@@ -104,18 +104,21 @@ import Layout from '../../layouts/Layout.astro';
           <canvas id="colorbar" class="colorbar-canvas" width="80" height="300"></canvas>
         </div>
 
-        <!-- Right: Results -->
+        <!-- Right: Summary -->
         <div class="results-panel card">
-          <h3>Spectrum</h3>
-          <canvas id="spectrum-canvas" class="spectrum-canvas" width="600" height="350"></canvas>
-          <p class="hint">Click on the chart to select a wavelength for 3D field view.</p>
-
           <h3>Summary</h3>
           <div id="summary-table" class="summary-table">
             <p class="text-muted">Run a solve to see results.</p>
           </div>
         </div>
 
+      </div>
+
+      <!-- Spectrum: full width below -->
+      <div class="spectrum-panel card">
+        <h3>Spectrum</h3>
+        <canvas id="spectrum-canvas" class="spectrum-canvas" width="1200" height="400"></canvas>
+        <p class="hint">Click on the chart to select a wavelength for 3D field view.</p>
       </div>
 
       <!-- Status bar -->
@@ -148,9 +151,9 @@ import Layout from '../../layouts/Layout.astro';
   /* Three-column layout */
   .bem-layout {
     display: grid;
-    grid-template-columns: 280px 1fr 320px;
+    grid-template-columns: 280px 1fr 240px;
     gap: var(--space-md);
-    min-height: 600px;
+    min-height: 500px;
   }
   @media (max-width: 1100px) {
     .bem-layout { grid-template-columns: 260px 1fr; }
@@ -158,6 +161,15 @@ import Layout from '../../layouts/Layout.astro';
   }
   @media (max-width: 768px) {
     .bem-layout { grid-template-columns: 1fr; }
+  }
+  .spectrum-panel {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+  }
+  .spectrum-panel h3 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-soft);
+    margin: 0 0 var(--space-sm);
   }
 
   /* Controls panel */
