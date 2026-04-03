@@ -1,0 +1,301 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="BEM Solver" description="Full-wave electromagnetic solver for nanoparticles — retarded BEM with 3D visualization, powered by Pyodide.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>BEM <span class="gradient-text">Solver</span></h1>
+      <p class="widget-hero__subtitle">
+        Solve Maxwell's equations for metallic nanoparticles using Galerkin BEM with
+        Raviart-Thomas elements. Compute cross-sections, near-field enhancement, and more
+        — all in your browser.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="bem-layout">
+
+        <!-- Left: Controls -->
+        <div class="controls card">
+          <h3>Geometry</h3>
+          <div class="param">
+            <div class="param-header"><label>Shape</label></div>
+            <select id="shape-select" class="param-select">
+              <option value="sphere" selected>Sphere</option>
+              <option value="rod">Nanorod</option>
+            </select>
+          </div>
+          <div class="param">
+            <div class="param-header">
+              <label>Radius (nm)</label>
+              <input type="number" class="param-number" id="radius-input" value="25" step="5" min="5" max="100">
+            </div>
+          </div>
+          <div class="param">
+            <div class="param-header">
+              <label>Mesh density</label>
+              <select id="subdivisions-input" class="param-select">
+                <option value="1" selected>Low (80 faces) — fast</option>
+                <option value="2">Medium (320 faces) — slow</option>
+              </select>
+            </div>
+          </div>
+
+          <h3>Material</h3>
+          <div class="param">
+            <div class="param-header"><label>Particle</label></div>
+            <select id="material-select" class="param-select">
+              <option value="au" selected>Gold (Au)</option>
+              <option value="ag">Silver (Ag)</option>
+            </select>
+          </div>
+          <div class="param">
+            <div class="param-header">
+              <label>Medium &epsilon;<sub>m</sub></label>
+              <input type="number" class="param-number" id="eps-medium-input" value="1.77" step="0.01" min="1">
+            </div>
+            <div class="preset-row">
+              <button class="preset-btn" data-eps="1.00">Air</button>
+              <button class="preset-btn" data-eps="1.77">Water</button>
+              <button class="preset-btn" data-eps="2.10">Oil</button>
+              <button class="preset-btn" data-eps="2.25">Glass</button>
+            </div>
+          </div>
+
+          <h3>Wavelength</h3>
+          <div class="param">
+            <div class="param-header">
+              <label>&lambda; range (nm)</label>
+            </div>
+            <div class="range-row">
+              <input type="number" class="param-number" id="wl-min-input" value="400" step="10" min="300">
+              <span>&mdash;</span>
+              <input type="number" class="param-number" id="wl-max-input" value="800" step="10" max="1000">
+            </div>
+          </div>
+          <div class="param">
+            <div class="param-header">
+              <label>Points</label>
+              <input type="number" class="param-number" id="wl-npoints-input" value="20" step="5" min="5" max="50">
+            </div>
+          </div>
+
+          <button id="solve-btn" class="btn btn--primary solve-btn" disabled>
+            Solve
+          </button>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <p class="progress-text" id="progress-text">Loading solver...</p>
+        </div>
+
+        <!-- Center: 3D Viewport -->
+        <div class="viewport-panel card">
+          <div class="viewport-toolbar">
+            <button id="wireframe-btn" class="toolbar-btn" title="Toggle wireframe">&#9634;</button>
+            <button id="reset-view-btn" class="toolbar-btn" title="Reset camera">&#8634;</button>
+          </div>
+          <div id="viewport-container" class="viewport-canvas"></div>
+          <canvas id="colorbar" class="colorbar-canvas" width="80" height="300"></canvas>
+        </div>
+
+        <!-- Right: Results -->
+        <div class="results-panel card">
+          <h3>Spectrum</h3>
+          <canvas id="spectrum-canvas" class="spectrum-canvas" width="600" height="350"></canvas>
+          <p class="hint">Click on the chart to select a wavelength for 3D field view.</p>
+
+          <h3>Summary</h3>
+          <div id="summary-table" class="summary-table">
+            <p class="text-muted">Run a solve to see results.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Status bar -->
+      <div class="status-bar">
+        <span id="status-text">Loading solver...</span>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { initBEMSolver } from '../../scripts/bem/main';
+  initBEMSolver();
+</script>
+
+<style>
+  /* Hero — same pattern as Mie page */
+  .widget-hero {
+    padding: var(--space-xl) 0 var(--space-lg);
+    text-align: center;
+  }
+  .widget-hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { color: var(--text-soft); max-width: 640px; margin: 0 auto; }
+  .back-link {
+    display: inline-block; margin-bottom: var(--space-md);
+    color: var(--primary); text-decoration: none; font-weight: 500;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  /* Three-column layout */
+  .bem-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    gap: var(--space-md);
+    min-height: 600px;
+  }
+  @media (max-width: 1100px) {
+    .bem-layout { grid-template-columns: 260px 1fr; }
+    .results-panel { grid-column: 1 / -1; }
+  }
+  @media (max-width: 768px) {
+    .bem-layout { grid-template-columns: 1fr; }
+  }
+
+  /* Controls panel */
+  .controls {
+    padding: var(--space-md);
+    overflow-y: auto;
+    max-height: 80vh;
+  }
+  .controls h3 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-soft);
+    margin: var(--space-md) 0 var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--bg-muted);
+  }
+  .controls h3:first-child { margin-top: 0; }
+
+  .param { margin-bottom: var(--space-sm); }
+  .param-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+  }
+  .param-header label { font-size: 0.85rem; font-weight: 500; color: var(--text); }
+  .param-number {
+    width: 80px; padding: 4px 8px; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm); font-size: 0.85rem; text-align: right;
+    background: var(--bg); color: var(--text);
+  }
+  .param-select {
+    width: 100%; padding: 6px 8px; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm); font-size: 0.85rem;
+    background: var(--bg); color: var(--text);
+  }
+
+  .range-row {
+    display: flex; align-items: center; gap: var(--space-xs);
+  }
+  .range-row .param-number { flex: 1; }
+  .range-row span { color: var(--text-muted); }
+
+  .preset-row {
+    display: flex; gap: 4px; margin-top: 4px;
+  }
+  .preset-btn {
+    flex: 1; padding: 4px; font-size: 0.75rem; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm); background: var(--bg-soft); color: var(--text-soft);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { background: var(--primary-light); color: var(--primary-dark); }
+
+  /* Solve button */
+  .solve-btn {
+    width: 100%; margin-top: var(--space-md); padding: 10px;
+    font-size: 1rem; font-weight: 600;
+  }
+
+  /* Progress */
+  .progress-bar {
+    width: 100%; height: 4px; background: var(--bg-muted);
+    border-radius: 2px; margin-top: var(--space-sm); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%; background: var(--spectrum);
+    background-size: 200% 100%;
+    transition: width 0.3s ease;
+  }
+  .progress-text {
+    font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;
+    min-height: 1.2em;
+  }
+
+  /* Viewport */
+  .viewport-panel {
+    position: relative; padding: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .viewport-toolbar {
+    position: absolute; top: 8px; right: 8px; z-index: 10;
+    display: flex; gap: 4px;
+  }
+  .toolbar-btn {
+    width: 32px; height: 32px; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm); background: rgba(255,255,255,0.85);
+    color: var(--text-soft); cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); transition: all 0.15s;
+  }
+  .toolbar-btn:hover { background: var(--primary-light); color: var(--primary-dark); }
+
+  .viewport-canvas {
+    flex: 1; min-height: 400px;
+  }
+  .colorbar-canvas {
+    position: absolute; bottom: 16px; left: 16px;
+  }
+
+  /* Results */
+  .results-panel {
+    padding: var(--space-md);
+    overflow-y: auto;
+    max-height: 80vh;
+  }
+  .results-panel h3 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-soft);
+    margin: var(--space-md) 0 var(--space-sm);
+  }
+  .results-panel h3:first-child { margin-top: 0; }
+
+  .spectrum-canvas {
+    width: 100%; height: auto; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+  }
+  .hint {
+    font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;
+    font-style: italic;
+  }
+  .summary-table {
+    font-size: 0.85rem;
+  }
+  .text-muted { color: var(--text-muted); }
+
+  /* Status bar */
+  .status-bar {
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-soft);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    border: 1px solid var(--bg-muted);
+  }
+
+  /* Gradient text — same as Mie */
+  .gradient-text {
+    background: var(--spectrum);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
