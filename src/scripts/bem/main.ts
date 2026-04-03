@@ -49,6 +49,7 @@ export async function initBEMSolver() {
     }
     if (r.spectra) {
       renderSpectrum(r.spectra, r.selectedWavelength);
+      updateSummary(r.spectra, r.enhancement);
     }
     if (r.timing !== null) {
       const meshInfo = r.mesh ? `${r.mesh.nFaces} faces` : '';
@@ -178,7 +179,8 @@ export async function initBEMSolver() {
     const params = readParams();
     const t0 = performance.now();
 
-    state.set('solver', { status: 'solving', progress: 0, message: 'Solving...' });
+    const nLam = params.wavelengths.length;
+    state.set('solver', { status: 'solving', progress: 0, message: `Solving 0/${nLam} wavelengths...` });
     state.set('results', { spectra: null, enhancement: null, selectedWavelength: null, timing: null });
 
     try {
@@ -205,6 +207,36 @@ export async function initBEMSolver() {
     } catch (err: any) {
       state.set('solver', { status: 'error', progress: 0, message: err.message });
     }
+  }
+
+  // --- Summary table ---
+  function updateSummary(spectra: NonNullable<AppState['results']['spectra']>, enhancement: Float64Array | null) {
+    const table = el('summary-table');
+    const ext = spectra.extinction;
+    const sca = spectra.scattering;
+    const abs = spectra.absorption;
+    const lams = spectra.wavelengths;
+
+    const peakIdx = ext.indexOf(Math.max(...ext));
+    const peakLam = lams[peakIdx];
+
+    let html = `
+      <table class="data-table">
+        <tr><td>Peak λ</td><td><strong>${peakLam.toFixed(0)} nm</strong></td></tr>
+        <tr><td>C<sub>ext</sub></td><td>${ext[peakIdx].toFixed(0)} nm²</td></tr>
+        <tr><td>C<sub>sca</sub></td><td>${sca[peakIdx].toFixed(0)} nm²</td></tr>
+        <tr><td>C<sub>abs</sub></td><td>${abs[peakIdx].toFixed(0)} nm²</td></tr>
+    `;
+    if (enhancement) {
+      const maxEnh = Math.max(...Array.from(enhancement));
+      const avgEnh = enhancement.reduce((a, b) => a + b, 0) / enhancement.length;
+      html += `
+        <tr><td>Max |E|/|E₀|</td><td><strong>${maxEnh.toFixed(1)}</strong></td></tr>
+        <tr><td>Avg |E|/|E₀|</td><td>${avgEnh.toFixed(2)}</td></tr>
+      `;
+    }
+    html += `</table>`;
+    table.innerHTML = html;
   }
 
   // --- Simple spectrum rendering (canvas) ---

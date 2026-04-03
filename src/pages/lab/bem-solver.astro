@@ -278,6 +278,15 @@ import Layout from '../../layouts/Layout.astro';
   .summary-table {
     font-size: 0.85rem;
   }
+  .data-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .data-table td {
+    padding: 4px 0; border-bottom: 1px solid var(--bg-muted);
+  }
+  .data-table td:last-child {
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
   .text-muted { color: var(--text-muted); }
 
   /* Status bar */

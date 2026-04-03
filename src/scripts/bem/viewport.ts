@@ -17,6 +17,8 @@ export class BEMViewport {
   private controls: OrbitControls;
   private meshObj: THREE.Mesh | null = null;
   private wireframe: THREE.LineSegments | null = null;
+  private grid: THREE.GridHelper;
+  private axes: THREE.AxesHelper;
   private showWireframe = false;
   private materialKey = 'au';
 
@@ -45,13 +47,12 @@ export class BEMViewport {
     dir.position.set(50, 80, 60);
     this.scene.add(dir);
 
-    // Grid
-    const grid = new THREE.GridHelper(200, 20, 0xa5b4fc, 0xf1f0fb);
-    grid.rotation.x = Math.PI / 2;  // XY plane
-    this.scene.add(grid);
-
-    // Axes
-    this.scene.add(new THREE.AxesHelper(40));
+    // Grid and axes — will be rescaled when mesh is set
+    this.grid = new THREE.GridHelper(200, 20, 0xa5b4fc, 0xf1f0fb);
+    this.grid.rotation.x = Math.PI / 2;
+    this.scene.add(this.grid);
+    this.axes = new THREE.AxesHelper(40);
+    this.scene.add(this.axes);
 
     // Resize observer
     const ro = new ResizeObserver(() => this.resize());
@@ -104,9 +105,26 @@ export class BEMViewport {
     this.wireframe.visible = this.showWireframe;
     this.scene.add(this.wireframe);
 
-    // Auto-fit camera
+    // Rescale grid and axes to mesh
+    this.scene.remove(this.grid);
+    this.scene.remove(this.axes);
+    const maxCoord = Math.max(...Array.from(positions).map(Math.abs));
+    const gridSize = Math.ceil(maxCoord / 10) * 20;
+    this.grid = new THREE.GridHelper(gridSize, 20, 0xa5b4fc, 0xf1f0fb);
+    this.grid.rotation.x = Math.PI / 2;
+    this.scene.add(this.grid);
+    this.axes = new THREE.AxesHelper(gridSize * 0.4);
+    this.scene.add(this.axes);
+
+    // Auto-fit camera to mesh bounding sphere
+    geom.computeBoundingSphere();
+    const r = geom.boundingSphere?.radius ?? 50;
+    const d = r * 3.5;
+    this.camera.position.set(d * 0.7, d * 0.5, d * 0.7);
     this.controls.target.set(0, 0, 0);
-    this.camera.position.set(80, 60, 80);
+    this.camera.near = r * 0.01;
+    this.camera.far = r * 100;
+    this.camera.updateProjectionMatrix();
     this.controls.update();
   }
 
@@ -149,7 +167,9 @@ export class BEMViewport {
   }
 
   resetView(): void {
-    this.camera.position.set(80, 60, 80);
+    const r = this.meshObj?.geometry.boundingSphere?.radius ?? 50;
+    const d = r * 3.5;
+    this.camera.position.set(d * 0.7, d * 0.5, d * 0.7);
     this.controls.target.set(0, 0, 0);
     this.controls.update();
   }
