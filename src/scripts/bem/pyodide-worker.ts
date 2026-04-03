@@ -37,7 +37,7 @@ async function init() {
 
     post({ type: 'init-progress', stage: 'Installing packages...', pct: 0.3 });
 
-    await pyodide.loadPackage(['numpy', 'scipy']);
+    await pyodide.loadPackage(['numpy', 'scipy', 'micropip']);
 
     post({ type: 'init-progress', stage: 'Installing trimesh...', pct: 0.6 });
 
