@@ -1,0 +1,859 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Mie Scattering Calculator" description="Interactive Mie scattering calculator for spherical nanoparticles — exact solutions in your browser.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Mie Scattering <span class="gradient-text">Calculator</span></h1>
+      <p class="widget-hero__subtitle">
+        Compute scattering, extinction, and absorption cross-sections for spherical
+        nanoparticles using exact Mie theory. Adjust parameters and see results in real time.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="param">
+            <div class="param-header">
+              <label>&epsilon;<sub>r</sub></label>
+              <input type="number" class="param-number" id="eps-num" value="10" step="0.5" min="1">
+            </div>
+            <input type="range" class="param-slider" id="eps-slider" min="1" max="50" step="0.5" value="10">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="eps-min" value="1" step="0.5" min="0.1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="eps-max" value="50" step="0.5" min="0.1">
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Radius (nm)</label>
+              <input type="number" class="param-number" id="r-num" value="100" step="5" min="1">
+            </div>
+            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="5" value="100">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="r-max" value="500" step="5" min="1">
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>n<sub>host</sub></label>
+              <input type="number" class="param-number" id="nh-num" value="1.00" step="0.01" min="1">
+            </div>
+            <input type="range" class="param-slider" id="nh-slider" min="1.0" max="2.5" step="0.01" value="1.0">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="nh-min" value="1.0" step="0.01" min="1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="nh-max" value="2.5" step="0.01" min="1">
+            </div>
+            <div class="param-presets" id="nh-presets">
+              <button class="preset-btn active" data-val="1.00">Air</button>
+              <button class="preset-btn" data-val="1.33">Water</button>
+              <button class="preset-btn" data-val="1.46">Oil</button>
+              <button class="preset-btn" data-val="1.50">Glass</button>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>Quantity</label></div>
+            <div class="plot-tabs" id="qty-tabs" role="radiogroup">
+              <button class="plot-tab active" data-qty="csca" role="radio" aria-checked="true">C<sub>sca</sub></button>
+              <button class="plot-tab" data-qty="cext" role="radio" aria-checked="false">C<sub>ext</sub></button>
+              <button class="plot-tab" data-qty="cabs" role="radio" aria-checked="false">C<sub>abs</sub></button>
+              <button class="plot-tab" data-qty="qsca" role="radio" aria-checked="false">Q<sub>sca</sub></button>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>X axis</label></div>
+            <div class="plot-tabs" id="axis-tabs" role="radiogroup">
+              <button class="plot-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
+              <button class="plot-tab" data-axis="energy" role="radio" aria-checked="false">E (eV)</button>
+            </div>
+          </div>
+
+          <p class="theory-note">
+            <strong>Mie theory</strong> gives exact solutions for light scattering by
+            spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.
+            For a lossless dielectric (real&nbsp;&epsilon;), C<sub>abs</sub>&nbsp;=&nbsp;0.
+          </p>
+        </div>
+
+        <div class="chart-panel card">
+          <div class="chart-toolbar">
+            <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
+            <span id="zoom-hint" class="chart-hint">Zoomed &mdash; double-click to reset</span>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="mie-chart"></canvas>
+            <canvas id="chart-overlay"></canvas>
+            <div class="chart-tooltip" id="chart-tooltip"></div>
+          </div>
+          <div class="download-bar">
+            <span class="download-label">Export</span>
+            <button id="dl-png" class="dl-btn" title="Download chart as PNG image">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button id="dl-csv" class="dl-btn" title="Download all data as CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .widget-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 600px; }
+  .gradient-text {
+    background: var(--spectrum);
+    background-clip: text; -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .back-link {
+    display: inline-block; margin-bottom: var(--space-md);
+    font-size: 0.875rem; font-weight: 500; color: var(--text-soft);
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout {
+    display: grid; grid-template-columns: 300px 1fr;
+    gap: var(--space-lg); align-items: start;
+  }
+  .controls {
+    display: flex; flex-direction: column; gap: var(--space-lg);
+    position: sticky; top: calc(var(--nav-height) + var(--space-lg));
+  }
+  .controls h3 { font-size: 1rem; margin-bottom: calc(-0.5 * var(--space-sm)); }
+  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-header { display: flex; justify-content: space-between; align-items: center; }
+  .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .param-number {
+    width: 5rem; padding: 0.2rem 0.4rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; color: var(--primary);
+    text-align: right; outline: none; background: var(--bg);
+    transition: border-color 0.15s;
+  }
+  .param-number:focus { border-color: var(--primary-light); }
+  .param-number::-webkit-inner-spin-button,
+  .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .param-number { -moz-appearance: textfield; }
+  .param-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; background: var(--bg-muted);
+    border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--primary);
+    cursor: pointer; transition: box-shadow 0.15s;
+  }
+  .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
+  .param-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--primary); border: none; cursor: pointer;
+  }
+  .param-slider::-moz-range-track { height: 6px; background: var(--bg-muted); border-radius: 3px; border: none; }
+  .param-limits { display: flex; align-items: center; gap: 0.25rem; }
+  .param-limit-dash { flex: 1; text-align: center; color: var(--bg-muted); font-size: 0.75rem; }
+  .param-limit {
+    width: 3.5rem; padding: 0.15rem 0.3rem;
+    border: 1px solid transparent; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums; color: var(--text-muted);
+    text-align: center; background: var(--bg-soft); outline: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .param-limit:focus { border-color: var(--primary-light); color: var(--text-soft); }
+  .param-limit::-webkit-inner-spin-button,
+  .param-limit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .param-limit { -moz-appearance: textfield; }
+  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.2rem 0.55rem; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full); background: var(--bg);
+    font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary-light); background: rgba(99,102,241,0.06); color: var(--primary); }
+  .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
+  .plot-tab {
+    flex: 1; padding: 0.35rem 0.4rem; border: none; background: none;
+    border-radius: var(--radius-full); font-family: var(--font);
+    font-size: 0.75rem; font-weight: 500; cursor: pointer;
+    color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center;
+  }
+  .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  .plot-tab:hover:not(.active) { color: var(--text); }
+  .theory-note {
+    font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5;
+    border-top: 1px solid var(--bg-muted); padding-top: var(--space-md);
+  }
+  .theory-note strong { color: var(--text-soft); }
+
+  /* Chart */
+  .chart-panel { padding: var(--space-md); }
+  .chart-toolbar {
+    display: flex; align-items: center; gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  .chart-tool-btn {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full); background: var(--bg);
+    font-family: var(--font); font-size: 0.6875rem; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .chart-tool-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .chart-tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
+  .chart-hint { font-size: 0.6875rem; color: var(--text-muted); display: none; }
+  .chart-hint.visible { display: inline; }
+  .chart-wrap { position: relative; cursor: crosshair; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; }
+  #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+  .chart-tooltip {
+    position: absolute; pointer-events: none;
+    background: rgba(30, 27, 75, 0.92); color: white;
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 0.6875rem; font-family: var(--font);
+    font-variant-numeric: tabular-nums; line-height: 1.5;
+    white-space: nowrap; display: none; z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .chart-tooltip.visible { display: block; }
+
+  .download-bar {
+    display: flex; align-items: center; gap: var(--space-sm);
+    margin-top: var(--space-md); padding-top: var(--space-md);
+    border-top: 1px solid var(--bg-muted);
+  }
+  .download-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs);
+  }
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full); background: var(--bg);
+    font-family: var(--font); font-size: 0.75rem; font-weight: 600;
+    color: var(--text-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  .dl-btn:active { transform: scale(0.97); }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+  }
+</style>
+
+<script>
+  // === Mie Scattering Computation Engine ===
+
+  const HC_EV_NM = 1239.841984;
+  const NUM_POINTS = 500;
+  const LAMBDA_MIN = 300;
+  const LAMBDA_MAX = 1200;
+  const MAX_NMAX = 50;
+
+  const _psiX = new Float64Array(MAX_NMAX + 1);
+  const _psiMx = new Float64Array(MAX_NMAX + 1);
+  const _xiRe = new Float64Array(MAX_NMAX + 1);
+  const _xiIm = new Float64Array(MAX_NMAX + 1);
+
+  interface MieResult {
+    lambda: Float64Array; energy: Float64Array;
+    csca: Float64Array; cext: Float64Array; cabs: Float64Array; qsca: Float64Array;
+  }
+
+  function computeMie(epsR: number, radiusNm: number, nHost: number): MieResult {
+    const m = Math.sqrt(epsR) / nHost;
+    const R = radiusNm * 1e-9;
+    const lambda = new Float64Array(NUM_POINTS);
+    const csca = new Float64Array(NUM_POINTS);
+    const cext = new Float64Array(NUM_POINTS);
+    const cabs = new Float64Array(NUM_POINTS);
+    const qsca = new Float64Array(NUM_POINTS);
+    const energy = new Float64Array(NUM_POINTS);
+
+    for (let i = 0; i < NUM_POINTS; i++)
+      lambda[i] = LAMBDA_MIN + (LAMBDA_MAX - LAMBDA_MIN) * i / (NUM_POINTS - 1);
+
+    for (let i = 0; i < NUM_POINTS; i++) {
+      const lm = lambda[i] * 1e-9;
+      const k = 2 * Math.PI * nHost / lm;
+      const x = k * R;
+      const mx = m * x;
+      const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
+      const sinX = Math.sin(x), cosX = Math.cos(x);
+      const sinMx = Math.sin(mx), cosMx = Math.cos(mx);
+
+      _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
+      for (let n = 1; n < nmax; n++) _psiX[n+1] = ((2*n+1)/x)*_psiX[n] - _psiX[n-1];
+      _psiMx[0] = sinMx; _psiMx[1] = sinMx / mx - cosMx;
+      for (let n = 1; n < nmax; n++) _psiMx[n+1] = ((2*n+1)/mx)*_psiMx[n] - _psiMx[n-1];
+      _xiRe[0] = sinX; _xiIm[0] = -cosX;
+      _xiRe[1] = sinX/x - cosX; _xiIm[1] = -cosX/x - sinX;
+      for (let n = 1; n < nmax; n++) {
+        const f = (2*n+1)/x;
+        _xiRe[n+1] = f*_xiRe[n] - _xiRe[n-1];
+        _xiIm[n+1] = f*_xiIm[n] - _xiIm[n-1];
+      }
+
+      let sumSca = 0, sumExt = 0;
+      for (let n = 1; n <= nmax; n++) {
+        const pxd = _psiX[n-1] - (n/x)*_psiX[n];
+        const pmxd = _psiMx[n-1] - (n/mx)*_psiMx[n];
+        const xdRe = _xiRe[n-1] - (n/x)*_xiRe[n];
+        const xdIm = _xiIm[n-1] - (n/x)*_xiIm[n];
+        const aN = m*_psiMx[n]*pxd - _psiX[n]*pmxd;
+        const adR = m*_psiMx[n]*xdRe - _xiRe[n]*pmxd;
+        const adI = m*_psiMx[n]*xdIm - _xiIm[n]*pmxd;
+        const bN = _psiMx[n]*pxd - m*_psiX[n]*pmxd;
+        const bdR = _psiMx[n]*xdRe - m*_xiRe[n]*pmxd;
+        const bdI = _psiMx[n]*xdIm - m*_xiIm[n]*pmxd;
+        const adM2 = adR*adR + adI*adI, bdM2 = bdR*bdR + bdI*bdI;
+        const w = 2*n+1;
+        sumSca += w * ((aN*aN)/adM2 + (bN*bN)/bdM2);
+        sumExt += w * ((aN*adR)/adM2 + (bN*bdR)/bdM2);
+      }
+      const pf = (2*Math.PI/(k*k))*1e18;
+      csca[i] = pf * sumSca;
+      cext[i] = pf * sumExt;
+      cabs[i] = Math.max(0, cext[i] - csca[i]);
+    }
+
+    const geo = Math.PI * radiusNm * radiusNm;
+    for (let i = 0; i < NUM_POINTS; i++) {
+      qsca[i] = csca[i] / geo;
+      energy[i] = HC_EV_NM / lambda[i];
+    }
+    return { lambda, energy, csca, cext, cabs, qsca };
+  }
+
+  // === Chart Renderer ===
+
+  const PAD = { top: 20, right: 25, bottom: 55, left: 70 };
+
+  function niceNum(range: number, round: boolean): number {
+    if (range <= 0) return 1;
+    const exp = Math.floor(Math.log10(range));
+    const frac = range / Math.pow(10, exp);
+    let nice: number;
+    if (round) { nice = frac < 1.5 ? 1 : frac < 3 ? 2 : frac < 7 ? 5 : 10; }
+    else { nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10; }
+    return nice * Math.pow(10, exp);
+  }
+
+  function niceScale(min: number, max: number, ticks = 7) {
+    if (max - min < 1e-10) max = min + 1;
+    const range = niceNum(max - min, false);
+    const step = niceNum(range / (ticks - 1), true);
+    return { min: Math.floor(min / step) * step, max: Math.ceil(max / step) * step, step };
+  }
+
+  function fmtTick(v: number): string {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(0) + 'M';
+    if (a >= 5000) return (v / 1e3).toFixed(0) + 'k';
+    if (Number.isInteger(v)) return v.toString();
+    if (a >= 1) return v.toFixed(1);
+    return v.toFixed(2);
+  }
+
+  function fmtVal(v: number): string {
+    const a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 1e5) return v.toLocaleString('en', { maximumFractionDigits: 0 });
+    if (a >= 1) return v.toLocaleString('en', { maximumFractionDigits: 2 });
+    if (a >= 0.01) return v.toFixed(4);
+    return v.toExponential(2);
+  }
+
+  interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; }
+  interface ChartXforms {
+    tx: (v: number) => number; ty: (v: number) => number;
+    invTx: (px: number) => number; invTy: (py: number) => number;
+    pL: number; pT: number; pW: number; pH: number;
+  }
+
+  function drawChart(
+    canvas: HTMLCanvasElement, xArr: Float64Array, yArr: Float64Array,
+    xLabel: string, yLabel: string, opts: ChartOpts = {},
+  ): ChartXforms {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const pw = W - PAD.left - PAD.right, ph = H - PAD.top - PAD.bottom;
+
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+
+    // Data ranges
+    let dxMin = xArr[0], dxMax = xArr[0], dyMin = Infinity, dyMax = 0;
+    for (let i = 0; i < xArr.length; i++) {
+      if (xArr[i] < dxMin) dxMin = xArr[i];
+      if (xArr[i] > dxMax) dxMax = xArr[i];
+      if (yArr[i] > dyMax) dyMax = yArr[i];
+      if (yArr[i] > 0 && yArr[i] < dyMin) dyMin = yArr[i];
+    }
+    if (dyMin === Infinity) dyMin = 1;
+
+    const xMin = opts.xRange ? opts.xRange[0] : dxMin;
+    const xMax = opts.xRange ? opts.xRange[1] : dxMax;
+
+    // X scale (always linear)
+    const xs = niceScale(xMin, xMax);
+    const tx = (v: number) => PAD.left + ((v - xs.min) / (xs.max - xs.min)) * pw;
+    const invTx = (px: number) => xs.min + ((px - PAD.left) / pw) * (xs.max - xs.min);
+
+    // Y scale
+    let ty: (v: number) => number;
+    let invTy: (py: number) => number;
+    let yTicks: number[];
+    let yTickLabeler: (v: number) => boolean; // true = show label
+
+    if (opts.logY && dyMax > 0) {
+      const logFloor = Math.floor(Math.log10(Math.max(opts.yRange ? opts.yRange[0] : dyMin * 0.5, 1e-10)));
+      const logCeil = Math.ceil(Math.log10(opts.yRange ? opts.yRange[1] : dyMax * 1.5));
+      ty = (v) => {
+        const lv = Math.log10(Math.max(v, 1e-10));
+        return PAD.top + ph - ((lv - logFloor) / (logCeil - logFloor)) * ph;
+      };
+      invTy = (py) => Math.pow(10, logFloor + ((PAD.top + ph - py) / ph) * (logCeil - logFloor));
+      yTicks = [];
+      for (let p = logFloor; p <= logCeil; p++) {
+        for (const m of [1, 2, 5]) yTicks.push(Math.pow(10, p) * m);
+      }
+      yTickLabeler = (v) => { const l = Math.log10(v); return Math.abs(l - Math.round(l)) < 0.01; };
+    } else {
+      const ys = opts.yRange ? niceScale(opts.yRange[0], opts.yRange[1]) : niceScale(0, dyMax * 1.05);
+      ty = (v) => PAD.top + ph - ((v - ys.min) / (ys.max - ys.min)) * ph;
+      invTy = (py) => ys.min + ((PAD.top + ph - py) / ph) * (ys.max - ys.min);
+      yTicks = [];
+      for (let v = ys.min; v <= ys.max + ys.step * 0.1; v += ys.step) yTicks.push(v);
+      yTickLabeler = () => true;
+    }
+
+    // X ticks
+    const xTicks: number[] = [];
+    for (let v = xs.min; v <= xs.max + xs.step * 0.1; v += xs.step) xTicks.push(v);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1;
+    for (const v of yTicks) {
+      const y = Math.round(ty(v)) + 0.5;
+      if (y < PAD.top || y > PAD.top + ph) continue;
+      ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + pw, y); ctx.stroke();
+    }
+    for (const v of xTicks) {
+      const x = Math.round(tx(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + ph); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#D1D5DB'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + ph); ctx.lineTo(PAD.left + pw, PAD.top + ph);
+    ctx.stroke();
+
+    // Tick labels
+    ctx.fillStyle = '#6B7280'; ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const v of xTicks) ctx.fillText(fmtTick(v), tx(v), PAD.top + ph + 6);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const v of yTicks) {
+      const y = ty(v);
+      if (y < PAD.top - 5 || y > PAD.top + ph + 5) continue;
+      if (yTickLabeler(v)) ctx.fillText(fmtTick(v), PAD.left - 8, y);
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#374151'; ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(xLabel, PAD.left + pw / 2, H - 14);
+    ctx.save(); ctx.translate(14, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    // Clipped data rendering
+    ctx.save();
+    ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
+
+    // Fill
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < xArr.length; i++) {
+      const v = yArr[i];
+      if (opts.logY && v <= 0) continue;
+      const px = tx(xArr[i]), py = ty(v);
+      if (first) { ctx.moveTo(px, py); first = false; } else { ctx.lineTo(px, py); }
+    }
+    if (!first) {
+      ctx.lineTo(tx(xArr[xArr.length - 1]), PAD.top + ph);
+      ctx.lineTo(tx(xArr[0]), PAD.top + ph);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + ph);
+      grad.addColorStop(0, 'rgba(99,102,241,0.10)');
+      grad.addColorStop(1, 'rgba(99,102,241,0.00)');
+      ctx.fillStyle = grad; ctx.fill();
+    }
+
+    // Line
+    ctx.beginPath(); first = true;
+    for (let i = 0; i < xArr.length; i++) {
+      const v = yArr[i];
+      if (opts.logY && v <= 0) continue;
+      const px = tx(xArr[i]), py = ty(v);
+      if (first) { ctx.moveTo(px, py); first = false; } else { ctx.lineTo(px, py); }
+    }
+    ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 2;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+
+    ctx.restore();
+
+    return { tx, ty, invTx, invTy, pL: PAD.left, pT: PAD.top, pW: pw, pH: ph };
+  }
+
+  // === Parameter Sync Helper ===
+
+  interface ParamHandle { readonly value: number; setValue(v: number): void; }
+
+  function setupParam(
+    numId: string, sliderId: string, minId: string, maxId: string,
+    fmt: (v: number) => string, onChange: () => void,
+  ): ParamHandle {
+    const num = document.getElementById(numId) as HTMLInputElement;
+    const slider = document.getElementById(sliderId) as HTMLInputElement;
+    const minIn = document.getElementById(minId) as HTMLInputElement;
+    const maxIn = document.getElementById(maxId) as HTMLInputElement;
+    function clamp(v: number) { return Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)); }
+    function fromSlider() { num.value = fmt(parseFloat(slider.value)); onChange(); }
+    function fromNumber() {
+      const v = clamp(parseFloat(num.value) || 0);
+      slider.value = v.toString(); num.value = fmt(v); onChange();
+    }
+    function fromLimits() {
+      const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value);
+      if (isNaN(lo) || isNaN(hi) || lo >= hi) return;
+      slider.min = lo.toString(); slider.max = hi.toString();
+      const v = clamp(parseFloat(slider.value));
+      slider.value = v.toString(); num.value = fmt(v); onChange();
+    }
+    slider.addEventListener('input', fromSlider);
+    num.addEventListener('change', fromNumber);
+    minIn.addEventListener('change', fromLimits);
+    maxIn.addEventListener('change', fromLimits);
+    return {
+      get value() { return parseFloat(slider.value); },
+      setValue(v: number) { const c = clamp(v); slider.value = c.toString(); num.value = fmt(c); onChange(); },
+    };
+  }
+
+  function setupTabs(containerId: string, dataAttr: string, initial: string, onSelect: (v: string) => void) {
+    const tabs = document.getElementById(containerId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
+    let current = initial;
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => { t.classList.remove('active'); t.setAttribute('aria-checked', 'false'); });
+        tab.classList.add('active'); tab.setAttribute('aria-checked', 'true');
+        current = tab.dataset[dataAttr]!; onSelect(current);
+      });
+    });
+    return { get value() { return current; } };
+  }
+
+  // === UI Setup ===
+
+  const canvas = document.getElementById('mie-chart') as HTMLCanvasElement;
+  const overlay = document.getElementById('chart-overlay') as HTMLCanvasElement;
+  const tooltip = document.getElementById('chart-tooltip')!;
+  const chartWrap = document.getElementById('chart-wrap')!;
+  const zoomHint = document.getElementById('zoom-hint')!;
+  const logToggle = document.getElementById('log-toggle')!;
+
+  let data: MieResult;
+  let chartXforms: ChartXforms | null = null;
+  let logY = false;
+  let zoomBounds: { xRange: [number, number]; yRange: [number, number] } | null = null;
+
+  let rafPending = false;
+  function scheduleUpdate() {
+    if (!rafPending) {
+      rafPending = true;
+      requestAnimationFrame(() => { rafPending = false; recompute(); render(); });
+    }
+  }
+
+  const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), () => { zoomBounds = null; scheduleUpdate(); });
+  const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), () => { zoomBounds = null; scheduleUpdate(); });
+  const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), () => { zoomBounds = null; scheduleUpdate(); });
+
+  const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; render(); });
+  const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
+
+  // n_host presets
+  const presetBtns = document.querySelectorAll<HTMLButtonElement>('#nh-presets .preset-btn');
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      presetBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      nhParam.setValue(parseFloat(btn.dataset.val!));
+    });
+  });
+  function clearPresetHighlight() {
+    const v = nhParam.value.toFixed(2);
+    presetBtns.forEach((b) => b.classList.toggle('active', parseFloat(b.dataset.val!).toFixed(2) === v));
+  }
+  document.getElementById('nh-slider')!.addEventListener('input', clearPresetHighlight);
+  document.getElementById('nh-num')!.addEventListener('change', clearPresetHighlight);
+
+  // Log toggle
+  logToggle.addEventListener('click', () => {
+    logY = !logY;
+    logToggle.classList.toggle('active', logY);
+    zoomBounds = null;
+    render();
+  });
+
+  function recompute() { data = computeMie(epsParam.value, rParam.value, nhParam.value); }
+
+  function getPlotData(): { xArr: Float64Array; yArr: Float64Array; xLabel: string; yLabel: string } {
+    const qty = qtyTabs.value;
+    let yRaw: Float64Array, yLabel: string;
+    switch (qty) {
+      case 'cext': yRaw = data.cext; yLabel = 'Cext (nm\u00B2)'; break;
+      case 'cabs': yRaw = data.cabs; yLabel = 'Cabs (nm\u00B2)'; break;
+      case 'qsca': yRaw = data.qsca; yLabel = 'Qsca'; break;
+      default:     yRaw = data.csca; yLabel = 'Csca (nm\u00B2)';
+    }
+    if (axisTabs.value === 'energy') {
+      const n = data.energy.length;
+      const xArr = new Float64Array(n), yArr = new Float64Array(n);
+      for (let i = 0; i < n; i++) { xArr[i] = data.energy[n-1-i]; yArr[i] = yRaw[n-1-i]; }
+      return { xArr, yArr, xLabel: 'Photon energy (eV)', yLabel };
+    }
+    return { xArr: data.lambda, yArr: yRaw, xLabel: 'Wavelength (nm)', yLabel };
+  }
+
+  function render() {
+    if (!data) return;
+    const { xArr, yArr, xLabel, yLabel } = getPlotData();
+    const opts: ChartOpts = { logY };
+    if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    chartXforms = drawChart(canvas, xArr, yArr, xLabel, yLabel, opts);
+    zoomHint.classList.toggle('visible', !!zoomBounds);
+    clearOverlay();
+  }
+
+  // === Chart Interactions ===
+
+  function sizeOverlay() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = overlay.getBoundingClientRect();
+    overlay.width = rect.width * dpr; overlay.height = rect.height * dpr;
+    const ctx = overlay.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    return ctx;
+  }
+
+  function clearOverlay() {
+    const ctx = sizeOverlay();
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    tooltip.classList.remove('visible');
+  }
+
+  // Nearest data index
+  function nearestIdx(xArr: Float64Array, xVal: number): number {
+    let lo = 0, hi = xArr.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (xArr[mid] < xVal) lo = mid + 1; else hi = mid;
+    }
+    if (lo > 0 && Math.abs(xArr[lo - 1] - xVal) < Math.abs(xArr[lo] - xVal)) lo--;
+    return lo;
+  }
+
+  // Drag state
+  let dragStart: { x: number; y: number } | null = null;
+  let isDragging = false;
+
+  chartWrap.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    dragStart = { x: e.offsetX, y: e.offsetY };
+    isDragging = false;
+  });
+
+  chartWrap.addEventListener('mousemove', (e: MouseEvent) => {
+    if (!chartXforms || !data) return;
+    const { tx, ty, invTx, invTy, pL, pT, pW, pH } = chartXforms;
+    const mx = e.offsetX, my = e.offsetY;
+
+    if (dragStart) {
+      // Zoom selection
+      const dx = Math.abs(mx - dragStart.x), dy = Math.abs(my - dragStart.y);
+      if (dx > 5 || dy > 5) isDragging = true;
+      if (isDragging) {
+        const ctx = sizeOverlay();
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        // Clamp to plot area
+        const x0 = Math.max(pL, Math.min(dragStart.x, mx));
+        const x1 = Math.min(pL + pW, Math.max(dragStart.x, mx));
+        const y0 = Math.max(pT, Math.min(dragStart.y, my));
+        const y1 = Math.min(pT + pH, Math.max(dragStart.y, my));
+        ctx.fillStyle = 'rgba(99,102,241,0.08)';
+        ctx.strokeStyle = 'rgba(99,102,241,0.4)';
+        ctx.setLineDash([4, 4]);
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+        tooltip.classList.remove('visible');
+        return;
+      }
+    }
+
+    // Hover crosshair
+    if (mx < pL || mx > pL + pW || my < pT || my > pT + pH) {
+      clearOverlay(); return;
+    }
+
+    const xVal = invTx(mx);
+    const { xArr, yArr, xLabel, yLabel } = getPlotData();
+    const idx = nearestIdx(xArr, xVal);
+    const dataX = xArr[idx], dataY = yArr[idx];
+    const px = tx(dataX), py = ty(dataY);
+
+    const ctx = sizeOverlay();
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    // Crosshair lines
+    ctx.strokeStyle = 'rgba(99,102,241,0.4)';
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, pT); ctx.lineTo(px, pT + pH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pL, py); ctx.lineTo(pL + pW, py); ctx.stroke();
+
+    // Dot
+    ctx.setLineDash([]); ctx.fillStyle = '#6366F1';
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.stroke();
+
+    // Tooltip
+    const xStr = axisTabs.value === 'lambda' ? `\u03BB = ${dataX.toFixed(1)} nm` : `E = ${dataX.toFixed(3)} eV`;
+    const qtyName = yLabel.split(' ')[0];
+    const yStr = `${qtyName} = ${fmtVal(dataY)}`;
+    tooltip.innerHTML = `${xStr}<br>${yStr}`;
+    tooltip.classList.add('visible');
+
+    // Position tooltip
+    const wrapRect = chartWrap.getBoundingClientRect();
+    let ttLeft = px + 12;
+    let ttTop = py - 36;
+    const ttW = tooltip.offsetWidth, ttH = tooltip.offsetHeight;
+    if (ttLeft + ttW > wrapRect.width - 4) ttLeft = px - ttW - 12;
+    if (ttTop < 4) ttTop = py + 12;
+    tooltip.style.left = ttLeft + 'px';
+    tooltip.style.top = ttTop + 'px';
+  });
+
+  chartWrap.addEventListener('mouseup', (e: MouseEvent) => {
+    if (isDragging && dragStart && chartXforms) {
+      const { invTx, invTy, pL, pT, pW, pH } = chartXforms;
+      const x0 = Math.max(pL, Math.min(dragStart.x, e.offsetX));
+      const x1 = Math.min(pL + pW, Math.max(dragStart.x, e.offsetX));
+      const y0 = Math.max(pT, Math.min(dragStart.y, e.offsetY));
+      const y1 = Math.min(pT + pH, Math.max(dragStart.y, e.offsetY));
+
+      if (x1 - x0 > 10 && y1 - y0 > 10) {
+        const xLo = invTx(x0), xHi = invTx(x1);
+        const yLo = invTy(y1), yHi = invTy(y0); // inverted: screen y increases downward
+        zoomBounds = { xRange: [xLo, xHi], yRange: [yLo, yHi] };
+        render();
+      }
+    }
+    dragStart = null; isDragging = false;
+  });
+
+  chartWrap.addEventListener('mouseleave', () => {
+    dragStart = null; isDragging = false;
+    clearOverlay();
+  });
+
+  // Double-click to reset zoom
+  chartWrap.addEventListener('dblclick', () => {
+    if (zoomBounds) { zoomBounds = null; render(); }
+  });
+
+  // === Downloads ===
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+  function filenameStem() { return `mie_eps${epsParam.value}_R${rParam.value}nm_n${nhParam.value}`; }
+
+  document.getElementById('dl-png')!.addEventListener('click', () => {
+    const exportCanvas = document.createElement('canvas');
+    const scale = 2, w = 1200, h = 720;
+    exportCanvas.width = w * scale; exportCanvas.height = h * scale;
+    const ctx = exportCanvas.getContext('2d')!; ctx.scale(scale, scale);
+    const origGetRect = exportCanvas.getBoundingClientRect.bind(exportCanvas);
+    exportCanvas.getBoundingClientRect = () => ({
+      ...origGetRect(), width: w, height: h,
+      top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON() { return this; },
+    });
+    const { xArr, yArr, xLabel, yLabel } = getPlotData();
+    const opts: ChartOpts = { logY };
+    if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    const savedDpr = window.devicePixelRatio;
+    Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
+    drawChart(exportCanvas, xArr, yArr, xLabel, yLabel, opts);
+    Object.defineProperty(window, 'devicePixelRatio', { value: savedDpr, writable: true, configurable: true });
+    exportCanvas.toBlob((blob) => { if (blob) downloadBlob(blob, filenameStem() + '.png'); }, 'image/png');
+  });
+
+  document.getElementById('dl-csv')!.addEventListener('click', () => {
+    const lines: string[] = [];
+    lines.push(`# Mie scattering — eps_r=${epsParam.value}, R=${rParam.value} nm, n_host=${nhParam.value}`);
+    lines.push('# Generated by NanophotonicsLab (nanophotonicslab.com)');
+    lines.push('wavelength_nm,energy_eV,Csca_nm2,Cext_nm2,Cabs_nm2,Qsca');
+    for (let i = 0; i < data.lambda.length; i++) {
+      lines.push([
+        data.lambda[i].toFixed(4), data.energy[i].toFixed(6),
+        data.csca[i].toFixed(6), data.cext[i].toFixed(6),
+        data.cabs[i].toFixed(6), data.qsca[i].toFixed(8),
+      ].join(','));
+    }
+    const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' });
+    downloadBlob(blob, filenameStem() + '.csv');
+  });
+
+  // Resize + init
+  new ResizeObserver(() => render()).observe(canvas);
+  recompute(); render();
+</script>
