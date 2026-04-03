@@ -1,0 +1,136 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const researchLines = [
+  {
+    title: 'Plasmonics',
+    color: '#F59E0B',
+    description: 'Surface plasmon polaritons and localized plasmon resonances in metallic nanostructures. Applications in sensing, spectroscopy, and energy harvesting.',
+    topics: ['Nanoparticle arrays', 'SERS', 'Plasmonic waveguides'],
+  },
+  {
+    title: 'Photonic Crystals',
+    color: '#6366F1',
+    description: 'Design and fabrication of periodic dielectric structures for light confinement and manipulation. Bandgap engineering and topological photonics.',
+    topics: ['Bandgap engineering', 'Slow light', 'Topological states'],
+  },
+  {
+    title: 'Quantum Nanophotonics',
+    color: '#7C3AED',
+    description: 'Light-matter interactions at the quantum level. Single-photon sources, cavity QED with nanostructures, and quantum information applications.',
+    topics: ['Single-photon sources', 'Purcell enhancement', 'Cavity QED'],
+  },
+  {
+    title: 'Computational Photonics',
+    color: '#3B82F6',
+    description: 'Numerical methods for electromagnetic simulation. FDTD, FEM, and machine learning approaches for inverse design of photonic structures.',
+    topics: ['FDTD methods', 'Inverse design', 'ML-driven optimization'],
+  },
+  {
+    title: 'Nanofabrication',
+    color: '#10B981',
+    description: 'Advanced lithography and self-assembly techniques for creating nanophotonic devices. E-beam lithography, focused ion beam, and colloidal methods.',
+    topics: ['E-beam lithography', 'Self-assembly', 'Thin films'],
+  },
+  {
+    title: 'Nonlinear Nanophotonics',
+    color: '#F43F5E',
+    description: 'Nonlinear optical phenomena enhanced by nanoscale confinement. Second-harmonic generation, four-wave mixing, and ultrafast dynamics.',
+    topics: ['SHG', 'Four-wave mixing', 'Ultrafast spectroscopy'],
+  },
+];
+---
+
+<Layout title="Research">
+  <section class="page-hero">
+    <div class="container">
+      <h1>Research</h1>
+      <p class="page-hero__subtitle">
+        Our work spans from fundamental light-matter interactions to practical
+        applications of nanophotonic devices. Here are our main research lines.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="research-grid">
+        {researchLines.map(line => (
+          <article class="card research-card">
+            <div class="research-card__accent" style={`background: ${line.color}`}></div>
+            <h3>{line.title}</h3>
+            <p>{line.description}</p>
+            <div class="research-card__topics">
+              {line.topics.map(topic => (
+                <span class="tag">{topic}</span>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero h1 {
+    margin-bottom: var(--space-md);
+  }
+
+  .page-hero__subtitle {
+    font-size: 1.25rem;
+    max-width: 600px;
+  }
+
+  .research-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .research-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding-top: calc(var(--space-lg) + 4px);
+  }
+
+  .research-card__accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .research-card:hover .research-card__accent {
+    height: 4px;
+  }
+
+  .research-card h3 {
+    font-size: 1.25rem;
+  }
+
+  .research-card p {
+    font-size: 0.9375rem;
+    flex-grow: 1;
+  }
+
+  .research-card__topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  @media (max-width: 768px) {
+    .research-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,270 @@
+/* ===== Design System: Nanophotonics Lab ===== */
+/* Concept: Light dispersing on a bright surface — vibrant spectral colors */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Background */
+  --bg: #FFFFFF;
+  --bg-soft: #F8F7FF;
+  --bg-muted: #F1F0FB;
+
+  /* Text */
+  --text: #1E1B4B;
+  --text-soft: #64648B;
+  --text-muted: #9CA3AF;
+
+  /* Spectral palette */
+  --violet: #7C3AED;
+  --indigo: #6366F1;
+  --blue: #3B82F6;
+  --cyan: #06B6D4;
+  --emerald: #10B981;
+  --amber: #F59E0B;
+  --orange: #F97316;
+  --rose: #F43F5E;
+  --red: #EF4444;
+
+  /* Primary / accent */
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: #A5B4FC;
+  --accent: #F59E0B;
+
+  /* Spectrum gradient */
+  --spectrum: linear-gradient(90deg, #7C3AED, #6366F1, #3B82F6, #06B6D4, #10B981, #F59E0B, #F97316, #EF4444);
+  --spectrum-soft: linear-gradient(90deg, #C4B5FD, #A5B4FC, #93C5FD, #67E8F9, #6EE7B7, #FCD34D, #FDBA74, #FCA5A5);
+
+  /* Typography */
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+  --space-3xl: 8rem;
+
+  /* Layout */
+  --max-width: 1200px;
+  --nav-height: 4rem;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(99, 102, 241, 0.08);
+  --shadow-md: 0 4px 16px rgba(99, 102, 241, 0.1);
+  --shadow-lg: 0 8px 32px rgba(99, 102, 241, 0.12);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2);
+}
+
+/* ===== Reset ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+  font-size: 1rem;
+  overflow-x: hidden;
+}
+
+img, video, svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* ===== Typography ===== */
+h1, h2, h3, h4 {
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+h1 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; }
+h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); }
+h3 { font-size: clamp(1.25rem, 2vw, 1.5rem); }
+h4 { font-size: 1.125rem; }
+
+p {
+  color: var(--text-soft);
+  max-width: 65ch;
+}
+
+/* ===== Layout utilities ===== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.section {
+  padding: var(--space-3xl) 0;
+}
+
+.section-header {
+  margin-bottom: var(--space-xl);
+}
+
+.section-header h2 {
+  margin-bottom: var(--space-sm);
+}
+
+.section-header p {
+  font-size: 1.125rem;
+}
+
+/* ===== Spectrum line (decorative) ===== */
+.spectrum-line {
+  height: 3px;
+  background: var(--spectrum);
+  border: none;
+  border-radius: var(--radius-full);
+}
+
+.spectrum-line--animated {
+  background-size: 200% 100%;
+  animation: spectrumShift 4s ease-in-out infinite;
+}
+
+@keyframes spectrumShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ===== Cards ===== */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: transform 0.25s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--spectrum);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn--primary:hover {
+  background: var(--primary-dark);
+  color: white;
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary-light);
+}
+
+.btn--outline:hover {
+  background: var(--bg-soft);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+/* ===== Grid ===== */
+.grid {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+/* ===== Tag / Badge ===== */
+.tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--bg-muted);
+  color: var(--primary);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-md);
+  }
+
+  .section {
+    padding: var(--space-2xl) 0;
+  }
+
+  .grid--2, .grid--3, .grid--4 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,164 @@
+---
+const base = import.meta.env.BASE_URL;
+const currentPath = Astro.url.pathname;
+
+const links = [
+  { href: `${base}`, label: 'Home' },
+  { href: `${base}research/`, label: 'Research' },
+  { href: `${base}publications/`, label: 'Publications' },
+  { href: `${base}team/`, label: 'Team' },
+  { href: `${base}widgets/`, label: 'Widgets' },
+];
+
+function isActive(href: string): boolean {
+  if (href === base || href === `${base}/`) {
+    return currentPath === base || currentPath === `${base}/` || currentPath === '/';
+  }
+  return currentPath.startsWith(href);
+}
+---
+
+<nav class="navbar">
+  <div class="navbar__inner container">
+    <a href={base} class="navbar__brand">
+      <span class="navbar__logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+          <polygon points="16,4 28,26 4,26" fill="#F8F7FF" stroke="#6366F1" stroke-width="1.5"/>
+          <line x1="20" y1="14" x2="29" y2="9" stroke="#7C3AED" stroke-width="1"/>
+          <line x1="20" y1="16" x2="29" y2="13" stroke="#3B82F6" stroke-width="1"/>
+          <line x1="20" y1="18" x2="29" y2="17" stroke="#06B6D4" stroke-width="1"/>
+          <line x1="20" y1="20" x2="29" y2="21" stroke="#10B981" stroke-width="1"/>
+          <line x1="20" y1="22" x2="29" y2="25" stroke="#F59E0B" stroke-width="1"/>
+        </svg>
+      </span>
+      <span class="navbar__name">NanophotonicsLab</span>
+    </a>
+
+    <button class="navbar__toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <ul class="navbar__links">
+      {links.map(link => (
+        <li>
+          <a href={link.href} class:list={['navbar__link', { active: isActive(link.href) }]}>
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+  <div class="spectrum-line spectrum-line--animated"></div>
+</nav>
+
+<style>
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .navbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--nav-height);
+  }
+
+  .navbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .navbar__name {
+    font-weight: 700;
+    font-size: 1.125rem;
+    letter-spacing: -0.02em;
+  }
+
+  .navbar__links {
+    display: flex;
+    list-style: none;
+    gap: 0.25rem;
+  }
+
+  .navbar__link {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .navbar__link:hover {
+    color: var(--text);
+    background: var(--bg-muted);
+  }
+
+  .navbar__link.active {
+    color: var(--primary);
+    background: var(--bg-muted);
+  }
+
+  .navbar__toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .navbar__toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+
+  @media (max-width: 768px) {
+    .navbar__toggle {
+      display: flex;
+    }
+
+    .navbar__links {
+      display: none;
+      position: absolute;
+      top: var(--nav-height);
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      background: var(--bg);
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--bg-muted);
+      box-shadow: var(--shadow-md);
+    }
+
+    .navbar__links.open {
+      display: flex;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector('.navbar__toggle');
+  const links = document.querySelector('.navbar__links');
+  toggle?.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!expanded));
+    links?.classList.toggle('open');
+  });
+</script>

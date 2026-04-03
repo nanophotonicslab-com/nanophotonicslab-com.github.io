@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const widgets = [
+  {
+    title: 'Mie Scattering Calculator',
+    description: 'Compute scattering and absorption cross-sections for spherical nanoparticles. Visualize near-field and far-field patterns for different materials and sizes.',
+    color: '#F59E0B',
+    status: 'Live',
+    url: '#',
+  },
+  {
+    title: 'Photonic Band Structure',
+    description: 'Calculate and visualize photonic band diagrams for 1D and 2D periodic structures. Explore bandgaps, dispersion relations, and mode profiles.',
+    color: '#6366F1',
+    status: 'Live',
+    url: '#',
+  },
+  {
+    title: 'Fresnel Coefficients',
+    description: 'Interactive visualization of reflection and transmission at planar interfaces. Explore Brewster angle, total internal reflection, and multilayer stacks.',
+    color: '#3B82F6',
+    status: 'Live',
+    url: '#',
+  },
+  {
+    title: 'FDTD Playground',
+    description: 'Simplified 2D FDTD simulator in the browser. Watch electromagnetic waves propagate, scatter, and interfere in real time.',
+    color: '#10B981',
+    status: 'Coming soon',
+    url: '#',
+  },
+  {
+    title: 'Plasmon Resonance Explorer',
+    description: 'Tune the geometry of metallic nanoparticles and see how localized surface plasmon resonances shift. Compare Drude and experimental dielectric functions.',
+    color: '#F43F5E',
+    status: 'Coming soon',
+    url: '#',
+  },
+  {
+    title: 'Coupled Mode Theory',
+    description: 'Explore energy transfer between coupled resonators. Visualize normal mode splitting, Fano resonances, and electromagnetically induced transparency.',
+    color: '#7C3AED',
+    status: 'Coming soon',
+    url: '#',
+  },
+];
+---
+
+<Layout title="Widgets" description="Interactive simulation tools for nanophotonics — explore, learn, and play.">
+  <section class="page-hero">
+    <div class="container">
+      <h1>
+        Simulation
+        <span class="hero__gradient-text">playground</span>
+      </h1>
+      <p class="page-hero__subtitle">
+        Interactive tools built by our lab. Explore nanophotonic phenomena
+        right in your browser — no installation required.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widgets-grid">
+        {widgets.map(widget => (
+          <a href={widget.url} class="widget-card card" data-status={widget.status}>
+            <div class="widget-card__header">
+              <div class="widget-card__icon" style={`background: ${widget.color}15; color: ${widget.color}`}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+              </div>
+              <span class:list={['widget-status', { 'widget-status--live': widget.status === 'Live' }]}>
+                {widget.status}
+              </span>
+            </div>
+            <h3>{widget.title}</h3>
+            <p>{widget.description}</p>
+            {widget.status === 'Live' && (
+              <span class="widget-cta">
+                Launch simulator &rarr;
+              </span>
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero h1 {
+    margin-bottom: var(--space-md);
+  }
+
+  .page-hero__subtitle {
+    font-size: 1.25rem;
+    max-width: 600px;
+  }
+
+  .hero__gradient-text {
+    background: var(--spectrum);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .widget-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .widget-card[data-status="Coming soon"] {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  .widget-card[data-status="Coming soon"]:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .widget-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .widget-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .widget-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    background: var(--bg-muted);
+    color: var(--text-muted);
+  }
+
+  .widget-status--live {
+    background: #ECFDF5;
+    color: #059669;
+  }
+
+  .widget-card h3 {
+    font-size: 1.125rem;
+  }
+
+  .widget-card p {
+    font-size: 0.9375rem;
+    flex-grow: 1;
+  }
+
+  .widget-cta {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--primary);
+    transition: gap 0.2s;
+  }
+
+  .widget-card:hover .widget-cta {
+    color: var(--primary-dark);
+  }
+
+  @media (max-width: 768px) {
+    .widgets-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

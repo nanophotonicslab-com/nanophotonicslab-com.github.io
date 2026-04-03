@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const publications = [
+  {
+    year: 2026,
+    papers: [
+      {
+        title: 'Enhanced Light Emission from Plasmonic Nanoantenna Arrays',
+        authors: 'A. Author, B. Coauthor, C. Supervisor',
+        journal: 'Nature Photonics',
+        volume: '20, 134–141',
+        doi: '10.1038/s41566-026-0001-0',
+      },
+      {
+        title: 'Topological Edge States in Two-Dimensional Photonic Crystals',
+        authors: 'D. Student, A. Author, C. Supervisor',
+        journal: 'Physical Review Letters',
+        volume: '136, 053901',
+        doi: '10.1103/PhysRevLett.136.053901',
+      },
+    ],
+  },
+  {
+    year: 2025,
+    papers: [
+      {
+        title: 'Machine Learning Inverse Design of Plasmonic Nanostructures',
+        authors: 'E. Postdoc, A. Author, C. Supervisor',
+        journal: 'ACS Photonics',
+        volume: '12, 2301–2310',
+        doi: '10.1021/acsphotonics.5b00123',
+      },
+      {
+        title: 'Ultrafast Dynamics of Gap Plasmons in Sub-Nanometer Cavities',
+        authors: 'B. Coauthor, F. Collaborator, C. Supervisor',
+        journal: 'Nano Letters',
+        volume: '25, 4521–4530',
+        doi: '10.1021/acs.nanolett.5b00456',
+      },
+      {
+        title: 'Purcell Enhancement of Quantum Emitters Coupled to Dielectric Nanoantennas',
+        authors: 'G. PhDStudent, A. Author, C. Supervisor',
+        journal: 'Physical Review B',
+        volume: '112, 195422',
+        doi: '10.1103/PhysRevB.112.195422',
+      },
+    ],
+  },
+  {
+    year: 2024,
+    papers: [
+      {
+        title: 'Colloidal Self-Assembly of Photonic Crystals with Controlled Defects',
+        authors: 'A. Author, H. LabMember, C. Supervisor',
+        journal: 'Advanced Materials',
+        volume: '36, 2312456',
+        doi: '10.1002/adma.202312456',
+      },
+    ],
+  },
+];
+---
+
+<Layout title="Publications">
+  <section class="page-hero">
+    <div class="container">
+      <h1>Publications</h1>
+      <p class="page-hero__subtitle">
+        Selected peer-reviewed publications from our group.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      {publications.map(group => (
+        <div class="pub-year-group">
+          <h2 class="pub-year">{group.year}</h2>
+          <div class="pub-list">
+            {group.papers.map(paper => (
+              <article class="pub-item">
+                <h3 class="pub-title">
+                  <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noopener">
+                    {paper.title}
+                  </a>
+                </h3>
+                <p class="pub-authors">{paper.authors}</p>
+                <p class="pub-journal">
+                  <em>{paper.journal}</em> {paper.volume}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero h1 {
+    margin-bottom: var(--space-md);
+  }
+
+  .page-hero__subtitle {
+    font-size: 1.25rem;
+    max-width: 600px;
+  }
+
+  .pub-year-group {
+    margin-bottom: var(--space-xl);
+  }
+
+  .pub-year {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--bg-muted);
+  }
+
+  .pub-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .pub-item {
+    padding-left: var(--space-lg);
+    border-left: 3px solid var(--bg-muted);
+    transition: border-color 0.2s;
+  }
+
+  .pub-item:hover {
+    border-left-color: var(--primary);
+  }
+
+  .pub-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+  }
+
+  .pub-title a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .pub-title a:hover {
+    color: var(--primary);
+  }
+
+  .pub-authors {
+    font-size: 0.9375rem;
+    color: var(--text-soft);
+    margin-bottom: var(--space-xs);
+  }
+
+  .pub-journal {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+</style>
