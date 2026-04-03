@@ -58,6 +58,16 @@ export class PyodideBridge {
     });
   }
 
+  async generateMesh(params: SolveParams): Promise<MeshData> {
+    if (!this.worker) throw new Error('Worker not initialized');
+
+    return new Promise<MeshData>((resolve, reject) => {
+      this.pendingResolve = resolve;
+      this.pendingReject = reject;
+      this.worker!.postMessage({ type: 'generate-mesh', params });
+    });
+  }
+
   async surfaceFields(wavelength: number): Promise<Float64Array> {
     if (!this.worker) throw new Error('Worker not initialized');
 
@@ -88,6 +98,10 @@ export class PyodideBridge {
         break;
       case 'solve-progress':
         this.onSolveProgress(msg.index, msg.total, msg.wavelength);
+        break;
+      case 'mesh-result':
+        this.pendingResolve?.(msg.mesh);
+        this.pendingResolve = null;
         break;
       case 'solve-result':
         this.pendingResolve?.(msg);

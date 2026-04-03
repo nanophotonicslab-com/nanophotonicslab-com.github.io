@@ -310,6 +310,11 @@ export async function initBEMSolver() {
       state.set('solver', { status: 'loading', progress: pct, message: stage });
     });
     state.set('solver', { status: 'idle', progress: 1, message: '' });
+
+    // Show initial mesh preview
+    const params = readParams();
+    const mesh = await bridge.generateMesh(params);
+    state.set('results', { mesh });
   } catch (err: any) {
     state.set('solver', { status: 'error', progress: 0, message: `Failed to load: ${err.message}` });
   }

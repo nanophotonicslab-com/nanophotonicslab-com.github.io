@@ -89,7 +89,6 @@ async function solveSpectrum(params: SolveParams) {
     const script = `
 import nanobem as nb
 import numpy as np
-from js import _post_progress
 
 ${meshLine}
 
@@ -181,6 +180,40 @@ enh_list = enhancement.tolist()
   }
 }
 
+async function generateMesh(params: SolveParams) {
+  try {
+    const meshLine = params.shape === 'sphere'
+      ? `mesh = nb.sphere_mesh(radius=${params.radius}, subdivisions=${params.subdivisions})`
+      : `mesh = nb.rod_mesh(radius=${params.radius}, aspect_ratio=${params.aspectRatio}, subdivisions=${params.subdivisions})`;
+
+    await pyodide.runPythonAsync(`
+import nanobem as nb
+${meshLine}
+verts = mesh.vertices.ravel().tolist()
+faces = mesh.faces.ravel().tolist()
+n_faces = mesh.n_faces
+n_verts = mesh.n_vertices
+    `);
+
+    const verts = pyodide.globals.get('verts').toJs();
+    const faces = pyodide.globals.get('faces').toJs();
+    const nFaces = pyodide.globals.get('n_faces');
+    const nVerts = pyodide.globals.get('n_verts');
+
+    post({
+      type: 'mesh-result',
+      mesh: {
+        vertices: new Float64Array(verts),
+        faces: new Int32Array(faces),
+        nFaces,
+        nVertices: nVerts,
+      },
+    });
+  } catch (e: any) {
+    post({ type: 'solve-error', error: e.message || String(e) });
+  }
+}
+
 // Message handler
 let lastParams: SolveParams | null = null;
 
@@ -189,6 +222,10 @@ self.onmessage = async (e: MessageEvent) => {
   switch (msg.type) {
     case 'init':
       await init();
+      break;
+    case 'generate-mesh':
+      lastParams = msg.params;
+      await generateMesh(msg.params);
       break;
     case 'solve-spectrum':
       lastParams = msg.params;
