@@ -101,18 +101,18 @@ export async function initBEMSolver() {
     });
   }
 
-  function bindSelect(id: string, stateKey: keyof AppState, field: string) {
+  function bindSelect(id: string, stateKey: keyof AppState, field: string, transform: (v: string) => any = (v) => v) {
     const sel = document.getElementById(id) as HTMLSelectElement | null;
     if (!sel) return;
     sel.addEventListener('change', () => {
-      state.set(stateKey, { [field]: sel.value } as any);
+      state.set(stateKey, { [field]: transform(sel.value) } as any);
     });
   }
 
   // Geometry
   bindSelect('shape-select', 'geometry', 'shape');
   bindInput('radius-input', 'geometry', 'radius');
-  bindInput('subdivisions-input', 'geometry', 'subdivisions', parseInt);
+  bindSelect('subdivisions-input', 'geometry', 'subdivisions', parseInt);
 
   // Material
   bindSelect('material-select', 'material', 'key');
@@ -124,6 +124,19 @@ export async function initBEMSolver() {
   bindInput('wl-min-input', 'wavelength', 'min');
   bindInput('wl-max-input', 'wavelength', 'max');
   bindInput('wl-npoints-input', 'wavelength', 'npoints', parseInt);
+
+  // --- Regenerate mesh when geometry changes ---
+  let meshDebounce: ReturnType<typeof setTimeout> | null = null;
+  state.subscribe('geometry', () => {
+    if (meshDebounce) clearTimeout(meshDebounce);
+    meshDebounce = setTimeout(async () => {
+      if (state.get('solver').status === 'loading') return;
+      try {
+        const mesh = await bridge.generateMesh(readParams());
+        state.set('results', { mesh, enhancement: null });
+      } catch { /* ignore if worker not ready */ }
+    }, 300);
+  });
 
   // --- Solve button ---
   solveBtn.addEventListener('click', () => solve());
