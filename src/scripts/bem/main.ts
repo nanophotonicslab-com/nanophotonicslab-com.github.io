@@ -183,12 +183,26 @@ export async function initBEMSolver() {
     state.set('solver', { status: 'solving', progress: 0, message: `Solving 0/${nLam} wavelengths...` });
     state.set('results', { spectra: null, enhancement: null, selectedWavelength: null, timing: null });
 
+    // Incremental spectrum — grows point by point
+    const partialSpectra = {
+      wavelengths: [] as number[],
+      extinction: [] as number[],
+      scattering: [] as number[],
+      absorption: [] as number[],
+    };
+
     try {
-      const result = await bridge.solveSpectrum(params, (i, n, lam) => {
+      const result = await bridge.solveSpectrum(params, (i, n, lam, ext, sca, abs) => {
         state.set('solver', {
           progress: i / n,
           message: `Wavelength ${i}/${n} (${lam.toFixed(0)}nm)`,
         });
+        // Update spectrum incrementally
+        partialSpectra.wavelengths.push(lam);
+        partialSpectra.extinction.push(ext);
+        partialSpectra.scattering.push(sca);
+        partialSpectra.absorption.push(abs);
+        state.set('results', { spectra: { ...partialSpectra } });
       });
 
       const dt = (performance.now() - t0) / 1000;

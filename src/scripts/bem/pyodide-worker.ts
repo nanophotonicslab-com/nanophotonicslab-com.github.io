@@ -70,9 +70,9 @@ print(f"nanobem loaded: {nb.sphere_mesh(radius=10, subdivisions=1).n_faces} face
 
 async function solveSpectrum(params: SolveParams) {
   try {
-    // Inject progress callback into Python
-    pyodide.globals.set('_post_progress', (i: number, n: number, lam: number) => {
-      post({ type: 'solve-progress', index: i, total: n, wavelength: lam });
+    // Inject progress callback that also sends per-wavelength results
+    pyodide.globals.set('_post_progress', (i: number, n: number, lam: number, ext: number, sca: number, abs: number) => {
+      post({ type: 'solve-progress', index: i, total: n, wavelength: lam, ext, sca, abs });
     });
 
     // Build the Python solve script
@@ -104,7 +104,7 @@ for i, lam in enumerate(wavelengths):
     c_ext.append(result.extinction)
     c_sca.append(result.scattering)
     c_abs.append(result.absorption)
-    _post_progress(i + 1, len(wavelengths), lam)
+    _post_progress(i + 1, len(wavelengths), float(lam), result.extinction, result.scattering, result.absorption)
 
 # Export mesh data
 verts = mesh.vertices.ravel().tolist()

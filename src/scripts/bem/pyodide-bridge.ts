@@ -20,7 +20,7 @@ export interface SolveResult {
 }
 
 type InitProgressFn = (stage: string, pct: number) => void;
-type SolveProgressFn = (index: number, total: number, wavelength: number) => void;
+type SolveProgressFn = (index: number, total: number, wavelength: number, ext: number, sca: number, abs: number) => void;
 
 export class PyodideBridge {
   private worker: Worker | null = null;
@@ -97,7 +97,7 @@ export class PyodideBridge {
         this.pendingReject = null;
         break;
       case 'solve-progress':
-        this.onSolveProgress(msg.index, msg.total, msg.wavelength);
+        this.onSolveProgress(msg.index, msg.total, msg.wavelength, msg.ext, msg.sca, msg.abs);
         break;
       case 'mesh-result':
         this.pendingResolve?.(msg.mesh);
