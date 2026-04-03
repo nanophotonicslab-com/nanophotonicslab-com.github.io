@@ -4,6 +4,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { viridis } from './colormap';
 
+const MATERIAL_COLORS: Record<string, [number, number, number]> = {
+  au: [0.83, 0.69, 0.22],   // gold
+  ag: [0.75, 0.75, 0.78],   // silver
+  custom: [0.65, 0.71, 0.95], // indigo default
+};
+
 export class BEMViewport {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
@@ -12,6 +18,7 @@ export class BEMViewport {
   private meshObj: THREE.Mesh | null = null;
   private wireframe: THREE.LineSegments | null = null;
   private showWireframe = false;
+  private materialKey = 'au';
 
   constructor(container: HTMLElement) {
     const w = container.clientWidth;
@@ -69,10 +76,10 @@ export class BEMViewport {
         positions[f * 9 + v * 3 + 0] = vertices[vi * 3 + 0];
         positions[f * 9 + v * 3 + 1] = vertices[vi * 3 + 1];
         positions[f * 9 + v * 3 + 2] = vertices[vi * 3 + 2];
-        // Default: light indigo
-        colors[f * 9 + v * 3 + 0] = 0.65;
-        colors[f * 9 + v * 3 + 1] = 0.71;
-        colors[f * 9 + v * 3 + 2] = 0.95;
+        const [cr, cg, cb] = MATERIAL_COLORS[this.materialKey] ?? MATERIAL_COLORS.custom;
+        colors[f * 9 + v * 3 + 0] = cr;
+        colors[f * 9 + v * 3 + 1] = cg;
+        colors[f * 9 + v * 3 + 2] = cb;
       }
     }
 
@@ -120,6 +127,17 @@ export class BEMViewport {
       for (let v = 0; v < 3; v++) {
         colors.setXYZ(f * 3 + v, r, g, b);
       }
+    }
+    colors.needsUpdate = true;
+  }
+
+  setMaterial(key: string): void {
+    this.materialKey = key;
+    if (!this.meshObj) return;
+    const colors = this.meshObj.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const [cr, cg, cb] = MATERIAL_COLORS[key] ?? MATERIAL_COLORS.custom;
+    for (let i = 0; i < colors.count; i++) {
+      colors.setXYZ(i, cr, cg, cb);
     }
     colors.needsUpdate = true;
   }

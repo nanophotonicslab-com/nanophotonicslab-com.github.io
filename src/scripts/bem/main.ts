@@ -125,6 +125,11 @@ export async function initBEMSolver() {
   bindInput('wl-max-input', 'wavelength', 'max');
   bindInput('wl-npoints-input', 'wavelength', 'npoints', parseInt);
 
+  // --- Update mesh color when material changes ---
+  state.subscribe('material', (m) => {
+    viewport?.setMaterial(m.key);
+  });
+
   // --- Regenerate mesh when geometry changes ---
   let meshDebounce: ReturnType<typeof setTimeout> | null = null;
   state.subscribe('geometry', () => {
