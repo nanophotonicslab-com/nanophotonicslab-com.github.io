@@ -17,6 +17,7 @@ export async function initBEMSolver() {
   const progressText = el('progress-text') as HTMLElement;
   const statusText = el('status-text') as HTMLElement;
   const solveBtn = el('solve-btn') as HTMLButtonElement;
+  const cancelBtn = el('cancel-btn') as HTMLButtonElement;
   const viewportContainer = el('viewport-container');
   const colorbarCanvas = el('colorbar') as HTMLCanvasElement;
 
@@ -28,6 +29,7 @@ export async function initBEMSolver() {
     progressBar.style.width = `${s.progress * 100}%`;
     progressText.textContent = s.message;
     solveBtn.disabled = s.status === 'loading' || s.status === 'solving';
+    cancelBtn.style.display = s.status === 'solving' ? '' : 'none';
 
     if (s.status === 'idle') statusText.textContent = 'Ready';
     else if (s.status === 'loading') statusText.textContent = s.message;
@@ -144,8 +146,20 @@ export async function initBEMSolver() {
     }, 300);
   });
 
-  // --- Solve button ---
+  // --- Solve / Cancel buttons ---
   solveBtn.addEventListener('click', () => solve());
+  cancelBtn.addEventListener('click', async () => {
+    bridge.terminate();
+    state.set('solver', { status: 'loading', progress: 0, message: 'Restarting solver...' });
+    try {
+      await bridge.init((stage, pct) => {
+        state.set('solver', { status: 'loading', progress: pct, message: stage });
+      });
+      state.set('solver', { status: 'idle', progress: 1, message: 'Cancelled' });
+    } catch (err: any) {
+      state.set('solver', { status: 'error', progress: 0, message: err.message });
+    }
+  });
 
   // --- Medium presets ---
   document.querySelectorAll('.preset-btn').forEach(btn => {
