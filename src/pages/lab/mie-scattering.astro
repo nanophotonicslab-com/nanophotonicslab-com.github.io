@@ -112,6 +112,15 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <!-- Dynamic extra shells container -->
+          <div id="extra-shells" class="cs-only" style="display:none"></div>
+
+          <!-- Add shell button -->
+          <div class="param cs-only" id="add-shell-wrap" style="display:none">
+            <button id="add-shell-btn" class="chart-tool-btn" style="width:100%">+ Add shell</button>
+            <span id="shell-limit-note" class="material-ref" style="display:none">Maximum 5 shells reached. Need more? <a href="mailto:info@nanophotonicslab.com">Contact us</a>.</span>
+          </div>
+
           <div class="param">
             <div class="param-header">
               <label>n<sub>host</sub></label>
@@ -245,6 +254,12 @@ import Layout from '../../layouts/Layout.astro';
   .param-select:focus { border-color: var(--primary-light); }
   .material-ref { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
   #eps-group.hidden { display: none; }
+  .shell-section { display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); }
+  .shell-header { display: flex; justify-content: space-between; align-items: center; }
+  .shell-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+  .remove-shell-btn { padding: 0.15rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .remove-shell-btn:hover { border-color: #ef4444; color: #ef4444; }
+  .shell-eps-group.hidden { display: none !important; }
   .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
   .plot-tab { flex: 1; padding: 0.35rem 0.4rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.75rem; font-weight: 500; cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center; }
   .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
@@ -311,6 +326,16 @@ import Layout from '../../layouts/Layout.astro';
     lambda: Float64Array; energy: Float64Array;
     csca: Float64Array; cext: Float64Array; cabs: Float64Array; qsca: Float64Array;
   }
+  interface ShellLayer {
+    getDielectric: (lambdaNm: number) => [number, number];
+    radiusNm: number;
+  }
+  const MAX_SHELLS = 5;
+  // Effective D_n arrays for multi-shell recursion (TM and TE modes)
+  const _dEffARe = new Float64Array(MAX_N + 2);
+  const _dEffAIm = new Float64Array(MAX_N + 2);
+  const _dEffBRe = new Float64Array(MAX_N + 2);
+  const _dEffBIm = new Float64Array(MAX_N + 2);
 
   function computeMie(
     getDielectric: (lambdaNm: number) => [number, number],
@@ -464,14 +489,17 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  function computeMieCoreShell(
-    getCoreDielectric: (lambdaNm: number) => [number, number],
-    getShellDielectric: (lambdaNm: number) => [number, number],
-    coreRadiusNm: number, outerRadiusNm: number,
+  /**
+   * Multi-shell Mie scattering using recursive effective logarithmic derivatives.
+   * Layers are ordered inside-out: layers[0] = core, layers[1] = first shell, etc.
+   * Generalizes Bohren-Huffman Ch. 4 to N concentric shells (Wu & Wang 1991).
+   */
+  function computeMieMultiShell(
+    layers: ShellLayer[],
     nHost: number, lambdaMin: number, lambdaMax: number,
   ): MieResult {
-    const rCore = coreRadiusNm * 1e-9;
-    const rOuter = outerRadiusNm * 1e-9;
+    const N = layers.length;
+    const outerRadiusNm = layers[N - 1].radiusNm;
     const lambda = new Float64Array(NUM_POINTS);
     const csca = new Float64Array(NUM_POINTS);
     const cext = new Float64Array(NUM_POINTS);
@@ -483,38 +511,119 @@ import Layout from '../../layouts/Layout.astro';
       lambda[i] = lambdaMin + (lambdaMax - lambdaMin) * i / (NUM_POINTS - 1);
 
     for (let i = 0; i < NUM_POINTS; i++) {
-      const [n1, k1] = getCoreDielectric(lambda[i]);
-      const [n2, k2] = getShellDielectric(lambda[i]);
-      // Relative refractive indices: m1 = n_core/n_host, m2 = n_shell/n_host
-      const m1Re = n1 / nHost, m1Im = k1 / nHost;
-      const m2Re = n2 / nHost, m2Im = k2 / nHost;
+      // Refractive indices for each layer (relative to host)
+      const mRe: number[] = [], mIm: number[] = [], radii: number[] = [];
+      let maxMAbs = 0;
+      for (let j = 0; j < N; j++) {
+        const [nj, kj] = layers[j].getDielectric(lambda[i]);
+        mRe.push(nj / nHost); mIm.push(kj / nHost);
+        radii.push(layers[j].radiusNm * 1e-9);
+        const ma = Math.sqrt((nj / nHost) ** 2 + (kj / nHost) ** 2);
+        if (ma > maxMAbs) maxMAbs = ma;
+      }
 
       const lm = lambda[i] * 1e-9;
       const k0 = 2 * Math.PI * nHost / lm;
-      const x = k0 * rOuter;  // outer size parameter
-      const y = k0 * rCore;   // core size parameter
-
+      const x = k0 * radii[N - 1];
       if (x < 1e-12) { csca[i] = 0; cext[i] = 0; cabs[i] = 0; continue; }
 
       const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
-      const m1Abs = Math.sqrt(m1Re * m1Re + m1Im * m1Im);
-      const m2Abs = Math.sqrt(m2Re * m2Re + m2Im * m2Im);
-      const nmx = Math.max(nmax, Math.ceil(Math.max(m1Abs, m2Abs) * x)) + 16;
+      const nmx = Math.max(nmax, Math.ceil(maxMAbs * x)) + 16;
 
-      // Complex products: m1*y, m2*y, m2*x
-      const m1yRe = m1Re * y, m1yIm = m1Im * y;
-      const m2yRe = m2Re * y, m2yIm = m2Im * y;
-      const m2xRe = m2Re * x, m2xIm = m2Im * x;
+      // Step 1: Core — D_n(m[0]*k0*r[0])
+      const c0Re = mRe[0] * k0 * radii[0], c0Im = mIm[0] * k0 * radii[0];
+      downwardD(c0Re, c0Im, nmax, nmx, _D1Re, _D1Im);
+      for (let n = 0; n <= nmax; n++) {
+        _dEffARe[n] = _D1Re[n]; _dEffAIm[n] = _D1Im[n];
+        _dEffBRe[n] = _D1Re[n]; _dEffBIm[n] = _D1Im[n];
+      }
 
-      const m1M2 = m1Re * m1Re + m1Im * m1Im;
-      const m2M2 = m2Re * m2Re + m2Im * m2Im;
+      // Step 2: Propagate through each shell (j = 1 … N-1)
+      for (let j = 1; j < N; j++) {
+        const rIn = radii[j - 1], rOut = radii[j];
+        // v = m[j]*k0*rIn  (shell j evaluated at inner boundary)
+        const vRe = mRe[j] * k0 * rIn, vIm = mIm[j] * k0 * rIn;
+        // u = m[j]*k0*rOut (shell j evaluated at outer boundary)
+        const uRe = mRe[j] * k0 * rOut, uIm = mIm[j] * k0 * rOut;
+        const mjM2 = mRe[j] * mRe[j] + mIm[j] * mIm[j];
 
-      // Downward recurrence for D_n at m1*y, m2*y, m2*x
-      downwardD(m1yRe, m1yIm, nmax, nmx, _D1Re, _D1Im);       // D_n(m1*y)
-      downwardD(m2yRe, m2yIm, nmax, nmx, _D2yRe, _D2yIm);     // D_n(m2*y)
-      downwardD(m2xRe, m2xIm, nmax, nmx, _DRe, _DIm);          // D_n(m2*x)
+        // D_n at v and u
+        downwardD(vRe, vIm, nmax, nmx, _D2yRe, _D2yIm);
+        downwardD(uRe, uIm, nmax, nmx, _DRe, _DIm);
+        // ψ,χ at v and u
+        if (rIn > 1e-14) besselUp(vRe, vIm, nmax, _psiVRe, _psiVIm, _chiVRe, _chiVIm);
+        besselUp(uRe, uIm, nmax, _psiURe, _psiUIm, _chiURe, _chiUIm);
 
-      // Riccati-Bessel functions at real x (outer)
+        for (let n = 1; n <= nmax; n++) {
+          // --- Inner boundary (v): mixing coefficients γ ---
+          // ψ·χ at v, 1/(ψ·χ)
+          const pcvRe = _psiVRe[n] * _chiVRe[n] - _psiVIm[n] * _chiVIm[n];
+          const pcvIm = _psiVRe[n] * _chiVIm[n] + _psiVIm[n] * _chiVRe[n];
+          const pcvM = pcvRe * pcvRe + pcvIm * pcvIm;
+          // D̃(v)
+          const DtVRe = _D2yRe[n] - pcvRe / pcvM, DtVIm = _D2yIm[n] + pcvIm / pcvM;
+          // -ψ/χ at v
+          const cvM = _chiVRe[n] * _chiVRe[n] + _chiVIm[n] * _chiVIm[n];
+          const negPoCRe = -(_psiVRe[n] * _chiVRe[n] + _psiVIm[n] * _chiVIm[n]) / cvM;
+          const negPoCIm = -(_psiVIm[n] * _chiVRe[n] - _psiVRe[n] * _chiVIm[n]) / cvM;
+
+          // m[j-1]·D_eff (TM input)
+          const mPDaRe = mRe[j-1] * _dEffARe[n] - mIm[j-1] * _dEffAIm[n];
+          const mPDaIm = mRe[j-1] * _dEffAIm[n] + mIm[j-1] * _dEffARe[n];
+          // m[j-1]·D_eff / m[j]
+          const mPDa_mRe = (mPDaRe * mRe[j] + mPDaIm * mIm[j]) / mjM2;
+          const mPDa_mIm = (mPDaIm * mRe[j] - mPDaRe * mIm[j]) / mjM2;
+
+          // TM: γ_a
+          let nR = mPDa_mRe - _D2yRe[n], nI = mPDa_mIm - _D2yIm[n];
+          let dR = mPDa_mRe - DtVRe, dI = mPDa_mIm - DtVIm;
+          let dM = dR * dR + dI * dI;
+          let rR = (nR * dR + nI * dI) / dM, rI = (nI * dR - nR * dI) / dM;
+          const gaRe = negPoCRe * rR - negPoCIm * rI;
+          const gaIm = negPoCRe * rI + negPoCIm * rR;
+
+          // TE: γ_b — uses m[j-1]·D_eff_TE and m[j]·D(v)
+          const mPDbRe = mRe[j-1] * _dEffBRe[n] - mIm[j-1] * _dEffBIm[n];
+          const mPDbIm = mRe[j-1] * _dEffBIm[n] + mIm[j-1] * _dEffBRe[n];
+          const mjDvRe = mRe[j] * _D2yRe[n] - mIm[j] * _D2yIm[n];
+          const mjDvIm = mRe[j] * _D2yIm[n] + mIm[j] * _D2yRe[n];
+          const mjDtRe = mRe[j] * DtVRe - mIm[j] * DtVIm;
+          const mjDtIm = mRe[j] * DtVIm + mIm[j] * DtVRe;
+          nR = mPDbRe - mjDvRe; nI = mPDbIm - mjDvIm;
+          dR = mPDbRe - mjDtRe; dI = mPDbIm - mjDtIm;
+          dM = dR * dR + dI * dI;
+          rR = (nR * dR + nI * dI) / dM; rI = (nI * dR - nR * dI) / dM;
+          const gbRe = negPoCRe * rR - negPoCIm * rI;
+          const gbIm = negPoCRe * rI + negPoCIm * rR;
+
+          // --- Outer boundary (u): propagate D_eff ---
+          const puM = _psiURe[n] * _psiURe[n] + _psiUIm[n] * _psiUIm[n];
+          const RuRe = (_chiURe[n] * _psiURe[n] + _chiUIm[n] * _psiUIm[n]) / puM;
+          const RuIm = (_chiUIm[n] * _psiURe[n] - _chiURe[n] * _psiUIm[n]) / puM;
+          const pcuRe = _psiURe[n] * _chiURe[n] - _psiUIm[n] * _chiUIm[n];
+          const pcuIm = _psiURe[n] * _chiUIm[n] + _psiUIm[n] * _chiURe[n];
+          const pcuM = pcuRe * pcuRe + pcuIm * pcuIm;
+          const DtURe = _DRe[n] - pcuRe / pcuM, DtUIm = _DIm[n] + pcuIm / pcuM;
+
+          // D_eff = [D(u) + γ·R·D̃(u)] / [1 + γ·R]
+          // TM
+          let grR = gaRe * RuRe - gaIm * RuIm, grI = gaRe * RuIm + gaIm * RuRe;
+          let grdR = grR * DtURe - grI * DtUIm, grdI = grR * DtUIm + grI * DtURe;
+          let eNR = _DRe[n] + grdR, eNI = _DIm[n] + grdI;
+          let eDR = 1 + grR, eDI = grI, eDM = eDR * eDR + eDI * eDI;
+          _dEffARe[n] = (eNR * eDR + eNI * eDI) / eDM;
+          _dEffAIm[n] = (eNI * eDR - eNR * eDI) / eDM;
+          // TE
+          grR = gbRe * RuRe - gbIm * RuIm; grI = gbRe * RuIm + gbIm * RuRe;
+          grdR = grR * DtURe - grI * DtUIm; grdI = grR * DtUIm + grI * DtURe;
+          eNR = _DRe[n] + grdR; eNI = _DIm[n] + grdI;
+          eDR = 1 + grR; eDI = grI; eDM = eDR * eDR + eDI * eDI;
+          _dEffBRe[n] = (eNR * eDR + eNI * eDI) / eDM;
+          _dEffBIm[n] = (eNI * eDR - eNR * eDI) / eDM;
+        }
+      }
+
+      // Step 3: Final a_n, b_n at real outer boundary x
       const sinX = Math.sin(x), cosX = Math.cos(x);
       _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
       for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
@@ -526,97 +635,26 @@ import Layout from '../../layouts/Layout.astro';
         _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1];
       }
 
-      // ψ_n, χ_n at complex v = m2*y and u = m2*x (upward recurrence)
-      if (y > 1e-14) besselUp(m2yRe, m2yIm, nmax, _psiVRe, _psiVIm, _chiVRe, _chiVIm);
-      besselUp(m2xRe, m2xIm, nmax, _psiURe, _psiUIm, _chiURe, _chiUIm);
-
+      const moRe = mRe[N - 1], moIm = mIm[N - 1];
+      const moM2 = moRe * moRe + moIm * moIm;
       let sumSca = 0, sumExt = 0;
       for (let n = 1; n <= nmax; n++) {
         const nx = n / x;
-        // --- Core matching: mixing coefficients γ_a (TM) and γ_b (TE) ---
-        // Wronskian W[ψ,χ] = -1 → D̃(z) = D(z) - 1/(ψ(z)·χ(z))
-        // γ = -ψ(v)/χ(v) · [numerator] / [denominator]  where v = m2*y
-
-        // ψ(v)·χ(v) and 1/(ψ·χ) at v = m2*y
-        const pcvRe = _psiVRe[n] * _chiVRe[n] - _psiVIm[n] * _chiVIm[n];
-        const pcvIm = _psiVRe[n] * _chiVIm[n] + _psiVIm[n] * _chiVRe[n];
-        const pcvM = pcvRe * pcvRe + pcvIm * pcvIm;
-        const ipcvRe = pcvRe / pcvM, ipcvIm = -pcvIm / pcvM;
-        // D̃(v) = D(v) - 1/(ψ·χ)(v)
-        const DtVRe = _D2yRe[n] - ipcvRe, DtVIm = _D2yIm[n] - ipcvIm;
-
-        // -ψ(v)/χ(v)
-        const cvM = _chiVRe[n] * _chiVRe[n] + _chiVIm[n] * _chiVIm[n];
-        const negPoCRe = -(_psiVRe[n] * _chiVRe[n] + _psiVIm[n] * _chiVIm[n]) / cvM;
-        const negPoCIm = -(_psiVIm[n] * _chiVRe[n] - _psiVRe[n] * _chiVIm[n]) / cvM;
-
-        // m1·D(m1*y)
-        const m1DwRe = m1Re * _D1Re[n] - m1Im * _D1Im[n];
-        const m1DwIm = m1Re * _D1Im[n] + m1Im * _D1Re[n];
-        // m1·D(m1*y) / m2
-        const m1Dw_m2Re = (m1DwRe * m2Re + m1DwIm * m2Im) / m2M2;
-        const m1Dw_m2Im = (m1DwIm * m2Re - m1DwRe * m2Im) / m2M2;
-
-        // TM: γ_a = -ψ/χ · [m1·D(w)/m2 - D(v)] / [m1·D(w)/m2 - D̃(v)]
-        let nR = m1Dw_m2Re - _D2yRe[n], nI = m1Dw_m2Im - _D2yIm[n];
-        let dR = m1Dw_m2Re - DtVRe, dI = m1Dw_m2Im - DtVIm;
-        let dM = dR * dR + dI * dI;
-        let rR = (nR * dR + nI * dI) / dM, rI = (nI * dR - nR * dI) / dM;
-        const gaRe = negPoCRe * rR - negPoCIm * rI;
-        const gaIm = negPoCRe * rI + negPoCIm * rR;
-
-        // TE: γ_b = -ψ/χ · [m1·D(w) - m2·D(v)] / [m1·D(w) - m2·D̃(v)]
-        const m2DvRe = m2Re * _D2yRe[n] - m2Im * _D2yIm[n];
-        const m2DvIm = m2Re * _D2yIm[n] + m2Im * _D2yRe[n];
-        const m2DtRe = m2Re * DtVRe - m2Im * DtVIm;
-        const m2DtIm = m2Re * DtVIm + m2Im * DtVRe;
-        nR = m1DwRe - m2DvRe; nI = m1DwIm - m2DvIm;
-        dR = m1DwRe - m2DtRe; dI = m1DwIm - m2DtIm;
-        dM = dR * dR + dI * dI;
-        rR = (nR * dR + nI * dI) / dM; rI = (nI * dR - nR * dI) / dM;
-        const gbRe = negPoCRe * rR - negPoCIm * rI;
-        const gbIm = negPoCRe * rI + negPoCIm * rR;
-
-        // --- Effective D_n at outer boundary (u = m2*x) ---
-        // R_x = χ(u)/ψ(u)
-        const puM = _psiURe[n] * _psiURe[n] + _psiUIm[n] * _psiUIm[n];
-        const RxRe = (_chiURe[n] * _psiURe[n] + _chiUIm[n] * _psiUIm[n]) / puM;
-        const RxIm = (_chiUIm[n] * _psiURe[n] - _chiURe[n] * _psiUIm[n]) / puM;
-        // 1/(ψ·χ) at u
-        const pcuRe = _psiURe[n] * _chiURe[n] - _psiUIm[n] * _chiUIm[n];
-        const pcuIm = _psiURe[n] * _chiUIm[n] + _psiUIm[n] * _chiURe[n];
-        const pcuM = pcuRe * pcuRe + pcuIm * pcuIm;
-        // D̃(u) = D(u) - 1/(ψ·χ)(u)
-        const DtURe = _DRe[n] - pcuRe / pcuM, DtUIm = _DIm[n] + pcuIm / pcuM;
-
-        // D^eff = [D(u) + γ·R·D̃(u)] / [1 + γ·R]  (applied for TM and TE)
-        function effDn(gR2: number, gI2: number): [number, number] {
-          const grR = gR2 * RxRe - gI2 * RxIm, grI = gR2 * RxIm + gI2 * RxRe;
-          const grdR = grR * DtURe - grI * DtUIm, grdI = grR * DtUIm + grI * DtURe;
-          const eNR = _DRe[n] + grdR, eNI = _DIm[n] + grdI;
-          const eDR = 1 + grR, eDI = grI, eDM = eDR * eDR + eDI * eDI;
-          return [(eNR * eDR + eNI * eDI) / eDM, (eNI * eDR - eNR * eDI) / eDM];
-        }
-        const [DaRe, DaIm] = effDn(gaRe, gaIm);
-        const [DbRe, DbIm] = effDn(gbRe, gbIm);
-
-        // --- a_n (TM): A = D_a^eff / m2 + n/x ---
-        const DaOmRe = (DaRe * m2Re + DaIm * m2Im) / m2M2;
-        const DaOmIm = (DaIm * m2Re - DaRe * m2Im) / m2M2;
+        // a_n (TM): A = D_eff_TM / m_out + n/x
+        const DaOmRe = (_dEffARe[n] * moRe + _dEffAIm[n] * moIm) / moM2;
+        const DaOmIm = (_dEffAIm[n] * moRe - _dEffARe[n] * moIm) / moM2;
         const ARe = DaOmRe + nx, AIm = DaOmIm;
         const anNRe = ARe * _psiX[n] - _psiX[n - 1], anNIm = AIm * _psiX[n];
         const anDRe = (ARe * _xiRe[n] - AIm * _xiIm[n]) - _xiRe[n - 1];
         const anDIm = (ARe * _xiIm[n] + AIm * _xiRe[n]) - _xiIm[n - 1];
-
-        // --- b_n (TE): B = m2 · D_b^eff + n/x ---
-        const m2DbRe = m2Re * DbRe - m2Im * DbIm;
-        const m2DbIm = m2Re * DbIm + m2Im * DbRe;
-        const BRe = m2DbRe + nx, BIm = m2DbIm;
+        // b_n (TE): B = m_out · D_eff_TE + n/x
+        const mDbRe = moRe * _dEffBRe[n] - moIm * _dEffBIm[n];
+        const mDbIm = moRe * _dEffBIm[n] + moIm * _dEffBRe[n];
+        const BRe = mDbRe + nx, BIm = mDbIm;
         const bnNRe = BRe * _psiX[n] - _psiX[n - 1], bnNIm = BIm * _psiX[n];
         const bnDRe = (BRe * _xiRe[n] - BIm * _xiIm[n]) - _xiRe[n - 1];
         const bnDIm = (BRe * _xiIm[n] + BIm * _xiRe[n]) - _xiIm[n - 1];
 
-        // Complex division
         const adM2 = anDRe * anDRe + anDIm * anDIm;
         const aRe = (anNRe * anDRe + anNIm * anDIm) / adM2;
         const aIm = (anNIm * anDRe - anNRe * anDIm) / adM2;
@@ -742,6 +780,14 @@ import Layout from '../../layouts/Layout.astro';
     minIn.addEventListener('change', fl); maxIn.addEventListener('change', fl);
     return { get value() { return parseFloat(slider.value); }, setValue(v: number) { const c = clamp(v); slider.value = c.toString(); num.value = fmt(c); onChange(); } };
   }
+  function setupParamEl(num: HTMLInputElement, slider: HTMLInputElement, minIn: HTMLInputElement, maxIn: HTMLInputElement, fmt: (v: number) => string, onChange: () => void): ParamHandle {
+    function clamp(v: number) { return Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)); }
+    slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); onChange(); });
+    num.addEventListener('change', () => { const v = clamp(parseFloat(num.value) || 0); slider.value = v.toString(); num.value = fmt(v); onChange(); });
+    function fl() { const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value); if (isNaN(lo) || isNaN(hi) || lo >= hi) return; slider.min = lo.toString(); slider.max = hi.toString(); const v = clamp(parseFloat(slider.value)); slider.value = v.toString(); num.value = fmt(v); onChange(); }
+    minIn.addEventListener('change', fl); maxIn.addEventListener('change', fl);
+    return { get value() { return parseFloat(slider.value); }, setValue(v: number) { const c = clamp(v); slider.value = c.toString(); num.value = fmt(c); onChange(); } };
+  }
   function setupTabs(cId: string, attr: string, init: string, onSel: (v: string) => void) {
     const tabs = document.getElementById(cId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
     let cur = init;
@@ -760,11 +806,24 @@ import Layout from '../../layouts/Layout.astro';
   const materialSelect = document.getElementById('material-select') as HTMLSelectElement;
   const epsGroup = document.getElementById('eps-group')!;
   const materialRefEl = document.getElementById('material-ref')!;
+  const materialLabel = document.getElementById('material-label')!;
+  const radiusLabel = document.getElementById('radius-label')!;
   const lamMinInput = document.getElementById('lam-min') as HTMLInputElement;
   const lamMaxInput = document.getElementById('lam-max') as HTMLInputElement;
+  const coreMaterialSelect = document.getElementById('core-material-select') as HTMLSelectElement;
+  const coreEpsGroup = document.getElementById('core-eps-group')!;
+  const coreMatGroup = document.getElementById('core-mat-group')!;
+  const coreRGroup = document.getElementById('core-r-group')!;
+  const coreMaterialRefEl = document.getElementById('core-material-ref')!;
+  const theoryNote = document.getElementById('theory-note')!;
+  const extraShellsContainer = document.getElementById('extra-shells')!;
+  const addShellBtn = document.getElementById('add-shell-btn')!;
+  const addShellWrap = document.getElementById('add-shell-wrap')!;
+  const shellLimitNote = document.getElementById('shell-limit-note')!;
 
   let data: MieResult, chartXforms: ChartXforms | null = null;
   let logY = false, zoomBounds: { xRange: [number, number]; yRange: [number, number] } | null = null;
+  let geometry: 'sphere' | 'coreshell' = 'sphere';
   let rafPending = false;
   function scheduleUpdate() { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; recompute(); render(); }); } }
   function resetAndUpdate() { zoomBounds = null; scheduleUpdate(); }
@@ -772,6 +831,8 @@ import Layout from '../../layouts/Layout.astro';
   const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
   const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), resetAndUpdate);
   const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), resetAndUpdate);
+  const coreEpsParam = setupParam('core-eps-num', 'core-eps-slider', 'core-eps-min', 'core-eps-max', v => v.toFixed(1), resetAndUpdate);
+  const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', v => v.toFixed(0), resetAndUpdate);
 
   lamMinInput.addEventListener('change', resetAndUpdate);
   lamMaxInput.addEventListener('change', resetAndUpdate);
@@ -779,11 +840,41 @@ import Layout from '../../layouts/Layout.astro';
   const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; render(); });
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
 
-  // Material selector
+  // Geometry tabs (Sphere / Core-Shell)
+  const geoTabs = setupTabs('geo-tabs', 'geo', 'sphere', (v: string) => {
+    geometry = v as 'sphere' | 'coreshell';
+    const cs = geometry === 'coreshell';
+    // Toggle core-shell-only controls
+    coreMatGroup.style.display = cs ? '' : 'none';
+    coreEpsGroup.style.display = cs && coreMaterialSelect.value === 'custom' ? '' : 'none';
+    coreRGroup.style.display = cs ? '' : 'none';
+    extraShellsContainer.style.display = cs ? '' : 'none';
+    addShellWrap.style.display = cs ? '' : 'none';
+    // Update labels for shell/particle context
+    materialLabel.textContent = cs ? 'Shell 1 material' : 'Material';
+    radiusLabel.textContent = cs ? 'Shell 1 outer radius (nm)' : 'Radius (nm)';
+    // In core-shell mode, epsilon group tracks shell material
+    epsGroup.classList.toggle('hidden', materialSelect.value !== 'custom');
+    // Theory note
+    theoryNote.innerHTML = cs
+      ? '<strong>Multi-shell Mie</strong> extends Mie theory to layered spheres with up to ' + MAX_SHELLS + ' concentric shells. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.'
+      : '<strong>Mie theory</strong> gives exact solutions for light scattering by spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>. Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.';
+    resetAndUpdate();
+  });
+
+  // Shell / particle material selector
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
     epsGroup.classList.toggle('hidden', v !== 'custom');
     materialRefEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
+    resetAndUpdate();
+  });
+
+  // Core material selector (core-shell only)
+  coreMaterialSelect.addEventListener('change', () => {
+    const v = coreMaterialSelect.value;
+    coreEpsGroup.style.display = v === 'custom' ? '' : 'none';
+    coreMaterialRefEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
     resetAndUpdate();
   });
 
@@ -802,10 +893,159 @@ import Layout from '../../layouts/Layout.astro';
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
 
+  function getCoreDielectric(lambdaNm: number): [number, number] {
+    const mat = coreMaterialSelect.value;
+    if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
+    return interpolateNK(MATERIALS[mat].data, lambdaNm);
+  }
+
+  // Dynamic shell state
+  interface ShellHandle {
+    el: HTMLElement;
+    material: HTMLSelectElement;
+    epsParam: ParamHandle;
+    epsGroup: HTMLElement;
+    rParam: ParamHandle;
+    refEl: HTMLElement;
+  }
+  const extraShells: ShellHandle[] = [];
+
+  function buildLayers(): ShellLayer[] {
+    const layers: ShellLayer[] = [];
+    // Core
+    layers.push({ getDielectric: getCoreDielectric, radiusNm: coreRParam.value });
+    // Shell 1 (always present in core-shell mode — uses main material/radius)
+    const outerR = rParam.value;
+    layers.push({ getDielectric: getDielectric, radiusNm: outerR });
+    // Extra dynamic shells
+    for (const sh of extraShells) {
+      const mat = sh.material.value;
+      const eps = sh.epsParam.value;
+      const getDiel = mat === 'custom'
+        ? (_: number): [number, number] => [Math.sqrt(eps), 0]
+        : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
+      layers.push({ getDielectric: getDiel, radiusNm: sh.rParam.value });
+    }
+    // Sort by radius (enforce r_core < r_shell1 < r_shell2 ...)
+    layers.sort((a, b) => a.radiusNm - b.radiusNm);
+    return layers;
+  }
+
+  function updateShellLimit() {
+    // Shell 1 is always the main material/radius; extras add on top. Max total = MAX_SHELLS.
+    const total = 1 + extraShells.length;
+    const atMax = total >= MAX_SHELLS;
+    addShellBtn.style.display = atMax ? 'none' : '';
+    shellLimitNote.style.display = atMax ? '' : 'none';
+    // Renumber shell headers
+    for (let i = 0; i < extraShells.length; i++) {
+      const lbl = extraShells[i].el.querySelector('.shell-header label')!;
+      lbl.textContent = `Shell ${i + 2}`;
+    }
+  }
+
+  function createShellSection(outerR: number): ShellHandle {
+    const idx = extraShells.length;
+    const sec = document.createElement('div');
+    sec.className = 'shell-section';
+    sec.innerHTML = `
+      <div class="shell-header">
+        <label>Shell ${idx + 2}</label>
+        <button class="remove-shell-btn" title="Remove this shell">&times;</button>
+      </div>
+      <div class="param">
+        <div class="param-header"><label>Material</label></div>
+        <select class="param-select shell-mat-sel">
+          <option value="custom" selected>Custom dielectric</option>
+          <option value="au">Gold (Au)</option>
+          <option value="ag">Silver (Ag)</option>
+          <option value="si">Silicon (Si)</option>
+          <option value="al">Aluminum (Al)</option>
+          <option value="tio2">TiO\u2082</option>
+        </select>
+        <span class="material-ref shell-ref"></span>
+      </div>
+      <div class="param shell-eps-group">
+        <div class="param-header">
+          <label>&epsilon;<sub>r</sub></label>
+          <input type="number" class="param-number sh-eps-num" value="10" step="0.5" min="1">
+        </div>
+        <input type="range" class="param-slider sh-eps-slider" min="1" max="50" step="0.5" value="10">
+        <div class="param-limits">
+          <input type="number" class="param-limit sh-eps-min" value="1" step="0.5" min="0.1">
+          <span class="param-limit-dash">&mdash;</span>
+          <input type="number" class="param-limit sh-eps-max" value="50" step="0.5" min="0.1">
+        </div>
+      </div>
+      <div class="param">
+        <div class="param-header">
+          <label>Outer radius (nm)</label>
+          <input type="number" class="param-number sh-r-num" value="${outerR}" step="5" min="1">
+        </div>
+        <input type="range" class="param-slider sh-r-slider" min="10" max="500" step="5" value="${outerR}">
+        <div class="param-limits">
+          <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
+          <span class="param-limit-dash">&mdash;</span>
+          <input type="number" class="param-limit sh-r-max" value="500" step="5" min="1">
+        </div>
+      </div>`;
+    extraShellsContainer.appendChild(sec);
+
+    const matSel = sec.querySelector('.shell-mat-sel') as HTMLSelectElement;
+    const epsGrp = sec.querySelector('.shell-eps-group') as HTMLElement;
+    const refEl = sec.querySelector('.shell-ref') as HTMLElement;
+    const epsP = setupParamEl(
+      sec.querySelector('.sh-eps-num') as HTMLInputElement,
+      sec.querySelector('.sh-eps-slider') as HTMLInputElement,
+      sec.querySelector('.sh-eps-min') as HTMLInputElement,
+      sec.querySelector('.sh-eps-max') as HTMLInputElement,
+      v => v.toFixed(1), resetAndUpdate,
+    );
+    const rP = setupParamEl(
+      sec.querySelector('.sh-r-num') as HTMLInputElement,
+      sec.querySelector('.sh-r-slider') as HTMLInputElement,
+      sec.querySelector('.sh-r-min') as HTMLInputElement,
+      sec.querySelector('.sh-r-max') as HTMLInputElement,
+      v => v.toFixed(0), resetAndUpdate,
+    );
+
+    matSel.addEventListener('change', () => {
+      const v = matSel.value;
+      epsGrp.classList.toggle('hidden', v !== 'custom');
+      refEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
+      resetAndUpdate();
+    });
+
+    const handle: ShellHandle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl };
+    sec.querySelector('.remove-shell-btn')!.addEventListener('click', () => removeShellSection(handle));
+    extraShells.push(handle);
+    updateShellLimit();
+    resetAndUpdate();
+    return handle;
+  }
+
+  function removeShellSection(handle: ShellHandle) {
+    const idx = extraShells.indexOf(handle);
+    if (idx >= 0) extraShells.splice(idx, 1);
+    handle.el.remove();
+    updateShellLimit();
+    resetAndUpdate();
+  }
+
+  addShellBtn.addEventListener('click', () => {
+    // Default outer radius: 20 nm larger than current outermost
+    const lastR = extraShells.length > 0 ? extraShells[extraShells.length - 1].rParam.value : rParam.value;
+    createShellSection(Math.min(lastR + 20, 500));
+  });
+
   function recompute() {
     let lMin = parseFloat(lamMinInput.value) || 300, lMax = parseFloat(lamMaxInput.value) || 1200;
     if (lMin >= lMax) { lMin = 300; lMax = 1200; }
-    data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+    if (geometry === 'coreshell') {
+      data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
+    } else {
+      data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+    }
   }
 
   function getPlotData(): { xArr: Float64Array; yArr: Float64Array; xLabel: string; yLabel: string } {
@@ -892,7 +1132,14 @@ import Layout from '../../layouts/Layout.astro';
   // === Downloads ===
 
   function downloadBlob(blob: Blob, fn: string) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fn; a.click(); URL.revokeObjectURL(u); }
-  function filenameStem() { const m = materialSelect.value; return `mie_${m === 'custom' ? 'eps' + epsParam.value : m}_R${rParam.value}nm_n${nhParam.value}`; }
+  function filenameStem() {
+    const m = materialSelect.value;
+    if (geometry === 'coreshell') {
+      const nLayers = 1 + 1 + extraShells.length; // core + shell1 + extras
+      return `mie_${nLayers}layer_n${nhParam.value}`;
+    }
+    return `mie_${m === 'custom' ? 'eps' + epsParam.value : m}_R${rParam.value}nm_n${nhParam.value}`;
+  }
 
   document.getElementById('dl-png')!.addEventListener('click', () => {
     const ec = document.createElement('canvas'); const s = 2, w = 1200, h = 720;
@@ -911,8 +1158,15 @@ import Layout from '../../layouts/Layout.astro';
   document.getElementById('dl-csv')!.addEventListener('click', () => {
     const mat = materialSelect.value;
     const matS = mat === 'custom' ? `eps_r=${epsParam.value}` : `material=${mat} (${MATERIALS[mat].ref})`;
+    let headerLine: string;
+    if (geometry === 'coreshell') {
+      const nLayers = 1 + 1 + extraShells.length;
+      headerLine = `# Multi-shell Mie (${nLayers} layers), n_host=${nhParam.value}, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`;
+    } else {
+      headerLine = `# Mie scattering — ${matS}, R=${rParam.value} nm, n_host=${nhParam.value}, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`;
+    }
     const lines = [
-      `# Mie scattering — ${matS}, R=${rParam.value} nm, n_host=${nhParam.value}, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`,
+      headerLine,
       '# Generated by NanophotonicsLab (nanophotonicslab.com)',
       'wavelength_nm,energy_eV,Csca_nm2,Cext_nm2,Cabs_nm2,Qsca',
     ];
