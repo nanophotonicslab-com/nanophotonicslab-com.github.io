@@ -1039,12 +1039,17 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   function recompute() {
-    let lMin = parseFloat(lamMinInput.value) || 300, lMax = parseFloat(lamMaxInput.value) || 1200;
-    if (lMin >= lMax) { lMin = 300; lMax = 1200; }
-    if (geometry === 'coreshell') {
-      data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
-    } else {
-      data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+    try {
+      let lMin = parseFloat(lamMinInput.value) || 300, lMax = parseFloat(lamMaxInput.value) || 1200;
+      if (lMin >= lMax) { lMin = 300; lMax = 1200; }
+      if (geometry === 'coreshell') {
+        data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
+      } else {
+        data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+      }
+    } catch (e) {
+      console.error('Mie recompute error:', e);
+      theoryNote.textContent = 'Error: ' + (e instanceof Error ? e.message : String(e));
     }
   }
 
