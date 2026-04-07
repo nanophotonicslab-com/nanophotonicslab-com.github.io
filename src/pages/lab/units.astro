@@ -158,11 +158,12 @@ import Layout from '../../layouts/Layout.astro';
   .divider { border: none; height: 1px; background: var(--bg-muted); margin: var(--space-xs) 0; }
 
   /* Constants table */
+  .constants-section { overflow-x: auto; }
   .constants-section h3 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
-  .constants-table { width: 100%; border-collapse: collapse; font-size: 0.6875rem; font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
-  .constants-table th { text-align: right; font-weight: 600; color: var(--text-muted); padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--bg-muted); }
+  .constants-table { width: 100%; border-collapse: collapse; font-size: 0.625rem; font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+  .constants-table th { text-align: right; font-weight: 600; color: var(--text-muted); padding: 0.2rem 0.25rem; border-bottom: 1px solid var(--bg-muted); white-space: nowrap; }
   .constants-table th:first-child { text-align: left; }
-  .constants-table td { padding: 0.25rem 0.4rem; color: var(--text-soft); text-align: right; }
+  .constants-table td { padding: 0.25rem 0.25rem; color: var(--text-soft); text-align: right; white-space: nowrap; }
   .constants-table td:first-child { text-align: left; font-weight: 600; color: var(--text); font-family: var(--font); }
 
   /* Conversion panel */
@@ -245,7 +246,7 @@ import Layout from '../../layouts/Layout.astro';
       scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1, au: AU_S },
     },
     mass: {
-      units:  { si: 'kg', si_nano: 'nkg', si_femto: 'fkg', esu: 'g', au: 'a.u.' },
+      units:  { si: 'kg', si_nano: '\u00B5g', si_femto: 'pg', esu: 'g', au: 'a.u.' },
       scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-3, au: AU_KG },
     },
     energy: {
