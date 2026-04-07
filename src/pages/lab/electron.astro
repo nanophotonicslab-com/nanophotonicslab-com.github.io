@@ -485,11 +485,16 @@ import Layout from '../../layouts/Layout.astro';
       ctx.fillStyle = ref.color;
       ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
 
-      // Label
+      // Label (vertical to avoid overlap)
+      ctx.save();
       ctx.fillStyle = ref.color;
       ctx.font = '9px Inter, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(ref.label, x, m.top + 12);
+      ctx.translate(x + 4, m.top + 8);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ref.label, 0, 0);
+      ctx.restore();
     }
 
     // Operating point
