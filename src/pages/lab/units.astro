@@ -59,12 +59,12 @@ import Layout from '../../layouts/Layout.astro';
                 <tr><th></th><th>SI</th><th>ESU</th><th>AU</th></tr>
               </thead>
               <tbody>
-                <tr><td>c</td><td>2.998e+8</td><td>2.998e+10</td><td>1.370e+2</td></tr>
-                <tr><td>&hbar;</td><td>1.055e&minus;34</td><td>1.055e&minus;27</td><td>1</td></tr>
-                <tr><td>&epsilon;<sub>0</sub></td><td>8.854e&minus;12</td><td>7.958e&minus;2</td><td>7.958e&minus;2</td></tr>
-                <tr><td>q</td><td>1.602e&minus;19</td><td>4.803e&minus;10</td><td>1</td></tr>
-                <tr><td>m<sub>e</sub></td><td>9.109e&minus;31</td><td>9.109e&minus;28</td><td>1</td></tr>
-                <tr><td>a<sub>0</sub></td><td>5.292e&minus;11</td><td>5.292e&minus;9</td><td>1</td></tr>
+                <tr><td>c</td><td>3.00e8</td><td>3.00e10</td><td>137</td></tr>
+                <tr><td>&hbar;</td><td>1.05e-34</td><td>1.05e-27</td><td>1</td></tr>
+                <tr><td>&epsilon;<sub>0</sub></td><td>8.85e-12</td><td>7.96e-2</td><td>7.96e-2</td></tr>
+                <tr><td>q</td><td>1.60e-19</td><td>4.80e-10</td><td>1</td></tr>
+                <tr><td>m<sub>e</sub></td><td>9.11e-31</td><td>9.11e-28</td><td>1</td></tr>
+                <tr><td>a<sub>0</sub></td><td>5.29e-11</td><td>5.29e-9</td><td>1</td></tr>
               </tbody>
             </table>
           </div>
@@ -246,8 +246,8 @@ import Layout from '../../layouts/Layout.astro';
       scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1, au: AU_S },
     },
     mass: {
-      units:  { si: 'kg', si_nano: '\u00B5g', si_femto: 'pg', esu: 'g', au: 'a.u.' },
-      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-3, au: AU_KG },
+      units:  { si: 'kg', si_nano: 'ng', si_femto: 'fg', esu: 'g', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-12, si_femto: 1e-18, esu: 1e-3, au: AU_KG },
     },
     energy: {
       units:  { si: 'J', si_nano: 'nJ', si_femto: 'fJ', esu: 'erg', au: 'a.u.' },
