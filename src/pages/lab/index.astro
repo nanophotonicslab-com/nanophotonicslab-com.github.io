@@ -6,8 +6,25 @@ const widgets = [
     title: 'Mie Scattering Calculator',
     description: 'Compute scattering, extinction, and absorption cross-sections for spherical nanoparticles. Supports real materials (Au, Ag, Si, Al, TiO\u2082) and custom dielectrics.',
     color: '#F59E0B',
+    icon: 'bolt',
     status: 'Live',
     url: '/lab/mie-scattering/',
+  },
+  {
+    title: 'Relativistic Electron Calculator',
+    description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.',
+    color: '#7C3AED',
+    icon: 'electron',
+    status: 'Live',
+    url: '/lab/electron/',
+  },
+  {
+    title: 'Scientific Unit Converter',
+    description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.',
+    color: '#06B6D4',
+    icon: 'ruler',
+    status: 'Live',
+    url: '/lab/units/',
   },
 ];
 ---
@@ -33,9 +50,25 @@ const widgets = [
           <a href={widget.url} class="widget-card card" data-status={widget.status}>
             <div class="widget-card__header">
               <div class="widget-card__icon" style={`background: ${widget.color}15; color: ${widget.color}`}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                </svg>
+                {widget.icon === 'bolt' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                )}
+                {widget.icon === 'electron' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <ellipse cx="12" cy="12" rx="10" ry="4"/>
+                    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
+                    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
+                  </svg>
+                )}
+                {widget.icon === 'ruler' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0z"/>
+                    <path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>
+                  </svg>
+                )}
               </div>
               <span class:list={['widget-status', { 'widget-status--live': widget.status === 'Live' }]}>
                 {widget.status}

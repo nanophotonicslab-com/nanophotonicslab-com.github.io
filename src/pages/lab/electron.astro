@@ -1,0 +1,537 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Relativistic Electron Calculator" description="Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons — with live chart and microscope references.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Relativistic Electron <span class="gradient-text">Calculator</span></h1>
+      <p class="widget-hero__subtitle">
+        Enter any quantity and all others update in real time.
+        The chart shows de&nbsp;Broglie wavelength vs kinetic energy with common
+        electron-microscope references.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="fields">
+            <div class="field">
+              <label for="vc">v / c</label>
+              <input type="text" class="field-input" id="vc" inputmode="decimal" placeholder="0.548">
+            </div>
+            <div class="field">
+              <label for="kev">K (keV)</label>
+              <input type="text" class="field-input" id="kev" inputmode="decimal" placeholder="100">
+            </div>
+            <div class="field">
+              <label for="lam">&lambda;<sub>e</sub> (pm)</label>
+              <input type="text" class="field-input" id="lam" inputmode="decimal" placeholder="3.70">
+            </div>
+            <div class="field">
+              <label for="vnmfs">v (nm/fs)</label>
+              <input type="text" class="field-input" id="vnmfs" inputmode="decimal" placeholder="0.164">
+            </div>
+            <div class="field">
+              <label for="ej">E (J)</label>
+              <input type="text" class="field-input" id="ej" inputmode="decimal" placeholder="1.60e-14">
+            </div>
+            <div class="field">
+              <label for="gamma">&gamma;</label>
+              <input type="text" class="field-input" id="gamma" inputmode="decimal" placeholder="1.196">
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>Quick set</label></div>
+            <div class="preset-row" id="presets">
+              <button class="preset-btn" data-kev="30">30&thinsp;kV</button>
+              <button class="preset-btn" data-kev="80">80&thinsp;kV</button>
+              <button class="preset-btn" data-kev="120">120&thinsp;kV</button>
+              <button class="preset-btn" data-kev="200">200&thinsp;kV</button>
+              <button class="preset-btn" data-kev="300">300&thinsp;kV</button>
+            </div>
+          </div>
+
+          <!-- Velocity gauge -->
+          <div class="gauge">
+            <div class="gauge-header">
+              <span class="gauge-label">Velocity</span>
+              <span class="gauge-value" id="gauge-pct">&mdash;</span>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="gauge-fill"></div>
+            </div>
+          </div>
+
+          <button class="clear-btn" id="clear-btn">Clear all</button>
+
+          <p class="theory-note">
+            <strong>Relativistic kinematics.</strong>
+            K&nbsp;=&nbsp;(&gamma;&nbsp;&minus;&nbsp;1)&thinsp;m<sub>e</sub>c&sup2;, &ensp;
+            &gamma;&nbsp;=&nbsp;(1&nbsp;&minus;&nbsp;v&sup2;/c&sup2;)<sup>&minus;&frac12;</sup>, &ensp;
+            &lambda;<sub>e</sub>&nbsp;=&nbsp;h&thinsp;/&thinsp;p.
+            Constants: CODATA 2018.
+          </p>
+        </div>
+
+        <!-- ===== Chart ===== -->
+        <div class="chart-panel card">
+          <div class="chart-header">
+            <span class="chart-title">&lambda;<sub>e</sub>&ensp;vs&ensp;K &mdash; de&nbsp;Broglie wavelength</span>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="electron-chart"></canvas>
+          </div>
+          <div class="chart-refs">
+            <span class="chart-refs-label">References</span>
+            <span class="ref-tag ref-tag--sem">SEM 30&thinsp;kV</span>
+            <span class="ref-tag ref-tag--tem">TEM 120&thinsp;kV</span>
+            <span class="ref-tag ref-tag--tem">TEM 200&thinsp;kV</span>
+            <span class="ref-tag ref-tag--tem">TEM 300&thinsp;kV</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== Scoped styles ===== -->
+<style>
+  /* Hero */
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  /* Layout */
+  .widget-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--space-lg)); }
+  .controls h3 { font-size: 1rem; }
+
+  /* Fields */
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .field { display: flex; flex-direction: column; gap: 0.2rem; }
+  .field label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .field-input {
+    width: 100%; padding: 0.35rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--primary); text-align: right; outline: none; background: var(--bg); transition: border-color 0.15s;
+  }
+  .field-input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
+  .field-input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+  /* Presets */
+  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-header label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .preset-row { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.25rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); }
+
+  /* Gauge */
+  .gauge { display: flex; flex-direction: column; gap: 0.3rem; }
+  .gauge-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .gauge-label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .gauge-value { font-size: 0.8125rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+  .gauge-track {
+    height: 8px; border-radius: var(--radius-full); background: var(--bg-muted); overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill {
+    height: 100%; border-radius: var(--radius-full); width: 0%;
+    background: linear-gradient(90deg, var(--indigo), var(--cyan), var(--emerald), var(--amber), var(--rose));
+    background-size: 500% 100%;
+    transition: width 0.3s ease;
+  }
+
+  /* Clear */
+  .clear-btn {
+    align-self: flex-start; padding: 0.4rem 1rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  /* Theory note */
+  .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
+  .theory-note strong { color: var(--text-soft); }
+
+  /* Chart */
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-header { display: flex; align-items: center; }
+  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  .chart-refs { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .chart-refs-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .ref-tag {
+    font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: var(--radius-full);
+  }
+  .ref-tag--sem { background: #FEF3C7; color: #92400E; }
+  .ref-tag--tem { background: #EDE9FE; color: #5B21B6; }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+    .fields { grid-template-columns: 1fr; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+  }
+</style>
+
+<!-- ===== Script ===== -->
+<script>
+  // ===== Physical constants (CODATA 2018) =====
+  const AU_EV = 27.2113834;
+  const C_AU  = 137.03599971;
+  const M_E   = 9.1093837015e-31;
+  const C     = 299792458.0;
+  const H     = 6.62607015e-34;
+  const EV    = 1.602176634e-19;
+  const E0    = M_E * C * C;
+
+  // ===== Conversion functions (canonical unit: eV) =====
+
+  function keFromV(vc: number): number {
+    if (vc < 0 || vc >= 1) return NaN;
+    return AU_EV * C_AU * C_AU * (1 / Math.sqrt(1 - vc * vc) - 1);
+  }
+
+  function vFromKe(eV: number): number {
+    if (eV < 0) return NaN;
+    const t = eV / (AU_EV * C_AU * C_AU) + 1;
+    return Math.sqrt(1 - 1 / (t * t));
+  }
+
+  function lambdaFromK(eV: number): number {
+    if (eV <= 0) return NaN;
+    const kJ = eV * EV;
+    const E = E0 + kJ;
+    const pc = Math.sqrt(E * E - E0 * E0);
+    if (pc === 0) return Infinity;
+    return (H / (pc / C)) * 1e12;
+  }
+
+  function kFromLambda(pm: number): number {
+    if (pm <= 0) return NaN;
+    const p = H / (pm * 1e-12);
+    const E = Math.sqrt((p * C) ** 2 + E0 * E0);
+    return (E - E0) / EV;
+  }
+
+  function vNmFsFromKe(eV: number): number {
+    const vc = vFromKe(eV);
+    return isNaN(vc) ? NaN : vc * C * 1e-6;
+  }
+
+  function keFromVNmFs(v: number): number {
+    if (v < 0) return NaN;
+    const ms = v * 1e6;
+    return ms >= C ? NaN : keFromV(ms / C);
+  }
+
+  function joulesFromKe(eV: number): number { return eV < 0 ? NaN : eV * EV; }
+  function keFromJoules(j: number): number  { return j < 0 ? NaN : j / EV; }
+
+  function gammaFromKe(eV: number): number  { return eV < 0 ? NaN : (eV * EV) / E0 + 1; }
+  function keFromGamma(g: number): number   { return g < 1 ? NaN : ((g - 1) * E0) / EV; }
+
+  // ===== Formatting =====
+
+  function fmt(v: number): string {
+    if (!isFinite(v)) return '';
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a < 1e-3 || a >= 1e6) return v.toExponential(3);
+    return parseFloat(v.toPrecision(6)).toString();
+  }
+
+  function fmtJ(v: number): string {
+    if (!isFinite(v)) return '';
+    return v.toExponential(2);
+  }
+
+  // ===== DOM =====
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  const inputs: Record<string, HTMLInputElement> = {
+    vc: $('vc'), kev: $('kev'), lam: $('lam'),
+    vnmfs: $('vnmfs'), ej: $('ej'), gamma: $('gamma'),
+  };
+
+  const gaugeFill = $('gauge-fill');
+  const gaugePct  = document.getElementById('gauge-pct')!;
+
+  let activeField: string | null = null;
+  let currentEv = NaN;
+
+  // ===== Update logic =====
+
+  function updateFrom(eV: number, source: string) {
+    if (isNaN(eV) || eV < 0) return;
+    currentEv = eV;
+
+    if (source !== 'vc')    inputs.vc.value    = fmt(vFromKe(eV));
+    if (source !== 'kev')   inputs.kev.value   = fmt(eV / 1000);
+    if (source !== 'lam')   inputs.lam.value   = fmt(lambdaFromK(eV));
+    if (source !== 'vnmfs') inputs.vnmfs.value = fmt(vNmFsFromKe(eV));
+    if (source !== 'ej')    inputs.ej.value    = fmtJ(joulesFromKe(eV));
+    if (source !== 'gamma') inputs.gamma.value = fmt(gammaFromKe(eV));
+
+    updateGauge(vFromKe(eV));
+    updatePresets(eV / 1000);
+    drawChart();
+  }
+
+  function clearAll() {
+    for (const inp of Object.values(inputs)) inp.value = '';
+    currentEv = NaN;
+    gaugeFill.style.width = '0%';
+    gaugeFill.style.backgroundPosition = '0% 0';
+    gaugePct.innerHTML = '&mdash;';
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    drawChart();
+  }
+
+  function updateGauge(vc: number) {
+    if (isNaN(vc) || vc < 0) { gaugeFill.style.width = '0%'; gaugePct.innerHTML = '&mdash;'; return; }
+    const pct = Math.min(vc * 100, 99.99);
+    gaugeFill.style.width = pct + '%';
+    gaugeFill.style.backgroundPosition = pct + '% 0';
+    gaugePct.textContent = pct.toFixed(2) + '% c';
+  }
+
+  function updatePresets(keV: number) {
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      const pk = parseFloat((b as HTMLElement).dataset.kev!);
+      b.classList.toggle('active', Math.abs(keV - pk) / pk < 0.001);
+    });
+  }
+
+  // ===== Input handlers =====
+
+  function toEv(field: string, val: number): number {
+    switch (field) {
+      case 'vc':    return keFromV(val);
+      case 'kev':   return val * 1000;
+      case 'lam':   return kFromLambda(val);
+      case 'vnmfs': return keFromVNmFs(val);
+      case 'ej':    return keFromJoules(val);
+      case 'gamma': return keFromGamma(val);
+      default:      return NaN;
+    }
+  }
+
+  for (const [name, inp] of Object.entries(inputs)) {
+    inp.addEventListener('focus', () => { activeField = name; });
+    inp.addEventListener('input', () => {
+      if (activeField !== name) return;
+      const raw = inp.value.trim();
+      if (raw === '') { clearAll(); return; }
+      const num = parseFloat(raw);
+      if (isNaN(num)) return;
+      const eV = toEv(name, num);
+      if (!isNaN(eV)) updateFrom(eV, name);
+    });
+  }
+
+  // Presets
+  document.getElementById('presets')!.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
+    if (!btn) return;
+    const keV = parseFloat(btn.dataset.kev!);
+    activeField = 'kev';
+    inputs.kev.value = keV.toString();
+    updateFrom(keV * 1000, 'kev');
+    inputs.kev.focus();
+  });
+
+  // Clear
+  document.getElementById('clear-btn')!.addEventListener('click', clearAll);
+
+  // ===== Chart =====
+
+  const CHART = {
+    kMin: 0.01, kMax: 10000,       // keV
+    lMin: 0.1,  lMax: 1000,        // pm
+    margin: { top: 24, right: 24, bottom: 48, left: 56 },
+    refs: [
+      { k: 30,  label: 'SEM 30 kV',  color: '#D97706' },
+      { k: 120, label: 'TEM 120 kV', color: '#7C3AED' },
+      { k: 200, label: 'TEM 200 kV', color: '#7C3AED' },
+      { k: 300, label: 'TEM 300 kV', color: '#7C3AED' },
+    ],
+  };
+
+  const logKMin = Math.log10(CHART.kMin);
+  const logKMax = Math.log10(CHART.kMax);
+  const logLMin = Math.log10(CHART.lMin);
+  const logLMax = Math.log10(CHART.lMax);
+
+  function drawChart() {
+    const canvas = document.getElementById('electron-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const m = CHART.margin;
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+
+    const kToX = (keV: number) => m.left + pw * (Math.log10(keV) - logKMin) / (logKMax - logKMin);
+    const lToY = (pm: number)  => m.top  + ph * (1 - (Math.log10(pm) - logLMin) / (logLMax - logLMin));
+
+    // Background
+    ctx.fillStyle = '#FAFAFF';
+    ctx.fillRect(m.left, m.top, pw, ph);
+
+    // Grid
+    ctx.strokeStyle = '#EEEDF5';
+    ctx.lineWidth = 1;
+    for (let e = -2; e <= 4; e++) {
+      const x = kToX(10 ** e);
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+    }
+    for (let e = -1; e <= 3; e++) {
+      const y = lToY(10 ** e);
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#1E1B4B';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    // X labels
+    ctx.fillStyle = '#64648B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const xLabels: Record<number, string> = { '-2': '0.01', '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k', '4': '10k' };
+    for (let e = -2; e <= 4; e++) ctx.fillText(xLabels[e], kToX(10 ** e), m.top + ph + 6);
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#1E1B4B';
+    ctx.fillText('K (keV)', m.left + pw / 2, h - 8);
+
+    // Y labels
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#64648B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    const yLabels: Record<number, string> = { '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k' };
+    for (let e = -1; e <= 3; e++) ctx.fillText(yLabels[e], m.left - 8, lToY(10 ** e));
+    ctx.save();
+    ctx.translate(12, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillText('\u03BBe (pm)', 0, 0);
+    ctx.restore();
+
+    // Curve
+    ctx.strokeStyle = '#6366F1';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const N = 600;
+    let started = false;
+    for (let i = 0; i < N; i++) {
+      const logK = logKMin + (logKMax - logKMin) * i / (N - 1);
+      const keV = 10 ** logK;
+      const lam = lambdaFromK(keV * 1000);
+      if (isNaN(lam) || !isFinite(lam) || lam < CHART.lMin || lam > CHART.lMax) continue;
+      const x = kToX(keV), y = lToY(lam);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Reference lines
+    for (const ref of CHART.refs) {
+      const x = kToX(ref.k);
+      const lam = lambdaFromK(ref.k * 1000);
+      const y = lToY(lam);
+
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = ref.color + '60';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Dot on curve
+      ctx.fillStyle = ref.color + '30';
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = ref.color;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+
+      // Label
+      ctx.fillStyle = ref.color;
+      ctx.font = '9px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(ref.label, x, m.top + 12);
+    }
+
+    // Operating point
+    if (isFinite(currentEv) && currentEv > 0) {
+      const keV = currentEv / 1000;
+      const lam = lambdaFromK(currentEv);
+      if (keV >= CHART.kMin && keV <= CHART.kMax && lam >= CHART.lMin && lam <= CHART.lMax) {
+        const x = kToX(keV), y = lToY(lam);
+
+        // Crosshairs
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = '#F43F5E50';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Glow
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 14);
+        grad.addColorStop(0, 'rgba(244,63,94,0.25)');
+        grad.addColorStop(1, 'rgba(244,63,94,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+
+        // Dot
+        ctx.fillStyle = '#F43F5E';
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // Value label
+        ctx.fillStyle = '#1E1B4B';
+        ctx.font = '600 10px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${fmt(keV)} keV, ${fmt(lam)} pm`, x + 10, y - 8);
+      }
+    }
+  }
+
+  // Resize handling
+  new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
+
+  // Initial draw
+  drawChart();
+</script>

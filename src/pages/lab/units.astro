@@ -1,0 +1,409 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Unit Converter" description="Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics and quantum mechanics.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Scientific Unit <span class="gradient-text">Converter</span></h1>
+      <p class="widget-hero__subtitle">
+        Convert between SI, CGS&thinsp;/&thinsp;ESU, and atomic units for the quantities
+        that matter in nanophotonics, quantum mechanics, and electromagnetism.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Sidebar: magnitude selector + constants ===== -->
+        <div class="controls card">
+          <h3>Magnitude</h3>
+
+          <div class="mag-group">
+            <span class="mag-group-label">Mechanical</span>
+            <div class="mag-buttons">
+              <button class="mag-btn active" data-mag="length">Length</button>
+              <button class="mag-btn" data-mag="time">Time</button>
+              <button class="mag-btn" data-mag="mass">Mass</button>
+            </div>
+          </div>
+
+          <div class="mag-group">
+            <span class="mag-group-label">Energy &amp; waves</span>
+            <div class="mag-buttons">
+              <button class="mag-btn" data-mag="energy">Energy</button>
+              <button class="mag-btn" data-mag="power">Power</button>
+              <button class="mag-btn" data-mag="intensity">Intensity</button>
+              <button class="mag-btn" data-mag="frequency">Frequency</button>
+            </div>
+          </div>
+
+          <div class="mag-group">
+            <span class="mag-group-label">Electromagnetic</span>
+            <div class="mag-buttons">
+              <button class="mag-btn" data-mag="charge">Charge</button>
+              <button class="mag-btn" data-mag="current">Current</button>
+              <button class="mag-btn" data-mag="efield">E field</button>
+              <button class="mag-btn" data-mag="bfield">B field</button>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <div class="constants-section">
+            <h3>Fundamental Constants</h3>
+            <table class="constants-table">
+              <thead>
+                <tr><th></th><th>SI</th><th>ESU</th><th>AU</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>c</td><td>2.998e+8</td><td>2.998e+10</td><td>1.370e+2</td></tr>
+                <tr><td>&hbar;</td><td>1.055e&minus;34</td><td>1.055e&minus;27</td><td>1</td></tr>
+                <tr><td>&epsilon;<sub>0</sub></td><td>8.854e&minus;12</td><td>7.958e&minus;2</td><td>7.958e&minus;2</td></tr>
+                <tr><td>q</td><td>1.602e&minus;19</td><td>4.803e&minus;10</td><td>1</td></tr>
+                <tr><td>m<sub>e</sub></td><td>9.109e&minus;31</td><td>9.109e&minus;28</td><td>1</td></tr>
+                <tr><td>a<sub>0</sub></td><td>5.292e&minus;11</td><td>5.292e&minus;9</td><td>1</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== Main: conversion panel ===== -->
+        <div class="conv-panel card">
+          <div class="conv-row" data-sys="si">
+            <span class="conv-system">SI</span>
+            <input type="text" class="conv-input" id="inp-si" inputmode="decimal" placeholder="0">
+            <span class="conv-unit" id="unit-si">m</span>
+            <button class="copy-btn" data-target="inp-si" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+
+          <div class="conv-row" data-sys="si_nano">
+            <span class="conv-system">SI (nano)</span>
+            <input type="text" class="conv-input" id="inp-si_nano" inputmode="decimal" placeholder="0">
+            <span class="conv-unit" id="unit-si_nano">nm</span>
+            <button class="copy-btn" data-target="inp-si_nano" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+
+          <div class="conv-row" data-sys="si_femto">
+            <span class="conv-system">SI (femto)</span>
+            <input type="text" class="conv-input" id="inp-si_femto" inputmode="decimal" placeholder="0">
+            <span class="conv-unit" id="unit-si_femto">fm</span>
+            <button class="copy-btn" data-target="inp-si_femto" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+
+          <hr class="conv-divider">
+
+          <div class="conv-row" data-sys="esu">
+            <span class="conv-system">ESU / CGS</span>
+            <input type="text" class="conv-input" id="inp-esu" inputmode="decimal" placeholder="0">
+            <span class="conv-unit" id="unit-esu">cm</span>
+            <button class="copy-btn" data-target="inp-esu" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+
+          <div class="conv-row" data-sys="au">
+            <span class="conv-system">Atomic units</span>
+            <input type="text" class="conv-input" id="inp-au" inputmode="decimal" placeholder="0">
+            <span class="conv-unit" id="unit-au">a.u.</span>
+            <button class="copy-btn" data-target="inp-au" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+
+          <div class="conv-actions">
+            <button class="clear-btn" id="clear-btn">Clear all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== Scoped styles ===== -->
+<style>
+  /* Hero */
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  /* Layout */
+  .widget-layout { display: grid; grid-template-columns: 260px 1fr; gap: var(--space-lg); align-items: start; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--space-lg)); }
+  .controls h3 { font-size: 1rem; }
+
+  /* Magnitude selector */
+  .mag-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .mag-group-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+  .mag-buttons { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .mag-btn {
+    padding: 0.3rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 500;
+    color: var(--text-soft); cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .mag-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .mag-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); font-weight: 600; }
+
+  .divider { border: none; height: 1px; background: var(--bg-muted); margin: var(--space-xs) 0; }
+
+  /* Constants table */
+  .constants-section h3 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .constants-table { width: 100%; border-collapse: collapse; font-size: 0.6875rem; font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+  .constants-table th { text-align: right; font-weight: 600; color: var(--text-muted); padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--bg-muted); }
+  .constants-table th:first-child { text-align: left; }
+  .constants-table td { padding: 0.25rem 0.4rem; color: var(--text-soft); text-align: right; }
+  .constants-table td:first-child { text-align: left; font-weight: 600; color: var(--text); font-family: var(--font); }
+
+  /* Conversion panel */
+  .conv-panel { display: flex; flex-direction: column; gap: var(--space-md); }
+  .conv-row { display: grid; grid-template-columns: 100px 1fr auto auto; gap: 0.5rem; align-items: center; }
+  .conv-system { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .conv-input {
+    width: 100%; padding: 0.5rem 0.65rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 0.9375rem; font-weight: 500;
+    font-variant-numeric: tabular-nums; color: var(--primary); text-align: right;
+    outline: none; background: var(--bg); transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .conv-input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
+  .conv-input::placeholder { color: var(--text-muted); font-weight: 400; }
+  .conv-unit {
+    font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); min-width: 4rem; text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+  .copy-btn {
+    display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+    border: 1px solid transparent; border-radius: var(--radius-sm); background: none;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--bg-muted); color: var(--primary); background: var(--bg-soft); }
+  .copy-btn.copied { color: var(--emerald); }
+
+  .conv-divider { border: none; height: 1px; background: var(--bg-muted); margin: 0; }
+
+  .conv-actions { display: flex; padding-top: var(--space-sm); }
+  .clear-btn {
+    padding: 0.4rem 1rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+    .conv-row { grid-template-columns: 80px 1fr auto auto; }
+  }
+</style>
+
+<!-- ===== Script ===== -->
+<script>
+  // ===== Constants (CODATA 2018) =====
+
+  const QE   = 1.602176634e-19;
+  const AU_NM = 0.05291772083;
+  const AU_KG = 9.10938291e-31;
+  const AU_S  = 2.418884326502e-17;
+  const AU_J  = 4.3597442e-18;
+  const AU_E  = 5.14221e11;
+  const AU_T  = 2.35e5;
+  const I_AU  = AU_S ** 3 / AU_KG;
+
+  const STATC_TO_C  = 3.33564095198152e-10;
+  const STATV_CM    = 29979.2458;
+  const GAUSS_TO_T  = 1e-4;
+
+  // ===== Unit systems =====
+
+  type Sys = 'si' | 'si_nano' | 'si_femto' | 'esu' | 'au';
+  const SYSTEMS: Sys[] = ['si', 'si_nano', 'si_femto', 'esu', 'au'];
+
+  // ===== Magnitude definitions =====
+
+  interface MagDef {
+    units: Record<Sys, string>;
+    scales: Record<Sys, number>;
+  }
+
+  const MAGNITUDES: Record<string, MagDef> = {
+    length: {
+      units:  { si: 'm', si_nano: 'nm', si_femto: 'fm', esu: 'cm', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-2, au: AU_NM * 1e-9 },
+    },
+    time: {
+      units:  { si: 's', si_nano: 'ns', si_femto: 'fs', esu: 's', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1, au: AU_S },
+    },
+    mass: {
+      units:  { si: 'kg', si_nano: 'nkg', si_femto: 'fkg', esu: 'g', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-3, au: AU_KG },
+    },
+    energy: {
+      units:  { si: 'J', si_nano: 'nJ', si_femto: 'fJ', esu: 'erg', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-7, au: AU_J },
+    },
+    charge: {
+      units:  { si: 'C', si_nano: 'nC', si_femto: 'fC', esu: 'statC', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: STATC_TO_C, au: QE },
+    },
+    current: {
+      units:  { si: 'A', si_nano: 'nA', si_femto: 'fA', esu: 'statA', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: STATC_TO_C, au: QE / AU_S },
+    },
+    efield: {
+      units:  { si: 'V/m', si_nano: 'nV/m', si_femto: 'fV/m', esu: 'statV/cm', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: STATV_CM, au: AU_E },
+    },
+    bfield: {
+      units:  { si: 'T', si_nano: 'nT', si_femto: 'fT', esu: 'G', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: GAUSS_TO_T, au: AU_T },
+    },
+    power: {
+      units:  { si: 'W', si_nano: 'nW', si_femto: 'fW', esu: 'erg/s', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-7, au: AU_J / AU_S },
+    },
+    intensity: {
+      units:  { si: 'W/m\u00B2', si_nano: 'nW/m\u00B2', si_femto: 'fW/m\u00B2', esu: 'erg/(s\u00B7cm\u00B2)', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1e-3, au: 1 / I_AU },
+    },
+    frequency: {
+      units:  { si: 'Hz', si_nano: 'nHz', si_femto: 'fHz', esu: 'Hz', au: 'a.u.' },
+      scales: { si: 1, si_nano: 1e-9, si_femto: 1e-15, esu: 1, au: 1 / AU_S },
+    },
+  };
+
+  // ===== Formatting =====
+
+  function fmtSI(v: number): string {
+    if (!isFinite(v)) return '';
+    return v.toExponential(3);
+  }
+
+  function fmtVal(v: number): string {
+    if (!isFinite(v)) return '';
+    if (v === 0) return '0';
+    const s = v.toPrecision(8);
+    if (s.includes('e') || s.includes('E')) return s;
+    return s.replace(/\.?0+$/, '');
+  }
+
+  // ===== DOM =====
+
+  const inputs: Record<Sys, HTMLInputElement> = {
+    si:       document.getElementById('inp-si')       as HTMLInputElement,
+    si_nano:  document.getElementById('inp-si_nano')  as HTMLInputElement,
+    si_femto: document.getElementById('inp-si_femto') as HTMLInputElement,
+    esu:      document.getElementById('inp-esu')      as HTMLInputElement,
+    au:       document.getElementById('inp-au')       as HTMLInputElement,
+  };
+
+  const unitLabels: Record<Sys, HTMLElement> = {
+    si:       document.getElementById('unit-si')!,
+    si_nano:  document.getElementById('unit-si_nano')!,
+    si_femto: document.getElementById('unit-si_femto')!,
+    esu:      document.getElementById('unit-esu')!,
+    au:       document.getElementById('unit-au')!,
+  };
+
+  let currentMag: string = 'length';
+  let activeSystem: Sys | null = null;
+
+  // ===== Conversion =====
+
+  function convert(sourceVal: number, source: Sys, target: Sys): number {
+    const mag = MAGNITUDES[currentMag];
+    return sourceVal * mag.scales[source] / mag.scales[target];
+  }
+
+  function formatFor(sys: Sys, val: number): string {
+    return (sys === 'si' || sys === 'si_nano' || sys === 'si_femto') ? fmtSI(val) : fmtVal(val);
+  }
+
+  function updateConversions(sourceText: string, source: Sys) {
+    const num = parseFloat(sourceText);
+    for (const sys of SYSTEMS) {
+      if (sys === source) continue;
+      if (isNaN(num)) { inputs[sys].value = ''; continue; }
+      const val = convert(num, source, sys);
+      inputs[sys].value = formatFor(sys, val);
+    }
+  }
+
+  function updateUnitLabels() {
+    const mag = MAGNITUDES[currentMag];
+    for (const sys of SYSTEMS) {
+      unitLabels[sys].textContent = mag.units[sys];
+    }
+  }
+
+  function clearAll() {
+    for (const sys of SYSTEMS) inputs[sys].value = '';
+    activeSystem = null;
+  }
+
+  // ===== Magnitude buttons =====
+
+  function selectMagnitude(mag: string) {
+    currentMag = mag;
+    document.querySelectorAll('.mag-btn').forEach(b => {
+      b.classList.toggle('active', (b as HTMLElement).dataset.mag === mag);
+    });
+    updateUnitLabels();
+
+    // Re-convert from active field if there is one
+    if (activeSystem) {
+      const text = inputs[activeSystem].value.trim();
+      if (text) updateConversions(text, activeSystem);
+    }
+  }
+
+  document.querySelectorAll('.mag-btn').forEach(btn => {
+    btn.addEventListener('click', () => selectMagnitude((btn as HTMLElement).dataset.mag!));
+  });
+
+  // ===== Input handlers =====
+
+  for (const sys of SYSTEMS) {
+    inputs[sys].addEventListener('focus', () => { activeSystem = sys; });
+    inputs[sys].addEventListener('input', () => {
+      activeSystem = sys;
+      const raw = inputs[sys].value.trim();
+      if (raw === '') { clearAll(); return; }
+      updateConversions(raw, sys);
+    });
+  }
+
+  // ===== Copy to clipboard =====
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    const svgHtml = btn.innerHTML;
+    btn.addEventListener('click', () => {
+      const target = (btn as HTMLElement).dataset.target!;
+      const input = document.getElementById(target) as HTMLInputElement;
+      if (!input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.innerHTML = svgHtml; btn.classList.remove('copied'); }, 1200);
+      });
+    });
+  });
+
+  // ===== Clear =====
+
+  document.getElementById('clear-btn')!.addEventListener('click', clearAll);
+
+  // ===== Init =====
+
+  updateUnitLabels();
+</script>
