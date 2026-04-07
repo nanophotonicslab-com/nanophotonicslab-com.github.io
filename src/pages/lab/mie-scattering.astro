@@ -20,9 +20,18 @@ import Layout from '../../layouts/Layout.astro';
         <div class="controls card">
           <h3>Parameters</h3>
 
-          <!-- Material selector -->
+          <!-- Geometry type -->
           <div class="param">
-            <div class="param-header"><label>Material</label></div>
+            <div class="param-header"><label>Geometry</label></div>
+            <div class="plot-tabs" id="geo-tabs" role="radiogroup">
+              <button class="plot-tab active" data-geo="sphere" role="radio" aria-checked="true">Sphere</button>
+              <button class="plot-tab" data-geo="coreshell" role="radio" aria-checked="false">Core-Shell</button>
+            </div>
+          </div>
+
+          <!-- Shell / particle material -->
+          <div class="param">
+            <div class="param-header"><label id="material-label">Material</label></div>
             <select id="material-select" class="param-select">
               <option value="custom" selected>Custom dielectric</option>
               <option value="au">Gold (Au)</option>
@@ -34,7 +43,7 @@ import Layout from '../../layouts/Layout.astro';
             <span class="material-ref" id="material-ref"></span>
           </div>
 
-          <!-- Custom epsilon (hidden when material selected) -->
+          <!-- Custom epsilon for shell/particle -->
           <div class="param" id="eps-group">
             <div class="param-header">
               <label>&epsilon;<sub>r</sub></label>
@@ -48,9 +57,37 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <!-- Core material (core-shell only) -->
+          <div class="param cs-only" id="core-mat-group" style="display:none">
+            <div class="param-header"><label>Core material</label></div>
+            <select id="core-material-select" class="param-select">
+              <option value="au" selected>Gold (Au)</option>
+              <option value="ag">Silver (Ag)</option>
+              <option value="si">Silicon (Si)</option>
+              <option value="al">Aluminum (Al)</option>
+              <option value="tio2">TiO&sub2;</option>
+              <option value="custom">Custom dielectric</option>
+            </select>
+            <span class="material-ref" id="core-material-ref"></span>
+          </div>
+
+          <!-- Custom epsilon for core (core-shell only) -->
+          <div class="param cs-only" id="core-eps-group" style="display:none">
+            <div class="param-header">
+              <label>Core &epsilon;<sub>r</sub></label>
+              <input type="number" class="param-number" id="core-eps-num" value="10" step="0.5" min="1">
+            </div>
+            <input type="range" class="param-slider" id="core-eps-slider" min="1" max="50" step="0.5" value="10">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="core-eps-min" value="1" step="0.5" min="0.1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="core-eps-max" value="50" step="0.5" min="0.1">
+            </div>
+          </div>
+
           <div class="param">
             <div class="param-header">
-              <label>Radius (nm)</label>
+              <label id="radius-label">Radius (nm)</label>
               <input type="number" class="param-number" id="r-num" value="100" step="5" min="1">
             </div>
             <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="5" value="100">
@@ -58,6 +95,20 @@ import Layout from '../../layouts/Layout.astro';
               <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
               <span class="param-limit-dash">&mdash;</span>
               <input type="number" class="param-limit" id="r-max" value="500" step="5" min="1">
+            </div>
+          </div>
+
+          <!-- Core radius (core-shell only) -->
+          <div class="param cs-only" id="core-r-group" style="display:none">
+            <div class="param-header">
+              <label>Core radius (nm)</label>
+              <input type="number" class="param-number" id="core-r-num" value="60" step="5" min="1">
+            </div>
+            <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="5" value="60">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="core-r-min" value="5" step="5" min="1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="core-r-max" value="400" step="5" min="1">
             </div>
           </div>
 
@@ -107,7 +158,7 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
-          <p class="theory-note">
+          <p class="theory-note" id="theory-note">
             <strong>Mie theory</strong> gives exact solutions for light scattering by
             spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.
             Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.
@@ -247,6 +298,14 @@ import Layout from '../../layouts/Layout.astro';
   const _xiIm = new Float64Array(MAX_N + 2);
   const _DRe = new Float64Array(MAX_N + 2);
   const _DIm = new Float64Array(MAX_N + 2);
+  // Extra arrays for core-shell: D_n at m1*y and m2*y
+  const _D1Re = new Float64Array(MAX_N + 2);
+  const _D1Im = new Float64Array(MAX_N + 2);
+  const _D2yRe = new Float64Array(MAX_N + 2);
+  const _D2yIm = new Float64Array(MAX_N + 2);
+  // psi/chi at real y (core size parameter)
+  const _psiY = new Float64Array(MAX_N + 2);
+  const _chiY = new Float64Array(MAX_N + 2);
 
   interface MieResult {
     lambda: Float64Array; energy: Float64Array;
@@ -360,6 +419,227 @@ import Layout from '../../layouts/Layout.astro';
     return { lambda, energy, csca, cext, cabs, qsca };
   }
 
+  // === Core-Shell Mie (Bohren-Huffman Ch. 4) ===
+  //
+  // Coated sphere: core (radius a, m1) + shell (outer radius b, m2) in host.
+  // Uses D_n log-derivatives at three complex args and upward recurrence for
+  // ψ_n, χ_n at complex m2*y and m2*x. Stable for nanoparticle size parameters.
+
+  function downwardD(zRe: number, zIm: number, nmax: number, nmx: number, outRe: Float64Array, outIm: Float64Array) {
+    const zM2 = zRe * zRe + zIm * zIm;
+    let dRe = 0, dIm = 0;
+    for (let n = nmx; n >= 1; n--) {
+      const novRe = n * zRe / zM2, novIm = -n * zIm / zM2;
+      const tRe = dRe + novRe, tIm = dIm + novIm;
+      const tM2 = tRe * tRe + tIm * tIm;
+      dRe = novRe - tRe / tM2;
+      dIm = novIm + tIm / tM2;
+      if (n - 1 <= nmax) { outRe[n - 1] = dRe; outIm[n - 1] = dIm; }
+    }
+  }
+
+  // Scratch arrays for complex Bessel at m2*y and m2*x
+  const _psiVRe = new Float64Array(MAX_N + 2), _psiVIm = new Float64Array(MAX_N + 2);
+  const _chiVRe = new Float64Array(MAX_N + 2), _chiVIm = new Float64Array(MAX_N + 2);
+  const _psiURe = new Float64Array(MAX_N + 2), _psiUIm = new Float64Array(MAX_N + 2);
+  const _chiURe = new Float64Array(MAX_N + 2), _chiUIm = new Float64Array(MAX_N + 2);
+
+  /** Upward recurrence for ψ_n(z) and χ_n(z) at complex z. */
+  function besselUp(zRe: number, zIm: number, nmax: number,
+    pR: Float64Array, pI: Float64Array, cR: Float64Array, cI: Float64Array) {
+    const zM2 = zRe * zRe + zIm * zIm;
+    const sR = Math.sin(zRe) * Math.cosh(zIm), sI = Math.cos(zRe) * Math.sinh(zIm);
+    const coR = Math.cos(zRe) * Math.cosh(zIm), coI = -Math.sin(zRe) * Math.sinh(zIm);
+    const soR = (sR * zRe + sI * zIm) / zM2, soI = (sI * zRe - sR * zIm) / zM2;
+    const cooR = (coR * zRe + coI * zIm) / zM2, cooI = (coI * zRe - coR * zIm) / zM2;
+    pR[0] = sR; pI[0] = sI; pR[1] = soR - coR; pI[1] = soI - coI;
+    cR[0] = -coR; cI[0] = -coI; cR[1] = -cooR - sR; cI[1] = -cooI - sI;
+    for (let n = 1; n < nmax; n++) {
+      const fac = 2 * n + 1;
+      const fR = fac * zRe / zM2, fI = -fac * zIm / zM2;
+      pR[n + 1] = fR * pR[n] - fI * pI[n] - pR[n - 1];
+      pI[n + 1] = fR * pI[n] + fI * pR[n] - pI[n - 1];
+      cR[n + 1] = fR * cR[n] - fI * cI[n] - cR[n - 1];
+      cI[n + 1] = fR * cI[n] + fI * cR[n] - cI[n - 1];
+    }
+  }
+
+  function computeMieCoreShell(
+    getCoreDielectric: (lambdaNm: number) => [number, number],
+    getShellDielectric: (lambdaNm: number) => [number, number],
+    coreRadiusNm: number, outerRadiusNm: number,
+    nHost: number, lambdaMin: number, lambdaMax: number,
+  ): MieResult {
+    const rCore = coreRadiusNm * 1e-9;
+    const rOuter = outerRadiusNm * 1e-9;
+    const lambda = new Float64Array(NUM_POINTS);
+    const csca = new Float64Array(NUM_POINTS);
+    const cext = new Float64Array(NUM_POINTS);
+    const cabs = new Float64Array(NUM_POINTS);
+    const qsca = new Float64Array(NUM_POINTS);
+    const energy = new Float64Array(NUM_POINTS);
+
+    for (let i = 0; i < NUM_POINTS; i++)
+      lambda[i] = lambdaMin + (lambdaMax - lambdaMin) * i / (NUM_POINTS - 1);
+
+    for (let i = 0; i < NUM_POINTS; i++) {
+      const [n1, k1] = getCoreDielectric(lambda[i]);
+      const [n2, k2] = getShellDielectric(lambda[i]);
+      // Relative refractive indices: m1 = n_core/n_host, m2 = n_shell/n_host
+      const m1Re = n1 / nHost, m1Im = k1 / nHost;
+      const m2Re = n2 / nHost, m2Im = k2 / nHost;
+
+      const lm = lambda[i] * 1e-9;
+      const k0 = 2 * Math.PI * nHost / lm;
+      const x = k0 * rOuter;  // outer size parameter
+      const y = k0 * rCore;   // core size parameter
+
+      if (x < 1e-12) { csca[i] = 0; cext[i] = 0; cabs[i] = 0; continue; }
+
+      const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
+      const m1Abs = Math.sqrt(m1Re * m1Re + m1Im * m1Im);
+      const m2Abs = Math.sqrt(m2Re * m2Re + m2Im * m2Im);
+      const nmx = Math.max(nmax, Math.ceil(Math.max(m1Abs, m2Abs) * x)) + 16;
+
+      // Complex products: m1*y, m2*y, m2*x
+      const m1yRe = m1Re * y, m1yIm = m1Im * y;
+      const m2yRe = m2Re * y, m2yIm = m2Im * y;
+      const m2xRe = m2Re * x, m2xIm = m2Im * x;
+
+      const m1M2 = m1Re * m1Re + m1Im * m1Im;
+      const m2M2 = m2Re * m2Re + m2Im * m2Im;
+
+      // Downward recurrence for D_n at m1*y, m2*y, m2*x
+      downwardD(m1yRe, m1yIm, nmax, nmx, _D1Re, _D1Im);       // D_n(m1*y)
+      downwardD(m2yRe, m2yIm, nmax, nmx, _D2yRe, _D2yIm);     // D_n(m2*y)
+      downwardD(m2xRe, m2xIm, nmax, nmx, _DRe, _DIm);          // D_n(m2*x)
+
+      // Riccati-Bessel functions at real x (outer)
+      const sinX = Math.sin(x), cosX = Math.cos(x);
+      _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
+      for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
+      _xiRe[0] = sinX; _xiIm[0] = -cosX;
+      _xiRe[1] = sinX / x - cosX; _xiIm[1] = -cosX / x - sinX;
+      for (let n = 1; n < nmax; n++) {
+        const f = (2 * n + 1) / x;
+        _xiRe[n + 1] = f * _xiRe[n] - _xiRe[n - 1];
+        _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1];
+      }
+
+      // ψ_n, χ_n at complex v = m2*y and u = m2*x (upward recurrence)
+      if (y > 1e-14) besselUp(m2yRe, m2yIm, nmax, _psiVRe, _psiVIm, _chiVRe, _chiVIm);
+      besselUp(m2xRe, m2xIm, nmax, _psiURe, _psiUIm, _chiURe, _chiUIm);
+
+      let sumSca = 0, sumExt = 0;
+      for (let n = 1; n <= nmax; n++) {
+        const nx = n / x;
+        // --- Core matching: mixing coefficients γ_a (TM) and γ_b (TE) ---
+        // Wronskian W[ψ,χ] = -1 → D̃(z) = D(z) - 1/(ψ(z)·χ(z))
+        // γ = -ψ(v)/χ(v) · [numerator] / [denominator]  where v = m2*y
+
+        // ψ(v)·χ(v) and 1/(ψ·χ) at v = m2*y
+        const pcvRe = _psiVRe[n] * _chiVRe[n] - _psiVIm[n] * _chiVIm[n];
+        const pcvIm = _psiVRe[n] * _chiVIm[n] + _psiVIm[n] * _chiVRe[n];
+        const pcvM = pcvRe * pcvRe + pcvIm * pcvIm;
+        const ipcvRe = pcvRe / pcvM, ipcvIm = -pcvIm / pcvM;
+        // D̃(v) = D(v) - 1/(ψ·χ)(v)
+        const DtVRe = _D2yRe[n] - ipcvRe, DtVIm = _D2yIm[n] - ipcvIm;
+
+        // -ψ(v)/χ(v)
+        const cvM = _chiVRe[n] * _chiVRe[n] + _chiVIm[n] * _chiVIm[n];
+        const negPoCRe = -(_psiVRe[n] * _chiVRe[n] + _psiVIm[n] * _chiVIm[n]) / cvM;
+        const negPoCIm = -(_psiVIm[n] * _chiVRe[n] - _psiVRe[n] * _chiVIm[n]) / cvM;
+
+        // m1·D(m1*y)
+        const m1DwRe = m1Re * _D1Re[n] - m1Im * _D1Im[n];
+        const m1DwIm = m1Re * _D1Im[n] + m1Im * _D1Re[n];
+        // m1·D(m1*y) / m2
+        const m1Dw_m2Re = (m1DwRe * m2Re + m1DwIm * m2Im) / m2M2;
+        const m1Dw_m2Im = (m1DwIm * m2Re - m1DwRe * m2Im) / m2M2;
+
+        // TM: γ_a = -ψ/χ · [m1·D(w)/m2 - D(v)] / [m1·D(w)/m2 - D̃(v)]
+        let nR = m1Dw_m2Re - _D2yRe[n], nI = m1Dw_m2Im - _D2yIm[n];
+        let dR = m1Dw_m2Re - DtVRe, dI = m1Dw_m2Im - DtVIm;
+        let dM = dR * dR + dI * dI;
+        let rR = (nR * dR + nI * dI) / dM, rI = (nI * dR - nR * dI) / dM;
+        const gaRe = negPoCRe * rR - negPoCIm * rI;
+        const gaIm = negPoCRe * rI + negPoCIm * rR;
+
+        // TE: γ_b = -ψ/χ · [m1·D(w) - m2·D(v)] / [m1·D(w) - m2·D̃(v)]
+        const m2DvRe = m2Re * _D2yRe[n] - m2Im * _D2yIm[n];
+        const m2DvIm = m2Re * _D2yIm[n] + m2Im * _D2yRe[n];
+        const m2DtRe = m2Re * DtVRe - m2Im * DtVIm;
+        const m2DtIm = m2Re * DtVIm + m2Im * DtVRe;
+        nR = m1DwRe - m2DvRe; nI = m1DwIm - m2DvIm;
+        dR = m1DwRe - m2DtRe; dI = m1DwIm - m2DtIm;
+        dM = dR * dR + dI * dI;
+        rR = (nR * dR + nI * dI) / dM; rI = (nI * dR - nR * dI) / dM;
+        const gbRe = negPoCRe * rR - negPoCIm * rI;
+        const gbIm = negPoCRe * rI + negPoCIm * rR;
+
+        // --- Effective D_n at outer boundary (u = m2*x) ---
+        // R_x = χ(u)/ψ(u)
+        const puM = _psiURe[n] * _psiURe[n] + _psiUIm[n] * _psiUIm[n];
+        const RxRe = (_chiURe[n] * _psiURe[n] + _chiUIm[n] * _psiUIm[n]) / puM;
+        const RxIm = (_chiUIm[n] * _psiURe[n] - _chiURe[n] * _psiUIm[n]) / puM;
+        // 1/(ψ·χ) at u
+        const pcuRe = _psiURe[n] * _chiURe[n] - _psiUIm[n] * _chiUIm[n];
+        const pcuIm = _psiURe[n] * _chiUIm[n] + _psiUIm[n] * _chiURe[n];
+        const pcuM = pcuRe * pcuRe + pcuIm * pcuIm;
+        // D̃(u) = D(u) - 1/(ψ·χ)(u)
+        const DtURe = _DRe[n] - pcuRe / pcuM, DtUIm = _DIm[n] + pcuIm / pcuM;
+
+        // D^eff = [D(u) + γ·R·D̃(u)] / [1 + γ·R]  (applied for TM and TE)
+        function effDn(gR2: number, gI2: number): [number, number] {
+          const grR = gR2 * RxRe - gI2 * RxIm, grI = gR2 * RxIm + gI2 * RxRe;
+          const grdR = grR * DtURe - grI * DtUIm, grdI = grR * DtUIm + grI * DtURe;
+          const eNR = _DRe[n] + grdR, eNI = _DIm[n] + grdI;
+          const eDR = 1 + grR, eDI = grI, eDM = eDR * eDR + eDI * eDI;
+          return [(eNR * eDR + eNI * eDI) / eDM, (eNI * eDR - eNR * eDI) / eDM];
+        }
+        const [DaRe, DaIm] = effDn(gaRe, gaIm);
+        const [DbRe, DbIm] = effDn(gbRe, gbIm);
+
+        // --- a_n (TM): A = D_a^eff / m2 + n/x ---
+        const DaOmRe = (DaRe * m2Re + DaIm * m2Im) / m2M2;
+        const DaOmIm = (DaIm * m2Re - DaRe * m2Im) / m2M2;
+        const ARe = DaOmRe + nx, AIm = DaOmIm;
+        const anNRe = ARe * _psiX[n] - _psiX[n - 1], anNIm = AIm * _psiX[n];
+        const anDRe = (ARe * _xiRe[n] - AIm * _xiIm[n]) - _xiRe[n - 1];
+        const anDIm = (ARe * _xiIm[n] + AIm * _xiRe[n]) - _xiIm[n - 1];
+
+        // --- b_n (TE): B = m2 · D_b^eff + n/x ---
+        const m2DbRe = m2Re * DbRe - m2Im * DbIm;
+        const m2DbIm = m2Re * DbIm + m2Im * DbRe;
+        const BRe = m2DbRe + nx, BIm = m2DbIm;
+        const bnNRe = BRe * _psiX[n] - _psiX[n - 1], bnNIm = BIm * _psiX[n];
+        const bnDRe = (BRe * _xiRe[n] - BIm * _xiIm[n]) - _xiRe[n - 1];
+        const bnDIm = (BRe * _xiIm[n] + BIm * _xiRe[n]) - _xiIm[n - 1];
+
+        // Complex division
+        const adM2 = anDRe * anDRe + anDIm * anDIm;
+        const aRe = (anNRe * anDRe + anNIm * anDIm) / adM2;
+        const aIm = (anNIm * anDRe - anNRe * anDIm) / adM2;
+        const bdM2 = bnDRe * bnDRe + bnDIm * bnDIm;
+        const bRe = (bnNRe * bnDRe + bnNIm * bnDIm) / bdM2;
+        const bIm = (bnNIm * bnDRe - bnNRe * bnDIm) / bdM2;
+
+        const w = 2 * n + 1;
+        sumSca += w * (aRe * aRe + aIm * aIm + bRe * bRe + bIm * bIm);
+        sumExt += w * (aRe + bRe);
+      }
+
+      const pf = (2 * Math.PI / (k0 * k0)) * 1e18;
+      csca[i] = pf * sumSca;
+      cext[i] = pf * sumExt;
+      cabs[i] = Math.max(0, cext[i] - csca[i]);
+    }
+
+    const geo = Math.PI * outerRadiusNm * outerRadiusNm;
+    for (let i = 0; i < NUM_POINTS; i++) { qsca[i] = csca[i] / geo; energy[i] = HC_EV_NM / lambda[i]; }
+    return { lambda, energy, csca, cext, cabs, qsca };
+  }
+
   // === Chart Renderer ===
 
   const PAD = { top: 20, right: 25, bottom: 55, left: 70 };
@@ -396,7 +676,7 @@ import Layout from '../../layouts/Layout.astro';
     return v.toExponential(2);
   }
 
-  interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; }
+  interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; fontScale?: number; }
   interface ChartXforms { tx: (v: number) => number; ty: (v: number) => number; invTx: (px: number) => number; invTy: (py: number) => number; pL: number; pT: number; pW: number; pH: number; }
 
   function drawChart(canvas: HTMLCanvasElement, xArr: Float64Array, yArr: Float64Array, xLabel: string, yLabel: string, opts: ChartOpts = {}): ChartXforms {
@@ -433,11 +713,12 @@ import Layout from '../../layouts/Layout.astro';
     for (const v of yTicks) { const y = Math.round(ty(v)) + 0.5; if (y < PAD.top || y > PAD.top + ph) continue; ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + pw, y); ctx.stroke(); }
     for (const v of xTicks) { const x = Math.round(tx(v)) + 0.5; ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + ph); ctx.stroke(); }
     ctx.strokeStyle = '#D1D5DB'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + ph); ctx.lineTo(PAD.left + pw, PAD.top + ph); ctx.stroke();
-    ctx.fillStyle = '#6B7280'; ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const v of xTicks) ctx.fillText(fmtTick(v), tx(v), PAD.top + ph + 6);
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const v of yTicks) { const y = ty(v); if (y < PAD.top - 5 || y > PAD.top + ph + 5) continue; if (yTickLabeler(v)) ctx.fillText(fmtTick(v), PAD.left - 8, y); }
-    ctx.fillStyle = '#374151'; ctx.font = '12px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 14);
-    ctx.save(); ctx.translate(14, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
+    const fs = opts.fontScale || 1;
+    ctx.fillStyle = '#6B7280'; ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const v of xTicks) ctx.fillText(fmtTick(v), tx(v), PAD.top + ph + 6 * fs);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const v of yTicks) { const y = ty(v); if (y < PAD.top - 5 || y > PAD.top + ph + 5) continue; if (yTickLabeler(v)) ctx.fillText(fmtTick(v), PAD.left - 8 * fs, y); }
+    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
+    ctx.save(); ctx.translate(14 * fs, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
     ctx.beginPath(); let first = true;
     for (let i = 0; i < xArr.length; i++) { const v = yArr[i]; if (opts.logY && v <= 0) continue; const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
@@ -619,7 +900,7 @@ import Layout from '../../layouts/Layout.astro';
     const or = ec.getBoundingClientRect.bind(ec);
     ec.getBoundingClientRect = () => ({ ...or(), width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON() { return this; } });
     const { xArr, yArr, xLabel, yLabel } = getPlotData();
-    const opts: ChartOpts = { logY }; if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    const opts: ChartOpts = { logY, fontScale: w / canvas.getBoundingClientRect().width }; if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
     const sd = window.devicePixelRatio;
     Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
     drawChart(ec, xArr, yArr, xLabel, yLabel, opts);

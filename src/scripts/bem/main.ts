@@ -117,6 +117,33 @@ export async function initBEMSolver() {
   bindInput('radius-input', 'geometry', 'radius');
   bindSelect('subdivisions-input', 'geometry', 'subdivisions', parseInt);
 
+  // Length input for nanorod (shown/hidden by shape, synced to aspectRatio)
+  const lengthParam = document.getElementById('length-param');
+  const lengthInput = document.getElementById('length-input') as HTMLInputElement | null;
+
+  function syncLengthVisibility(shape: string) {
+    if (lengthParam) lengthParam.style.display = shape === 'rod' ? '' : 'none';
+  }
+  syncLengthVisibility(state.get('geometry').shape);
+
+  state.subscribe('geometry', (g) => {
+    syncLengthVisibility(g.shape);
+    // Keep length input in sync when radius changes externally
+    if (lengthInput && document.activeElement !== lengthInput) {
+      lengthInput.value = String(Math.round(g.aspectRatio * 2 * g.radius));
+    }
+  });
+
+  if (lengthInput) {
+    lengthInput.addEventListener('input', () => {
+      const length = parseFloat(lengthInput.value);
+      const radius = state.get('geometry').radius;
+      if (!isNaN(length) && radius > 0) {
+        state.set('geometry', { aspectRatio: length / (2 * radius) });
+      }
+    });
+  }
+
   // Material
   bindSelect('material-select', 'material', 'key');
 
