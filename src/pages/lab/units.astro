@@ -294,8 +294,8 @@ import Layout from '../../layouts/Layout.astro';
     if (!isFinite(v)) return '';
     if (v === 0) return '0';
     const s = v.toPrecision(8);
-    if (s.includes('e') || s.includes('E')) return s;
-    return s.replace(/\.?0+$/, '');
+    if (!s.includes('.') && !s.includes('e')) return s;
+    return s.replace(/\.?0+(e|$)/, '$1');
   }
 
   // ===== DOM =====
