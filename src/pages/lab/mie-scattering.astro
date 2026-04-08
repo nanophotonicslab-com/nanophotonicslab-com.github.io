@@ -167,6 +167,8 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
+
           <p class="theory-note" id="theory-note">
             <strong>Mie theory</strong> gives exact solutions for light scattering by
             spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.
@@ -196,6 +198,18 @@ import Layout from '../../layouts/Layout.astro';
             </button>
           </div>
         </div>
+      </div>
+
+      <div class="references card">
+        <h4>References &amp; data sources</h4>
+        <ul>
+          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983). Algorithm: BHCOAT for coated spheres, generalized to N concentric shells.</li>
+          <li>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a> &mdash;
+            Au, Ag: Johnson &amp; Christy (1972);
+            Si: Aspnes &amp; Studna (1983);
+            Al: Raki&cacute; (1995);
+            TiO<sub>2</sub>: Sarkar et al. (2019).</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -260,6 +274,12 @@ import Layout from '../../layouts/Layout.astro';
   .remove-shell-btn { padding: 0.15rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   .remove-shell-btn:hover { border-color: #ef4444; color: #ef4444; }
   .shell-eps-group.hidden { display: none !important; }
+  .reset-btn { width: 100%; color: var(--text-muted) !important; }
+  .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
+  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .references a { color: var(--primary); }
   .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
   .plot-tab { flex: 1; padding: 0.35rem 0.4rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.75rem; font-weight: 500; cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center; }
   .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
@@ -1065,6 +1085,34 @@ import Layout from '../../layouts/Layout.astro';
   document.getElementById('nh-num')!.addEventListener('change', syncPresets);
 
   logToggle.addEventListener('click', () => { logY = !logY; logToggle.classList.toggle('active', logY); zoomBounds = null; render(); });
+
+  // Reset button
+  document.getElementById('reset-btn')!.addEventListener('click', () => {
+    // Remove extra shells
+    while (extraShells.length > 0) removeShellSection(extraShells[0]);
+    // Switch to Sphere mode
+    const sphereBtn = document.querySelector<HTMLButtonElement>('#geo-tabs [data-geo="sphere"]')!;
+    sphereBtn.click();
+    // Restore defaults
+    materialSelect.value = 'custom';
+    epsGroup.classList.remove('hidden');
+    materialRefEl.textContent = '';
+    epsParam.setValue(10);
+    rParam.setValue(100);
+    nhParam.setValue(1.0);
+    coreMaterialSelect.value = 'au';
+    coreMaterialRefEl.textContent = '';
+    coreEpsParam.setValue(10);
+    coreRParam.setValue(60);
+    (document.getElementById('lam-min') as HTMLInputElement).value = '300';
+    (document.getElementById('lam-max') as HTMLInputElement).value = '1200';
+    // Reset plot options
+    logY = false; logToggle.classList.remove('active');
+    document.querySelector<HTMLButtonElement>('#qty-tabs [data-qty="csca"]')?.click();
+    document.querySelector<HTMLButtonElement>('#axis-tabs [data-axis="lambda"]')?.click();
+    syncPresets();
+    resetAndUpdate();
+  });
 
   function getDielectric(lambdaNm: number): [number, number] {
     const mat = materialSelect.value;
