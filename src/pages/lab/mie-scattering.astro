@@ -214,6 +214,7 @@ import Layout from '../../layouts/Layout.astro';
             <div class="plot-tabs plot-tabs--sm" id="view-tabs" role="radiogroup">
               <button class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
               <button class="plot-tab" data-view="angular" role="radio" aria-checked="false">Angular</button>
+              <button class="plot-tab" data-view="nearfield" role="radio" aria-checked="false">Near-field</button>
             </div>
             <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
             <span id="zoom-hint" class="chart-hint">Zoomed &mdash; double-click to reset</span>
@@ -1396,6 +1397,151 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillText('0\u00B0 = forward', 8, 26 * fs);
   }
 
+  // === Near-field Heatmap ===
+
+  const INFERNO: [number, number, number][] = [[0,0,4],[40,11,84],[101,21,110],[159,42,99],[212,72,66],[245,125,21],[250,193,39],[252,255,164]];
+  function inferno(t: number): [number, number, number] {
+    t = Math.max(0, Math.min(1, t));
+    const s = t * (INFERNO.length - 1), i = Math.floor(s), f = s - i;
+    const a = INFERNO[Math.min(i, INFERNO.length - 1)], b = INFERNO[Math.min(i + 1, INFERNO.length - 1)];
+    return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])];
+  }
+
+  interface NearFieldResult { grid: Float64Array; gridSize: number; extent: number; minVal: number; maxVal: number; }
+
+  function computeNearField(coeffs: MieCoeffs, k: number, radiusNm: number, gridSize: number, extentNm: number): NearFieldResult {
+    const R = radiusNm * 1e-9;
+    const grid = new Float64Array(gridSize * gridSize);
+    let minVal = Infinity, maxVal = 0;
+    for (let iz = 0; iz < gridSize; iz++) {
+      const z = (-extentNm + iz * 2 * extentNm / (gridSize - 1)) * 1e-9;
+      for (let ix = 0; ix < gridSize; ix++) {
+        const x = (-extentNm + ix * 2 * extentNm / (gridSize - 1)) * 1e-9;
+        const r = Math.sqrt(x * x + z * z);
+        if (r < R * 1.001) { grid[iz * gridSize + ix] = -1; continue; }
+        const rho = k * r;
+        const costh = z / r, sinth = Math.sqrt(1 - costh * costh);
+        const phase = k * z;
+        // Incident field in spherical coords (φ=0)
+        let ErRe = sinth * Math.cos(phase), ErIm = sinth * Math.sin(phase);
+        let EtRe = costh * Math.cos(phase), EtIm = costh * Math.sin(phase);
+        // Riccati-Bessel at rho
+        const sinR = Math.sin(rho), cosR = Math.cos(rho);
+        let pP = sinR, pC = sinR / rho - cosR;
+        let cP = cosR, cC = cosR / rho + sinR;
+        let piPr = 0, piCu = 1;
+        for (let n = 1; n <= coeffs.nmax; n++) {
+          const xiRe = pC, xiIm = -cC;
+          const psiD = pP - (n / rho) * pC, chiD = cP - (n / rho) * cC;
+          const xiDRe = psiD, xiDIm = -chiD;
+          const tau = n * costh * piCu - (n + 1) * piPr;
+          const Pn1 = sinth * piCu;
+          const ww = (2 * n + 1) / (n * (n + 1));
+          let eRe = 0, eIm = 0;
+          switch (n % 4) { case 0: eRe = ww; break; case 1: eIm = ww; break; case 2: eRe = -ww; break; case 3: eIm = -ww; break; }
+          // En*i
+          const eiRe = -eIm, eiIm = eRe;
+          // ei*an
+          const earRe = eiRe * coeffs.aRe[n-1] - eiIm * coeffs.aIm[n-1];
+          const earIm = eiRe * coeffs.aIm[n-1] + eiIm * coeffs.aRe[n-1];
+          // ear*xi
+          const nn1 = n * (n + 1), fR = nn1 * Pn1 / (rho * rho);
+          ErRe += fR * (earRe * xiRe - earIm * xiIm);
+          ErIm += fR * (earRe * xiIm + earIm * xiRe);
+          // E_theta scattered: En*[i*an*xi'*tau - bn*xi*pi] / rho
+          const tF = tau / rho;
+          EtRe += tF * (earRe * xiDRe - earIm * xiDIm);
+          EtIm += tF * (earRe * xiDIm + earIm * xiDRe);
+          const ebRe = eRe * coeffs.bRe[n-1] - eIm * coeffs.bIm[n-1];
+          const ebIm = eRe * coeffs.bIm[n-1] + eIm * coeffs.bRe[n-1];
+          const pF = piCu / rho;
+          EtRe -= pF * (ebRe * xiRe - ebIm * xiIm);
+          EtIm -= pF * (ebRe * xiIm + ebIm * xiRe);
+          // Recurrences
+          const bf = (2 * n + 1) / rho;
+          const pN = bf * pC - pP; pP = pC; pC = pN;
+          const cN = bf * cC - cP; cP = cC; cC = cN;
+          const piN = ((2 * n + 1) / n) * costh * piCu - ((n + 1) / n) * piPr;
+          piPr = piCu; piCu = piN;
+        }
+        const ExRe = ErRe * sinth + EtRe * costh, ExIm = ErIm * sinth + EtIm * costh;
+        const EzRe = ErRe * costh - EtRe * sinth, EzIm = ErIm * costh - EtIm * sinth;
+        const Esq = ExRe * ExRe + ExIm * ExIm + EzRe * EzRe + EzIm * EzIm;
+        grid[iz * gridSize + ix] = Esq;
+        if (Esq > maxVal) maxVal = Esq;
+        if (Esq > 0 && Esq < minVal) minVal = Esq;
+      }
+    }
+    return { grid, gridSize, extent: extentNm, minVal, maxVal };
+  }
+
+  function drawHeatmap(canvas: HTMLCanvasElement, nf: NearFieldResult, radiusNm: number, lambdaNm: number, opts: { fontScale?: number } = {}): void {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!; ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = opts.fontScale || 1;
+    // Compute plot area (square, centered)
+    const plotSide = Math.min(W - 80 * fs, H - 40 * fs);
+    const ox = (W - plotSide) / 2, oy = 20 * fs;
+    // Log scale
+    const logMin = Math.log10(Math.max(nf.minVal, 1e-6)), logMax = Math.log10(nf.maxVal);
+    const logRange = logMax - logMin || 1;
+    // Render pixel by pixel
+    const imgData = ctx.createImageData(Math.round(plotSide * dpr), Math.round(plotSide * dpr));
+    const pxW = imgData.width, pxH = imgData.height;
+    for (let py = 0; py < pxH; py++) {
+      const iz = Math.round(py * (nf.gridSize - 1) / (pxH - 1));
+      for (let px = 0; px < pxW; px++) {
+        const ix = Math.round(px * (nf.gridSize - 1) / (pxW - 1));
+        const val = nf.grid[iz * nf.gridSize + ix];
+        let r: number, g: number, b: number;
+        if (val < 0) { r = 80; g = 80; b = 90; } // inside particle
+        else { const t = (Math.log10(Math.max(val, 1e-10)) - logMin) / logRange; [r, g, b] = inferno(t); }
+        const off = (py * pxW + px) * 4;
+        imgData.data[off] = r; imgData.data[off + 1] = g; imgData.data[off + 2] = b; imgData.data[off + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, Math.round(ox * dpr), Math.round(oy * dpr));
+    // Particle boundary circle
+    const scale = plotSide / (2 * nf.extent);
+    const cr = radiusNm * scale, ccx = ox + plotSide / 2, ccy = oy + plotSide / 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.arc(ccx, ccy, cr, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    // Colorbar
+    const cbW = 12 * fs, cbH = plotSide * 0.6, cbX = ox + plotSide + 10 * fs, cbY = oy + (plotSide - cbH) / 2;
+    for (let i = 0; i < cbH; i++) {
+      const t = 1 - i / cbH; const [cr2, cg, cb] = inferno(t);
+      ctx.fillStyle = `rgb(${cr2},${cg},${cb})`; ctx.fillRect(cbX, cbY + i, cbW, 1);
+    }
+    ctx.strokeStyle = '#D1D5DB'; ctx.lineWidth = 1; ctx.strokeRect(cbX, cbY, cbW, cbH);
+    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${nf.maxVal.toFixed(1)}`, cbX + cbW + 4, cbY);
+    ctx.fillText(`${nf.minVal.toFixed(2)}`, cbX + cbW + 4, cbY + cbH);
+    ctx.fillText('|E|²/|E₀|²', cbX + cbW + 4, cbY + cbH / 2);
+    // Labels
+    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`\u03BB = ${lambdaNm.toFixed(1)} nm`, 8, 4);
+    // Axis labels
+    ctx.fillStyle = '#6B7280'; ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('x (nm)', ccx, oy + plotSide + 4 * fs);
+    ctx.save(); ctx.translate(ox - 14 * fs, ccy); ctx.rotate(-Math.PI / 2); ctx.fillText('z (nm)', 0, 0); ctx.restore();
+    // Tick marks
+    ctx.font = `${Math.round(8 * fs)}px Inter, system-ui, sans-serif`; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    const ticks = [-nf.extent, -nf.extent / 2, 0, nf.extent / 2, nf.extent];
+    for (const v of ticks) {
+      const px2 = ox + (v + nf.extent) / (2 * nf.extent) * plotSide;
+      ctx.fillText(`${v.toFixed(0)}`, px2, oy + plotSide + 1);
+    }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const v of ticks) {
+      const py2 = oy + (nf.extent - v) / (2 * nf.extent) * plotSide;
+      ctx.fillText(`${v.toFixed(0)}`, ox - 3, py2);
+    }
+  }
+
   // === Param + Tab helpers ===
 
   interface ParamHandle { readonly value: number; setValue(v: number): void; }
@@ -1475,11 +1621,11 @@ import Layout from '../../layouts/Layout.astro';
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
 
   const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
-    const isAngular = v === 'angular';
-    logToggle.style.display = isAngular ? 'none' : '';
-    zoomHint.style.display = isAngular ? 'none' : '';
-    angularControls.style.display = isAngular ? '' : 'none';
-    angularPolWrap.style.display = isAngular ? '' : 'none';
+    const isSpatial = v === 'angular' || v === 'nearfield';
+    logToggle.style.display = isSpatial ? 'none' : '';
+    zoomHint.style.display = isSpatial ? 'none' : '';
+    angularControls.style.display = isSpatial ? '' : 'none';
+    angularPolWrap.style.display = v === 'angular' ? '' : 'none';
     zoomBounds = null;
     render();
   });
@@ -2003,6 +2149,7 @@ import Layout from '../../layouts/Layout.astro';
   function render() {
     if (!data) return;
     if (viewTabs.value === 'angular') { renderAngular(); return; }
+    if (viewTabs.value === 'nearfield') { renderNearField(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
     currentXArr = xArr; currentSeries = series;
     const opts: ChartOpts = { logY };
@@ -2023,6 +2170,25 @@ import Layout from '../../layouts/Layout.astro';
     }
     const pattern = computeAngularPattern(coeffs);
     drawPolarChart(canvas, pattern, polTabs.value, lambdaNm);
+    clearOverlay();
+  }
+
+  function renderNearField() {
+    chartXforms = null;
+    const lambdaNm = parseFloat(angularLambdaInput.value) || 550;
+    const outerR = geometry === 'coreshell'
+      ? Math.max(coreRParam.value, rParam.value, ...extraShells.map(s => s.rParam.value))
+      : rParam.value;
+    let coeffs: MieCoeffs;
+    if (geometry === 'coreshell') {
+      coeffs = computeShellCoeffsAtLambda(buildLayers(), nhParam.value, lambdaNm);
+    } else {
+      coeffs = computeSphereCoeffs(getDielectric, rParam.value, nhParam.value, lambdaNm);
+    }
+    const k = 2 * Math.PI * nhParam.value / (lambdaNm * 1e-9);
+    const extent = outerR * 3;
+    const nf = computeNearField(coeffs, k, outerR, 150, extent);
+    drawHeatmap(canvas, nf, outerR, lambdaNm);
     clearOverlay();
   }
 
