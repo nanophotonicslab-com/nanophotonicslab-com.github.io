@@ -211,8 +211,24 @@ import Layout from '../../layouts/Layout.astro';
 
         <div class="chart-panel card">
           <div class="chart-toolbar">
+            <div class="plot-tabs plot-tabs--sm" id="view-tabs" role="radiogroup">
+              <button class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
+              <button class="plot-tab" data-view="angular" role="radio" aria-checked="false">Angular</button>
+            </div>
             <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
             <span id="zoom-hint" class="chart-hint">Zoomed &mdash; double-click to reset</span>
+            <span id="angular-controls" class="angular-controls" style="display:none">
+              <label class="angular-label">&lambda; =</label>
+              <input type="number" class="param-number param-number--sm" id="angular-lambda" value="550" step="10" min="100">
+              <span class="angular-label">nm</span>
+            </span>
+          </div>
+          <div id="angular-pol-wrap" class="angular-pol-wrap" style="display:none">
+            <div class="plot-tabs" id="pol-tabs" role="radiogroup">
+              <button class="plot-tab active" data-pol="total" role="radio" aria-checked="true">Unpolarized</button>
+              <button class="plot-tab" data-pol="perp" role="radio" aria-checked="false">&perp; (S&#x2081;)</button>
+              <button class="plot-tab" data-pol="par" role="radio" aria-checked="false">&#x2016; (S&#x2082;)</button>
+            </div>
           </div>
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="mie-chart"></canvas>
@@ -323,6 +339,11 @@ import Layout from '../../layouts/Layout.astro';
   .rii-result:hover { background: rgba(99,102,241,0.06); }
   .rii-result-book { font-weight: 600; color: var(--text); }
   .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }
+  .plot-tabs--sm { padding: 2px; }
+  .plot-tabs--sm .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.6875rem; }
+  .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
+  .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  .angular-pol-wrap { margin-bottom: var(--space-sm); }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -1033,6 +1054,160 @@ import Layout from '../../layouts/Layout.astro';
     return { lambda, energy, csca, cext, cabs, qsca, csca_e, csca_m, cext_e, cext_m, csca_mp, cext_mp };
   }
 
+  // === Mie Coefficients (single wavelength, for angular patterns) ===
+
+  interface MieCoeffs {
+    aRe: Float64Array; aIm: Float64Array;
+    bRe: Float64Array; bIm: Float64Array;
+    nmax: number; x: number;
+  }
+
+  function computeSphereCoeffs(
+    getDiel: (l: number) => [number, number], radiusNm: number, nHost: number, lambdaNm: number,
+  ): MieCoeffs {
+    const [nP, kP] = getDiel(lambdaNm);
+    const mRe = nP / nHost, mIm = kP / nHost;
+    const R = radiusNm * 1e-9, lm = lambdaNm * 1e-9;
+    const k0 = 2 * Math.PI * nHost / lm, x = k0 * R;
+    if (x < 1e-12) return { aRe: new Float64Array(0), aIm: new Float64Array(0), bRe: new Float64Array(0), bIm: new Float64Array(0), nmax: 0, x };
+    const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
+    const mAbs = Math.sqrt(mRe * mRe + mIm * mIm);
+    const nmx = Math.max(nmax, Math.ceil(mAbs * x)) + 16;
+    const mxRe = mRe * x, mxIm = mIm * x, mxMag2 = mxRe * mxRe + mxIm * mxIm, mMag2 = mRe * mRe + mIm * mIm;
+    let dRe = 0, dIm = 0;
+    for (let n = nmx; n >= 1; n--) {
+      const novRe = n * mxRe / mxMag2, novIm = -n * mxIm / mxMag2;
+      const tRe = dRe + novRe, tIm = dIm + novIm, tM2 = tRe * tRe + tIm * tIm;
+      dRe = novRe - tRe / tM2; dIm = novIm + tIm / tM2;
+      if (n - 1 <= nmax) { _DRe[n - 1] = dRe; _DIm[n - 1] = dIm; }
+    }
+    const sinX = Math.sin(x), cosX = Math.cos(x);
+    _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
+    for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
+    _xiRe[0] = sinX; _xiIm[0] = -cosX; _xiRe[1] = sinX / x - cosX; _xiIm[1] = -cosX / x - sinX;
+    for (let n = 1; n < nmax; n++) { const f = (2 * n + 1) / x; _xiRe[n + 1] = f * _xiRe[n] - _xiRe[n - 1]; _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1]; }
+    const aR = new Float64Array(nmax), aI = new Float64Array(nmax), bR = new Float64Array(nmax), bI = new Float64Array(nmax);
+    for (let n = 1; n <= nmax; n++) {
+      const DomRe = (_DRe[n]*mRe+_DIm[n]*mIm)/mMag2, DomIm = (_DIm[n]*mRe-_DRe[n]*mIm)/mMag2;
+      const mDRe = mRe*_DRe[n]-mIm*_DIm[n], mDIm = mRe*_DIm[n]+mIm*_DRe[n];
+      const nx = n/x, ARe = DomRe+nx, AIm = DomIm, BRe = mDRe+nx, BIm = mDIm;
+      const anNRe = ARe*_psiX[n]-_psiX[n-1], anNIm = AIm*_psiX[n];
+      const anDRe = (ARe*_xiRe[n]-AIm*_xiIm[n])-_xiRe[n-1], anDIm = (ARe*_xiIm[n]+AIm*_xiRe[n])-_xiIm[n-1];
+      const bnNRe = BRe*_psiX[n]-_psiX[n-1], bnNIm = BIm*_psiX[n];
+      const bnDRe = (BRe*_xiRe[n]-BIm*_xiIm[n])-_xiRe[n-1], bnDIm = (BRe*_xiIm[n]+BIm*_xiRe[n])-_xiIm[n-1];
+      const adM2 = anDRe*anDRe+anDIm*anDIm; aR[n-1] = (anNRe*anDRe+anNIm*anDIm)/adM2; aI[n-1] = (anNIm*anDRe-anNRe*anDIm)/adM2;
+      const bdM2 = bnDRe*bnDRe+bnDIm*bnDIm; bR[n-1] = (bnNRe*bnDRe+bnNIm*bnDIm)/bdM2; bI[n-1] = (bnNIm*bnDRe-bnNRe*bnDIm)/bdM2;
+    }
+    return { aRe: aR, aIm: aI, bRe: bR, bIm: bI, nmax, x };
+  }
+
+  function computeShellCoeffsAtLambda(layers: ShellLayer[], nHost: number, lambdaNm: number): MieCoeffs {
+    const NL = layers.length, outerR = layers[NL-1].radiusNm;
+    const lm = lambdaNm*1e-9, k0 = 2*Math.PI*nHost/lm, Y = k0*outerR*1e-9;
+    if (Y < 1e-12) return { aRe: new Float64Array(0), aIm: new Float64Array(0), bRe: new Float64Array(0), bIm: new Float64Array(0), nmax: 0, x: Y };
+    const mR: number[] = [], mI: number[] = [];
+    for (let j = 0; j < NL; j++) { const [nj, kj] = layers[j].getDielectric(lambdaNm); mR.push(nj/nHost); mI.push(kj/nHost); }
+    const S = layers.map(l => k0*l.radiusNm*1e-9);
+    const NSTOP = Math.floor(Y + 4*Math.pow(Y, 1/3) + 2);
+    const zCRe = mR[0]*S[0], zCIm = mI[0]*S[0];
+    let [D0CRe, D0CIm] = ccot(zCRe, zCIm);
+    interface SS { zInRe:number;zInIm:number;zOutRe:number;zOutIm:number;D0InRe:number;D0InIm:number;D0OutRe:number;D0OutIm:number;chi0InRe:number;chi0InIm:number;chi1InRe:number;chi1InIm:number;chi0OutRe:number;chi0OutIm:number;chi1OutRe:number;chi1OutIm:number; }
+    const ss: SS[] = [];
+    for (let j = 1; j < NL; j++) {
+      const zIR=mR[j]*S[j-1],zII=mI[j]*S[j-1],zOR=mR[j]*S[j],zOI=mI[j]*S[j];
+      const [d0IR,d0II]=ccot(zIR,zII),[d0OR,d0OI]=ccot(zOR,zOI);
+      const [sIR,sII]=csin(zIR,zII),[cIR,cII]=ccos(zIR,zII),[sOR,sOI]=csin(zOR,zOI),[cOR,cOI]=ccos(zOR,zOI);
+      ss.push({zInRe:zIR,zInIm:zII,zOutRe:zOR,zOutIm:zOI,D0InRe:d0IR,D0InIm:d0II,D0OutRe:d0OR,D0OutIm:d0OI,chi0InRe:-sIR,chi0InIm:-sII,chi1InRe:cIR,chi1InIm:cII,chi0OutRe:-sOR,chi0OutIm:-sOI,chi1OutRe:cOR,chi1OutIm:cOI});
+    }
+    let PSI0Y=Math.cos(Y),PSI1Y=Math.sin(Y),CHI0Y=-Math.sin(Y),CHI1Y=Math.cos(Y),XI1YRe=PSI1Y,XI1YIm=-CHI1Y;
+    const aRA = new Float64Array(NSTOP), aIA = new Float64Array(NSTOP), bRA = new Float64Array(NSTOP), bIA = new Float64Array(NSTOP);
+    for (let n = 1; n <= NSTOP; n++) {
+      const RN=n, PSIY=(2*RN-1)*PSI1Y/Y-PSI0Y, CHIY=(2*RN-1)*CHI1Y/Y-CHI0Y, XIYRe=PSIY, XIYIm=-CHIY;
+      const [novCRe,novCIm]=cdivN(RN,zCRe,zCIm),[invCRe,invCIm]=cdiv(1,0,novCRe-D0CRe,novCIm-D0CIm);
+      const DCRe=invCRe-novCRe,DCIm=invCIm-novCIm;
+      let DNBARRe=DCRe,DNBARIm=DCIm,GNBARRe=DCRe,GNBARIm=DCIm;
+      for (let j = 0; j < ss.length; j++) {
+        const s=ss[j],jL=j+1;
+        const [novIRe,novIIm]=cdivN(RN,s.zInRe,s.zInIm),[invIRe,invIIm]=cdiv(1,0,novIRe-s.D0InRe,novIIm-s.D0InIm);
+        const D1IRe=invIRe-novIRe,D1IIm=invIIm-novIIm;
+        const [novORe,novOIm]=cdivN(RN,s.zOutRe,s.zOutIm),[invORe,invOIm]=cdiv(1,0,novORe-s.D0OutRe,novOIm-s.D0OutIm);
+        const D1ORe=invORe-novORe,D1OIm=invOIm-novOIm;
+        const fac=2*RN-1;
+        const [fIRe,fIIm]=cdivN(fac,s.zInRe,s.zInIm);
+        const CHIIRe=fIRe*s.chi1InRe-fIIm*s.chi1InIm-s.chi0InRe,CHIIIm=fIRe*s.chi1InIm+fIIm*s.chi1InRe-s.chi0InIm;
+        const [ncIRe,ncIIm]=cdivN(RN,s.zInRe,s.zInIm);
+        const CHIPIRe=s.chi1InRe-(ncIRe*CHIIRe-ncIIm*CHIIIm),CHIPIIm=s.chi1InIm-(ncIRe*CHIIIm+ncIIm*CHIIRe);
+        const [fORe,fOIm]=cdivN(fac,s.zOutRe,s.zOutIm);
+        const CHIORe=fORe*s.chi1OutRe-fOIm*s.chi1OutIm-s.chi0OutRe,CHIOIm=fORe*s.chi1OutIm+fOIm*s.chi1OutRe-s.chi0OutIm;
+        const [ncORe,ncOIm]=cdivN(RN,s.zOutRe,s.zOutIm);
+        const CHIPORe=s.chi1OutRe-(ncORe*CHIORe-ncOIm*CHIOIm),CHIPOIm=s.chi1OutIm-(ncORe*CHIOIm+ncOIm*CHIORe);
+        const [REFRe,REFIm]=cdiv(mR[jL],mI[jL],mR[jL-1],mI[jL-1]);
+        const [rDRe,rDIm]=cmul(REFRe,REFIm,DNBARRe,DNBARIm);
+        const [rDcRe,rDcIm]=cmul(rDRe,rDIm,CHIIRe,CHIIIm);
+        const [cDaRe,cDaIm]=cmul(CHIIRe,CHIIIm,D1IRe,D1IIm);
+        const den2Re=cDaRe-CHIPIRe,den2Im=cDaIm-CHIPIIm;
+        const [ddaRe,ddaIm]=cmul(rDcRe-CHIPIRe,rDcIm-CHIPIIm,den2Re,den2Im);
+        const [ANCRe,ANCIm]=cdiv(rDRe-D1IRe,rDIm-D1IIm,ddaRe,ddaIm);
+        const [cdoRe,cdoIm]=cmul(CHIORe,CHIOIm,D1ORe,D1OIm);
+        const brRe=cdoRe-CHIPORe,brIm=cdoIm-CHIPOIm;
+        const [BRKRe,BRKIm]=cmul(ANCRe,ANCIm,brRe,brIm);
+        const [rD2Re,rD2Im]=cmul(REFRe,REFIm,D1IRe,D1IIm);
+        const [rCpRe,rCpIm]=cmul(REFRe,REFIm,CHIPIRe,CHIPIIm);
+        const [gCRe,gCIm]=cmul(GNBARRe,GNBARIm,CHIIRe,CHIIIm);
+        const [ddbRe,ddbIm]=cmul(rCpRe-gCRe,rCpIm-gCIm,den2Re,den2Im);
+        const [BNCRe,BNCIm]=cdiv(rD2Re-GNBARRe,rD2Im-GNBARIm,ddbRe,ddbIm);
+        const [CRKRe,CRKIm]=cmul(BNCRe,BNCIm,brRe,brIm);
+        const [bcpRe,bcpIm]=cmul(BRKRe,BRKIm,CHIPORe,CHIPOIm),[bcyRe,bcyIm]=cmul(BRKRe,BRKIm,CHIORe,CHIOIm);
+        [DNBARRe,DNBARIm]=cdiv(D1ORe-bcpRe,D1OIm-bcpIm,1-bcyRe,-bcyIm);
+        const [ccpRe,ccpIm]=cmul(CRKRe,CRKIm,CHIPORe,CHIPOIm),[ccyRe,ccyIm]=cmul(CRKRe,CRKIm,CHIORe,CHIOIm);
+        [GNBARRe,GNBARIm]=cdiv(D1ORe-ccpRe,D1OIm-ccpIm,1-ccyRe,-ccyIm);
+        s.D0InRe=D1IRe;s.D0InIm=D1IIm;s.D0OutRe=D1ORe;s.D0OutIm=D1OIm;
+        s.chi0InRe=s.chi1InRe;s.chi0InIm=s.chi1InIm;s.chi1InRe=CHIIRe;s.chi1InIm=CHIIIm;
+        s.chi0OutRe=s.chi1OutRe;s.chi0OutIm=s.chi1OutIm;s.chi1OutRe=CHIORe;s.chi1OutIm=CHIOIm;
+      }
+      D0CRe=DCRe;D0CIm=DCIm;
+      const [dbrRe,dbrIm]=cdiv(DNBARRe,DNBARIm,mR[NL-1],mI[NL-1]);
+      const ARe=dbrRe+RN/Y,AIm=dbrIm;
+      const anNRe=ARe*PSIY-PSI1Y,anNIm=AIm*PSIY;
+      const anDRe=(ARe*XIYRe-AIm*XIYIm)-XI1YRe,anDIm=(ARe*XIYIm+AIm*XIYRe)-XI1YIm;
+      [aRA[n-1],aIA[n-1]]=cdiv(anNRe,anNIm,anDRe,anDIm);
+      const [rgRe,rgIm]=cmul(mR[NL-1],mI[NL-1],GNBARRe,GNBARIm);
+      const BRe=rgRe+RN/Y,BIm=rgIm;
+      const bnNRe=BRe*PSIY-PSI1Y,bnNIm=BIm*PSIY;
+      const bnDRe=(BRe*XIYRe-BIm*XIYIm)-XI1YRe,bnDIm=(BRe*XIYIm+BIm*XIYRe)-XI1YIm;
+      [bRA[n-1],bIA[n-1]]=cdiv(bnNRe,bnNIm,bnDRe,bnDIm);
+      PSI0Y=PSI1Y;PSI1Y=PSIY;CHI0Y=CHI1Y;CHI1Y=CHIY;XI1YRe=PSI1Y;XI1YIm=-CHI1Y;
+    }
+    return { aRe:aRA, aIm:aIA, bRe:bRA, bIm:bIA, nmax:NSTOP, x:Y };
+  }
+
+  // === Angular Pattern (far-field) ===
+
+  interface AngularPattern { theta: Float64Array; iPerp: Float64Array; iPar: Float64Array; }
+
+  function computeAngularPattern(coeffs: MieCoeffs, nTheta = 361): AngularPattern {
+    const theta = new Float64Array(nTheta), iPerp = new Float64Array(nTheta), iPar = new Float64Array(nTheta);
+    for (let t = 0; t < nTheta; t++) {
+      theta[t] = Math.PI * t / (nTheta - 1);
+      const mu = Math.cos(theta[t]);
+      let piPrev = 0, piCur = 1;
+      let s1Re = 0, s1Im = 0, s2Re = 0, s2Im = 0;
+      for (let n = 1; n <= coeffs.nmax; n++) {
+        const tau = n * mu * piCur - (n + 1) * piPrev;
+        const w = (2 * n + 1) / (n * (n + 1));
+        s1Re += w * (coeffs.aRe[n-1] * piCur + coeffs.bRe[n-1] * tau);
+        s1Im += w * (coeffs.aIm[n-1] * piCur + coeffs.bIm[n-1] * tau);
+        s2Re += w * (coeffs.aRe[n-1] * tau + coeffs.bRe[n-1] * piCur);
+        s2Im += w * (coeffs.aIm[n-1] * tau + coeffs.bIm[n-1] * piCur);
+        const piNext = ((2 * n + 1) / n) * mu * piCur - ((n + 1) / n) * piPrev;
+        piPrev = piCur; piCur = piNext;
+      }
+      iPerp[t] = s1Re * s1Re + s1Im * s1Im;
+      iPar[t] = s2Re * s2Re + s2Im * s2Im;
+    }
+    return { theta, iPerp, iPar };
+  }
+
   // === Chart Renderer ===
 
   const PAD = { top: 20, right: 25, bottom: 55, left: 70 };
@@ -1145,6 +1320,82 @@ import Layout from '../../layouts/Layout.astro';
     return { tx, ty, invTx, invTy, pL: PAD.left, pT: PAD.top, pW: pw, pH: ph };
   }
 
+  // === Polar Chart Renderer ===
+
+  function drawPolarChart(canvas: HTMLCanvasElement, pattern: AngularPattern, polMode: string, lambdaNm: number, opts: { fontScale?: number } = {}): void {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!; ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    const fs = opts.fontScale || 1;
+
+    // Choose intensity data
+    let intensity: Float64Array;
+    if (polMode === 'perp') intensity = pattern.iPerp;
+    else if (polMode === 'par') intensity = pattern.iPar;
+    else { intensity = new Float64Array(pattern.theta.length); for (let i = 0; i < intensity.length; i++) intensity[i] = (pattern.iPerp[i] + pattern.iPar[i]) / 2; }
+
+    // Log scale bounds
+    let logMin = Infinity, logMax = -Infinity;
+    for (let i = 0; i < intensity.length; i++) { if (intensity[i] > 0) { const l = Math.log10(intensity[i]); if (l < logMin) logMin = l; if (l > logMax) logMax = l; } }
+    if (!isFinite(logMin)) { logMin = 0; logMax = 1; }
+    if (logMax - logMin < 1) { logMin = logMax - 1; }
+    const lf = Math.floor(logMin), lc = Math.ceil(logMax);
+
+    const margin = 45 * fs;
+    const plotR = Math.min(W, H) / 2 - margin;
+    const cx = W / 2, cy = H / 2;
+    const r = (logI: number) => Math.max(0, ((logI - lf) / (lc - lf)) * plotR);
+
+    // Concentric grid circles
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
+    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#9CA3AF'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    for (let p = lf; p <= lc; p++) {
+      const rr = r(p); if (rr <= 0) continue;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillText(`10${p >= 0 ? '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[p] || '^' + p : '\u207B' + '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[-p] || '^' + p}`, cx + rr + 3, cy - 3);
+    }
+
+    // Radial gridlines + angle labels
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#6B7280'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let deg = 0; deg < 360; deg += 30) {
+      const a = deg * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + plotR * Math.sin(a), cy - plotR * Math.cos(a)); ctx.stroke();
+      if (deg <= 180) {
+        const lx = cx + (plotR + 14 * fs) * Math.sin(a), ly = cy - (plotR + 14 * fs) * Math.cos(a);
+        ctx.fillText(`${deg}\u00B0`, lx, ly);
+        if (deg > 0 && deg < 180) ctx.fillText(`${deg}\u00B0`, cx - (plotR + 14 * fs) * Math.sin(a), ly);
+      }
+    }
+
+    // Draw scattering pattern (right half + mirror)
+    const color = polMode === 'par' ? '#EC4899' : '#6366F1';
+    ctx.beginPath();
+    for (let i = 0; i < pattern.theta.length; i++) {
+      const I = intensity[i]; if (I <= 0) continue;
+      const rr = r(Math.log10(I)), th = pattern.theta[i];
+      const px = cx + rr * Math.sin(th), py = cy - rr * Math.cos(th);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    for (let i = pattern.theta.length - 1; i >= 0; i--) {
+      const I = intensity[i]; if (I <= 0) continue;
+      const rr = r(Math.log10(I)), th = pattern.theta[i];
+      ctx.lineTo(cx - rr * Math.sin(th), cy - rr * Math.cos(th));
+    }
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(color, 0.08); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`\u03BB = ${lambdaNm.toFixed(1)} nm`, 8, 8);
+    ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#9CA3AF';
+    ctx.fillText('0\u00B0 = forward', 8, 26 * fs);
+  }
+
   // === Param + Tab helpers ===
 
   interface ParamHandle { readonly value: number; setValue(v: number): void; }
@@ -1181,6 +1432,9 @@ import Layout from '../../layouts/Layout.astro';
   const chartWrap = document.getElementById('chart-wrap')!;
   const zoomHint = document.getElementById('zoom-hint')!;
   const logToggle = document.getElementById('log-toggle')!;
+  const angularControls = document.getElementById('angular-controls')!;
+  const angularPolWrap = document.getElementById('angular-pol-wrap')!;
+  const angularLambdaInput = document.getElementById('angular-lambda') as HTMLInputElement;
   const materialSelect = document.getElementById('material-select') as HTMLSelectElement;
   const epsGroup = document.getElementById('eps-group')!;
   const materialRefEl = document.getElementById('material-ref')!;
@@ -1219,6 +1473,18 @@ import Layout from '../../layouts/Layout.astro';
   const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; render(); });
   const decompTabs = setupTabs('decomp-tabs', 'decomp', 'total', () => { zoomBounds = null; render(); });
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
+
+  const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
+    const isAngular = v === 'angular';
+    logToggle.style.display = isAngular ? 'none' : '';
+    zoomHint.style.display = isAngular ? 'none' : '';
+    angularControls.style.display = isAngular ? '' : 'none';
+    angularPolWrap.style.display = isAngular ? '' : 'none';
+    zoomBounds = null;
+    render();
+  });
+  const polTabs = setupTabs('pol-tabs', 'pol', 'total', () => render());
+  angularLambdaInput.addEventListener('change', () => render());
 
   // Geometry tabs (Sphere / Core-Shell)
   const geoTabs = setupTabs('geo-tabs', 'geo', 'sphere', (v: string) => {
@@ -1736,12 +2002,27 @@ import Layout from '../../layouts/Layout.astro';
 
   function render() {
     if (!data) return;
+    if (viewTabs.value === 'angular') { renderAngular(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
     currentXArr = xArr; currentSeries = series;
     const opts: ChartOpts = { logY };
     if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
     chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, opts);
     zoomHint.classList.toggle('visible', !!zoomBounds);
+    clearOverlay();
+  }
+
+  function renderAngular() {
+    chartXforms = null;
+    const lambdaNm = parseFloat(angularLambdaInput.value) || 550;
+    let coeffs: MieCoeffs;
+    if (geometry === 'coreshell') {
+      coeffs = computeShellCoeffsAtLambda(buildLayers(), nhParam.value, lambdaNm);
+    } else {
+      coeffs = computeSphereCoeffs(getDielectric, rParam.value, nhParam.value, lambdaNm);
+    }
+    const pattern = computeAngularPattern(coeffs);
+    drawPolarChart(canvas, pattern, polTabs.value, lambdaNm);
     clearOverlay();
   }
 
