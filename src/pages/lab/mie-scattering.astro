@@ -644,15 +644,17 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   /**
-   * Core-shell Mie scattering using validated BHCOAT algorithm.
-   * layers[0] = core, layers[1] = shell (N=2 only for now).
+   * Multi-shell Mie scattering — generalized BHCOAT.
+   * Recursive upward-recurrence matching from core outward, shell by shell.
+   * layers[0] = core, layers[1..N-1] = shells (inside-out).
+   * For N=2 delegates to the validated bhcoat fast path.
    */
   function computeMieMultiShell(
     layers: ShellLayer[],
     nHost: number, lambdaMin: number, lambdaMax: number,
   ): MieResult {
-    const outerRadiusNm = layers[layers.length - 1].radiusNm;
-    const coreRadiusNm = layers[0].radiusNm;
+    const N = layers.length;
+    const outerRadiusNm = layers[N - 1].radiusNm;
     const lambda = new Float64Array(NUM_POINTS);
     const csca = new Float64Array(NUM_POINTS);
     const cext = new Float64Array(NUM_POINTS);
@@ -664,21 +666,189 @@ import Layout from '../../layouts/Layout.astro';
       lambda[i] = lambdaMin + (lambdaMax - lambdaMin) * i / (NUM_POINTS - 1);
 
     for (let i = 0; i < NUM_POINTS; i++) {
-      const [n1, k1] = layers[0].getDielectric(lambda[i]);
-      const [n2, k2] = layers[1].getDielectric(lambda[i]);
-      const m1Re = n1 / nHost, m1Im = k1 / nHost;
-      const m2Re = n2 / nHost, m2Im = k2 / nHost;
-
       const lm = lambda[i] * 1e-9;
       const k0 = 2 * Math.PI * nHost / lm;
-      const XX = k0 * coreRadiusNm * 1e-9;
-      const YY = k0 * outerRadiusNm * 1e-9;
-      if (YY < 1e-12) { csca[i] = 0; cext[i] = 0; cabs[i] = 0; continue; }
+      const Y = k0 * outerRadiusNm * 1e-9;
+      if (Y < 1e-12) { csca[i] = 0; cext[i] = 0; cabs[i] = 0; continue; }
 
-      const [qs, qe] = bhcoat(XX, YY, m1Re, m1Im, m2Re, m2Im);
+      // Refractive indices relative to host
+      const mRe: number[] = [], mIm: number[] = [];
+      for (let j = 0; j < N; j++) {
+        const [nj, kj] = layers[j].getDielectric(lambda[i]);
+        mRe.push(nj / nHost); mIm.push(kj / nHost);
+      }
+      const radii = layers.map(l => l.radiusNm * 1e-9);
+
+      // N=2 fast path: use validated bhcoat
+      if (N === 2) {
+        const XX = k0 * radii[0];
+        const [qs, qe] = bhcoat(XX, Y, mRe[0], mIm[0], mRe[1], mIm[1]);
+        const geo = Math.PI * outerRadiusNm * outerRadiusNm;
+        csca[i] = qs * geo; cext[i] = qe * geo;
+        cabs[i] = Math.max(0, cext[i] - csca[i]);
+        continue;
+      }
+
+      // --- General N-layer recursive BHCOAT ---
+      const NSTOP = Math.floor(Y + 4 * Math.pow(Y, 1 / 3) + 2);
+
+      // Size parameters: S[j] = k0 * r[j] (in host medium)
+      const S = radii.map(r => k0 * r);
+
+      // Per-shell recurrence state: D_prev and chi_{n-1}, chi_{n-2}
+      // at inner boundary (m[j]*S[j-1]) and outer boundary (m[j]*S[j])
+      interface ShellState {
+        zInRe: number; zInIm: number; zOutRe: number; zOutIm: number;
+        D0InRe: number; D0InIm: number; D0OutRe: number; D0OutIm: number;
+        chi0InRe: number; chi0InIm: number; chi1InRe: number; chi1InIm: number;
+        chi0OutRe: number; chi0OutIm: number; chi1OutRe: number; chi1OutIm: number;
+      }
+      // Core D recurrence
+      const zCRe = mRe[0] * S[0], zCIm = mIm[0] * S[0];
+      let [D0CRe, D0CIm] = ccot(zCRe, zCIm);
+
+      // Shell states
+      const ss: ShellState[] = [];
+      for (let j = 1; j < N; j++) {
+        const zIR = mRe[j] * S[j-1], zII = mIm[j] * S[j-1];
+        const zOR = mRe[j] * S[j],   zOI = mIm[j] * S[j];
+        const [d0IR, d0II] = ccot(zIR, zII);
+        const [d0OR, d0OI] = ccot(zOR, zOI);
+        const [sIR, sII] = csin(zIR, zII); const [cIR, cII] = ccos(zIR, zII);
+        const [sOR, sOI] = csin(zOR, zOI); const [cOR, cOI] = ccos(zOR, zOI);
+        ss.push({
+          zInRe: zIR, zInIm: zII, zOutRe: zOR, zOutIm: zOI,
+          D0InRe: d0IR, D0InIm: d0II, D0OutRe: d0OR, D0OutIm: d0OI,
+          chi0InRe: -sIR, chi0InIm: -sII, chi1InRe: cIR, chi1InIm: cII,
+          chi0OutRe: -sOR, chi0OutIm: -sOI, chi1OutRe: cOR, chi1OutIm: cOI,
+        });
+      }
+
+      // Outer real Bessel recurrence
+      let PSI0Y = Math.cos(Y), PSI1Y = Math.sin(Y);
+      let CHI0Y = -Math.sin(Y), CHI1Y = Math.cos(Y);
+      let XI1YRe = PSI1Y, XI1YIm = -CHI1Y;
+
+      let QSCA = 0, QEXT = 0;
+      for (let n = 1; n <= NSTOP; n++) {
+        const RN = n;
+        const PSIY = (2 * RN - 1) * PSI1Y / Y - PSI0Y;
+        const CHIY = (2 * RN - 1) * CHI1Y / Y - CHI0Y;
+        const XIYRe = PSIY, XIYIm = -CHIY;
+
+        // Core D_n upward
+        const [novCRe, novCIm] = cdivN(RN, zCRe, zCIm);
+        const [invCRe, invCIm] = cdiv(1, 0, novCRe - D0CRe, novCIm - D0CIm);
+        const DCRe = invCRe - novCRe, DCIm = invCIm - novCIm;
+
+        // Initialize effective D from core
+        let DNBARRe = DCRe, DNBARIm = DCIm;
+        let GNBARRe = DCRe, GNBARIm = DCIm;
+
+        // Process each shell (inside-out)
+        for (let j = 0; j < ss.length; j++) {
+          const s = ss[j];
+          const jLayer = j + 1;
+
+          // D_n at inner boundary
+          const [novIRe, novIIm] = cdivN(RN, s.zInRe, s.zInIm);
+          const [invIRe, invIIm] = cdiv(1, 0, novIRe - s.D0InRe, novIIm - s.D0InIm);
+          const D1IRe = invIRe - novIRe, D1IIm = invIIm - novIIm;
+
+          // D_n at outer boundary
+          const [novORe, novOIm] = cdivN(RN, s.zOutRe, s.zOutIm);
+          const [invORe, invOIm] = cdiv(1, 0, novORe - s.D0OutRe, novOIm - s.D0OutIm);
+          const D1ORe = invORe - novORe, D1OIm = invOIm - novOIm;
+
+          // χ_n at inner boundary (upward)
+          const fac = 2 * RN - 1;
+          const [fIRe, fIIm] = cdivN(fac, s.zInRe, s.zInIm);
+          const CHIIRe = fIRe * s.chi1InRe - fIIm * s.chi1InIm - s.chi0InRe;
+          const CHIIIm = fIRe * s.chi1InIm + fIIm * s.chi1InRe - s.chi0InIm;
+          // χ'_n at inner
+          const [ncIRe, ncIIm] = cdivN(RN, s.zInRe, s.zInIm);
+          const CHIPIRe = s.chi1InRe - (ncIRe * CHIIRe - ncIIm * CHIIIm);
+          const CHIPIIm = s.chi1InIm - (ncIRe * CHIIIm + ncIIm * CHIIRe);
+
+          // χ_n at outer boundary
+          const [fORe, fOIm] = cdivN(fac, s.zOutRe, s.zOutIm);
+          const CHIORe = fORe * s.chi1OutRe - fOIm * s.chi1OutIm - s.chi0OutRe;
+          const CHIOIm = fORe * s.chi1OutIm + fOIm * s.chi1OutRe - s.chi0OutIm;
+          // χ'_n at outer
+          const [ncORe, ncOIm] = cdivN(RN, s.zOutRe, s.zOutIm);
+          const CHIPORe = s.chi1OutRe - (ncORe * CHIORe - ncOIm * CHIOIm);
+          const CHIPOIm = s.chi1OutIm - (ncORe * CHIOIm + ncOIm * CHIORe);
+
+          // REFREL = m[jLayer] / m[jLayer-1]
+          const [REFRe, REFIm] = cdiv(mRe[jLayer], mIm[jLayer], mRe[jLayer - 1], mIm[jLayer - 1]);
+
+          // --- TM: ANCAP uses DNBAR as inner D ---
+          const [rDRe, rDIm] = cmul(REFRe, REFIm, DNBARRe, DNBARIm);
+          const [rDcRe, rDcIm] = cmul(rDRe, rDIm, CHIIRe, CHIIIm);
+          const [cDaRe, cDaIm] = cmul(CHIIRe, CHIIIm, D1IRe, D1IIm);
+          const den1aRe = rDcRe - CHIPIRe, den1aIm = rDcIm - CHIPIIm;
+          const den2Re = cDaRe - CHIPIRe, den2Im = cDaIm - CHIPIIm;
+          const [ddaRe, ddaIm] = cmul(den1aRe, den1aIm, den2Re, den2Im);
+          const [ANCRe, ANCIm] = cdiv(rDRe - D1IRe, rDIm - D1IIm, ddaRe, ddaIm);
+          // BRACK
+          const [cdoRe, cdoIm] = cmul(CHIORe, CHIOIm, D1ORe, D1OIm);
+          const brRe = cdoRe - CHIPORe, brIm = cdoIm - CHIPOIm;
+          const [BRKRe, BRKIm] = cmul(ANCRe, ANCIm, brRe, brIm);
+
+          // --- TE: BNCAP uses GNBAR as inner D ---
+          const [rD2Re, rD2Im] = cmul(REFRe, REFIm, D1IRe, D1IIm);
+          const [rCpRe, rCpIm] = cmul(REFRe, REFIm, CHIPIRe, CHIPIIm);
+          const [gCRe, gCIm] = cmul(GNBARRe, GNBARIm, CHIIRe, CHIIIm);
+          const den1bRe = rCpRe - gCRe, den1bIm = rCpIm - gCIm;
+          const [ddbRe, ddbIm] = cmul(den1bRe, den1bIm, den2Re, den2Im);
+          const [BNCRe, BNCIm] = cdiv(rD2Re - GNBARRe, rD2Im - GNBARIm, ddbRe, ddbIm);
+          const [CRKRe, CRKIm] = cmul(BNCRe, BNCIm, brRe, brIm);
+
+          // Propagate DNBAR, GNBAR to outer boundary
+          const [bcpRe, bcpIm] = cmul(BRKRe, BRKIm, CHIPORe, CHIPOIm);
+          const [bcyRe, bcyIm] = cmul(BRKRe, BRKIm, CHIORe, CHIOIm);
+          [DNBARRe, DNBARIm] = cdiv(D1ORe - bcpRe, D1OIm - bcpIm, 1 - bcyRe, -bcyIm);
+          const [ccpRe, ccpIm] = cmul(CRKRe, CRKIm, CHIPORe, CHIPOIm);
+          const [ccyRe, ccyIm] = cmul(CRKRe, CRKIm, CHIORe, CHIOIm);
+          [GNBARRe, GNBARIm] = cdiv(D1ORe - ccpRe, D1OIm - ccpIm, 1 - ccyRe, -ccyIm);
+
+          // Update recurrence state
+          s.D0InRe = D1IRe; s.D0InIm = D1IIm;
+          s.D0OutRe = D1ORe; s.D0OutIm = D1OIm;
+          s.chi0InRe = s.chi1InRe; s.chi0InIm = s.chi1InIm;
+          s.chi1InRe = CHIIRe; s.chi1InIm = CHIIIm;
+          s.chi0OutRe = s.chi1OutRe; s.chi0OutIm = s.chi1OutIm;
+          s.chi1OutRe = CHIORe; s.chi1OutIm = CHIOIm;
+        }
+        D0CRe = DCRe; D0CIm = DCIm;
+
+        // a_n, b_n from final DNBAR/GNBAR and outermost m
+        const [dbrRe, dbrIm] = cdiv(DNBARRe, DNBARIm, mRe[N - 1], mIm[N - 1]);
+        const ARe = dbrRe + RN / Y, AIm = dbrIm;
+        const anNRe = ARe * PSIY - PSI1Y, anNIm = AIm * PSIY;
+        const anDRe = (ARe * XIYRe - AIm * XIYIm) - XI1YRe;
+        const anDIm = (ARe * XIYIm + AIm * XIYRe) - XI1YIm;
+        const [aRe, aIm] = cdiv(anNRe, anNIm, anDRe, anDIm);
+
+        const [rgRe, rgIm] = cmul(mRe[N - 1], mIm[N - 1], GNBARRe, GNBARIm);
+        const BRe = rgRe + RN / Y, BIm = rgIm;
+        const bnNRe = BRe * PSIY - PSI1Y, bnNIm = BIm * PSIY;
+        const bnDRe = (BRe * XIYRe - BIm * XIYIm) - XI1YRe;
+        const bnDIm = (BRe * XIYIm + BIm * XIYRe) - XI1YIm;
+        const [bRe, bIm] = cdiv(bnNRe, bnNIm, bnDRe, bnDIm);
+
+        const w = 2 * RN + 1;
+        QSCA += w * (aRe * aRe + aIm * aIm + bRe * bRe + bIm * bIm);
+        QEXT += w * (aRe + bRe);
+
+        PSI0Y = PSI1Y; PSI1Y = PSIY;
+        CHI0Y = CHI1Y; CHI1Y = CHIY;
+        XI1YRe = PSI1Y; XI1YIm = -CHI1Y;
+      }
+
+      const qs = (2 / (Y * Y)) * QSCA, qe = (2 / (Y * Y)) * QEXT;
       const geo = Math.PI * outerRadiusNm * outerRadiusNm;
-      csca[i] = qs * geo;
-      cext[i] = qe * geo;
+      csca[i] = qs * geo; cext[i] = qe * geo;
       cabs[i] = Math.max(0, cext[i] - csca[i]);
     }
 
