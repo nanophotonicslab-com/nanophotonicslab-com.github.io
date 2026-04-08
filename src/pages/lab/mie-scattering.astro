@@ -39,8 +39,13 @@ import Layout from '../../layouts/Layout.astro';
               <option value="si">Silicon (Si)</option>
               <option value="al">Aluminum (Al)</option>
               <option value="tio2">TiO&sub2;</option>
+              <option value="file">Upload file&hellip;</option>
             </select>
             <span class="material-ref" id="material-ref"></span>
+            <div class="file-upload-row" id="file-upload-group" style="display:none">
+              <input type="file" id="file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="file-name"></span>
+            </div>
           </div>
 
           <!-- Custom epsilon for shell/particle -->
@@ -70,8 +75,13 @@ import Layout from '../../layouts/Layout.astro';
                   <option value="al">Aluminum (Al)</option>
                   <option value="tio2">TiO&sub2;</option>
                   <option value="custom">Custom dielectric</option>
+                  <option value="file">Upload file&hellip;</option>
                 </select>
                 <span class="material-ref" id="core-material-ref"></span>
+                <div class="file-upload-row" id="core-file-upload-group" style="display:none">
+                  <input type="file" id="core-file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+                  <span class="file-name" id="core-file-name"></span>
+                </div>
               </div>
               <div class="param" id="core-eps-group" style="display:none">
                 <div class="param-header">
@@ -276,6 +286,12 @@ import Layout from '../../layouts/Layout.astro';
   .remove-shell-btn:hover { border-color: #ef4444; color: #ef4444; }
   .shell-eps-group.hidden { display: none !important; }
   .reset-btn { width: 100%; color: var(--text-muted) !important; }
+  .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+  .file-input { font-size: 0.75rem; font-family: var(--font); color: var(--text-soft); }
+  .file-input::file-selector-button { padding: 0.2rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-soft); cursor: pointer; margin-right: 0.4rem; transition: all 0.15s; }
+  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
+  .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .file-error { font-size: 0.6875rem; color: var(--rose); }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -336,6 +352,54 @@ import Layout from '../../layouts/Layout.astro';
     const t = (lam - data[lo][0]) / (data[hi][0] - data[lo][0]);
     return [data[lo][1] + t * (data[hi][1] - data[lo][1]), data[lo][2] + t * (data[hi][2] - data[lo][2])];
   }
+
+  // === File-based optical constants ===
+
+  /**
+   * Parse a CSV/TSV file with columns: wavelength, n, k
+   * Auto-detects: delimiter (comma/tab/space), wavelength unit (μm if max < 50, else nm).
+   * Returns data in the same format as MATERIALS[x].data: [[λ_μm, n, k], ...]
+   */
+  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
+    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
+
+    // Detect delimiter: try tab, comma, then whitespace
+    let delim = /\t/;
+    if (lines[0].split(delim).length < 3) delim = /,/;
+    if (lines[0].split(delim).length < 3) delim = /\s+/;
+
+    // Skip header row if first field is not a number
+    let startIdx = 0;
+    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
+
+    const data: number[][] = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = lines[i].split(delim).map(Number);
+      if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) continue;
+      const lam = parts[0];
+      const n = parts[1];
+      const k = parts.length >= 3 && !isNaN(parts[2]) ? Math.abs(parts[2]) : 0;
+      data.push([lam, n, k]);
+    }
+    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
+
+    // Sort by wavelength
+    data.sort((a, b) => a[0] - b[0]);
+
+    // Auto-detect unit: if max wavelength < 50, assume μm; else nm → convert to μm
+    const maxLam = data[data.length - 1][0];
+    let unit = 'μm';
+    if (maxLam > 50) {
+      unit = 'nm';
+      for (const row of data) row[0] /= 1000;
+    }
+    return { data, unit };
+  }
+
+  // Uploaded material data storage (main + core)
+  let uploadedMaterial: number[][] | null = null;
+  let uploadedCoreMaterial: number[][] | null = null;
 
   // === Mie Engine (Bohren-Huffman algorithm with logarithmic derivatives) ===
 
@@ -1075,19 +1139,68 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   // Shell / particle material selector
+  const fileUploadGroup = document.getElementById('file-upload-group')!;
+  const fileUpload = document.getElementById('file-upload') as HTMLInputElement;
+  const fileNameEl = document.getElementById('file-name')!;
+
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
     epsGroup.classList.toggle('hidden', v !== 'custom');
-    materialRefEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
+    fileUploadGroup.style.display = v === 'file' ? '' : 'none';
+    materialRefEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+    if (v === 'file' && !uploadedMaterial) return; // wait for file
     resetAndUpdate();
   });
 
+  fileUpload.addEventListener('change', () => {
+    const file = fileUpload.files?.[0];
+    if (!file) return;
+    file.text().then(text => {
+      const result = parseNKFile(text);
+      if ('error' in result) {
+        fileNameEl.className = 'file-error';
+        fileNameEl.textContent = result.error;
+        uploadedMaterial = null;
+      } else {
+        uploadedMaterial = result.data;
+        fileNameEl.className = 'file-name';
+        fileNameEl.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
+        materialRefEl.textContent = '';
+        resetAndUpdate();
+      }
+    });
+  });
+
   // Core material selector (core-shell only)
+  const coreFileUploadGroup = document.getElementById('core-file-upload-group')!;
+  const coreFileUpload = document.getElementById('core-file-upload') as HTMLInputElement;
+  const coreFileNameEl = document.getElementById('core-file-name')!;
+
   coreMaterialSelect.addEventListener('change', () => {
     const v = coreMaterialSelect.value;
     coreEpsGroup.style.display = v === 'custom' ? '' : 'none';
-    coreMaterialRefEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
+    coreFileUploadGroup.style.display = v === 'file' ? '' : 'none';
+    coreMaterialRefEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+    if (v === 'file' && !uploadedCoreMaterial) return;
     resetAndUpdate();
+  });
+
+  coreFileUpload.addEventListener('change', () => {
+    const file = coreFileUpload.files?.[0];
+    if (!file) return;
+    file.text().then(text => {
+      const result = parseNKFile(text);
+      if ('error' in result) {
+        coreFileNameEl.className = 'file-error';
+        coreFileNameEl.textContent = result.error;
+        uploadedCoreMaterial = null;
+      } else {
+        uploadedCoreMaterial = result.data;
+        coreFileNameEl.className = 'file-name';
+        coreFileNameEl.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
+        resetAndUpdate();
+      }
+    });
   });
 
   // n_host presets
@@ -1130,12 +1243,16 @@ import Layout from '../../layouts/Layout.astro';
   function getDielectric(lambdaNm: number): [number, number] {
     const mat = materialSelect.value;
     if (mat === 'custom') return [Math.sqrt(epsParam.value), 0];
+    if (mat === 'file' && uploadedMaterial) return interpolateNK(uploadedMaterial, lambdaNm);
+    if (mat === 'file') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
 
   function getCoreDielectric(lambdaNm: number): [number, number] {
     const mat = coreMaterialSelect.value;
     if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
+    if (mat === 'file' && uploadedCoreMaterial) return interpolateNK(uploadedCoreMaterial, lambdaNm);
+    if (mat === 'file') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
 
@@ -1147,6 +1264,7 @@ import Layout from '../../layouts/Layout.astro';
     epsGroup: HTMLElement;
     rParam: ParamHandle;
     refEl: HTMLElement;
+    uploadedData: number[][] | null;
   }
   const extraShells: ShellHandle[] = [];
 
@@ -1161,9 +1279,12 @@ import Layout from '../../layouts/Layout.astro';
     for (const sh of extraShells) {
       const mat = sh.material.value;
       const eps = sh.epsParam.value;
+      const fileData = sh.uploadedData;
       const getDiel = mat === 'custom'
         ? (_: number): [number, number] => [Math.sqrt(eps), 0]
-        : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
+        : mat === 'file' && fileData
+          ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
+          : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
       layers.push({ getDielectric: getDiel, radiusNm: sh.rParam.value });
     }
     // Sort by radius (enforce r_core < r_shell1 < r_shell2 ...)
@@ -1213,8 +1334,13 @@ import Layout from '../../layouts/Layout.astro';
             <option value="si">Silicon (Si)</option>
             <option value="al">Aluminum (Al)</option>
             <option value="tio2">TiO\u2082</option>
+            <option value="file">Upload file\u2026</option>
           </select>
           <span class="material-ref shell-ref"></span>
+          <div class="file-upload-row sh-file-group" style="display:none">
+            <input type="file" accept=".csv,.tsv,.txt,.dat" class="file-input sh-file-input">
+            <span class="file-name sh-file-name"></span>
+          </div>
         </div>
         <div class="param shell-eps-group">
           <div class="param-header">
@@ -1262,14 +1388,38 @@ import Layout from '../../layouts/Layout.astro';
       v => v.toFixed(0), resetAndUpdate,
     );
 
+    const shFileGrp = sec.querySelector('.sh-file-group') as HTMLElement;
+    const shFileInput = sec.querySelector('.sh-file-input') as HTMLInputElement;
+    const shFileName = sec.querySelector('.sh-file-name') as HTMLElement;
+
     matSel.addEventListener('change', () => {
       const v = matSel.value;
       epsGrp.classList.toggle('hidden', v !== 'custom');
-      refEl.textContent = v === 'custom' ? '' : MATERIALS[v].ref;
+      shFileGrp.style.display = v === 'file' ? '' : 'none';
+      refEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+      if (v === 'file' && !handle.uploadedData) return;
       resetAndUpdate();
     });
 
-    const handle: ShellHandle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl };
+    const handle: ShellHandle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl, uploadedData: null };
+
+    shFileInput.addEventListener('change', () => {
+      const file = shFileInput.files?.[0];
+      if (!file) return;
+      file.text().then(text => {
+        const result = parseNKFile(text);
+        if ('error' in result) {
+          shFileName.className = 'file-error';
+          shFileName.textContent = result.error;
+          handle.uploadedData = null;
+        } else {
+          handle.uploadedData = result.data;
+          shFileName.className = 'file-name';
+          shFileName.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
+          resetAndUpdate();
+        }
+      });
+    });
     sec.querySelector('.remove-shell-btn')!.addEventListener('click', () => removeShellSection(handle));
     extraShells.push(handle);
     updateShellLimit();
