@@ -1171,6 +1171,15 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  // Astro scopes CSS with data-astro-cid-* attributes. Dynamic elements need it too.
+  const _scopeAttr = Array.from(document.querySelector('.controls')!.attributes)
+    .find(a => a.name.startsWith('data-astro-cid-'))?.name || '';
+  function applyScope(el: Element) {
+    if (!_scopeAttr) return;
+    el.setAttribute(_scopeAttr, '');
+    el.querySelectorAll('*').forEach(c => c.setAttribute(_scopeAttr, ''));
+  }
+
   function createShellSection(outerR: number): ShellHandle {
     const idx = extraShells.length;
     const sec = document.createElement('div');
@@ -1216,6 +1225,7 @@ import Layout from '../../layouts/Layout.astro';
           <input type="number" class="param-limit sh-r-max" value="500" step="5" min="1">
         </div>
       </div>`;
+    applyScope(sec);
     extraShellsContainer.appendChild(sec);
 
     const matSel = sec.querySelector('.shell-mat-sel') as HTMLSelectElement;
