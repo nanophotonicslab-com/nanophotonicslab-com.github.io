@@ -202,6 +202,8 @@ import Layout from '../../layouts/Layout.astro';
 
           <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
 
+          <div class="config-check" id="config-check"></div>
+
           <p class="theory-note" id="theory-note">
             <strong>Mie theory</strong> gives exact solutions for light scattering by
             spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.
@@ -345,6 +347,12 @@ import Layout from '../../layouts/Layout.astro';
   .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
   .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .angular-pol-wrap { margin-bottom: var(--space-sm); }
+  .config-check { border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); display: flex; gap: var(--space-sm); align-items: flex-start; }
+  .config-svg { flex-shrink: 0; border-radius: var(--radius-sm); }
+  .config-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .config-row { font-size: 0.6875rem; color: var(--text-soft); line-height: 1.5; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .config-row--dim { color: var(--text-muted); }
+  .config-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15); }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -1604,7 +1612,7 @@ import Layout from '../../layouts/Layout.astro';
   let logY = false, zoomBounds: { xRange: [number, number]; yRange: [number, number] } | null = null;
   let geometry: 'sphere' | 'coreshell' = 'sphere';
   let rafPending = false;
-  function scheduleUpdate() { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; recompute(); render(); }); } }
+  function scheduleUpdate() { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; recompute(); render(); updateConfigCheck(); }); } }
   function resetAndUpdate() { zoomBounds = null; scheduleUpdate(); }
 
   const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
@@ -2251,6 +2259,54 @@ import Layout from '../../layouts/Layout.astro';
   chartWrap.addEventListener('mouseleave', () => { dragStart = null; isDragging = false; clearOverlay(); });
   chartWrap.addEventListener('dblclick', () => { if (zoomBounds) { zoomBounds = null; render(); } });
 
+  // === Config Check ===
+
+  const MAT_COLORS: Record<string, string> = { au:'#FFD700', ag:'#C0C0C0', si:'#7B68EE', al:'#87CEEB', tio2:'#DDA0DD', custom:'#90EE90', file:'#FFA07A', rii:'#FFA07A' };
+  const MAT_NAMES: Record<string, string> = { au:'Au', ag:'Ag', si:'Si', al:'Al', tio2:'TiO\u2082', custom:'Custom \u03B5', file:'File', rii:'Database' };
+
+  function updateConfigCheck() {
+    const el = document.getElementById('config-check')!;
+    // Build layer list
+    interface CLayer { r: number; mat: string; eps: number; ref: string; name: string; }
+    const layers: CLayer[] = [];
+    if (geometry === 'coreshell') {
+      layers.push({ r: coreRParam.value, mat: coreMaterialSelect.value, eps: coreEpsParam.value, ref: coreMaterialRefEl.textContent || '', name: 'Core' });
+      layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Shell 1' });
+      for (let i = 0; i < extraShells.length; i++) {
+        const sh = extraShells[i];
+        layers.push({ r: sh.rParam.value, mat: sh.material.value, eps: sh.epsParam.value, ref: sh.refEl.textContent || '', name: `Shell ${i+2}` });
+      }
+      layers.sort((a, b) => a.r - b.r);
+    } else {
+      layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Particle' });
+    }
+
+    // SVG schematic
+    const maxR = layers[layers.length - 1].r;
+    const svgR = 36, svgW = svgR * 2 + 8;
+    const cx = svgW / 2, cy = svgW / 2;
+    let svg = `<svg width="${svgW}" height="${svgW}" viewBox="0 0 ${svgW} ${svgW}" class="config-svg">`;
+    svg += `<rect width="${svgW}" height="${svgW}" fill="#F0F4FF" rx="4"/>`;
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const r = Math.max(3, (layers[i].r / maxR) * svgR);
+      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${MAT_COLORS[layers[i].mat] || '#ccc'}" stroke="rgba(0,0,0,0.2)" stroke-width="0.5"/>`;
+    }
+    svg += '</svg>';
+
+    // Text rows
+    const hostPresets: Record<string, string> = { '1.00': 'Air', '1.33': 'Water', '1.46': 'Oil', '1.50': 'Glass' };
+    const nhStr = nhParam.value.toFixed(2);
+    let info = `<div class="config-info">`;
+    info += `<div class="config-row config-row--dim">n\u2095\u2092\u209B\u209C = ${nhStr}${hostPresets[nhStr] ? ' (' + hostPresets[nhStr] + ')' : ''} \u00B7 \u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</div>`;
+    for (const l of layers) {
+      const matLabel = l.mat === 'custom' ? `\u03B5 = ${l.eps}` : (MAT_NAMES[l.mat] || l.mat);
+      const refStr = l.ref ? ` \u2014 ${l.ref}` : '';
+      info += `<div class="config-row"><span class="config-dot" style="background:${MAT_COLORS[l.mat] || '#ccc'}"></span><strong>${l.name}</strong>: ${matLabel}${refStr}, R = ${l.r} nm</div>`;
+    }
+    info += '</div>';
+    el.innerHTML = svg + info;
+  }
+
   // === Downloads ===
 
   function downloadBlob(blob: Blob, fn: string) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fn; a.click(); URL.revokeObjectURL(u); }
@@ -2298,5 +2354,5 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   new ResizeObserver(() => render()).observe(canvas);
-  recompute(); render();
+  recompute(); render(); updateConfigCheck();
 </script>
