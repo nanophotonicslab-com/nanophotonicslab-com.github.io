@@ -347,12 +347,8 @@ import Layout from '../../layouts/Layout.astro';
   .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
   .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .angular-pol-wrap { margin-bottom: var(--space-sm); }
-  .config-check { border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); display: flex; gap: var(--space-sm); align-items: flex-start; }
-  .config-svg { flex-shrink: 0; border-radius: var(--radius-sm); }
-  .config-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .config-row { font-size: 0.6875rem; color: var(--text-soft); line-height: 1.5; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .config-row--dim { color: var(--text-muted); }
-  .config-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15); }
+  .config-check { border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); }
+  .config-check svg { width: 100%; height: auto; border-radius: var(--radius-sm); }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -2266,7 +2262,6 @@ import Layout from '../../layouts/Layout.astro';
 
   function updateConfigCheck() {
     const el = document.getElementById('config-check')!;
-    // Build layer list
     interface CLayer { r: number; mat: string; eps: number; ref: string; name: string; }
     const layers: CLayer[] = [];
     if (geometry === 'coreshell') {
@@ -2281,30 +2276,51 @@ import Layout from '../../layouts/Layout.astro';
       layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Particle' });
     }
 
-    // SVG schematic
     const maxR = layers[layers.length - 1].r;
-    const svgR = 36, svgW = svgR * 2 + 8;
-    const cx = svgW / 2, cy = svgW / 2;
-    let svg = `<svg width="${svgW}" height="${svgW}" viewBox="0 0 ${svgW} ${svgW}" class="config-svg">`;
-    svg += `<rect width="${svgW}" height="${svgW}" fill="#F0F4FF" rx="4"/>`;
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const r = Math.max(3, (layers[i].r / maxR) * svgR);
-      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${MAT_COLORS[layers[i].mat] || '#ccc'}" stroke="rgba(0,0,0,0.2)" stroke-width="0.5"/>`;
-    }
-    svg += '</svg>';
-
-    // Text rows
-    const hostPresets: Record<string, string> = { '1.00': 'Air', '1.33': 'Water', '1.46': 'Oil', '1.50': 'Glass' };
+    const hostPresets: Record<string, string> = { '1.00':'Air', '1.33':'Water', '1.46':'Oil', '1.50':'Glass' };
     const nhStr = nhParam.value.toFixed(2);
-    let info = `<div class="config-info">`;
-    info += `<div class="config-row config-row--dim">n\u2095\u2092\u209B\u209C = ${nhStr}${hostPresets[nhStr] ? ' (' + hostPresets[nhStr] + ')' : ''} \u00B7 \u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</div>`;
-    for (const l of layers) {
-      const matLabel = l.mat === 'custom' ? `\u03B5 = ${l.eps}` : (MAT_NAMES[l.mat] || l.mat);
-      const refStr = l.ref ? ` \u2014 ${l.ref}` : '';
-      info += `<div class="config-row"><span class="config-dot" style="background:${MAT_COLORS[l.mat] || '#ccc'}"></span><strong>${l.name}</strong>: ${matLabel}${refStr}, R = ${l.r} nm</div>`;
+    const hostLabel = hostPresets[nhStr] ? `${hostPresets[nhStr]} (n=${nhStr})` : `n\u2095 = ${nhStr}`;
+
+    // Full-width annotated cross-section SVG
+    const W = 280, circR = 44, cx = 68, labelX = cx + circR + 14;
+    const rowH = layers.length > 3 ? 18 : 22;
+    const H = Math.max(circR * 2 + 36, layers.length * rowH + 50);
+    const cy = H / 2;
+    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    // Background
+    s += `<rect width="${W}" height="${H}" fill="#F8FAFC" rx="6"/>`;
+    // Host label
+    s += `<text x="${cx}" y="11" text-anchor="middle" fill="#9CA3AF" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
+    s += `<text x="${cx}" y="${H-4}" text-anchor="middle" fill="#9CA3AF" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
+    // Concentric circles (outer to inner)
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const r = Math.max(5, (layers[i].r / maxR) * circR);
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.25)" stroke-width="0.7"/>`;
     }
-    info += '</div>';
-    el.innerHTML = svg + info;
+    // Dimension lines and labels
+    const labStartY = cy - (layers.length - 1) * rowH / 2;
+    for (let i = 0; i < layers.length; i++) {
+      const r = Math.max(5, (layers[i].r / maxR) * circR);
+      const ly = labStartY + i * rowH;
+      const edgeX = cx + r;
+      // Leader line
+      s += `<line x1="${edgeX}" y1="${cy}" x2="${labelX - 2}" y2="${ly}" stroke="#D1D5DB" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+      s += `<circle cx="${edgeX}" cy="${cy}" r="1.5" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>`;
+      // Layer name + material
+      const matLabel = layers[i].mat === 'custom' ? `\u03B5=${layers[i].eps}` : (MAT_NAMES[layers[i].mat] || layers[i].mat);
+      const refParts = layers[i].ref ? layers[i].ref.split(':')[0].split(' ').slice(0, 2).join(' ') : '';
+      const detail = refParts ? `${matLabel} (${refParts})` : matLabel;
+      s += `<text x="${labelX}" y="${ly - 1}" fill="#374151" font-size="8.5" font-weight="600" font-family="Inter,system-ui">${layers[i].name}</text>`;
+      s += `<text x="${labelX}" y="${ly + 9}" fill="#6B7280" font-size="7.5" font-family="Inter,system-ui">${detail} \u00B7 R=${layers[i].r} nm</text>`;
+    }
+    // Radius dimension arrow (bottom)
+    const arrowY = cy + circR + 10;
+    s += `<line x1="${cx}" y1="${arrowY}" x2="${cx + circR}" y2="${arrowY}" stroke="#9CA3AF" stroke-width="0.7" marker-end="url(#arr)"/>`;
+    s += `<line x1="${cx}" y1="${arrowY-3}" x2="${cx}" y2="${arrowY+3}" stroke="#9CA3AF" stroke-width="0.7"/>`;
+    s += `<defs><marker id="arr" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="none" stroke="#9CA3AF" stroke-width="0.7"/></marker></defs>`;
+    s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="#9CA3AF" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
+    s += '</svg>';
+    el.innerHTML = s;
   }
 
   // === Downloads ===
