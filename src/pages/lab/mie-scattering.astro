@@ -57,33 +57,48 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
-          <!-- Core material (core-shell only) -->
-          <div class="param cs-only" id="core-mat-group" style="display:none">
-            <div class="param-header"><label>Core material</label></div>
-            <select id="core-material-select" class="param-select">
-              <option value="au" selected>Gold (Au)</option>
-              <option value="ag">Silver (Ag)</option>
-              <option value="si">Silicon (Si)</option>
-              <option value="al">Aluminum (Al)</option>
-              <option value="tio2">TiO&sub2;</option>
-              <option value="custom">Custom dielectric</option>
-            </select>
-            <span class="material-ref" id="core-material-ref"></span>
-          </div>
-
-          <!-- Custom epsilon for core (core-shell only) -->
-          <div class="param cs-only" id="core-eps-group" style="display:none">
-            <div class="param-header">
-              <label>Core &epsilon;<sub>r</sub></label>
-              <input type="number" class="param-number" id="core-eps-num" value="10" step="0.5" min="1">
+          <!-- Core section (core-shell only, collapsible) -->
+          <details class="layer-details cs-only" id="core-section" style="display:none" open>
+            <summary>Core</summary>
+            <div class="layer-body">
+              <div class="param" id="core-mat-group">
+                <div class="param-header"><label>Material</label></div>
+                <select id="core-material-select" class="param-select">
+                  <option value="au" selected>Gold (Au)</option>
+                  <option value="ag">Silver (Ag)</option>
+                  <option value="si">Silicon (Si)</option>
+                  <option value="al">Aluminum (Al)</option>
+                  <option value="tio2">TiO&sub2;</option>
+                  <option value="custom">Custom dielectric</option>
+                </select>
+                <span class="material-ref" id="core-material-ref"></span>
+              </div>
+              <div class="param" id="core-eps-group" style="display:none">
+                <div class="param-header">
+                  <label>&epsilon;<sub>r</sub></label>
+                  <input type="number" class="param-number" id="core-eps-num" value="10" step="0.5" min="1">
+                </div>
+                <input type="range" class="param-slider" id="core-eps-slider" min="1" max="50" step="0.5" value="10">
+                <div class="param-limits">
+                  <input type="number" class="param-limit" id="core-eps-min" value="1" step="0.5" min="0.1">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit" id="core-eps-max" value="50" step="0.5" min="0.1">
+                </div>
+              </div>
+              <div class="param" id="core-r-group">
+                <div class="param-header">
+                  <label>Radius (nm)</label>
+                  <input type="number" class="param-number" id="core-r-num" value="60" step="5" min="1">
+                </div>
+                <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="5" value="60">
+                <div class="param-limits">
+                  <input type="number" class="param-limit" id="core-r-min" value="5" step="5" min="1">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit" id="core-r-max" value="400" step="5" min="1">
+                </div>
+              </div>
             </div>
-            <input type="range" class="param-slider" id="core-eps-slider" min="1" max="50" step="0.5" value="10">
-            <div class="param-limits">
-              <input type="number" class="param-limit" id="core-eps-min" value="1" step="0.5" min="0.1">
-              <span class="param-limit-dash">&mdash;</span>
-              <input type="number" class="param-limit" id="core-eps-max" value="50" step="0.5" min="0.1">
-            </div>
-          </div>
+          </details>
 
           <div class="param">
             <div class="param-header">
@@ -95,20 +110,6 @@ import Layout from '../../layouts/Layout.astro';
               <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
               <span class="param-limit-dash">&mdash;</span>
               <input type="number" class="param-limit" id="r-max" value="500" step="5" min="1">
-            </div>
-          </div>
-
-          <!-- Core radius (core-shell only) -->
-          <div class="param cs-only" id="core-r-group" style="display:none">
-            <div class="param-header">
-              <label>Core radius (nm)</label>
-              <input type="number" class="param-number" id="core-r-num" value="60" step="5" min="1">
-            </div>
-            <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="5" value="60">
-            <div class="param-limits">
-              <input type="number" class="param-limit" id="core-r-min" value="5" step="5" min="1">
-              <span class="param-limit-dash">&mdash;</span>
-              <input type="number" class="param-limit" id="core-r-max" value="400" step="5" min="1">
             </div>
           </div>
 
@@ -303,7 +304,21 @@ import Layout from '../../layouts/Layout.astro';
   .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
   .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
   .dl-btn:active { transform: scale(0.97); }
-  @media (max-width: 768px) { .widget-layout { grid-template-columns: 1fr; } .controls { position: static; } .chart-wrap canvas { aspect-ratio: 4 / 3; } }
+  /* Layer collapsible sections */
+  .layer-details { border-top: 1px solid var(--bg-muted); padding-top: var(--space-xs); margin-top: var(--space-xs); }
+  .layer-details summary { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; padding: 0.3rem 0; user-select: none; list-style: none; display: flex; align-items: center; gap: 0.4rem; }
+  .layer-details summary .shell-label { flex: 1; }
+  .layer-details summary .remove-shell-btn { margin-left: auto; }
+  .layer-details summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; }
+  .layer-details[open] summary::before { transform: rotate(90deg); }
+  .layer-details summary::-webkit-details-marker { display: none; }
+  .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.4rem; }
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; gap: var(--space-md); }
+    .param-limits { display: none; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+  }
 </style>
 
 <script>
@@ -1011,8 +1026,7 @@ import Layout from '../../layouts/Layout.astro';
   const lamMaxInput = document.getElementById('lam-max') as HTMLInputElement;
   const coreMaterialSelect = document.getElementById('core-material-select') as HTMLSelectElement;
   const coreEpsGroup = document.getElementById('core-eps-group')!;
-  const coreMatGroup = document.getElementById('core-mat-group')!;
-  const coreRGroup = document.getElementById('core-r-group')!;
+  const coreSection = document.getElementById('core-section')!;
   const coreMaterialRefEl = document.getElementById('core-material-ref')!;
   const theoryNote = document.getElementById('theory-note')!;
   const extraShellsContainer = document.getElementById('extra-shells')!;
@@ -1044,9 +1058,8 @@ import Layout from '../../layouts/Layout.astro';
     geometry = v as 'sphere' | 'coreshell';
     const cs = geometry === 'coreshell';
     // Toggle core-shell-only controls
-    coreMatGroup.style.display = cs ? '' : 'none';
-    coreEpsGroup.style.display = cs && coreMaterialSelect.value === 'custom' ? '' : 'none';
-    coreRGroup.style.display = cs ? '' : 'none';
+    coreSection.style.display = cs ? '' : 'none';
+    coreEpsGroup.style.display = coreMaterialSelect.value === 'custom' ? '' : 'none';
     extraShellsContainer.style.display = cs ? '' : 'none';
     addShellWrap.style.display = cs ? '' : 'none';
     // Update labels for shell/particle context
@@ -1166,7 +1179,7 @@ import Layout from '../../layouts/Layout.astro';
     shellLimitNote.style.display = atMax ? '' : 'none';
     // Renumber shell headers
     for (let i = 0; i < extraShells.length; i++) {
-      const lbl = extraShells[i].el.querySelector('.shell-header label')!;
+      const lbl = extraShells[i].el.querySelector('.shell-label')!;
       lbl.textContent = `Shell ${i + 2}`;
     }
   }
@@ -1182,47 +1195,50 @@ import Layout from '../../layouts/Layout.astro';
 
   function createShellSection(outerR: number): ShellHandle {
     const idx = extraShells.length;
-    const sec = document.createElement('div');
-    sec.className = 'shell-section';
+    const sec = document.createElement('details');
+    sec.className = 'layer-details';
+    sec.open = true;
     sec.innerHTML = `
-      <div class="shell-header">
-        <label>Shell ${idx + 2}</label>
+      <summary>
+        <span class="shell-label">Shell ${idx + 2}</span>
         <button class="remove-shell-btn" title="Remove this shell">&times;</button>
-      </div>
-      <div class="param">
-        <div class="param-header"><label>Material</label></div>
-        <select class="param-select shell-mat-sel">
-          <option value="custom" selected>Custom dielectric</option>
-          <option value="au">Gold (Au)</option>
-          <option value="ag">Silver (Ag)</option>
-          <option value="si">Silicon (Si)</option>
-          <option value="al">Aluminum (Al)</option>
-          <option value="tio2">TiO\u2082</option>
-        </select>
-        <span class="material-ref shell-ref"></span>
-      </div>
-      <div class="param shell-eps-group">
-        <div class="param-header">
-          <label>&epsilon;<sub>r</sub></label>
-          <input type="number" class="param-number sh-eps-num" value="10" step="0.5" min="1">
+      </summary>
+      <div class="layer-body">
+        <div class="param">
+          <div class="param-header"><label>Material</label></div>
+          <select class="param-select shell-mat-sel">
+            <option value="custom" selected>Custom dielectric</option>
+            <option value="au">Gold (Au)</option>
+            <option value="ag">Silver (Ag)</option>
+            <option value="si">Silicon (Si)</option>
+            <option value="al">Aluminum (Al)</option>
+            <option value="tio2">TiO\u2082</option>
+          </select>
+          <span class="material-ref shell-ref"></span>
         </div>
-        <input type="range" class="param-slider sh-eps-slider" min="1" max="50" step="0.5" value="10">
-        <div class="param-limits">
-          <input type="number" class="param-limit sh-eps-min" value="1" step="0.5" min="0.1">
-          <span class="param-limit-dash">&mdash;</span>
-          <input type="number" class="param-limit sh-eps-max" value="50" step="0.5" min="0.1">
+        <div class="param shell-eps-group">
+          <div class="param-header">
+            <label>&epsilon;<sub>r</sub></label>
+            <input type="number" class="param-number sh-eps-num" value="10" step="0.5" min="1">
+          </div>
+          <input type="range" class="param-slider sh-eps-slider" min="1" max="50" step="0.5" value="10">
+          <div class="param-limits">
+            <input type="number" class="param-limit sh-eps-min" value="1" step="0.5" min="0.1">
+            <span class="param-limit-dash">&mdash;</span>
+            <input type="number" class="param-limit sh-eps-max" value="50" step="0.5" min="0.1">
+          </div>
         </div>
-      </div>
-      <div class="param">
-        <div class="param-header">
-          <label>Outer radius (nm)</label>
-          <input type="number" class="param-number sh-r-num" value="${outerR}" step="5" min="1">
-        </div>
-        <input type="range" class="param-slider sh-r-slider" min="10" max="500" step="5" value="${outerR}">
-        <div class="param-limits">
-          <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
-          <span class="param-limit-dash">&mdash;</span>
-          <input type="number" class="param-limit sh-r-max" value="500" step="5" min="1">
+        <div class="param">
+          <div class="param-header">
+            <label>Outer radius (nm)</label>
+            <input type="number" class="param-number sh-r-num" value="${outerR}" step="5" min="1">
+          </div>
+          <input type="range" class="param-slider sh-r-slider" min="10" max="500" step="5" value="${outerR}">
+          <div class="param-limits">
+            <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
+            <span class="param-limit-dash">&mdash;</span>
+            <input type="number" class="param-limit sh-r-max" value="500" step="5" min="1">
+          </div>
         </div>
       </div>`;
     applyScope(sec);
