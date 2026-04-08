@@ -40,11 +40,17 @@ import Layout from '../../layouts/Layout.astro';
               <option value="al">Aluminum (Al)</option>
               <option value="tio2">TiO&sub2;</option>
               <option value="file">Upload file&hellip;</option>
+              <option value="rii">Search database&hellip;</option>
             </select>
             <span class="material-ref" id="material-ref"></span>
             <div class="file-upload-row" id="file-upload-group" style="display:none">
               <input type="file" id="file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
               <span class="file-name" id="file-name"></span>
+            </div>
+            <div class="rii-search" id="rii-search-group" style="display:none">
+              <input type="text" id="rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+              <div class="rii-results" id="rii-results"></div>
+              <span class="material-ref" id="rii-status"></span>
             </div>
           </div>
 
@@ -76,11 +82,17 @@ import Layout from '../../layouts/Layout.astro';
                   <option value="tio2">TiO&sub2;</option>
                   <option value="custom">Custom dielectric</option>
                   <option value="file">Upload file&hellip;</option>
+                  <option value="rii">Search database&hellip;</option>
                 </select>
                 <span class="material-ref" id="core-material-ref"></span>
                 <div class="file-upload-row" id="core-file-upload-group" style="display:none">
                   <input type="file" id="core-file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
                   <span class="file-name" id="core-file-name"></span>
+                </div>
+                <div class="rii-search" id="core-rii-search-group" style="display:none">
+                  <input type="text" id="core-rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+                  <div class="rii-results" id="core-rii-results"></div>
+                  <span class="material-ref" id="core-rii-status"></span>
                 </div>
               </div>
               <div class="param" id="core-eps-group" style="display:none">
@@ -302,6 +314,15 @@ import Layout from '../../layouts/Layout.astro';
   .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
   .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
   .file-error { font-size: 0.6875rem; color: var(--rose); }
+  .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
+  .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
+  .rii-results:empty { display: none; }
+  .rii-result { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
+  .rii-result:last-child { border-bottom: none; }
+  .rii-result:hover { background: rgba(99,102,241,0.06); }
+  .rii-result-book { font-weight: 600; color: var(--text); }
+  .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -349,6 +370,7 @@ import Layout from '../../layouts/Layout.astro';
 
 <script>
   import { MATERIALS } from '../../data/optical-constants';
+  import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
 
   // === Interpolation ===
 
@@ -1219,16 +1241,79 @@ import Layout from '../../layouts/Layout.astro';
     resetAndUpdate();
   });
 
+  // === RII search helper (reusable for any material selector) ===
+
+  function setupRIISearch(
+    searchGroup: HTMLElement, searchInput: HTMLInputElement,
+    resultsList: HTMLElement, statusEl: HTMLElement, refEl: HTMLElement,
+    onLoaded: (data: number[][]) => void,
+  ) {
+    let catalog: RIIMaterial[] | null = null;
+    let debounce: ReturnType<typeof setTimeout>;
+
+    function showResults(q: string) {
+      if (!catalog) return;
+      const hits = searchCatalog(catalog, q);
+      resultsList.innerHTML = hits.map((m, i) =>
+        `<div class="rii-result" data-idx="${i}"><span class="rii-result-book">${m.bookName}</span><br><span class="rii-result-page">${m.pageName}</span></div>`
+      ).join('');
+      (resultsList as any)._hits = hits;
+    }
+
+    async function ensureCatalog() {
+      if (catalog) { showResults(searchInput.value); return; }
+      statusEl.textContent = 'Loading catalog\u2026';
+      try {
+        catalog = await loadCatalog();
+        statusEl.textContent = `${catalog.length} materials available`;
+        showResults(searchInput.value);
+      } catch { statusEl.textContent = 'Failed to load catalog'; }
+    }
+
+    searchInput.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(() => showResults(searchInput.value), 150); });
+    searchInput.addEventListener('focus', () => { if (catalog) showResults(searchInput.value); });
+
+    resultsList.addEventListener('click', async (e) => {
+      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement;
+      if (!el) return;
+      const hits = (resultsList as any)._hits as RIIMaterial[];
+      const mat = hits[parseInt(el.dataset.idx!)];
+      statusEl.textContent = 'Loading\u2026';
+      resultsList.innerHTML = '';
+      try {
+        const d = await fetchMaterialNK(mat.dataPath);
+        refEl.textContent = mat.pageName;
+        statusEl.textContent = `${d.length} points loaded`;
+        searchInput.value = mat.bookName;
+        onLoaded(d);
+      } catch { statusEl.textContent = 'Failed to load material'; }
+    });
+
+    return { ensureCatalog };
+  }
+
   // Shell / particle material selector
   const fileUploadGroup = document.getElementById('file-upload-group')!;
   const fileUpload = document.getElementById('file-upload') as HTMLInputElement;
   const fileNameEl = document.getElementById('file-name')!;
+  const riiSearchGroup = document.getElementById('rii-search-group')!;
+
+  const riiHandle = setupRIISearch(
+    riiSearchGroup,
+    document.getElementById('rii-search') as HTMLInputElement,
+    document.getElementById('rii-results')!,
+    document.getElementById('rii-status')!,
+    materialRefEl,
+    (d) => { uploadedMaterial = d; resetAndUpdate(); },
+  );
 
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
     epsGroup.classList.toggle('hidden', v !== 'custom');
     fileUploadGroup.style.display = v === 'file' ? '' : 'none';
-    materialRefEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+    riiSearchGroup.style.display = v === 'rii' ? '' : 'none';
+    materialRefEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+    if (v === 'rii') { riiHandle.ensureCatalog(); return; }
     if (v === 'file' && !uploadedMaterial) return; // wait for file
     resetAndUpdate();
   });
@@ -1256,12 +1341,24 @@ import Layout from '../../layouts/Layout.astro';
   const coreFileUploadGroup = document.getElementById('core-file-upload-group')!;
   const coreFileUpload = document.getElementById('core-file-upload') as HTMLInputElement;
   const coreFileNameEl = document.getElementById('core-file-name')!;
+  const coreRiiSearchGroup = document.getElementById('core-rii-search-group')!;
+
+  const coreRiiHandle = setupRIISearch(
+    coreRiiSearchGroup,
+    document.getElementById('core-rii-search') as HTMLInputElement,
+    document.getElementById('core-rii-results')!,
+    document.getElementById('core-rii-status')!,
+    coreMaterialRefEl,
+    (d) => { uploadedCoreMaterial = d; resetAndUpdate(); },
+  );
 
   coreMaterialSelect.addEventListener('change', () => {
     const v = coreMaterialSelect.value;
     coreEpsGroup.style.display = v === 'custom' ? '' : 'none';
     coreFileUploadGroup.style.display = v === 'file' ? '' : 'none';
-    coreMaterialRefEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+    coreRiiSearchGroup.style.display = v === 'rii' ? '' : 'none';
+    coreMaterialRefEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+    if (v === 'rii') { coreRiiHandle.ensureCatalog(); return; }
     if (v === 'file' && !uploadedCoreMaterial) return;
     resetAndUpdate();
   });
@@ -1303,6 +1400,9 @@ import Layout from '../../layouts/Layout.astro';
     // Restore defaults
     materialSelect.value = 'custom';
     epsGroup.classList.remove('hidden');
+    fileUploadGroup.style.display = 'none';
+    riiSearchGroup.style.display = 'none';
+    uploadedMaterial = null;
     materialRefEl.textContent = '';
     epsParam.setValue(10);
     rParam.setValue(100);
@@ -1325,16 +1425,16 @@ import Layout from '../../layouts/Layout.astro';
   function getDielectric(lambdaNm: number): [number, number] {
     const mat = materialSelect.value;
     if (mat === 'custom') return [Math.sqrt(epsParam.value), 0];
-    if (mat === 'file' && uploadedMaterial) return interpolateNK(uploadedMaterial, lambdaNm);
-    if (mat === 'file') return [1, 0];
+    if ((mat === 'file' || mat === 'rii') && uploadedMaterial) return interpolateNK(uploadedMaterial, lambdaNm);
+    if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
 
   function getCoreDielectric(lambdaNm: number): [number, number] {
     const mat = coreMaterialSelect.value;
     if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
-    if (mat === 'file' && uploadedCoreMaterial) return interpolateNK(uploadedCoreMaterial, lambdaNm);
-    if (mat === 'file') return [1, 0];
+    if ((mat === 'file' || mat === 'rii') && uploadedCoreMaterial) return interpolateNK(uploadedCoreMaterial, lambdaNm);
+    if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
 
@@ -1364,9 +1464,11 @@ import Layout from '../../layouts/Layout.astro';
       const fileData = sh.uploadedData;
       const getDiel = mat === 'custom'
         ? (_: number): [number, number] => [Math.sqrt(eps), 0]
-        : mat === 'file' && fileData
+        : (mat === 'file' || mat === 'rii') && fileData
           ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
-          : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
+          : (mat === 'file' || mat === 'rii')
+            ? (_: number): [number, number] => [1, 0]
+            : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
       layers.push({ getDielectric: getDiel, radiusNm: sh.rParam.value });
     }
     // Sort by radius (enforce r_core < r_shell1 < r_shell2 ...)
@@ -1417,11 +1519,17 @@ import Layout from '../../layouts/Layout.astro';
             <option value="al">Aluminum (Al)</option>
             <option value="tio2">TiO\u2082</option>
             <option value="file">Upload file\u2026</option>
+            <option value="rii">Search database\u2026</option>
           </select>
           <span class="material-ref shell-ref"></span>
           <div class="file-upload-row sh-file-group" style="display:none">
             <input type="file" accept=".csv,.tsv,.txt,.dat" class="file-input sh-file-input">
             <span class="file-name sh-file-name"></span>
+          </div>
+          <div class="rii-search sh-rii-group" style="display:none">
+            <input type="text" class="param-number rii-input sh-rii-search" placeholder="Search materials\u2026">
+            <div class="rii-results sh-rii-results"></div>
+            <span class="material-ref sh-rii-status"></span>
           </div>
         </div>
         <div class="param shell-eps-group">
@@ -1473,12 +1581,24 @@ import Layout from '../../layouts/Layout.astro';
     const shFileGrp = sec.querySelector('.sh-file-group') as HTMLElement;
     const shFileInput = sec.querySelector('.sh-file-input') as HTMLInputElement;
     const shFileName = sec.querySelector('.sh-file-name') as HTMLElement;
+    const shRiiGrp = sec.querySelector('.sh-rii-group') as HTMLElement;
+
+    const shRiiHandle = setupRIISearch(
+      shRiiGrp,
+      sec.querySelector('.sh-rii-search') as HTMLInputElement,
+      sec.querySelector('.sh-rii-results')!,
+      sec.querySelector('.sh-rii-status')!,
+      refEl,
+      (d) => { handle.uploadedData = d; resetAndUpdate(); },
+    );
 
     matSel.addEventListener('change', () => {
       const v = matSel.value;
       epsGrp.classList.toggle('hidden', v !== 'custom');
       shFileGrp.style.display = v === 'file' ? '' : 'none';
-      refEl.textContent = (v === 'custom' || v === 'file') ? '' : MATERIALS[v].ref;
+      shRiiGrp.style.display = v === 'rii' ? '' : 'none';
+      refEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+      if (v === 'rii') { shRiiHandle.ensureCatalog(); return; }
       if (v === 'file' && !handle.uploadedData) return;
       resetAndUpdate();
     });
