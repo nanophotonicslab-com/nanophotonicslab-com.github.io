@@ -248,6 +248,10 @@ import Layout from '../../layouts/Layout.astro';
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
               CSV
             </button>
+            <button id="dl-share" class="dl-btn" title="Copy shareable link to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Share
+            </button>
           </div>
         </div>
       </div>
@@ -1064,6 +1068,9 @@ import Layout from '../../layouts/Layout.astro';
   interface MieCoeffs {
     aRe: Float64Array; aIm: Float64Array;
     bRe: Float64Array; bIm: Float64Array;
+    cRe?: Float64Array; cIm?: Float64Array;
+    dRe?: Float64Array; dIm?: Float64Array;
+    mRe?: number; mIm?: number;
     nmax: number; x: number;
   }
 
@@ -1091,7 +1098,20 @@ import Layout from '../../layouts/Layout.astro';
     for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
     _xiRe[0] = sinX; _xiIm[0] = -cosX; _xiRe[1] = sinX / x - cosX; _xiIm[1] = -cosX / x - sinX;
     for (let n = 1; n < nmax; n++) { const f = (2 * n + 1) / x; _xiRe[n + 1] = f * _xiRe[n] - _xiRe[n - 1]; _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1]; }
+    // ψ_n(mx) for complex mx — needed for internal field coefficients
+    const [mxSinRe, mxSinIm] = csin(mxRe, mxIm);
+    const [mxCosRe, mxCosIm] = ccos(mxRe, mxIm);
+    const _psiMxRe = new Float64Array(nmax + 2), _psiMxIm = new Float64Array(nmax + 2);
+    _psiMxRe[0] = mxSinRe; _psiMxIm[0] = mxSinIm;
+    const [sovRe, sovIm] = cdiv(mxSinRe, mxSinIm, mxRe, mxIm);
+    _psiMxRe[1] = sovRe - mxCosRe; _psiMxIm[1] = sovIm - mxCosIm;
+    for (let n = 1; n < nmax + 1; n++) {
+      const [fRe, fIm] = cdivN(2 * n + 1, mxRe, mxIm);
+      _psiMxRe[n + 1] = fRe * _psiMxRe[n] - fIm * _psiMxIm[n] - _psiMxRe[n - 1];
+      _psiMxIm[n + 1] = fRe * _psiMxIm[n] + fIm * _psiMxRe[n] - _psiMxIm[n - 1];
+    }
     const aR = new Float64Array(nmax), aI = new Float64Array(nmax), bR = new Float64Array(nmax), bI = new Float64Array(nmax);
+    const cR = new Float64Array(nmax), cI = new Float64Array(nmax), dR2 = new Float64Array(nmax), dI2 = new Float64Array(nmax);
     for (let n = 1; n <= nmax; n++) {
       const DomRe = (_DRe[n]*mRe+_DIm[n]*mIm)/mMag2, DomIm = (_DIm[n]*mRe-_DRe[n]*mIm)/mMag2;
       const mDRe = mRe*_DRe[n]-mIm*_DIm[n], mDIm = mRe*_DIm[n]+mIm*_DRe[n];
@@ -1102,8 +1122,18 @@ import Layout from '../../layouts/Layout.astro';
       const bnDRe = (BRe*_xiRe[n]-BIm*_xiIm[n])-_xiRe[n-1], bnDIm = (BRe*_xiIm[n]+BIm*_xiRe[n])-_xiIm[n-1];
       const adM2 = anDRe*anDRe+anDIm*anDIm; aR[n-1] = (anNRe*anDRe+anNIm*anDIm)/adM2; aI[n-1] = (anNIm*anDRe-anNRe*anDIm)/adM2;
       const bdM2 = bnDRe*bnDRe+bnDIm*bnDIm; bR[n-1] = (bnNRe*bnDRe+bnNIm*bnDIm)/bdM2; bI[n-1] = (bnNIm*bnDRe-bnNRe*bnDIm)/bdM2;
+      // Internal field coefficients (B&H 4.53):
+      // c_n = -i / (m * ψ_n(mx) * anD), d_n = -m*i / (ψ_n(mx) * bnD)
+      const [mpRe, mpIm] = cmul(mRe, mIm, _psiMxRe[n], _psiMxIm[n]);
+      const [dcRe, dcIm] = cmul(mpRe, mpIm, anDRe, anDIm);
+      const dcM2 = dcRe * dcRe + dcIm * dcIm;
+      cR[n - 1] = -dcIm / dcM2; cI[n - 1] = -dcRe / dcM2;
+      const [ddRe, ddIm] = cmul(_psiMxRe[n], _psiMxIm[n], bnDRe, bnDIm);
+      const ddM2 = ddRe * ddRe + ddIm * ddIm;
+      dR2[n - 1] = (mIm * ddRe - mRe * ddIm) / ddM2;
+      dI2[n - 1] = (-mRe * ddRe - mIm * ddIm) / ddM2;
     }
-    return { aRe: aR, aIm: aI, bRe: bR, bIm: bI, nmax, x };
+    return { aRe: aR, aIm: aI, bRe: bR, bIm: bI, cRe: cR, cIm: cI, dRe: dR2, dIm: dI2, mRe, mIm, nmax, x };
   }
 
   function computeShellCoeffsAtLambda(layers: ShellLayer[], nHost: number, lambdaNm: number): MieCoeffs {
@@ -1415,65 +1445,136 @@ import Layout from '../../layouts/Layout.astro';
 
   function computeNearField(coeffs: MieCoeffs, k: number, radiusNm: number, gridSize: number, extentNm: number): NearFieldResult {
     const R = radiusNm * 1e-9;
+    const hasInternal = !!(coeffs.cRe && coeffs.dRe && coeffs.mRe !== undefined);
     const grid = new Float64Array(gridSize * gridSize);
     let minVal = Infinity, maxVal = 0;
     for (let iz = 0; iz < gridSize; iz++) {
       const z = (-extentNm + iz * 2 * extentNm / (gridSize - 1)) * 1e-9;
       for (let ix = 0; ix < gridSize; ix++) {
         const x = (-extentNm + ix * 2 * extentNm / (gridSize - 1)) * 1e-9;
-        const r = Math.sqrt(x * x + z * z);
-        if (r < R * 1.001) { grid[iz * gridSize + ix] = -1; continue; }
-        const rho = k * r;
-        const costh = z / r, sinth = Math.sqrt(1 - costh * costh);
-        const phase = k * z;
-        // Incident field in spherical coords (φ=0)
-        let ErRe = sinth * Math.cos(phase), ErIm = sinth * Math.sin(phase);
-        let EtRe = costh * Math.cos(phase), EtIm = costh * Math.sin(phase);
-        // Riccati-Bessel at rho
-        const sinR = Math.sin(rho), cosR = Math.cos(rho);
-        let pP = sinR, pC = sinR / rho - cosR;
-        let cP = cosR, cC = cosR / rho + sinR;
-        let piPr = 0, piCu = 1;
-        for (let n = 1; n <= coeffs.nmax; n++) {
-          const xiRe = pC, xiIm = -cC;
-          const psiD = pP - (n / rho) * pC, chiD = cP - (n / rho) * cC;
-          const xiDRe = psiD, xiDIm = -chiD;
-          const tau = n * costh * piCu - (n + 1) * piPr;
-          const Pn1 = sinth * piCu;
-          const ww = (2 * n + 1) / (n * (n + 1));
-          let eRe = 0, eIm = 0;
-          switch (n % 4) { case 0: eRe = ww; break; case 1: eIm = ww; break; case 2: eRe = -ww; break; case 3: eIm = -ww; break; }
-          // En*i
-          const eiRe = -eIm, eiIm = eRe;
-          // ei*an
-          const earRe = eiRe * coeffs.aRe[n-1] - eiIm * coeffs.aIm[n-1];
-          const earIm = eiRe * coeffs.aIm[n-1] + eiIm * coeffs.aRe[n-1];
-          // ear*xi
-          const nn1 = n * (n + 1), fR = nn1 * Pn1 / (rho * rho);
-          ErRe += fR * (earRe * xiRe - earIm * xiIm);
-          ErIm += fR * (earRe * xiIm + earIm * xiRe);
-          // E_theta scattered: En*[i*an*xi'*tau - bn*xi*pi] / rho
-          const tF = tau / rho;
-          EtRe += tF * (earRe * xiDRe - earIm * xiDIm);
-          EtIm += tF * (earRe * xiDIm + earIm * xiDRe);
-          const ebRe = eRe * coeffs.bRe[n-1] - eIm * coeffs.bIm[n-1];
-          const ebIm = eRe * coeffs.bIm[n-1] + eIm * coeffs.bRe[n-1];
-          const pF = piCu / rho;
-          EtRe -= pF * (ebRe * xiRe - ebIm * xiIm);
-          EtIm -= pF * (ebRe * xiIm + ebIm * xiRe);
-          // Recurrences
-          const bf = (2 * n + 1) / rho;
-          const pN = bf * pC - pP; pP = pC; pC = pN;
-          const cN = bf * cC - cP; cP = cC; cC = cN;
-          const piN = ((2 * n + 1) / n) * costh * piCu - ((n + 1) / n) * piPr;
-          piPr = piCu; piCu = piN;
+        let r = Math.sqrt(x * x + z * z);
+        const inside = r < R;
+
+        if (inside && !hasInternal) { grid[iz * gridSize + ix] = -1; continue; }
+
+        if (inside) {
+          // --- Internal field (B&H 4.40) ---
+          if (r < R * 0.005) r = R * 0.005; // regularize near origin
+          const costh = z / r, sinth = Math.sqrt(1 - costh * costh);
+          // ρ₁ = m·k·r (complex)
+          const r1Re = coeffs.mRe! * k * r, r1Im = coeffs.mIm! * k * r;
+          const r1M2 = r1Re * r1Re + r1Im * r1Im;
+          // Complex sin/cos(ρ₁)
+          const chI = Math.cosh(r1Im), shI = Math.sinh(r1Im);
+          const sinRRe = Math.sin(r1Re) * chI, sinRIm = Math.cos(r1Re) * shI;
+          const cosRRe = Math.cos(r1Re) * chI, cosRIm = -Math.sin(r1Re) * shI;
+          // ψ₀ = sin(ρ₁), ψ₁ = sin(ρ₁)/ρ₁ - cos(ρ₁)
+          let ppRe = sinRRe, ppIm = sinRIm;
+          const sovRe = (sinRRe * r1Re + sinRIm * r1Im) / r1M2;
+          const sovIm = (sinRIm * r1Re - sinRRe * r1Im) / r1M2;
+          let pcRe = sovRe - cosRRe, pcIm = sovIm - cosRIm;
+          let piPr = 0, piCu = 1;
+          let ErRe = 0, ErIm = 0, EtRe = 0, EtIm = 0;
+          for (let n = 1; n <= coeffs.nmax; n++) {
+            const psiRe = pcRe, psiIm = pcIm;
+            // ψ'_n = ψ_{n-1} - n/ρ₁ · ψ_n
+            const novRe = n * r1Re / r1M2, novIm = -n * r1Im / r1M2;
+            const psiDRe = ppRe - (novRe * psiRe - novIm * psiIm);
+            const psiDIm = ppIm - (novRe * psiIm + novIm * psiRe);
+            const tau = n * costh * piCu - (n + 1) * piPr;
+            const Pn1 = sinth * piCu;
+            const ww = (2 * n + 1) / (n * (n + 1));
+            let eRe = 0, eIm = 0;
+            switch (n % 4) { case 0: eRe = ww; break; case 1: eIm = ww; break; case 2: eRe = -ww; break; case 3: eIm = -ww; break; }
+            // E_n·(-i)·d_n for N term: -i·E_n = (eIm, -eRe)
+            const eniRe = eIm, eniIm = -eRe;
+            const eidRe = eniRe * coeffs.dRe![n-1] - eniIm * coeffs.dIm![n-1];
+            const eidIm = eniRe * coeffs.dIm![n-1] + eniIm * coeffs.dRe![n-1];
+            // E_n·c_n for M term
+            const ecRe = eRe * coeffs.cRe![n-1] - eIm * coeffs.cIm![n-1];
+            const ecIm = eRe * coeffs.cIm![n-1] + eIm * coeffs.cRe![n-1];
+            // E_r += E_n·(-i·d_n)·n(n+1)·Pn1 · ψ_n/ρ₁²
+            const nn1 = n * (n + 1);
+            const r1SqRe = r1Re * r1Re - r1Im * r1Im, r1SqIm = 2 * r1Re * r1Im;
+            const r1SqM2 = r1SqRe * r1SqRe + r1SqIm * r1SqIm;
+            const psrRe = (psiRe * r1SqRe + psiIm * r1SqIm) / r1SqM2;
+            const psrIm = (psiIm * r1SqRe - psiRe * r1SqIm) / r1SqM2;
+            const fRR = nn1 * Pn1;
+            ErRe += fRR * (eidRe * psrRe - eidIm * psrIm);
+            ErIm += fRR * (eidRe * psrIm + eidIm * psrRe);
+            // E_θ += [E_n·c_n·π_n·ψ_n + E_n·(-i·d_n)·τ_n·ψ'_n] / ρ₁
+            const invR1Re = r1Re / r1M2, invR1Im = -r1Im / r1M2;
+            // c_n term: ec·ψ_n / ρ₁ · π_n
+            const ecpRe = ecRe * psiRe - ecIm * psiIm, ecpIm = ecRe * psiIm + ecIm * psiRe;
+            const t1Re = (ecpRe * invR1Re - ecpIm * invR1Im) * piCu;
+            const t1Im = (ecpRe * invR1Im + ecpIm * invR1Re) * piCu;
+            EtRe += t1Re; EtIm += t1Im;
+            // d_n term: eid·ψ'_n / ρ₁ · τ_n
+            const edpRe = eidRe * psiDRe - eidIm * psiDIm, edpIm = eidRe * psiDIm + eidIm * psiDRe;
+            const t2Re = (edpRe * invR1Re - edpIm * invR1Im) * tau;
+            const t2Im = (edpRe * invR1Im + edpIm * invR1Re) * tau;
+            EtRe += t2Re; EtIm += t2Im;
+            // Recurrences: ψ_{n+1} = (2n+1)/ρ₁ · ψ_n - ψ_{n-1}
+            const bfRe = (2 * n + 1) * r1Re / r1M2, bfIm = -(2 * n + 1) * r1Im / r1M2;
+            const pNRe = bfRe * pcRe - bfIm * pcIm - ppRe;
+            const pNIm = bfRe * pcIm + bfIm * pcRe - ppIm;
+            ppRe = pcRe; ppIm = pcIm; pcRe = pNRe; pcIm = pNIm;
+            const piN = ((2 * n + 1) / n) * costh * piCu - ((n + 1) / n) * piPr;
+            piPr = piCu; piCu = piN;
+          }
+          const ExRe = ErRe * sinth + EtRe * costh, ExIm = ErIm * sinth + EtIm * costh;
+          const EzRe = ErRe * costh - EtRe * sinth, EzIm = ErIm * costh - EtIm * sinth;
+          const Esq = ExRe * ExRe + ExIm * ExIm + EzRe * EzRe + EzIm * EzIm;
+          grid[iz * gridSize + ix] = Esq;
+          if (Esq > maxVal) maxVal = Esq;
+          if (Esq > 0 && Esq < minVal) minVal = Esq;
+        } else {
+          // --- External field (incident + scattered) ---
+          const rho = k * r;
+          const costh = z / r, sinth = Math.sqrt(1 - costh * costh);
+          const phase = k * z;
+          let ErRe = sinth * Math.cos(phase), ErIm = sinth * Math.sin(phase);
+          let EtRe = costh * Math.cos(phase), EtIm = costh * Math.sin(phase);
+          const sinR = Math.sin(rho), cosR = Math.cos(rho);
+          let pP = sinR, pC = sinR / rho - cosR;
+          let cP = cosR, cC = cosR / rho + sinR;
+          let piPr = 0, piCu = 1;
+          for (let n = 1; n <= coeffs.nmax; n++) {
+            const xiRe = pC, xiIm = -cC;
+            const psiD = pP - (n / rho) * pC, chiD = cP - (n / rho) * cC;
+            const xiDRe = psiD, xiDIm = -chiD;
+            const tau = n * costh * piCu - (n + 1) * piPr;
+            const Pn1 = sinth * piCu;
+            const ww = (2 * n + 1) / (n * (n + 1));
+            let eRe = 0, eIm = 0;
+            switch (n % 4) { case 0: eRe = ww; break; case 1: eIm = ww; break; case 2: eRe = -ww; break; case 3: eIm = -ww; break; }
+            const eiRe = -eIm, eiIm = eRe;
+            const earRe = eiRe * coeffs.aRe[n-1] - eiIm * coeffs.aIm[n-1];
+            const earIm = eiRe * coeffs.aIm[n-1] + eiIm * coeffs.aRe[n-1];
+            const nn1 = n * (n + 1), fR = nn1 * Pn1 / (rho * rho);
+            ErRe += fR * (earRe * xiRe - earIm * xiIm);
+            ErIm += fR * (earRe * xiIm + earIm * xiRe);
+            const tF = tau / rho;
+            EtRe += tF * (earRe * xiDRe - earIm * xiDIm);
+            EtIm += tF * (earRe * xiDIm + earIm * xiDRe);
+            const ebRe = eRe * coeffs.bRe[n-1] - eIm * coeffs.bIm[n-1];
+            const ebIm = eRe * coeffs.bIm[n-1] + eIm * coeffs.bRe[n-1];
+            const pF = piCu / rho;
+            EtRe -= pF * (ebRe * xiRe - ebIm * xiIm);
+            EtIm -= pF * (ebRe * xiIm + ebIm * xiRe);
+            const bf = (2 * n + 1) / rho;
+            const pN = bf * pC - pP; pP = pC; pC = pN;
+            const cN = bf * cC - cP; cP = cC; cC = cN;
+            const piN = ((2 * n + 1) / n) * costh * piCu - ((n + 1) / n) * piPr;
+            piPr = piCu; piCu = piN;
+          }
+          const ExRe = ErRe * sinth + EtRe * costh, ExIm = ErIm * sinth + EtIm * costh;
+          const EzRe = ErRe * costh - EtRe * sinth, EzIm = ErIm * costh - EtIm * sinth;
+          const Esq = ExRe * ExRe + ExIm * ExIm + EzRe * EzRe + EzIm * EzIm;
+          grid[iz * gridSize + ix] = Esq;
+          if (Esq > maxVal) maxVal = Esq;
+          if (Esq > 0 && Esq < minVal) minVal = Esq;
         }
-        const ExRe = ErRe * sinth + EtRe * costh, ExIm = ErIm * sinth + EtIm * costh;
-        const EzRe = ErRe * costh - EtRe * sinth, EzIm = ErIm * costh - EtIm * sinth;
-        const Esq = ExRe * ExRe + ExIm * ExIm + EzRe * EzRe + EzIm * EzIm;
-        grid[iz * gridSize + ix] = Esq;
-        if (Esq > maxVal) maxVal = Esq;
-        if (Esq > 0 && Esq < minVal) minVal = Esq;
       }
     }
     return { grid, gridSize, extent: extentNm, minVal, maxVal };
@@ -1501,7 +1602,7 @@ import Layout from '../../layouts/Layout.astro';
         const ix = Math.round(px * (nf.gridSize - 1) / (pxW - 1));
         const val = nf.grid[iz * nf.gridSize + ix];
         let r: number, g: number, b: number;
-        if (val < 0) { r = 80; g = 80; b = 90; } // inside particle
+        if (val < 0) { r = 80; g = 80; b = 90; } // inside particle (core-shell fallback)
         else { const t = (Math.log10(Math.max(val, 1e-10)) - logMin) / logRange; [r, g, b] = inferno(t); }
         const off = (py * pxW + px) * 4;
         imgData.data[off] = r; imgData.data[off + 1] = g; imgData.data[off + 2] = b; imgData.data[off + 3] = 255;
@@ -1571,7 +1672,10 @@ import Layout from '../../layouts/Layout.astro';
     const tabs = document.getElementById(cId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
     let cur = init;
     tabs.forEach(t => t.addEventListener('click', () => { tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); }); t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = t.dataset[attr]!; onSel(cur); }));
-    return { get value() { return cur; } };
+    function select(v: string, silent = false) {
+      for (const t of tabs) { if (t.dataset[attr] === v) { tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); }); t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = v; if (!silent) onSel(v); return; } }
+    }
+    return { get value() { return cur; }, select };
   }
 
   // === UI Setup ===
@@ -2369,6 +2473,78 @@ import Layout from '../../layouts/Layout.astro';
     downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '.csv');
   });
 
+  // === Share / URL State ===
+
+  function serializeState(): string {
+    const p = new URLSearchParams();
+    p.set('geo', geometry);
+    p.set('mat', materialSelect.value);
+    if (materialSelect.value === 'custom') p.set('eps', epsParam.value.toString());
+    p.set('r', rParam.value.toString());
+    p.set('nh', nhParam.value.toString());
+    p.set('lmin', lamMinInput.value);
+    p.set('lmax', lamMaxInput.value);
+    p.set('view', viewTabs.value);
+    p.set('qty', qtyTabs.value);
+    p.set('decomp', decompTabs.value);
+    p.set('axis', axisTabs.value);
+    p.set('pol', polTabs.value);
+    p.set('al', angularLambdaInput.value);
+    if (logY) p.set('logY', '1');
+    if (geometry === 'coreshell') {
+      p.set('cmat', coreMaterialSelect.value);
+      if (coreMaterialSelect.value === 'custom') p.set('ceps', coreEpsParam.value.toString());
+      p.set('cr', coreRParam.value.toString());
+      for (let i = 0; i < extraShells.length; i++) {
+        const sh = extraShells[i];
+        p.set(`s${i + 2}mat`, sh.material.value);
+        if (sh.material.value === 'custom') p.set(`s${i + 2}eps`, sh.epsParam.value.toString());
+        p.set(`s${i + 2}r`, sh.rParam.value.toString());
+      }
+    }
+    return p.toString();
+  }
+
+  function restoreState() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const p = new URLSearchParams(hash);
+    const g = p.get('geo');
+    if (g === 'coreshell') geoTabs.select('coreshell', true);
+    const mat = p.get('mat');
+    if (mat && !['file', 'rii'].includes(mat)) { materialSelect.value = mat; materialSelect.dispatchEvent(new Event('change')); }
+    if (mat === 'custom' && p.has('eps')) epsParam.setValue(parseFloat(p.get('eps')!));
+    if (p.has('r')) rParam.setValue(parseFloat(p.get('r')!));
+    if (p.has('nh')) nhParam.setValue(parseFloat(p.get('nh')!));
+    if (p.has('lmin')) { lamMinInput.value = p.get('lmin')!; lamMinInput.dispatchEvent(new Event('change')); }
+    if (p.has('lmax')) { lamMaxInput.value = p.get('lmax')!; lamMaxInput.dispatchEvent(new Event('change')); }
+    if (p.has('al')) angularLambdaInput.value = p.get('al')!;
+    if (p.get('logY') === '1') { logY = true; logToggle.classList.add('active'); }
+    if (g === 'coreshell') {
+      const cm = p.get('cmat');
+      if (cm && !['file', 'rii'].includes(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }
+      if (cm === 'custom' && p.has('ceps')) coreEpsParam.setValue(parseFloat(p.get('ceps')!));
+      if (p.has('cr')) coreRParam.setValue(parseFloat(p.get('cr')!));
+    }
+    // Restore tab selections (silent to avoid intermediate renders)
+    if (p.has('qty')) qtyTabs.select(p.get('qty')!, true);
+    if (p.has('decomp')) decompTabs.select(p.get('decomp')!, true);
+    if (p.has('axis')) axisTabs.select(p.get('axis')!, true);
+    if (p.has('pol')) polTabs.select(p.get('pol')!, true);
+    if (p.has('view')) viewTabs.select(p.get('view')!);
+  }
+
+  const shareBtn = document.getElementById('dl-share')!;
+  shareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + serializeState();
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = shareBtn.textContent;
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => { shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share'; }, 1500);
+    });
+  });
+
+  restoreState();
   new ResizeObserver(() => render()).observe(canvas);
   recompute(); render(); updateConfigCheck();
 </script>
