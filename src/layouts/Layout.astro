@@ -1,5 +1,6 @@
 ---
 import Navbar from '../components/Navbar.astro';
+import LabToolsBar from '../components/LabToolsBar.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
 
@@ -23,6 +24,7 @@ const { title, description = 'Nanophotonics research lab — exploring light-mat
   </head>
   <body>
     <Navbar />
+    <LabToolsBar />
     <main>
       <slot />
     </main>
