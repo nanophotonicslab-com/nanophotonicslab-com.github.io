@@ -5,6 +5,7 @@ const currentPath = Astro.url.pathname;
 const tools = [
   { href: `${base}lab/`,               label: 'Lab',          icon: 'home' },
   { href: `${base}lab/mie-scattering/`, label: 'Mie',          icon: 'bolt' },
+  { href: `${base}lab/cylinder/`,       label: 'Cylinder',     icon: 'cylinder' },
   { href: `${base}lab/photothermal/`,   label: 'Photothermal', icon: 'flame' },
   { href: `${base}lab/electron/`,       label: 'Electron',     icon: 'electron' },
   { href: `${base}lab/photon/`,         label: 'Photon',       icon: 'photon' },
@@ -35,6 +36,13 @@ function isActive(href: string): boolean {
           {t.icon === 'bolt' && (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          )}
+          {t.icon === 'cylinder' && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="8" ry="2.5"/>
+              <path d="M4 5v14"/><path d="M20 5v14"/>
+              <ellipse cx="12" cy="19" rx="8" ry="2.5"/>
             </svg>
           )}
           {t.icon === 'flame' && (

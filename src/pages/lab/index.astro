@@ -27,6 +27,14 @@ const widgets = [
     url: '/lab/photon/',
   },
   {
+    title: 'Cylinder Dispersion',
+    description: 'Guided-mode dispersion ω(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.',
+    color: '#6366F1',
+    icon: 'cylinder',
+    status: 'Live',
+    url: '/lab/cylinder/',
+  },
+  {
     title: 'Photothermal Calculator',
     description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.',
     color: '#EF4444',
@@ -77,6 +85,14 @@ const widgets = [
                     <ellipse cx="12" cy="12" rx="10" ry="4"/>
                     <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
                     <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
+                  </svg>
+                )}
+                {widget.icon === 'cylinder' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="5" rx="8" ry="2.5"/>
+                    <path d="M4 5v14"/>
+                    <path d="M20 5v14"/>
+                    <ellipse cx="12" cy="19" rx="8" ry="2.5"/>
                   </svg>
                 )}
                 {widget.icon === 'flame' && (

@@ -1,0 +1,576 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Cylinder Dispersion" description="Guided-mode dispersion of an infinite dielectric cylinder: ω(q_z) branches from exact electromagnetic matching, solved in the browser.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Cylinder <span class="gradient-text">Dispersion</span></h1>
+      <p class="widget-hero__subtitle">
+        Guided-mode dispersion ω(q<sub>z</sub>) of an infinite cylinder in a
+        homogeneous host. Roots are found from det&nbsp;M(qa, ka, ε₁, ε<sub>h</sub>, m)&nbsp;=&nbsp;0
+        with exact complex-argument Bessel functions.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Radius a (nm)</label>
+              <input type="number" class="param-number" id="r-num" value="15" step="1" min="1" max="200">
+            </div>
+            <input type="range" class="param-slider" id="r-slider" min="2" max="100" step="1" value="15">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>&epsilon;<sub>h</sub> (host)</label>
+              <input type="number" class="param-number" id="eh-num" value="1.00" step="0.01" min="1">
+            </div>
+            <input type="range" class="param-slider" id="eh-slider" min="1" max="4" step="0.01" value="1">
+            <div class="param-presets" id="eh-presets">
+              <button class="preset-btn active" data-val="1.00">Air</button>
+              <button class="preset-btn" data-val="1.77">Water</button>
+              <button class="preset-btn" data-val="2.25">Glass</button>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Re(&epsilon;<sub>1</sub>)</label>
+              <input type="number" class="param-number" id="e1r-num" value="10.0" step="0.1" min="1">
+            </div>
+            <input type="range" class="param-slider" id="e1r-slider" min="1" max="30" step="0.1" value="10">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Im(&epsilon;<sub>1</sub>)</label>
+              <input type="number" class="param-number" id="e1i-num" value="0.10" step="0.01" min="0">
+            </div>
+            <input type="range" class="param-slider" id="e1i-slider" min="0" max="2" step="0.01" value="0.1">
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>&omega; range (eV)</label></div>
+            <div class="param-range-row">
+              <input type="number" class="param-number param-number--sm" id="w-min" value="1" step="0.5" min="0">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-number param-number--sm" id="w-max" value="20" step="0.5" min="0.1">
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>Angular orders m</label></div>
+            <div class="m-chips" id="m-chips">
+              <button class="m-chip active" data-m="0">0</button>
+              <button class="m-chip active" data-m="1">1</button>
+              <button class="m-chip active" data-m="2">2</button>
+              <button class="m-chip" data-m="3">3</button>
+            </div>
+          </div>
+
+          <button id="reset-btn" class="reset-btn" title="Reset all parameters">Reset defaults</button>
+
+          <p class="theory-note">
+            <strong>Model.</strong>
+            Tangential <b>E</b>, <b>H</b> matching at r&nbsp;=&nbsp;a gives a 4×4
+            system. Guided modes satisfy det&nbsp;M&nbsp;=&nbsp;0 inside the
+            window k<sub>h</sub>&nbsp;&lt;&nbsp;q&nbsp;&lt;&nbsp;k<sub>mat</sub>.
+            A small Im(ε₁) regularizes the search.
+          </p>
+        </div>
+
+        <!-- ===== Chart ===== -->
+        <div class="chart-panel card">
+          <div class="chart-toolbar">
+            <span class="chart-title">Dispersion &omega; vs q<sub>z</sub></span>
+            <span id="compute-status" class="compute-status"></span>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="cyl-chart"></canvas>
+          </div>
+          <div class="chart-legend" id="chart-legend"></div>
+        </div>
+      </div>
+
+      <div class="references card">
+        <h4>References</h4>
+        <ul>
+          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983), §8 — infinite cylinder expansion.</li>
+          <li>Abramowitz &amp; Stegun, §9.1.11 — integer-order Y<sub>m</sub> series used to compute complex-argument Bessel functions in the browser.</li>
+          <li>Internal port of Álvaro Rodríguez Echarri's MATLAB <code>cylinders</code> library (matrix <code>giveM</code>, dispersion root solver).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 640px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
+  .controls {
+    display: flex; flex-direction: column; gap: var(--space-md);
+    position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg));
+  }
+  .controls h3 { font-size: 1rem; }
+
+  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-header { display: flex; justify-content: space-between; align-items: center; }
+  .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .param-number {
+    width: 5rem; padding: 0.2rem 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--primary); text-align: right; outline: none; background: var(--bg);
+  }
+  .param-number::-webkit-inner-spin-button,
+  .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .param-number { -moz-appearance: textfield; }
+  .param-number--sm { width: 4.2rem; font-size: 0.8125rem; }
+  .param-range-row { display: flex; align-items: center; gap: 0.35rem; }
+  .param-limit-dash { color: var(--bg-muted); font-size: 0.75rem; }
+
+  .param-slider {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--primary); cursor: pointer; transition: box-shadow 0.15s;
+  }
+  .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
+  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
+
+  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.2rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); }
+
+  .m-chips { display: flex; gap: 0.35rem; }
+  .m-chip {
+    flex: 1; padding: 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .m-chip:hover { border-color: var(--primary-light); color: var(--primary); }
+  .m-chip.active { color: white; border-color: transparent; }
+  .m-chip[data-m="0"].active { background: #6366F1; }
+  .m-chip[data-m="1"].active { background: #06B6D4; }
+  .m-chip[data-m="2"].active { background: #10B981; }
+  .m-chip[data-m="3"].active { background: #F59E0B; }
+
+  .reset-btn {
+    width: 100%; padding: 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .reset-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  .theory-note {
+    font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55;
+    border-top: 1px solid var(--bg-muted); padding-top: var(--space-md);
+  }
+  .theory-note strong { color: var(--text-soft); }
+
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .compute-status { font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: var(--radius-sm); }
+
+  .chart-legend {
+    display: flex; gap: var(--space-md); flex-wrap: wrap;
+    padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-soft); }
+  .legend-swatch {
+    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+  }
+  .legend-line {
+    display: inline-block; width: 18px; height: 0;
+    border-top: 2px dashed currentColor;
+  }
+
+  .references { margin-top: var(--space-lg); }
+  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .references code {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    background: var(--bg-muted);
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 900px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+  }
+</style>
+
+<script>
+  import { getDispersion, HC_EV_NM } from '../../lib/cylinder.ts';
+  import type { C } from '../../lib/cylinder.ts';
+
+  // ===== State =====
+
+  const state = {
+    a_nm: 15,
+    eps_h: 1.0,
+    eps1_re: 10.0,
+    eps1_im: 0.1,
+    w_min: 1,
+    w_max: 20,
+    m_active: new Set<number>([0, 1, 2]),
+  };
+
+  const M_COLORS: Record<number, string> = {
+    0: '#6366F1',
+    1: '#06B6D4',
+    2: '#10B981',
+    3: '#F59E0B',
+  };
+
+  interface MBranch {
+    m: number;
+    points: { w: number; q: number }[];
+  }
+
+  let branches: MBranch[] = [];
+  let qMaxAuto = 0.5;
+  let computeTimer: number | null = null;
+
+  // ===== Compute =====
+
+  function recompute() {
+    const t0 = performance.now();
+    const eps_h: C = [state.eps_h, 0];
+    const eps1: C = [state.eps1_re, state.eps1_im];
+
+    // Sampling grids
+    const Nw = 80;
+    const Nq = 240;
+    const energies: number[] = [];
+    for (let i = 0; i < Nw; i++) {
+      energies.push(state.w_min + (state.w_max - state.w_min) * i / (Nw - 1));
+    }
+
+    // Auto-compute q range: material line at highest energy
+    const k0_max = state.w_max / HC_EV_NM;
+    const q_upper = Math.sqrt(Math.max(0, state.eps1_re)) * k0_max;
+    qMaxAuto = q_upper * 1.05;
+
+    const q_nm: number[] = [];
+    for (let i = 0; i < Nq; i++) {
+      q_nm.push(0.0001 + (qMaxAuto - 0.0001) * i / (Nq - 1));
+    }
+
+    branches = [];
+    const ms = Array.from(state.m_active).sort((a, b) => a - b);
+    for (const m of ms) {
+      const res = getDispersion({
+        energies_eV: energies,
+        q_nm,
+        a_nm: state.a_nm,
+        eps_h,
+        eps1_of_w: () => eps1,
+        m,
+      });
+      const pts: { w: number; q: number }[] = [];
+      for (let i = 0; i < res.energies_eV.length; i++) {
+        for (const q of res.roots_nm[i]) pts.push({ w: res.energies_eV[i], q });
+      }
+      branches.push({ m, points: pts });
+    }
+
+    const dt = performance.now() - t0;
+    const totalPts = branches.reduce((s, b) => s + b.points.length, 0);
+    const statusEl = document.getElementById('compute-status')!;
+    statusEl.textContent = `${totalPts} roots · ${dt.toFixed(0)} ms`;
+    drawChart();
+    drawLegend();
+  }
+
+  function scheduleRecompute() {
+    if (computeTimer !== null) window.clearTimeout(computeTimer);
+    computeTimer = window.setTimeout(() => {
+      computeTimer = null;
+      recompute();
+    }, 120);
+  }
+
+  // ===== Chart =====
+
+  function drawChart() {
+    const canvas = document.getElementById('cyl-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const m = { top: 14, right: 18, bottom: 38, left: 52 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+
+    const qMax = qMaxAuto;
+    const wMin = state.w_min, wMax = state.w_max;
+
+    const xTo = (q: number) => m.left + pw * q / qMax;
+    const yTo = (we: number) => m.top + ph * (1 - (we - wMin) / (wMax - wMin));
+
+    // Background
+    ctx.fillStyle = '#FAFAFF';
+    ctx.fillRect(m.left, m.top, pw, ph);
+
+    // Gridlines
+    ctx.strokeStyle = '#EEEDF5';
+    ctx.lineWidth = 1;
+    const nXt = 6, nYt = 6;
+    for (let i = 0; i <= nXt; i++) {
+      const x = m.left + pw * i / nXt;
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+    }
+    for (let i = 0; i <= nYt; i++) {
+      const y = m.top + ph * i / nYt;
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#1E1B4B';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    // X labels (q)
+    ctx.fillStyle = '#64648B';
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i <= nXt; i++) {
+      const q = qMax * i / nXt;
+      ctx.fillText(q.toFixed(3), m.left + pw * i / nXt, m.top + ph + 4);
+    }
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('q_z (nm⁻¹)', m.left + pw / 2, h - 16);
+
+    // Y labels (ω)
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#64648B';
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    for (let i = 0; i <= nYt; i++) {
+      const we = wMin + (wMax - wMin) * (1 - i / nYt);
+      ctx.fillText(we.toFixed(1), m.left - 6, m.top + ph * i / nYt);
+    }
+    ctx.save();
+    ctx.translate(14, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('ω (eV)', 0, 0);
+    ctx.restore();
+
+    // Clip plot area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(m.left, m.top, pw, ph);
+    ctx.clip();
+
+    // Light line and material line (from origin to max)
+    const k0_at = (we: number) => we / HC_EV_NM;
+    // Light line: q = √εₕ · k₀ → ω = HC · q / √εₕ
+    const qLightMax = Math.sqrt(state.eps_h) * k0_at(wMax);
+    const qMatMax = Math.sqrt(Math.max(0, state.eps1_re)) * k0_at(wMax);
+
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#94A3B8';
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(wMin));
+    ctx.moveTo(xTo(0), yTo(0));
+    ctx.lineTo(xTo(qLightMax), yTo(wMax));
+    ctx.stroke();
+
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(0));
+    ctx.lineTo(xTo(qMatMax), yTo(wMax));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Shaded guided region (between light line and material line)
+    ctx.fillStyle = 'rgba(99,102,241,0.04)';
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(0));
+    ctx.lineTo(xTo(qLightMax), yTo(wMax));
+    ctx.lineTo(xTo(qMatMax), yTo(wMax));
+    ctx.closePath();
+    ctx.fill();
+
+    // Dispersion points
+    for (const br of branches) {
+      const color = M_COLORS[br.m] ?? '#6366F1';
+      ctx.fillStyle = color;
+      for (const p of br.points) {
+        const x = xTo(p.q), y = yTo(p.w);
+        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    // Line labels (outside clip)
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    ctx.save();
+    const lx = xTo(qLightMax), ly = yTo(wMax);
+    ctx.translate(lx - 4, ly + 8);
+    const ang = Math.atan2(yTo(wMax) - yTo(0), xTo(qLightMax) - xTo(0));
+    ctx.rotate(ang);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('light line', 0, 0);
+    ctx.restore();
+
+    ctx.fillStyle = '#94A3B8';
+    const mx = xTo(qMatMax), my = yTo(wMax);
+    ctx.save();
+    ctx.translate(mx - 4, my + 8);
+    const angM = Math.atan2(yTo(wMax) - yTo(0), xTo(qMatMax) - xTo(0));
+    ctx.rotate(angM);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('material line', 0, 0);
+    ctx.restore();
+  }
+
+  function drawLegend() {
+    const el = document.getElementById('chart-legend')!;
+    el.innerHTML = '';
+    const ms = Array.from(state.m_active).sort((a, b) => a - b);
+    for (const m of ms) {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-swatch" style="background:${M_COLORS[m]}"></span> m = ${m}`;
+      el.appendChild(item);
+    }
+    const light = document.createElement('span');
+    light.className = 'legend-item';
+    light.style.color = '#94A3B8';
+    light.innerHTML = `<span class="legend-line"></span> light / material`;
+    el.appendChild(light);
+  }
+
+  // ===== Controls =====
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function syncPair(numId: string, sliderId: string, key: keyof typeof state) {
+    const num = $<HTMLInputElement>(numId);
+    const slider = $<HTMLInputElement>(sliderId);
+    const update = (src: 'num' | 'slider') => {
+      const raw = src === 'num' ? num.value : slider.value;
+      const v = parseFloat(raw);
+      if (!isFinite(v)) return;
+      (state as any)[key] = v;
+      if (src === 'num') slider.value = raw;
+      else num.value = raw;
+      scheduleRecompute();
+    };
+    num.addEventListener('input', () => update('num'));
+    slider.addEventListener('input', () => update('slider'));
+  }
+
+  syncPair('r-num', 'r-slider', 'a_nm');
+  syncPair('eh-num', 'eh-slider', 'eps_h');
+  syncPair('e1r-num', 'e1r-slider', 'eps1_re');
+  syncPair('e1i-num', 'e1i-slider', 'eps1_im');
+
+  $<HTMLInputElement>('w-min').addEventListener('input', (e) => {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (isFinite(v) && v >= 0) { state.w_min = v; scheduleRecompute(); }
+  });
+  $<HTMLInputElement>('w-max').addEventListener('input', (e) => {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (isFinite(v) && v > state.w_min) { state.w_max = v; scheduleRecompute(); }
+  });
+
+  $('eh-presets').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
+    if (!btn) return;
+    const v = parseFloat(btn.dataset.val!);
+    state.eps_h = v;
+    $<HTMLInputElement>('eh-num').value = v.toString();
+    $<HTMLInputElement>('eh-slider').value = v.toString();
+    $('eh-presets').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    scheduleRecompute();
+  });
+
+  $('m-chips').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.m-chip') as HTMLElement | null;
+    if (!btn) return;
+    const m = parseInt(btn.dataset.m!, 10);
+    if (state.m_active.has(m)) state.m_active.delete(m);
+    else state.m_active.add(m);
+    btn.classList.toggle('active');
+    scheduleRecompute();
+  });
+
+  $('reset-btn').addEventListener('click', () => {
+    state.a_nm = 15;
+    state.eps_h = 1.0;
+    state.eps1_re = 10.0;
+    state.eps1_im = 0.1;
+    state.w_min = 1;
+    state.w_max = 20;
+    state.m_active = new Set([0, 1, 2]);
+    $<HTMLInputElement>('r-num').value = '15';
+    $<HTMLInputElement>('r-slider').value = '15';
+    $<HTMLInputElement>('eh-num').value = '1.00';
+    $<HTMLInputElement>('eh-slider').value = '1';
+    $<HTMLInputElement>('e1r-num').value = '10.0';
+    $<HTMLInputElement>('e1r-slider').value = '10';
+    $<HTMLInputElement>('e1i-num').value = '0.10';
+    $<HTMLInputElement>('e1i-slider').value = '0.1';
+    $<HTMLInputElement>('w-min').value = '1';
+    $<HTMLInputElement>('w-max').value = '20';
+    $('eh-presets').querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+    document.querySelectorAll('.m-chip').forEach(c => {
+      const mm = parseInt((c as HTMLElement).dataset.m!, 10);
+      c.classList.toggle('active', mm < 3);
+    });
+    recompute();
+  });
+
+  new ResizeObserver(drawChart).observe($('chart-wrap'));
+
+  // Initial
+  recompute();
+</script>
