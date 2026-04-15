@@ -1,0 +1,630 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Methods Assistant" description="Conversational assistant for picking the right numerical method in nanophotonics — Mie, BEM, DGTD, RCWA. Placeholder preview; real knowledge base coming in May 2026.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Methods <span class="gradient-text">Assistant</span></h1>
+      <p class="widget-hero__subtitle">
+        Describe your problem and get a recommendation of the right numerical method
+        (Mie, BEM, DGTD, RCWA&hellip;), relevant references, and a direct link to the tool in our Lab.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="chat-card card">
+        <header class="chat-header">
+          <div class="chat-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a10 10 0 1 0 10 10"/>
+              <path d="M12 6v6l4 2"/>
+              <circle cx="18" cy="6" r="3"/>
+            </svg>
+          </div>
+          <div class="chat-title-wrap">
+            <h3 class="chat-title">Methods Assistant</h3>
+            <span class="chat-subtitle">Nanophotonics solver recommendations</span>
+          </div>
+          <span class="chat-badge" title="No LLM backend yet — keyword matching only">Preview</span>
+          <button id="clear-btn" class="chat-clear" title="Clear conversation" aria-label="Clear">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6 18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="chat-scroll" id="chat-scroll">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <h4>How can I help?</h4>
+            <p>
+              Ask about a geometry, material, or observable. Right now I match keywords and
+              point you to the right tool. A real LLM backed by our Computational Photonics
+              notes is planned for May&nbsp;2026.
+            </p>
+            <div class="examples">
+              <button class="example" data-prompt="Which method should I use for a 100 nm gold sphere on a glass substrate?">
+                100&nbsp;nm Au sphere on a glass substrate?
+              </button>
+              <button class="example" data-prompt="How much does a 50 nm Au nanoparticle heat up under a 1 mW 532 nm laser?">
+                Heating of a 50&nbsp;nm Au NP under a 1&nbsp;mW laser?
+              </button>
+              <button class="example" data-prompt="What is the difference between BEM and DGTD?">
+                BEM vs. DGTD — when to use each?
+              </button>
+              <button class="example" data-prompt="I need EELS spectra for a silver nanorod">
+                EELS for a silver nanorod
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form class="chat-input-form" id="chat-form">
+          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your problem&hellip; (Enter to send, Shift+Enter for newline)" autocomplete="off"></textarea>
+          <button type="submit" class="chat-send" id="chat-send" aria-label="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <p class="chat-disclaimer">
+        <strong>Note:</strong> this is a UI skeleton. Responses are keyword-matched, not generated
+        by an LLM. We're building the real assistant on top of our nanophotonics notes and the
+        tools in this Lab.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== Scoped styles ===== -->
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  /* Chat card */
+  .chat-card {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 640px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--bg-muted);
+    background: var(--bg-soft);
+  }
+  .chat-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .chat-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 0; }
+  .chat-title { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+  .chat-subtitle { font-size: 0.75rem; color: var(--text-muted); }
+  .chat-badge {
+    font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 0.2rem 0.55rem; border-radius: var(--radius-full);
+    background: #FEF3C7; color: #92400E;
+  }
+  .chat-clear {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .chat-clear:hover { color: var(--rose); border-color: var(--rose); }
+
+  /* Scroll area */
+  .chat-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    text-align: center;
+    padding: var(--space-lg);
+  }
+  .empty-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--bg-soft);
+    color: #8B5CF6;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: var(--space-xs);
+  }
+  .empty-state h4 { font-size: 1rem; font-weight: 600; }
+  .empty-state p {
+    font-size: 0.875rem;
+    color: var(--text-soft);
+    max-width: 480px;
+    line-height: 1.55;
+  }
+  .examples {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+    width: 100%;
+    max-width: 560px;
+  }
+  .example {
+    text-align: left;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+  .example:hover {
+    border-color: #8B5CF6;
+    color: var(--text);
+    background: rgba(139,92,246,0.04);
+  }
+
+  /* Messages */
+  .msg {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: flex-start;
+    max-width: 100%;
+  }
+  .msg--user { flex-direction: row-reverse; }
+  .msg-bubble {
+    max-width: 80%;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    word-wrap: break-word;
+  }
+  .msg--user .msg-bubble {
+    background: #6366F1;
+    color: white;
+    border-top-right-radius: 4px;
+  }
+  .msg--assistant .msg-bubble {
+    background: var(--bg-soft);
+    color: var(--text);
+    border: 1px solid var(--bg-muted);
+    border-top-left-radius: 4px;
+  }
+  .msg-bubble p { margin: 0 0 0.5rem 0; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble a { color: #8B5CF6; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .msg-bubble a:hover { color: #6D28D9; }
+  .msg--user .msg-bubble a { color: #FDE68A; }
+  .msg-bubble code {
+    background: rgba(139,92,246,0.12);
+    color: #6D28D9;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+  }
+  .msg--user .msg-bubble code { background: rgba(255,255,255,0.18); color: #FDE68A; }
+  .msg-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .msg--assistant .msg-icon {
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    color: white;
+  }
+  .msg--user .msg-icon {
+    background: var(--bg-muted);
+    color: var(--text-muted);
+  }
+
+  .typing {
+    display: inline-flex; gap: 4px; padding: 0.2rem 0;
+  }
+  .typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #8B5CF6;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* Input form */
+  .chat-input-form {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: flex-end;
+    padding: var(--space-sm) var(--space-md);
+    border-top: 1px solid var(--bg-muted);
+    background: var(--bg);
+  }
+  .chat-input {
+    flex: 1;
+    resize: none;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    font-family: var(--font);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .chat-input:focus { border-color: #8B5CF6; box-shadow: 0 0 0 3px rgba(139,92,246,0.08); }
+  .chat-input::placeholder { color: var(--text-muted); }
+  .chat-send {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: none;
+    border-radius: var(--radius-md);
+    background: #8B5CF6;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .chat-send:hover { background: #7C3AED; }
+  .chat-send:disabled { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
+
+  .chat-disclaimer {
+    max-width: 760px;
+    margin: var(--space-md) auto 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    text-align: center;
+  }
+  .chat-disclaimer strong { color: var(--text-soft); }
+
+  @media (max-width: 640px) {
+    .chat-card { height: 560px; }
+    .examples { grid-template-columns: 1fr; }
+    .msg-bubble { max-width: 90%; }
+  }
+</style>
+
+<!-- ===== Script ===== -->
+<script>
+  // ===== Canned knowledge base (keyword-matched) =====
+
+  interface CannedResponse {
+    keywords: string[];
+    response: string; // HTML
+  }
+
+  const RESPONSES: CannedResponse[] = [
+    {
+      keywords: ['photothermal', 'heat', 'heating', 'temperature', 'thermal', 'delta t', 'κ', 'kappa'],
+      response: `
+        <p>For the steady-state temperature rise of a laser-illuminated nanoparticle, use the
+        <a href="/lab/photothermal/">Photothermal Calculator</a> — it computes
+        ΔT = σ<sub>abs</sub>·I/(4π·κ·R) from exact Mie theory, with a power-budget breakdown
+        and radial T(r) profile.</p>
+        <p>For non-spherical geometries or particles on a substrate, BEM is the right tool
+        (in development — see the roadmap).</p>
+        <p><em>Reference: Baffou & Quidant, Laser & Photonics Reviews 7, 171 (2013).</em></p>
+      `,
+    },
+    {
+      keywords: ['mie', 'sphere', 'core-shell', 'core shell', 'multi-shell', 'multi shell', 'nanoparticle', 'nanosphere', 'cross-section', 'cross section', 'extinction', 'albedo'],
+      response: `
+        <p>For spherical particles the right tool is <strong>exact Mie theory</strong> — it's analytical,
+        fast, and there's no approximation. Our <a href="/lab/mie-scattering/">Mie Scattering Calculator</a>
+        handles single spheres and concentric multi-shell geometries (up to 5 shells) with
+        tabulated <em>n</em>,<em>k</em> from refractiveindex.info plus custom dielectrics.</p>
+        <p>It also gives you multipole decomposition, electric/magnetic split, far-field angular patterns
+        and a 2D near-field map.</p>
+        <p><em>Reference: Bohren & Huffman, Absorption and Scattering of Light by Small Particles (1983).</em></p>
+      `,
+    },
+    {
+      keywords: ['substrate', 'on glass', 'on silicon', 'film', 'layered', 'interface', 'half-space'],
+      response: `
+        <p>Substrates break spherical symmetry, so Mie alone doesn't work. You need
+        <strong>BEM</strong> with Green's functions for a layered half-space, or FDTD/DGTD.</p>
+        <p>Our Python+CUDA port of Hohenester's BEM with substrate is in development — target
+        Q3&nbsp;2026. In the meantime you can use the slower browser version:
+        <a href="/lab/bem-solver/">BEM Solver</a>.</p>
+      `,
+    },
+    {
+      keywords: ['roughness', 'rough', 'bump', 'gaussian surface'],
+      response: `
+        <p>Surface roughness on spheres is covered by <strong>BEM + a perturbative expansion</strong>
+        on a Gaussian-field description of the bumps. Our integrated solver (BEM + roughness) is
+        in the roadmap for Q3&nbsp;2026.</p>
+        <p>We're also investigating normalizing flows to generalize roughness from spheres to
+        arbitrary shapes — see <a href="https://github.com/nanophotonicslab-com/nf-roughness" target="_blank">nf-roughness</a>.</p>
+      `,
+    },
+    {
+      keywords: ['cylinder', 'wire', 'nanowire', 'nanorod', 'rod', 'plasmonic waveguide', 'waveguide'],
+      response: `
+        <p>For <strong>infinite cylinders</strong> there are semi-analytical solutions (ω-k dispersion
+        or mode-number representation). A dedicated widget for cylinder modes and their analytical
+        EELS is planned for <strong>May&nbsp;2026</strong>.</p>
+        <p>For <strong>finite rods</strong>, the rigorous tool is BEM. The Mie widget has a simple
+        "nanorod length" parameter but it's a crude approximation; don't trust it for high aspect ratios.</p>
+      `,
+    },
+    {
+      keywords: ['eels', 'electron energy loss', 'energy loss spectroscopy', 'loss probability'],
+      response: `
+        <p><strong>EELS</strong> in the quasi-electrostatic limit can be computed for spheres analytically
+        (Bohren–Huffman approach) and for arbitrary geometries via BEM (Hohenester's MNPBEM toolbox).</p>
+        <p>For the kinematics side (electron velocity, wavelength, γ) use the
+        <a href="/lab/electron/">Relativistic Electron Calculator</a>. A cylinder-EELS widget based
+        on Álvaro's analytical solutions is planned.</p>
+      `,
+    },
+    {
+      keywords: ['bem', 'boundary element', 'hohenester', 'mnpbem'],
+      response: `
+        <p><strong>BEM (Boundary Element Method)</strong> is the workhorse for plasmonic simulations:
+        discretize only the particle surface, solve a linear system for the surface currents. Excellent
+        for homogeneous particles in a homogeneous background, and extensible to layered media via
+        appropriate Green's functions.</p>
+        <p>We run a browser BEM demo at <a href="/lab/bem-solver/">/lab/bem-solver/</a>. A much faster
+        Python+CUDA port of Hohenester's code is being built (H1 2026).</p>
+      `,
+    },
+    {
+      keywords: ['dgtd', 'discontinuous galerkin', 'time domain', 'broadband', 'transient'],
+      response: `
+        <p><strong>DGTD (Discontinuous Galerkin Time-Domain)</strong> is the most modern family of
+        Maxwell solvers: high-order accurate, handles curved geometries well, and naturally broadband.
+        Good for transient/nonlinear/ultrafast problems. Kurt Busch's group (Hannover) pioneered
+        it for nanophotonics; Lumerical has recently added it commercially.</p>
+        <p>In our roadmap, DGTD is the second backend alongside BEM (H2, 2027).</p>
+      `,
+    },
+    {
+      keywords: ['fdtd', 'finite difference', 'yee', 'lumerical'],
+      response: `
+        <p><strong>FDTD</strong> is the traditional time-domain solver — easy to implement, broadband,
+        but staircasing errors on curved surfaces and memory-hungry for large domains. Lumerical is
+        the de-facto commercial tool.</p>
+        <p>For plasmonic nanoparticles FDTD works but BEM is usually faster and more accurate.
+        DGTD is the more modern choice.</p>
+      `,
+    },
+    {
+      keywords: ['rcwa', 'fourier modal', 'fmm', 'periodic', 'metalens', 'metasurface', 'grating'],
+      response: `
+        <p>For <strong>periodic structures</strong> (gratings, metasurfaces, metalenses), the standard
+        tool is <strong>RCWA (Rigorous Coupled-Wave Analysis)</strong>, also known as the Fourier
+        Modal Method. Commercial: Lumerical's RCWA module; open source: S4 (Stanford), grcwa.</p>
+        <p>RCWA is on our radar (demand detected in World SERP 2026) but not yet committed to the roadmap.</p>
+      `,
+    },
+    {
+      keywords: ['non-local', 'nonlocal', 'd-parameter', 'd parameter', 'feibelman'],
+      response: `
+        <p><strong>Non-local response</strong> (spatial dispersion, hydrodynamic model, Feibelman
+        d-parameters) becomes important below ~10 nm feature size. It shifts plasmon resonances
+        and adds size-dependent damping.</p>
+        <p>Hohenester's group has implemented d-parameters in BEM. We're targeting implementation
+        in DGTD as a differentiator — no commercial solver currently supports it (H2 2027).</p>
+      `,
+    },
+    {
+      keywords: ['photon', 'wavelength', 'hc/lambda', 'laser wavelength', 'frequency', 'angular frequency', 'wavenumber'],
+      response: `
+        <p>For quick photon unit conversions (λ, E, ν, ω, <span>&#7819;</span>, T) use the
+        <a href="/lab/photon/">Photon Calculator</a> — it includes common laser presets and a
+        visual EM-spectrum chart.</p>
+      `,
+    },
+    {
+      keywords: ['electron', 'tem', 'sem', 'de broglie', 'relativistic', 'gamma factor'],
+      response: `
+        <p>Use the <a href="/lab/electron/">Relativistic Electron Calculator</a> for electron
+        kinematics — v/c, kinetic energy (keV/eV), de Broglie wavelength, γ factor, with SEM/TEM
+        reference points (30, 80, 120, 200, 300&nbsp;kV).</p>
+      `,
+    },
+    {
+      keywords: ['unit', 'convert', 'cgs', 'esu', 'atomic unit', 'si units'],
+      response: `
+        <p>Our <a href="/lab/units/">Scientific Unit Converter</a> handles 11 physical quantities
+        across SI, CGS/ESU, and atomic units — useful for reconciling nanophotonics papers across
+        different traditions (theory papers in a.u., experiment papers in SI).</p>
+      `,
+    },
+    {
+      keywords: ['drude', 'dielectric function', 'optical constants', 'refractive index', 'n and k', 'epsilon'],
+      response: `
+        <p>Optical constants for common metals (Au, Ag, Al, Si, TiO<sub>2</sub>) are built in to our
+        <a href="/lab/mie-scattering/">Mie Calculator</a>, sourced from refractiveindex.info.
+        You can also search the full refractiveindex.info database (~3560 materials) directly from
+        the widget, or upload your own CSV/TSV.</p>
+        <p>For a custom Drude model, use the "Custom dielectric" option with a real ε<sub>r</sub>
+        slider (lossless case) or upload a file with complex (n, k).</p>
+      `,
+    },
+  ];
+
+  const DEFAULT_RESPONSE = `
+    <p>I'm a keyword-matching placeholder — I currently recognize terms like <em>Mie, sphere,
+    photothermal, cylinder, EELS, BEM, DGTD, FDTD, RCWA, substrate, roughness, non-local,
+    Drude, photon, electron, units</em> and point you to the right tool or roadmap item.</p>
+    <p>The real assistant (connected to our Computational Photonics notes and capable of
+    reasoning across methods) is planned for <strong>May&nbsp;2026</strong>. Meanwhile, try
+    rephrasing with one of those keywords, or explore <a href="/lab/">the Lab</a> directly.</p>
+  `;
+
+  function matchResponse(text: string): string {
+    const lower = text.toLowerCase();
+    for (const r of RESPONSES) {
+      for (const kw of r.keywords) {
+        if (lower.includes(kw)) return r.response;
+      }
+    }
+    return DEFAULT_RESPONSE;
+  }
+
+  // ===== Chat logic =====
+
+  interface Message { role: 'user' | 'assistant'; html: string; }
+
+  const messages: Message[] = [];
+
+  const scrollEl = document.getElementById('chat-scroll') as HTMLElement;
+  const emptyEl = document.getElementById('empty-state') as HTMLElement;
+  const form = document.getElementById('chat-form') as HTMLFormElement;
+  const input = document.getElementById('chat-input') as HTMLTextAreaElement;
+  const sendBtn = document.getElementById('chat-send') as HTMLButtonElement;
+  const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
+
+  function scrollToBottom() {
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderMessage(msg: Message): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = `msg msg--${msg.role}`;
+
+    const icon = document.createElement('div');
+    icon.className = 'msg-icon';
+    icon.textContent = msg.role === 'user' ? 'You' : 'MA';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = msg.html;
+
+    wrap.appendChild(icon);
+    wrap.appendChild(bubble);
+    return wrap;
+  }
+
+  function addMessage(role: 'user' | 'assistant', html: string) {
+    if (emptyEl.parentElement) emptyEl.remove();
+    const msg: Message = { role, html };
+    messages.push(msg);
+    scrollEl.appendChild(renderMessage(msg));
+    scrollToBottom();
+  }
+
+  function addTyping(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg--assistant';
+    wrap.id = 'typing-indicator';
+    wrap.innerHTML = `
+      <div class="msg-icon">MA</div>
+      <div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+    `;
+    scrollEl.appendChild(wrap);
+    scrollToBottom();
+    return wrap;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  function send(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    addMessage('user', `<p>${escapeHtml(trimmed)}</p>`);
+    input.value = '';
+    autosize();
+
+    const typing = addTyping();
+    // Small delay so the typing indicator is visible — it's a placeholder, not a real LLM call
+    setTimeout(() => {
+      removeTyping();
+      addMessage('assistant', matchResponse(trimmed));
+    }, 450);
+  }
+
+  function autosize() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
+
+  // ===== Event bindings =====
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    send(input.value);
+  });
+
+  input.addEventListener('input', autosize);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send(input.value);
+    }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.example').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prompt = btn.dataset.prompt || btn.textContent || '';
+      send(prompt);
+    });
+  });
+
+  clearBtn.addEventListener('click', () => {
+    messages.length = 0;
+    scrollEl.innerHTML = '';
+    scrollEl.appendChild(emptyEl);
+    input.focus();
+  });
+
+  input.focus();
+</script>
+</content>
+</invoke>
