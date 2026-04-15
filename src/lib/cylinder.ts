@@ -185,6 +185,39 @@ export function besselH1_d(m: number, z: C): C {
   return Cx.sub(Cx.mul(mOverZ, Hm), Hm1);
 }
 
+/**
+ * Modified Bessel I_m(z) for integer m and complex z.
+ * Uses the identity I_m(z) = (-i)^m J_m(i z). For real z the result is real.
+ */
+export function besselI(m: number, z: C): C {
+  if (m < 0) return besselI(-m, z); // I_{-m} = I_m for integer m
+  const iz: C = [-z[1], z[0]];       // i·z
+  const J = besselJ(m, iz);
+  const phase = m % 4;
+  if (phase === 0) return J;
+  if (phase === 1) return [J[1], -J[0]];   // (-i)·(a+bi) = b − ai
+  if (phase === 2) return [-J[0], -J[1]];
+  return [-J[1], J[0]];                     // i·(a+bi) = −b + ai
+}
+
+/**
+ * Modified Bessel K_m(z) for integer m and complex z with arg(z) in (-π, π].
+ * Uses K_m(z) = (π/2) i^{m+1} H_m^(1)(i z). For real positive z the result
+ * is real.
+ */
+export function besselK(m: number, z: C): C {
+  if (m < 0) return besselK(-m, z); // K_{-m} = K_m for integer m
+  const iz: C = [-z[1], z[0]];
+  const H = besselH1(m, iz);
+  const phase = (m + 1) % 4;
+  let rot: C;
+  if (phase === 0)      rot = H;
+  else if (phase === 1) rot = [-H[1], H[0]];
+  else if (phase === 2) rot = [-H[0], -H[1]];
+  else                  rot = [H[1], -H[0]];
+  return Cx.scale(rot, Math.PI / 2);
+}
+
 // ============================================================================
 // 4×4 matching matrix (after Álvaro's give_M)
 // ============================================================================
@@ -245,6 +278,133 @@ export function giveM(qa: number, ka: number, eps1: C, eps_h: C, m: number): Mat
   M[3][3] = M[1][1];
 
   return M;
+}
+
+// ============================================================================
+// 4×4 complex linear solver (Gauss elimination with partial pivoting)
+// ============================================================================
+
+export function solve4(M: Mat4, rhs: C[]): C[] {
+  // Deep copy so the caller's matrix is untouched.
+  const A: C[][] = M.map(row => row.map(x => [x[0], x[1]] as C));
+  const b: C[] = rhs.map(x => [x[0], x[1]] as C);
+  const n = 4;
+
+  for (let i = 0; i < n; i++) {
+    // Partial pivoting on column i
+    let pivotRow = i;
+    let pivotMag = Cx.abs2(A[i][i]);
+    for (let r = i + 1; r < n; r++) {
+      const mag = Cx.abs2(A[r][i]);
+      if (mag > pivotMag) { pivotRow = r; pivotMag = mag; }
+    }
+    if (pivotRow !== i) {
+      [A[i], A[pivotRow]] = [A[pivotRow], A[i]];
+      [b[i], b[pivotRow]] = [b[pivotRow], b[i]];
+    }
+
+    const pivot = A[i][i];
+    for (let r = i + 1; r < n; r++) {
+      const f = Cx.div(A[r][i], pivot);
+      for (let c = i; c < n; c++) {
+        A[r][c] = Cx.sub(A[r][c], Cx.mul(f, A[i][c]));
+      }
+      b[r] = Cx.sub(b[r], Cx.mul(f, b[i]));
+    }
+  }
+
+  const x: C[] = [Cx.zero(), Cx.zero(), Cx.zero(), Cx.zero()];
+  for (let i = n - 1; i >= 0; i--) {
+    let s: C = [b[i][0], b[i][1]];
+    for (let j = i + 1; j < n; j++) {
+      s = Cx.sub(s, Cx.mul(A[i][j], x[j]));
+    }
+    x[i] = Cx.div(s, A[i][i]);
+  }
+  return x;
+}
+
+// ============================================================================
+// Reflection / transmission coefficients for s- and p-polarization.
+// Inside → reflection from within the cylinder; Outside → reflection from
+// outside.
+// ============================================================================
+
+export interface RTCoefs {
+  r_ss: C; t_ss: C;
+  r_ps: C; t_ps: C;
+  r_sp: C; t_sp: C;
+  r_pp: C; t_pp: C;
+}
+
+export function getRTCoefs(
+  qa: number,
+  ka: number,
+  eps1: C,
+  eps_h: C,
+  m: number,
+  opt: 'inside' | 'outside',
+): RTCoefs {
+  const M = giveM(qa, ka, eps1, eps_h, m);
+
+  const chi = Cx.sqrt(Cx.div(eps1, eps_h));
+  const k1a = Cx.scale(Cx.sqrt(eps1), ka);
+  const kha = Cx.scale(Cx.sqrt(eps_h), ka);
+
+  let Q1a = Cx.sqrt(Cx.sub(Cx.mul(k1a, k1a), [qa * qa, 0]));
+  if (Q1a[0] < 0) Q1a = Cx.neg(Q1a);
+  let Qha = Cx.sqrt(Cx.sub(Cx.mul(kha, kha), [qa * qa, 0]));
+  if (Qha[0] < 0) Qha = Cx.neg(Qha);
+
+  const mqa: C = [m * qa, 0];
+
+  let v_s: C[], v_p: C[];
+  if (opt === 'inside') {
+    const Hma1 = besselH1(m, Q1a);
+    const Hm1p = besselH1_d(m, Q1a);
+    const chi_Q1aOverK1a = Cx.mul(chi, Cx.div(Q1a, k1a));
+    const chi_mqaOverK1aQ1a = Cx.mul(chi, Cx.div(mqa, Cx.mul(k1a, Q1a)));
+    const mqaOverK1aQ1a = Cx.div(mqa, Cx.mul(k1a, Q1a));
+    const Q1aOverK1a = Cx.div(Q1a, k1a);
+    v_s = [
+      Cx.neg(Cx.mul(chi_Q1aOverK1a, Hma1)),
+      Cx.neg(Hm1p),
+      Cx.zero(),
+      Cx.neg(Cx.mul(chi_mqaOverK1aQ1a, Hma1)),
+    ];
+    v_p = [
+      Cx.zero(),
+      Cx.neg(Cx.mul(mqaOverK1aQ1a, Hma1)),
+      Cx.neg(Cx.mul(Q1aOverK1a, Hma1)),
+      Cx.neg(Cx.mul(chi, Hm1p)),
+    ];
+  } else {
+    const Jmh = besselJ(m, Qha);
+    const Jmhp = besselJ_d(m, Qha);
+    const QhaOverKha = Cx.div(Qha, kha);
+    const mqaOverKhaQha = Cx.div(mqa, Cx.mul(kha, Qha));
+    v_s = [
+      Cx.mul(QhaOverKha, Jmh),
+      Jmhp,
+      Cx.zero(),
+      Cx.mul(mqaOverKhaQha, Jmh),
+    ];
+    v_p = [
+      Cx.zero(),
+      Cx.mul(mqaOverKhaQha, Jmh),
+      Cx.mul(QhaOverKha, Jmh),
+      Jmhp,
+    ];
+  }
+
+  const RT_s = solve4(M, v_s);
+  const RT_p = solve4(M, v_p);
+  return {
+    r_ss: RT_s[0], t_ss: RT_s[1],
+    r_ps: RT_s[2], t_ps: RT_s[3],
+    r_sp: RT_p[0], t_sp: RT_p[1],
+    r_pp: RT_p[2], t_pp: RT_p[3],
+  };
 }
 
 // ============================================================================
@@ -379,3 +539,104 @@ export function getDispersion(opts: DispersionOpts): DispersionResult {
 
   return { energies_eV, roots_nm, q_light_nm, q_mat_nm };
 }
+
+// ============================================================================
+// Electron energy-loss spectroscopy — parallel trajectory
+// ============================================================================
+
+const AU_NM = 0.05291772083;
+const AU_EV = 27.2113834;
+const C_AU  = 137.03599971;
+const NM_AU = 1 / AU_NM;
+
+export interface EELSParOpts {
+  a_nm: number;                                 // cylinder radius (nm)
+  b_nm: number;                                 // impact parameter from axis (nm)
+  eps_h: C;                                     // host dielectric
+  eps1_of_w: (w_eV: number) => C;               // cylinder dielectric
+  w_eV: number[];                               // energies to sample
+  vFrac: number;                                // v/c in (0, 1)
+  maxOrder: number;                             // use |m| ≤ maxOrder
+}
+
+/**
+ * EELS probability for a relativistic electron moving parallel to the
+ * cylinder axis at impact parameter `b_nm` from the axis.
+ *
+ * Ported from Álvaro's `EELS_par_cylinder.m`. Returns an array of the same
+ * length as `w_eV`, each entry in (nm / eV) — same convention as the MATLAB
+ * reference. Multiply by an appropriate scale factor for comparison with
+ * measured spectra; for visualization the raw values are fine.
+ */
+export function eelsParallel(opts: EELSParOpts): number[] {
+  const { a_nm, b_nm, eps_h, eps1_of_w, w_eV, vFrac, maxOrder } = opts;
+
+  const a_au = a_nm * NM_AU;
+  const b_au = b_nm * NM_AU;
+  const v = vFrac * C_AU;                       // velocity in a.u.
+  const outside = b_nm > a_nm;
+
+  const out: number[] = [];
+
+  for (const we of w_eV) {
+    const eps1 = eps1_of_w(we);
+    const W = we / AU_EV;                       // energy (Hartree)
+    const qz = W / v;
+    const k = W / C_AU;
+
+    // Lorentz factor uses the medium the electron traverses.
+    const eps_med = outside ? eps_h : eps1;
+    const beta2 = vFrac * vFrac;
+    const one_minus = Cx.sub([1, 0], Cx.scale(eps_med, beta2));
+    const g_inv = Cx.sqrt(one_minus);
+    // g = 1 / g_inv (complex, physical result).
+    const g = Cx.div([1, 0], g_inv);
+    // wb_over_vg (argument for modified Bessel)
+    const Wb: C = [W * b_au, 0];
+    const vg: C = Cx.scale(g, v);
+    const arg = Cx.div(Wb, vg);
+
+    let sum: C = [0, 0];
+    for (let mm = -maxOrder; mm <= maxOrder; mm++) {
+      const absm = Math.abs(mm);
+      const signM = mm % 2 === 0 ? 1 : -1;
+
+      if (outside) {
+        const coefs = getRTCoefs(qz * a_au, k * a_au, eps1, eps_h, mm, 'outside');
+        const Km = besselK(absm, arg);
+        const Km2 = Cx.mul(Km, Km);
+        const t_pp_re: C = [coefs.t_pp[0], 0];  // Re(t_pp) only
+        const contrib = Cx.scale(Cx.mul(t_pp_re, Km2), signM);
+        sum = Cx.add(sum, contrib);
+      } else {
+        const coefs = getRTCoefs(qz * a_au, k * a_au, eps1, eps_h, mm, 'inside');
+        const Im = besselI(absm, arg);
+        const Im2 = Cx.mul(Im, Im);
+        // MATLAB: TT = Im²·(-1)^(m-1)·Re(r_pp/ε₁) → sign is −(−1)^m = −signM
+        const r_over_eps = Cx.div(coefs.r_pp, eps1);
+        const r_re: C = [r_over_eps[0], 0];
+        const contrib = Cx.scale(Cx.mul(r_re, Im2), -signM);
+        sum = Cx.add(sum, contrib);
+      }
+    }
+
+    // Prefactor and final scaling per Álvaro's MATLAB.
+    const v2 = v * v;
+    const g2 = Cx.mul(g, g);
+    let eels_au: C;
+    if (outside) {
+      // 4/π²/v²/g² · sum / eps_h
+      const pref = 4 / (Math.PI * Math.PI * v2);
+      eels_au = Cx.scale(Cx.div(sum, Cx.mul(g2, eps_h)), pref);
+    } else {
+      const pref = 1 / v2;
+      eels_au = Cx.scale(Cx.div(sum, g2), pref);
+    }
+    // Match MATLAB's final unit conversion: multiply by (nm/au_eV) = nm_au/au_eV.
+    const scale = NM_AU / AU_EV;
+    const eels_nm_per_eV = eels_au[0] * scale;
+    out.push(eels_nm_per_eV);
+  }
+  return out;
+}
+

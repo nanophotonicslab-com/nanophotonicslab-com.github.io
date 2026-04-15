@@ -78,6 +78,37 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <details class="eels-section" id="eels-section">
+            <summary>EELS parameters</summary>
+            <div class="param">
+              <div class="param-header">
+                <label>Impact b (nm)</label>
+                <input type="number" class="param-number" id="b-num" value="25" step="1" min="0">
+              </div>
+              <input type="range" class="param-slider" id="b-slider" min="0" max="100" step="0.5" value="25">
+              <span class="param-note" id="b-note">outside the cylinder</span>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Electron v / c</label>
+                <input type="number" class="param-number" id="v-num" value="0.3" step="0.01" min="0.01" max="0.99">
+              </div>
+              <input type="range" class="param-slider" id="v-slider" min="0.05" max="0.99" step="0.01" value="0.3">
+              <div class="param-presets" id="v-presets">
+                <button class="preset-btn" data-val="0.3">slow</button>
+                <button class="preset-btn" data-val="0.55">100&thinsp;keV</button>
+                <button class="preset-btn" data-val="0.70">200&thinsp;keV</button>
+                <button class="preset-btn" data-val="0.78">300&thinsp;keV</button>
+              </div>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Max |m| (EELS)</label>
+                <input type="number" class="param-number" id="Mmax-num" value="4" step="1" min="0" max="10">
+              </div>
+            </div>
+          </details>
+
           <button id="reset-btn" class="reset-btn" title="Reset all parameters">Reset defaults</button>
 
           <p class="theory-note">
@@ -92,7 +123,17 @@ import Layout from '../../layouts/Layout.astro';
         <!-- ===== Chart ===== -->
         <div class="chart-panel card">
           <div class="chart-toolbar">
-            <span class="chart-title">Dispersion &omega; vs q<sub>z</sub></span>
+            <div class="view-tabs" id="view-tabs" role="radiogroup">
+              <button class="view-tab active" data-view="disp-wq" role="radio" aria-checked="true">
+                &omega;&ndash;q<sub>z</sub>
+              </button>
+              <button class="view-tab" data-view="disp-bV" role="radio" aria-checked="false">
+                b&ndash;V
+              </button>
+              <button class="view-tab" data-view="eels" role="radio" aria-checked="false">
+                EELS ∥
+              </button>
+            </div>
             <span id="compute-status" class="compute-status"></span>
           </div>
           <div class="chart-wrap" id="chart-wrap">
@@ -184,6 +225,37 @@ import Layout from '../../layouts/Layout.astro';
   }
   .reset-btn:hover { border-color: var(--rose); color: var(--rose); }
 
+  /* EELS subsection */
+  .eels-section {
+    border-top: 1px solid var(--bg-muted); padding-top: var(--space-xs); margin-top: var(--space-xs);
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .eels-section summary {
+    font-size: 0.8125rem; font-weight: 600; color: var(--text-soft);
+    text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer;
+    padding: 0.25rem 0; user-select: none; list-style: none;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .eels-section summary::before {
+    content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s;
+  }
+  .eels-section[open] summary::before { transform: rotate(90deg); }
+  .eels-section summary::-webkit-details-marker { display: none; }
+  .param-note { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+
+  /* View tabs */
+  .view-tabs {
+    display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px;
+  }
+  .view-tab {
+    flex: 1; padding: 0.3rem 0.65rem; border: none; background: none;
+    border-radius: var(--radius-full);
+    font-family: var(--font); font-size: 0.75rem; font-weight: 500;
+    cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap;
+  }
+  .view-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  .view-tab:hover:not(.active) { color: var(--text); }
+
   .theory-note {
     font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55;
     border-top: 1px solid var(--bg-muted); padding-top: var(--space-md);
@@ -230,8 +302,10 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
-  import { getDispersion, HC_EV_NM } from '../../lib/cylinder.ts';
+  import { getDispersion, eelsParallel, HC_EV_NM } from '../../lib/cylinder.ts';
   import type { C } from '../../lib/cylinder.ts';
+
+  type ViewMode = 'disp-wq' | 'disp-bV' | 'eels';
 
   // ===== State =====
 
@@ -243,6 +317,10 @@ import Layout from '../../layouts/Layout.astro';
     w_min: 1,
     w_max: 20,
     m_active: new Set<number>([0, 1, 2]),
+    view: 'disp-wq' as ViewMode,
+    b_nm: 25,
+    vFrac: 0.3,
+    maxOrderEels: 4,
   };
 
   const M_COLORS: Record<number, string> = {
@@ -259,16 +337,34 @@ import Layout from '../../layouts/Layout.astro';
 
   let branches: MBranch[] = [];
   let qMaxAuto = 0.5;
+  let eelsCurve: { w: number[]; y: number[] } | null = null;
   let computeTimer: number | null = null;
 
   // ===== Compute =====
 
   function recompute() {
     const t0 = performance.now();
+    if (state.view === 'eels') {
+      recomputeEELS();
+    } else {
+      recomputeDispersion();
+    }
+    const dt = performance.now() - t0;
+    const statusEl = document.getElementById('compute-status')!;
+    if (state.view === 'eels') {
+      statusEl.textContent = `${eelsCurve?.w.length ?? 0} pts · ${dt.toFixed(0)} ms`;
+    } else {
+      const totalPts = branches.reduce((s, b) => s + b.points.length, 0);
+      statusEl.textContent = `${totalPts} roots · ${dt.toFixed(0)} ms`;
+    }
+    drawChart();
+    drawLegend();
+  }
+
+  function recomputeDispersion() {
     const eps_h: C = [state.eps_h, 0];
     const eps1: C = [state.eps1_re, state.eps1_im];
 
-    // Sampling grids
     const Nw = 80;
     const Nq = 240;
     const energies: number[] = [];
@@ -276,7 +372,6 @@ import Layout from '../../layouts/Layout.astro';
       energies.push(state.w_min + (state.w_max - state.w_min) * i / (Nw - 1));
     }
 
-    // Auto-compute q range: material line at highest energy
     const k0_max = state.w_max / HC_EV_NM;
     const q_upper = Math.sqrt(Math.max(0, state.eps1_re)) * k0_max;
     qMaxAuto = q_upper * 1.05;
@@ -303,13 +398,29 @@ import Layout from '../../layouts/Layout.astro';
       }
       branches.push({ m, points: pts });
     }
+  }
 
-    const dt = performance.now() - t0;
-    const totalPts = branches.reduce((s, b) => s + b.points.length, 0);
-    const statusEl = document.getElementById('compute-status')!;
-    statusEl.textContent = `${totalPts} roots · ${dt.toFixed(0)} ms`;
-    drawChart();
-    drawLegend();
+  function recomputeEELS() {
+    const eps_h: C = [state.eps_h, 0];
+    const eps1: C = [state.eps1_re, state.eps1_im];
+    const Nw = 240;
+    const w: number[] = [];
+    for (let i = 0; i < Nw; i++) {
+      w.push(state.w_min + (state.w_max - state.w_min) * i / (Nw - 1));
+    }
+    const yRaw = eelsParallel({
+      a_nm: state.a_nm,
+      b_nm: state.b_nm,
+      eps_h,
+      eps1_of_w: () => eps1,
+      w_eV: w,
+      vFrac: state.vFrac,
+      maxOrder: state.maxOrderEels,
+    });
+    // Match MATLAB sign convention: inside trajectory returns negative raw.
+    // Report |EELS| for display so users see a positive loss spectrum.
+    const y = yRaw.map(v => Math.abs(v));
+    eelsCurve = { w, y };
   }
 
   function scheduleRecompute() {
@@ -322,42 +433,56 @@ import Layout from '../../layouts/Layout.astro';
 
   // ===== Chart =====
 
-  function drawChart() {
+  interface Axes {
+    ctx: CanvasRenderingContext2D;
+    m: { top: number; right: number; bottom: number; left: number };
+    pw: number; ph: number; w: number; h: number;
+    xMin: number; xMax: number; yMin: number; yMax: number;
+    xTo: (x: number) => number;
+    yTo: (y: number) => number;
+    xLabel: string; yLabel: string;
+  }
+
+  function setupCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
     const canvas = document.getElementById('cyl-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     canvas.width = w * dpr; canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
+    return { canvas, ctx, w, h };
+  }
 
+  function makeAxes(
+    ctx: CanvasRenderingContext2D, w: number, h: number,
+    xMin: number, xMax: number, yMin: number, yMax: number,
+    xLabel: string, yLabel: string,
+  ): Axes {
     const m = { top: 14, right: 18, bottom: 38, left: 52 };
     const pw = w - m.left - m.right;
     const ph = h - m.top - m.bottom;
+    const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin);
+    const yTo = (y: number) => m.top + ph * (1 - (y - yMin) / (yMax - yMin));
+    return { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xTo, yTo, xLabel, yLabel };
+  }
 
-    const qMax = qMaxAuto;
-    const wMin = state.w_min, wMax = state.w_max;
+  function drawAxesFrame(ax: Axes, xTicks: number, yTicks: number, xFmt: (v: number) => string, yFmt: (v: number) => string) {
+    const { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xLabel, yLabel } = ax;
 
-    const xTo = (q: number) => m.left + pw * q / qMax;
-    const yTo = (we: number) => m.top + ph * (1 - (we - wMin) / (wMax - wMin));
-
-    // Background
     ctx.fillStyle = '#FAFAFF';
     ctx.fillRect(m.left, m.top, pw, ph);
 
-    // Gridlines
     ctx.strokeStyle = '#EEEDF5';
     ctx.lineWidth = 1;
-    const nXt = 6, nYt = 6;
-    for (let i = 0; i <= nXt; i++) {
-      const x = m.left + pw * i / nXt;
+    for (let i = 0; i <= xTicks; i++) {
+      const x = m.left + pw * i / xTicks;
       ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
     }
-    for (let i = 0; i <= nYt; i++) {
-      const y = m.top + ph * i / nYt;
+    for (let i = 0; i <= yTicks; i++) {
+      const y = m.top + ph * i / yTicks;
       ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
     }
 
-    // Axes
     ctx.strokeStyle = '#1E1B4B';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -366,27 +491,25 @@ import Layout from '../../layouts/Layout.astro';
     ctx.lineTo(m.left + pw, m.top + ph);
     ctx.stroke();
 
-    // X labels (q)
     ctx.fillStyle = '#64648B';
     ctx.font = '10px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    for (let i = 0; i <= nXt; i++) {
-      const q = qMax * i / nXt;
-      ctx.fillText(q.toFixed(3), m.left + pw * i / nXt, m.top + ph + 4);
+    for (let i = 0; i <= xTicks; i++) {
+      const v = xMin + (xMax - xMin) * i / xTicks;
+      ctx.fillText(xFmt(v), m.left + pw * i / xTicks, m.top + ph + 4);
     }
     ctx.fillStyle = '#1E1B4B';
     ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.fillText('q_z (nm⁻¹)', m.left + pw / 2, h - 16);
+    ctx.fillText(xLabel, m.left + pw / 2, h - 16);
 
-    // Y labels (ω)
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#64648B';
     ctx.font = '10px Inter, system-ui, sans-serif';
-    for (let i = 0; i <= nYt; i++) {
-      const we = wMin + (wMax - wMin) * (1 - i / nYt);
-      ctx.fillText(we.toFixed(1), m.left - 6, m.top + ph * i / nYt);
+    for (let i = 0; i <= yTicks; i++) {
+      const v = yMax - (yMax - yMin) * i / yTicks;
+      ctx.fillText(yFmt(v), m.left - 6, m.top + ph * i / yTicks);
     }
     ctx.save();
     ctx.translate(14, m.top + ph / 2);
@@ -394,43 +517,53 @@ import Layout from '../../layouts/Layout.astro';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#1E1B4B';
     ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.fillText('ω (eV)', 0, 0);
+    ctx.fillText(yLabel, 0, 0);
     ctx.restore();
+  }
 
-    // Clip plot area
+  function drawChart() {
+    if (state.view === 'disp-wq') drawDispersionWQ();
+    else if (state.view === 'disp-bV') drawDispersionBV();
+    else drawEELS();
+  }
+
+  function drawDispersionWQ() {
+    const { ctx, w, h } = setupCanvas();
+    const ax = makeAxes(ctx, w, h, 0, qMaxAuto, state.w_min, state.w_max,
+                         'q_z (nm⁻¹)', 'ω (eV)');
+    drawAxesFrame(ax, 6, 6, v => v.toFixed(3), v => v.toFixed(1));
+
     ctx.save();
     ctx.beginPath();
-    ctx.rect(m.left, m.top, pw, ph);
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
     ctx.clip();
 
-    // Light line and material line (from origin to max)
+    // Light line and material line
     const k0_at = (we: number) => we / HC_EV_NM;
-    // Light line: q = √εₕ · k₀ → ω = HC · q / √εₕ
-    const qLightMax = Math.sqrt(state.eps_h) * k0_at(wMax);
-    const qMatMax = Math.sqrt(Math.max(0, state.eps1_re)) * k0_at(wMax);
+    const qLightMax = Math.sqrt(state.eps_h) * k0_at(state.w_max);
+    const qMatMax = Math.sqrt(Math.max(0, state.eps1_re)) * k0_at(state.w_max);
 
     ctx.setLineDash([5, 4]);
     ctx.lineWidth = 1.4;
     ctx.strokeStyle = '#94A3B8';
     ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(wMin));
-    ctx.moveTo(xTo(0), yTo(0));
-    ctx.lineTo(xTo(qLightMax), yTo(wMax));
+    ctx.moveTo(ax.xTo(0), ax.yTo(0));
+    ctx.lineTo(ax.xTo(qLightMax), ax.yTo(state.w_max));
     ctx.stroke();
 
     ctx.strokeStyle = '#CBD5E1';
     ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(0));
-    ctx.lineTo(xTo(qMatMax), yTo(wMax));
+    ctx.moveTo(ax.xTo(0), ax.yTo(0));
+    ctx.lineTo(ax.xTo(qMatMax), ax.yTo(state.w_max));
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Shaded guided region (between light line and material line)
+    // Shaded guided region
     ctx.fillStyle = 'rgba(99,102,241,0.04)';
     ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(0));
-    ctx.lineTo(xTo(qLightMax), yTo(wMax));
-    ctx.lineTo(xTo(qMatMax), yTo(wMax));
+    ctx.moveTo(ax.xTo(0), ax.yTo(0));
+    ctx.lineTo(ax.xTo(qLightMax), ax.yTo(state.w_max));
+    ctx.lineTo(ax.xTo(qMatMax), ax.yTo(state.w_max));
     ctx.closePath();
     ctx.fill();
 
@@ -439,40 +572,134 @@ import Layout from '../../layouts/Layout.astro';
       const color = M_COLORS[br.m] ?? '#6366F1';
       ctx.fillStyle = color;
       for (const p of br.points) {
-        const x = xTo(p.q), y = yTo(p.w);
-        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ax.xTo(p.q), ax.yTo(p.w), 2.2, 0, Math.PI * 2); ctx.fill();
       }
     }
     ctx.restore();
 
-    // Line labels (outside clip)
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '9px Inter, system-ui, sans-serif';
-    ctx.save();
-    const lx = xTo(qLightMax), ly = yTo(wMax);
-    ctx.translate(lx - 4, ly + 8);
-    const ang = Math.atan2(yTo(wMax) - yTo(0), xTo(qLightMax) - xTo(0));
-    ctx.rotate(ang);
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('light line', 0, 0);
-    ctx.restore();
+    // Line labels
+    drawLineLabel(ax, 'light line', qLightMax, '#94A3B8');
+    drawLineLabel(ax, 'material line', qMatMax, '#94A3B8');
+  }
 
-    ctx.fillStyle = '#94A3B8';
-    const mx = xTo(qMatMax), my = yTo(wMax);
+  function drawDispersionBV() {
+    const { ctx, w, h } = setupCanvas();
+    // V_max at (ω_max, a) for real(ε₁-ε_h). For ε1_re > eps_h.
+    const dEps = state.eps1_re - state.eps_h;
+    const k0_max = state.w_max / HC_EV_NM;
+    const Vmax = Math.max(0.1, k0_max * state.a_nm * Math.sqrt(Math.max(0, dEps)));
+    const ax = makeAxes(ctx, w, h, 0, Vmax * 1.05, 0, 1,
+                         'V = k₀ a √(ε₁ − ε_h)', 'b = (n_eff² − ε_h)/(ε₁ − ε_h)');
+    drawAxesFrame(ax, 6, 5, v => v.toFixed(2), v => v.toFixed(2));
+
     ctx.save();
-    ctx.translate(mx - 4, my + 8);
-    const angM = Math.atan2(yTo(wMax) - yTo(0), xTo(qMatMax) - xTo(0));
-    ctx.rotate(angM);
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+
+    // Bounds b=0 (light) and b=1 (material)
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(ax.xTo(0), ax.yTo(0));
+    ctx.lineTo(ax.xTo(Vmax * 1.05), ax.yTo(0));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ax.xTo(0), ax.yTo(1));
+    ctx.lineTo(ax.xTo(Vmax * 1.05), ax.yTo(1));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Shaded bound-mode region
+    ctx.fillStyle = 'rgba(99,102,241,0.04)';
+    ctx.fillRect(ax.xTo(0), ax.yTo(1), ax.pw, ax.yTo(0) - ax.yTo(1));
+
+    // Points in b-V coordinates
+    for (const br of branches) {
+      const color = M_COLORS[br.m] ?? '#6366F1';
+      ctx.fillStyle = color;
+      for (const p of br.points) {
+        const k0 = p.w / HC_EV_NM;
+        if (k0 <= 0 || dEps <= 0) continue;
+        const V = k0 * state.a_nm * Math.sqrt(dEps);
+        const n_eff_sq = (p.q / k0) * (p.q / k0);
+        const b = (n_eff_sq - state.eps_h) / dEps;
+        ctx.beginPath(); ctx.arc(ax.xTo(V), ax.yTo(b), 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawEELS() {
+    const { ctx, w, h } = setupCanvas();
+    if (!eelsCurve) return;
+    const y = eelsCurve.y;
+    let yMax = 0;
+    for (const v of y) if (v > yMax) yMax = v;
+    if (yMax <= 0) yMax = 1;
+    const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, yMax * 1.08,
+                         'ω (eV)', '|dΓ/dω|  (arb.)');
+    drawAxesFrame(ax, 6, 5, v => v.toFixed(1), v => v.toExponential(1));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+
+    const inside = state.b_nm <= state.a_nm;
+    const color = inside ? '#F59E0B' : '#6366F1';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.fillStyle = color + '18';
+    ctx.beginPath();
+    for (let i = 0; i < eelsCurve.w.length; i++) {
+      const x = ax.xTo(eelsCurve.w[i]);
+      const yy = ax.yTo(eelsCurve.y[i]);
+      if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+
+    // Fill under curve
+    ctx.beginPath();
+    for (let i = 0; i < eelsCurve.w.length; i++) {
+      const x = ax.xTo(eelsCurve.w[i]);
+      const yy = ax.yTo(eelsCurve.y[i]);
+      if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    }
+    ctx.lineTo(ax.xTo(eelsCurve.w[eelsCurve.w.length - 1]), ax.yTo(0));
+    ctx.lineTo(ax.xTo(eelsCurve.w[0]), ax.yTo(0));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawLineLabel(ax: Axes, text: string, qLineMax: number, color: string) {
+    const { ctx } = ax;
+    ctx.fillStyle = color;
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    const lx = ax.xTo(qLineMax), ly = ax.yTo(state.w_max);
+    ctx.save();
+    ctx.translate(lx - 4, ly + 8);
+    const angle = Math.atan2(ax.yTo(state.w_max) - ax.yTo(0), ax.xTo(qLineMax) - ax.xTo(0));
+    ctx.rotate(angle);
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
-    ctx.fillText('material line', 0, 0);
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   }
 
   function drawLegend() {
     const el = document.getElementById('chart-legend')!;
     el.innerHTML = '';
+    if (state.view === 'eels') {
+      const inside = state.b_nm <= state.a_nm;
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-swatch" style="background:${inside ? '#F59E0B' : '#6366F1'}"></span> parallel trajectory · ${inside ? 'inside (b < a)' : 'outside (b > a)'} · v/c = ${state.vFrac.toFixed(2)}`;
+      el.appendChild(item);
+      return;
+    }
     const ms = Array.from(state.m_active).sort((a, b) => a - b);
     for (const m of ms) {
       const item = document.createElement('span');
@@ -483,7 +710,7 @@ import Layout from '../../layouts/Layout.astro';
     const light = document.createElement('span');
     light.className = 'legend-item';
     light.style.color = '#94A3B8';
-    light.innerHTML = `<span class="legend-line"></span> light / material`;
+    light.innerHTML = `<span class="legend-line"></span> ${state.view === 'disp-wq' ? 'light / material' : 'b = 0 / b = 1'}`;
     el.appendChild(light);
   }
 
@@ -511,6 +738,49 @@ import Layout from '../../layouts/Layout.astro';
   syncPair('eh-num', 'eh-slider', 'eps_h');
   syncPair('e1r-num', 'e1r-slider', 'eps1_re');
   syncPair('e1i-num', 'e1i-slider', 'eps1_im');
+  syncPair('b-num', 'b-slider', 'b_nm');
+  syncPair('v-num', 'v-slider', 'vFrac');
+
+  $<HTMLInputElement>('Mmax-num').addEventListener('input', (e) => {
+    const v = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isFinite(v) && v >= 0 && v <= 10) { state.maxOrderEels = v; scheduleRecompute(); }
+  });
+
+  function updateBNote() {
+    const note = $('b-note');
+    note.textContent = state.b_nm > state.a_nm ? 'outside the cylinder' : 'inside the cylinder';
+  }
+  $<HTMLInputElement>('b-num').addEventListener('input', updateBNote);
+  $<HTMLInputElement>('b-slider').addEventListener('input', updateBNote);
+  $<HTMLInputElement>('r-num').addEventListener('input', updateBNote);
+  $<HTMLInputElement>('r-slider').addEventListener('input', updateBNote);
+
+  $('v-presets').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
+    if (!btn) return;
+    const v = parseFloat(btn.dataset.val!);
+    state.vFrac = v;
+    $<HTMLInputElement>('v-num').value = v.toString();
+    $<HTMLInputElement>('v-slider').value = v.toString();
+    scheduleRecompute();
+  });
+
+  $('view-tabs').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
+    if (!btn) return;
+    const v = btn.dataset.view as ViewMode;
+    if (v === state.view) return;
+    state.view = v;
+    document.querySelectorAll('.view-tab').forEach(b => {
+      const active = (b as HTMLElement).dataset.view === v;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-checked', String(active));
+    });
+    if (v === 'eels') {
+      $('eels-section').setAttribute('open', '');
+    }
+    recompute();
+  });
 
   $<HTMLInputElement>('w-min').addEventListener('input', (e) => {
     const v = parseFloat((e.target as HTMLInputElement).value);
@@ -551,6 +821,9 @@ import Layout from '../../layouts/Layout.astro';
     state.w_min = 1;
     state.w_max = 20;
     state.m_active = new Set([0, 1, 2]);
+    state.b_nm = 25;
+    state.vFrac = 0.3;
+    state.maxOrderEels = 4;
     $<HTMLInputElement>('r-num').value = '15';
     $<HTMLInputElement>('r-slider').value = '15';
     $<HTMLInputElement>('eh-num').value = '1.00';
@@ -561,13 +834,21 @@ import Layout from '../../layouts/Layout.astro';
     $<HTMLInputElement>('e1i-slider').value = '0.1';
     $<HTMLInputElement>('w-min').value = '1';
     $<HTMLInputElement>('w-max').value = '20';
+    $<HTMLInputElement>('b-num').value = '25';
+    $<HTMLInputElement>('b-slider').value = '25';
+    $<HTMLInputElement>('v-num').value = '0.3';
+    $<HTMLInputElement>('v-slider').value = '0.3';
+    $<HTMLInputElement>('Mmax-num').value = '4';
     $('eh-presets').querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
     document.querySelectorAll('.m-chip').forEach(c => {
       const mm = parseInt((c as HTMLElement).dataset.m!, 10);
       c.classList.toggle('active', mm < 3);
     });
+    updateBNote();
     recompute();
   });
+
+  updateBNote();
 
   new ResizeObserver(drawChart).observe($('chart-wrap'));
 
