@@ -27,6 +27,14 @@ const widgets = [
     url: '/lab/photon/',
   },
   {
+    title: 'Photothermal Calculator',
+    description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.',
+    color: '#EF4444',
+    icon: 'flame',
+    status: 'Live',
+    url: '/lab/photothermal/',
+  },
+  {
     title: 'Scientific Unit Converter',
     description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.',
     color: '#06B6D4',
@@ -69,6 +77,11 @@ const widgets = [
                     <ellipse cx="12" cy="12" rx="10" ry="4"/>
                     <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
                     <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
+                  </svg>
+                )}
+                {widget.icon === 'flame' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
                   </svg>
                 )}
                 {widget.icon === 'photon' && (

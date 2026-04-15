@@ -1,0 +1,780 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Photothermal Calculator" description="Laser-driven nanoparticle heating: absorbed power, scattering albedo, and steady-state temperature rise from Mie theory.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Photothermal <span class="gradient-text">Calculator</span></h1>
+      <p class="widget-hero__subtitle">
+        Given a metallic nanoparticle, a host medium, and a focused CW laser,
+        compute the power budget (absorption vs scattering) and the steady-state
+        temperature rise at the particle surface. Physics: exact Mie theory.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="param">
+            <div class="param-header"><label>Material</label></div>
+            <select id="material-select" class="param-select">
+              <option value="au" selected>Gold (Au)</option>
+              <option value="ag">Silver (Ag)</option>
+              <option value="al">Aluminum (Al)</option>
+              <option value="si">Silicon (Si)</option>
+            </select>
+            <span class="material-ref" id="material-ref"></span>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Radius (nm)</label>
+              <input type="number" class="param-number" id="r-num" value="50" step="5" min="1" max="200">
+            </div>
+            <input type="range" class="param-slider" id="r-slider" min="5" max="200" step="1" value="50">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>n<sub>host</sub></label>
+              <input type="number" class="param-number" id="nh-num" value="1.33" step="0.01" min="1">
+            </div>
+            <input type="range" class="param-slider" id="nh-slider" min="1.0" max="2.0" step="0.01" value="1.33">
+            <div class="param-presets" id="nh-presets">
+              <button class="preset-btn" data-val="1.00">Air</button>
+              <button class="preset-btn active" data-val="1.33">Water</button>
+              <button class="preset-btn" data-val="1.46">Oil</button>
+              <button class="preset-btn" data-val="1.50">Glass</button>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>&lambda; (nm)</label>
+              <input type="number" class="param-number" id="lam-num" value="532" step="1" min="300" max="1200">
+            </div>
+            <input type="range" class="param-slider" id="lam-slider" min="300" max="1200" step="1" value="532">
+            <div class="param-presets" id="lam-presets">
+              <button class="preset-btn" data-val="405">405</button>
+              <button class="preset-btn active" data-val="532">532</button>
+              <button class="preset-btn" data-val="633">633</button>
+              <button class="preset-btn" data-val="780">780</button>
+              <button class="preset-btn" data-val="1064">1064</button>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>P<sub>laser</sub> (mW)</label>
+              <input type="number" class="param-number" id="pow-num" value="1" step="0.1" min="0">
+            </div>
+            <input type="range" class="param-slider" id="pow-slider" min="0" max="100" step="0.1" value="1">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Beam waist w<sub>0</sub> (&mu;m)</label>
+              <input type="number" class="param-number" id="w0-num" value="1" step="0.1" min="0.1">
+            </div>
+            <input type="range" class="param-slider" id="w0-slider" min="0.1" max="50" step="0.1" value="1">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>&kappa; (W/m&middot;K)</label>
+              <input type="number" class="param-number" id="k-num" value="0.606" step="0.01" min="0.001">
+            </div>
+            <div class="param-presets" id="k-presets">
+              <button class="preset-btn active" data-val="0.606">Water</button>
+              <button class="preset-btn" data-val="0.026">Air</button>
+              <button class="preset-btn" data-val="0.17">Oil</button>
+              <button class="preset-btn" data-val="1.0">Glass</button>
+            </div>
+          </div>
+
+          <p class="theory-note">
+            <strong>Model.</strong>
+            I&nbsp;=&nbsp;2P/(&pi;w<sub>0</sub>&sup2;) (Gaussian peak).
+            P<sub>abs</sub>&nbsp;=&nbsp;&sigma;<sub>abs</sub>&middot;I.
+            &Delta;T&nbsp;=&nbsp;P<sub>abs</sub>/(4&pi;&kappa;R) at the surface;
+            T(r)&nbsp;&minus;&nbsp;T<sub>&infin;</sub>&nbsp;=&nbsp;P<sub>abs</sub>/(4&pi;&kappa;r) for r&nbsp;&ge;&nbsp;R.
+            &sigma;<sub>abs</sub> from exact Mie theory.
+          </p>
+        </div>
+
+        <!-- ===== Chart ===== -->
+        <div class="chart-panel card">
+          <div class="chart-header">
+            <span class="chart-title">Cross-sections vs wavelength</span>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-swatch" style="background:#EF4444"></span>&sigma;<sub>abs</sub></span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#3B82F6"></span>&sigma;<sub>sca</sub></span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#F43F5E"></span>laser &lambda;</span>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="mie-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- ===== Output panel ===== -->
+        <div class="output-card card">
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-label">&sigma;<sub>abs</sub></span>
+              <span class="stat-value" id="out-cabs">&mdash;</span>
+              <span class="stat-unit">nm&sup2;</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">&sigma;<sub>sca</sub></span>
+              <span class="stat-value" id="out-csca">&mdash;</span>
+              <span class="stat-unit">nm&sup2;</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">&sigma;<sub>ext</sub></span>
+              <span class="stat-value" id="out-cext">&mdash;</span>
+              <span class="stat-unit">nm&sup2;</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Albedo</span>
+              <span class="stat-value" id="out-albedo">&mdash;</span>
+              <span class="stat-unit"></span>
+            </div>
+          </div>
+
+          <div class="budget">
+            <div class="budget-header">
+              <span class="budget-label">Power at particle</span>
+              <span class="budget-i" id="out-i">&mdash;</span>
+            </div>
+            <div class="budget-bar">
+              <div class="budget-abs" id="budget-abs"></div>
+              <div class="budget-sca" id="budget-sca"></div>
+            </div>
+            <div class="budget-rows">
+              <div class="budget-row">
+                <span class="budget-dot" style="background:#EF4444"></span>
+                <span class="budget-name">absorbed</span>
+                <span class="budget-value" id="out-pabs">&mdash;</span>
+              </div>
+              <div class="budget-row">
+                <span class="budget-dot" style="background:#3B82F6"></span>
+                <span class="budget-name">scattered</span>
+                <span class="budget-value" id="out-psca">&mdash;</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="delta-t">
+            <span class="delta-t-label">&Delta;T at surface</span>
+            <div class="delta-t-value"><span id="out-dt">&mdash;</span><span class="delta-t-unit">K</span></div>
+            <div class="profile-wrap" id="profile-wrap">
+              <canvas id="profile-chart"></canvas>
+            </div>
+            <span class="profile-label">T(r) &minus; T<sub>&infin;</sub> &ensp;&middot;&ensp; r / R &in; [1, 10]</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="references card">
+        <h4>References &amp; data sources</h4>
+        <ul>
+          <li>G. Baffou &amp; R. Quidant, <em>Thermo-plasmonics: using metallic nanostructures as nano-sources of heat</em>, Laser &amp; Photonics Reviews 7, 171 (2013). Foundational review on photothermal generation with metallic nanoparticles.</li>
+          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983). Mie theory.</li>
+          <li>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a> &mdash; Au/Ag: Johnson &amp; Christy (1972); Al: Raki&cacute; (1995); Si: Aspnes &amp; Studna (1983).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== Scoped styles ===== -->
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+  .controls {
+    display: flex; flex-direction: column; gap: var(--space-md);
+    position: sticky; top: calc(var(--nav-height) + var(--space-lg));
+    grid-row: 1 / span 2;
+  }
+  .controls h3 { font-size: 1rem; }
+
+  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-header { display: flex; justify-content: space-between; align-items: center; }
+  .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .param-number {
+    width: 5rem; padding: 0.2rem 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--primary); text-align: right; outline: none; background: var(--bg);
+  }
+  .param-number::-webkit-inner-spin-button,
+  .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .param-number { -moz-appearance: textfield; }
+  .param-slider {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--primary); cursor: pointer; transition: box-shadow 0.15s;
+  }
+  .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
+  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
+
+  .param-select {
+    width: 100%; padding: 0.35rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.8125rem; font-weight: 500; color: var(--text);
+    background: var(--bg); outline: none; cursor: pointer;
+  }
+  .material-ref { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+
+  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.2rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); }
+
+  .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
+  .theory-note strong { color: var(--text-soft); }
+
+  /* Chart */
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); }
+  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .chart-legend { display: flex; gap: var(--space-sm); align-items: center; }
+  .legend-item { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+
+  /* Output card */
+  .output-card {
+    padding: var(--space-md);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .stat {
+    display: flex; flex-direction: column; gap: 0.15rem;
+    padding: var(--space-sm); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  .stat-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .stat-value { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); }
+  .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
+
+  .budget { display: flex; flex-direction: column; gap: 0.5rem; }
+  .budget-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .budget-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .budget-i { font-size: 0.75rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+  .budget-bar {
+    height: 14px; display: flex; border-radius: var(--radius-full); overflow: hidden;
+    background: var(--bg-muted);
+  }
+  .budget-abs { background: #EF4444; transition: flex-basis 0.3s ease; flex-basis: 0%; }
+  .budget-sca { background: #3B82F6; transition: flex-basis 0.3s ease; flex-basis: 0%; }
+  .budget-rows { display: flex; flex-direction: column; gap: 0.3rem; }
+  .budget-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.8125rem; }
+  .budget-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .budget-name { color: var(--text-soft); flex: 1; }
+  .budget-value { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary); }
+
+  .delta-t { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-start; }
+  .delta-t-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .delta-t-value { display: flex; align-items: baseline; gap: 0.35rem; }
+  .delta-t-value span:first-child { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #EF4444; line-height: 1; }
+  .delta-t-unit { font-size: 0.875rem; font-weight: 600; color: var(--text-soft); }
+  .profile-wrap { width: 100%; margin-top: 0.25rem; }
+  .profile-wrap canvas { width: 100%; aspect-ratio: 3 / 1; display: block; }
+  .profile-label { font-size: 0.6875rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
+  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .references a { color: var(--primary); }
+
+  @media (max-width: 900px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; grid-row: auto; }
+    .output-card { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- ===== Script ===== -->
+<script>
+  import { MATERIALS } from '../../data/optical-constants';
+
+  // ===== Mie engine (single sphere, single wavelength) =====
+
+  interface MieValues { csca: number; cabs: number; cext: number; } // nm²
+
+  function mieAt(nPart: number, kPart: number, nHost: number, radiusNm: number, lambdaNm: number): MieValues {
+    const R = radiusNm * 1e-9;
+    const lm = lambdaNm * 1e-9;
+    const k0 = 2 * Math.PI * nHost / lm;
+    const x = k0 * R;
+    if (x < 1e-12) return { csca: 0, cabs: 0, cext: 0 };
+
+    const mRe = nPart / nHost, mIm = kPart / nHost;
+    const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
+    const mAbs = Math.sqrt(mRe * mRe + mIm * mIm);
+    const nmx = Math.max(nmax, Math.ceil(mAbs * x)) + 16;
+
+    const mxRe = mRe * x, mxIm = mIm * x;
+    const mxMag2 = mxRe * mxRe + mxIm * mxIm;
+    const mMag2 = mRe * mRe + mIm * mIm;
+
+    const DRe = new Float64Array(nmx + 2);
+    const DIm = new Float64Array(nmx + 2);
+
+    let dRe = 0, dIm = 0;
+    for (let n = nmx; n >= 1; n--) {
+      const novRe = n * mxRe / mxMag2, novIm = -n * mxIm / mxMag2;
+      const tRe = dRe + novRe, tIm = dIm + novIm;
+      const tM2 = tRe * tRe + tIm * tIm;
+      dRe = novRe - tRe / tM2;
+      dIm = novIm + tIm / tM2;
+      if (n - 1 <= nmax) { DRe[n - 1] = dRe; DIm[n - 1] = dIm; }
+    }
+
+    const psiX = new Float64Array(nmax + 2);
+    const xiRe = new Float64Array(nmax + 2);
+    const xiIm = new Float64Array(nmax + 2);
+    const sinX = Math.sin(x), cosX = Math.cos(x);
+    psiX[0] = sinX; psiX[1] = sinX / x - cosX;
+    for (let n = 1; n < nmax; n++) psiX[n + 1] = ((2 * n + 1) / x) * psiX[n] - psiX[n - 1];
+    xiRe[0] = sinX; xiIm[0] = -cosX;
+    xiRe[1] = sinX / x - cosX; xiIm[1] = -cosX / x - sinX;
+    for (let n = 1; n < nmax; n++) {
+      const f = (2 * n + 1) / x;
+      xiRe[n + 1] = f * xiRe[n] - xiRe[n - 1];
+      xiIm[n + 1] = f * xiIm[n] - xiIm[n - 1];
+    }
+
+    let sumSca = 0, sumExt = 0;
+    for (let n = 1; n <= nmax; n++) {
+      const DomRe = (DRe[n] * mRe + DIm[n] * mIm) / mMag2;
+      const DomIm = (DIm[n] * mRe - DRe[n] * mIm) / mMag2;
+      const mDRe = mRe * DRe[n] - mIm * DIm[n];
+      const mDIm = mRe * DIm[n] + mIm * DRe[n];
+      const nx = n / x;
+      const ARe = DomRe + nx, AIm = DomIm;
+      const BRe = mDRe + nx, BIm = mDIm;
+
+      const anNRe = ARe * psiX[n] - psiX[n - 1];
+      const anNIm = AIm * psiX[n];
+      const anDRe = (ARe * xiRe[n] - AIm * xiIm[n]) - xiRe[n - 1];
+      const anDIm = (ARe * xiIm[n] + AIm * xiRe[n]) - xiIm[n - 1];
+      const bnNRe = BRe * psiX[n] - psiX[n - 1];
+      const bnNIm = BIm * psiX[n];
+      const bnDRe = (BRe * xiRe[n] - BIm * xiIm[n]) - xiRe[n - 1];
+      const bnDIm = (BRe * xiIm[n] + BIm * xiRe[n]) - xiIm[n - 1];
+
+      const adM2 = anDRe * anDRe + anDIm * anDIm;
+      const aRe = (anNRe * anDRe + anNIm * anDIm) / adM2;
+      const aIm = (anNIm * anDRe - anNRe * anDIm) / adM2;
+      const bdM2 = bnDRe * bnDRe + bnDIm * bnDIm;
+      const bRe = (bnNRe * bnDRe + bnNIm * bnDIm) / bdM2;
+      const bIm = (bnNIm * bnDRe - bnNRe * bnDIm) / bdM2;
+
+      const w = 2 * n + 1;
+      sumSca += w * (aRe * aRe + aIm * aIm + bRe * bRe + bIm * bIm);
+      sumExt += w * (aRe + bRe);
+    }
+
+    const pf = (2 * Math.PI / (k0 * k0)) * 1e18; // m² → nm²
+    const csca = pf * sumSca;
+    const cext = pf * sumExt;
+    return { csca, cext, cabs: Math.max(0, cext - csca) };
+  }
+
+  // ===== Optical-constants interpolation =====
+
+  function interpolateNK(data: number[][], lambdaNm: number): [number, number] {
+    const lam = lambdaNm / 1000;
+    if (lam <= data[0][0]) return [data[0][1], data[0][2]];
+    const last = data.length - 1;
+    if (lam >= data[last][0]) return [data[last][1], data[last][2]];
+    let lo = 0, hi = last;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (data[mid][0] <= lam) lo = mid; else hi = mid; }
+    const t = (lam - data[lo][0]) / (data[hi][0] - data[lo][0]);
+    return [data[lo][1] + t * (data[hi][1] - data[lo][1]), data[lo][2] + t * (data[hi][2] - data[lo][2])];
+  }
+
+  // ===== State =====
+
+  const state = {
+    material: 'au',
+    radius: 50,
+    nHost: 1.33,
+    lambda: 532,
+    power_mW: 1,
+    w0_um: 1,
+    kappa: 0.606,
+  };
+
+  const LAM_MIN = 300, LAM_MAX = 1200, NPTS = 240;
+
+  let spectrum: { lambda: Float64Array; csca: Float64Array; cabs: Float64Array; cext: Float64Array } | null = null;
+
+  function computeSpectrum() {
+    const mat = MATERIALS[state.material];
+    if (!mat) return;
+    const lambda = new Float64Array(NPTS);
+    const csca = new Float64Array(NPTS);
+    const cabs = new Float64Array(NPTS);
+    const cext = new Float64Array(NPTS);
+    for (let i = 0; i < NPTS; i++) {
+      const lam = LAM_MIN + (LAM_MAX - LAM_MIN) * i / (NPTS - 1);
+      lambda[i] = lam;
+      const [n, k] = interpolateNK(mat.data, lam);
+      const v = mieAt(n, k, state.nHost, state.radius, lam);
+      csca[i] = v.csca; cabs[i] = v.cabs; cext[i] = v.cext;
+    }
+    spectrum = { lambda, csca, cabs, cext };
+  }
+
+  // ===== Formatting =====
+
+  function fmt(v: number, digits = 3): string {
+    if (!isFinite(v)) return '—';
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a < 1e-3 || a >= 1e5) return v.toExponential(digits - 1);
+    return parseFloat(v.toPrecision(digits)).toString();
+  }
+
+  function fmtPower(watts: number): string {
+    if (!isFinite(watts)) return '—';
+    const a = Math.abs(watts);
+    if (a >= 1e-3) return `${fmt(watts * 1e3)} mW`;
+    if (a >= 1e-6) return `${fmt(watts * 1e6)} µW`;
+    if (a >= 1e-9) return `${fmt(watts * 1e9)} nW`;
+    if (a >= 1e-12) return `${fmt(watts * 1e12)} pW`;
+    return `${watts.toExponential(2)} W`;
+  }
+
+  function fmtIrradiance(Wm2: number): string {
+    if (!isFinite(Wm2)) return '—';
+    const Wcm2 = Wm2 * 1e-4;
+    if (Wcm2 >= 1e3) return `${fmt(Wcm2 * 1e-3)} kW/cm²`;
+    if (Wcm2 >= 1)    return `${fmt(Wcm2)} W/cm²`;
+    return `${fmt(Wcm2 * 1e3)} mW/cm²`;
+  }
+
+  // ===== Update outputs =====
+
+  function updateOutputs() {
+    if (!spectrum) return;
+    const mat = MATERIALS[state.material];
+    const [n, k] = interpolateNK(mat.data, state.lambda);
+    const v = mieAt(n, k, state.nHost, state.radius, state.lambda);
+
+    const albedo = v.cext > 0 ? v.csca / v.cext : 0;
+
+    const P_W = state.power_mW * 1e-3;
+    const w0_m = state.w0_um * 1e-6;
+    const I_peak = (2 * P_W) / (Math.PI * w0_m * w0_m); // W/m² (Gaussian peak)
+
+    const sigmaAbs_m2 = v.cabs * 1e-18;
+    const sigmaSca_m2 = v.csca * 1e-18;
+    const P_abs = sigmaAbs_m2 * I_peak;
+    const P_sca = sigmaSca_m2 * I_peak;
+
+    const dT = P_abs / (4 * Math.PI * state.kappa * (state.radius * 1e-9));
+
+    (document.getElementById('out-cabs') as HTMLElement).textContent = fmt(v.cabs);
+    (document.getElementById('out-csca') as HTMLElement).textContent = fmt(v.csca);
+    (document.getElementById('out-cext') as HTMLElement).textContent = fmt(v.cext);
+    (document.getElementById('out-albedo') as HTMLElement).textContent = albedo.toFixed(3);
+
+    (document.getElementById('out-i') as HTMLElement).textContent = `I = ${fmtIrradiance(I_peak)}`;
+    (document.getElementById('out-pabs') as HTMLElement).textContent = fmtPower(P_abs);
+    (document.getElementById('out-psca') as HTMLElement).textContent = fmtPower(P_sca);
+
+    const tot = P_abs + P_sca;
+    const pctAbs = tot > 0 ? (P_abs / tot) * 100 : 0;
+    const pctSca = tot > 0 ? (P_sca / tot) * 100 : 0;
+    (document.getElementById('budget-abs') as HTMLElement).style.flexBasis = pctAbs + '%';
+    (document.getElementById('budget-sca') as HTMLElement).style.flexBasis = pctSca + '%';
+
+    (document.getElementById('out-dt') as HTMLElement).textContent = isFinite(dT) ? fmt(dT, 3) : '—';
+
+    (document.getElementById('material-ref') as HTMLElement).textContent = mat.ref;
+
+    drawProfile(dT);
+    drawChart();
+  }
+
+  // ===== Main chart =====
+
+  function drawChart() {
+    if (!spectrum) return;
+    const canvas = document.getElementById('mie-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const m = { top: 14, right: 18, bottom: 34, left: 54 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+
+    // y-max across cabs + csca
+    let yMax = 0;
+    for (let i = 0; i < NPTS; i++) {
+      if (spectrum.cabs[i] > yMax) yMax = spectrum.cabs[i];
+      if (spectrum.csca[i] > yMax) yMax = spectrum.csca[i];
+    }
+    if (yMax <= 0) yMax = 1;
+    yMax *= 1.1;
+
+    const xTo = (lam: number) => m.left + pw * (lam - LAM_MIN) / (LAM_MAX - LAM_MIN);
+    const yTo = (v: number) => m.top + ph * (1 - v / yMax);
+
+    ctx.fillStyle = '#FAFAFF';
+    ctx.fillRect(m.left, m.top, pw, ph);
+
+    ctx.strokeStyle = '#EEEDF5';
+    ctx.lineWidth = 1;
+    for (let lam = 400; lam <= LAM_MAX; lam += 200) {
+      const x = xTo(lam);
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+    }
+    const yTicks = 5;
+    for (let i = 0; i <= yTicks; i++) {
+      const y = m.top + ph * i / yTicks;
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#1E1B4B';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    // axis labels
+    ctx.fillStyle = '#64648B';
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let lam = 400; lam <= LAM_MAX; lam += 200) {
+      ctx.fillText(String(lam), xTo(lam), m.top + ph + 4);
+    }
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('λ (nm)', m.left + pw / 2, h - 14);
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#64648B';
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    for (let i = 0; i <= yTicks; i++) {
+      const v = yMax * (1 - i / yTicks);
+      const y = m.top + ph * i / yTicks;
+      ctx.fillText(fmt(v, 2), m.left - 5, y);
+    }
+    ctx.save();
+    ctx.translate(12, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('σ (nm²)', 0, 0);
+    ctx.restore();
+
+    // Clip curves to plot area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(m.left, m.top, pw, ph);
+    ctx.clip();
+
+    // σ_abs
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let i = 0; i < NPTS; i++) {
+      const x = xTo(spectrum.lambda[i]);
+      const y = yTo(spectrum.cabs[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // σ_sca
+    ctx.strokeStyle = '#3B82F6';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let i = 0; i < NPTS; i++) {
+      const x = xTo(spectrum.lambda[i]);
+      const y = yTo(spectrum.csca[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Laser marker
+    const xL = xTo(state.lambda);
+    if (xL >= m.left && xL <= m.left + pw) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = '#F43F5E';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(xL, m.top); ctx.lineTo(xL, m.top + ph); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#F43F5E';
+      ctx.font = '600 10px Inter, system-ui, sans-serif';
+      ctx.textAlign = xL > m.left + pw - 60 ? 'right' : 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${state.lambda} nm`, xL + (xL > m.left + pw - 60 ? -4 : 4), m.top + 2);
+    }
+  }
+
+  // ===== Profile T(r) mini chart =====
+
+  function drawProfile(dTSurface: number) {
+    const canvas = document.getElementById('profile-chart') as HTMLCanvasElement;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = '#FAFAFF';
+    ctx.fillRect(0, 0, w, h);
+
+    if (!isFinite(dTSurface) || dTSurface <= 0) {
+      ctx.strokeStyle = '#D1D5DB';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(4, h - 6); ctx.lineTo(w - 4, h - 6); ctx.stroke();
+      return;
+    }
+
+    const pad = 6;
+    const pw = w - 2 * pad;
+    const ph = h - 2 * pad;
+
+    // r from R to 10 R
+    const rMin = 1, rMax = 10;
+    const xTo = (r: number) => pad + pw * (r - rMin) / (rMax - rMin);
+    const yTo = (t: number) => pad + ph * (1 - t / dTSurface);
+
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const N = 80;
+    for (let i = 0; i < N; i++) {
+      const r = rMin + (rMax - rMin) * i / (N - 1);
+      const t = dTSurface / r;
+      const x = xTo(r), y = yTo(t);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Baseline
+    ctx.strokeStyle = '#D1D5DB';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pad, yTo(0));
+    ctx.lineTo(pad + pw, yTo(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ===== Binding helpers =====
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function syncPair(numId: string, sliderId: string, key: keyof typeof state, recompute: boolean) {
+    const num = $<HTMLInputElement>(numId);
+    const slider = $<HTMLInputElement>(sliderId);
+    const update = (src: 'num' | 'slider') => {
+      const raw = src === 'num' ? num.value : slider.value;
+      const v = parseFloat(raw);
+      if (!isFinite(v)) return;
+      (state as any)[key] = v;
+      if (src === 'num') slider.value = raw;
+      else num.value = raw;
+      if (recompute) computeSpectrum();
+      updateOutputs();
+    };
+    num.addEventListener('input', () => update('num'));
+    slider.addEventListener('input', () => update('slider'));
+  }
+
+  function bindPresets(groupId: string, numId: string, sliderId: string | null, key: keyof typeof state, recompute: boolean) {
+    $(groupId).addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
+      if (!btn) return;
+      const v = parseFloat(btn.dataset.val!);
+      (state as any)[key] = v;
+      $<HTMLInputElement>(numId).value = v.toString();
+      if (sliderId) $<HTMLInputElement>(sliderId).value = v.toString();
+      $(groupId).querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (recompute) computeSpectrum();
+      updateOutputs();
+    });
+  }
+
+  syncPair('r-num', 'r-slider', 'radius', true);
+  syncPair('nh-num', 'nh-slider', 'nHost', true);
+  syncPair('lam-num', 'lam-slider', 'lambda', false);
+  syncPair('pow-num', 'pow-slider', 'power_mW', false);
+  syncPair('w0-num', 'w0-slider', 'w0_um', false);
+
+  $<HTMLInputElement>('k-num').addEventListener('input', (e) => {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (!isFinite(v) || v <= 0) return;
+    state.kappa = v;
+    $('k-presets').querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    updateOutputs();
+  });
+
+  bindPresets('nh-presets', 'nh-num', 'nh-slider', 'nHost', true);
+  bindPresets('lam-presets', 'lam-num', 'lam-slider', 'lambda', false);
+  bindPresets('k-presets', 'k-num', null, 'kappa', false);
+
+  $<HTMLSelectElement>('material-select').addEventListener('change', (e) => {
+    state.material = (e.target as HTMLSelectElement).value;
+    computeSpectrum();
+    updateOutputs();
+  });
+
+  // Initial
+  computeSpectrum();
+  updateOutputs();
+
+  new ResizeObserver(() => { drawChart(); /* profile redraws with outputs */ }).observe($('chart-wrap'));
+</script>
+</content>
+</invoke>
