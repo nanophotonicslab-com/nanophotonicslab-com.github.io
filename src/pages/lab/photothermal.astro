@@ -126,6 +126,17 @@ import Layout from '../../layouts/Layout.astro';
 
         <!-- ===== Output panel ===== -->
         <div class="output-card card">
+          <div class="colors-row">
+            <span class="colors-label">Apparent color (CIE&nbsp;1931, illuminant&nbsp;E)</span>
+            <div class="color-item">
+              <div class="color-box" id="swatch-sca"></div>
+              <span class="color-name">scattered</span>
+            </div>
+            <div class="color-item">
+              <div class="color-box" id="swatch-trans"></div>
+              <span class="color-name">transmitted</span>
+            </div>
+          </div>
           <div class="stats">
             <div class="stat">
               <span class="stat-label">&sigma;<sub>abs</sub></span>
@@ -178,7 +189,10 @@ import Layout from '../../layouts/Layout.astro';
             <div class="profile-wrap" id="profile-wrap">
               <canvas id="profile-chart"></canvas>
             </div>
-            <span class="profile-label">T(r) &minus; T<sub>&infin;</sub> &ensp;&middot;&ensp; r / R &in; [1, 10]</span>
+            <span class="profile-label">
+              T(r) &minus; T<sub>&infin;</sub> vs. r / R &ensp;&middot;&ensp;
+              dots mark 1/e (r = e&middot;R) and 1/e&sup2; (r = e&sup2;&middot;R)
+            </span>
           </div>
         </div>
       </div>
@@ -273,8 +287,34 @@ import Layout from '../../layouts/Layout.astro';
     padding: var(--space-md);
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: var(--space-lg);
+    gap: var(--space-md) var(--space-lg);
     align-items: start;
+  }
+  .colors-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--bg-muted);
+  }
+  .colors-label {
+    font-size: 0.6875rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .color-item { display: flex; align-items: center; gap: 0.5rem; }
+  .color-box {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--bg-muted);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    transition: background 0.3s;
+    background: #222;
+  }
+  .color-name {
+    font-size: 0.75rem; color: var(--text-soft);
+    font-weight: 500;
   }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .stat {
@@ -307,9 +347,9 @@ import Layout from '../../layouts/Layout.astro';
   .delta-t-value { display: flex; align-items: baseline; gap: 0.35rem; }
   .delta-t-value span:first-child { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #EF4444; line-height: 1; }
   .delta-t-unit { font-size: 0.875rem; font-weight: 600; color: var(--text-soft); }
-  .profile-wrap { width: 100%; margin-top: 0.25rem; }
-  .profile-wrap canvas { width: 100%; aspect-ratio: 3 / 1; display: block; }
-  .profile-label { font-size: 0.6875rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .profile-wrap { width: 100%; margin-top: 0.35rem; }
+  .profile-wrap canvas { width: 100%; aspect-ratio: 2.2 / 1; display: block; }
+  .profile-label { font-size: 0.6875rem; color: var(--text-muted); line-height: 1.4; }
 
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
@@ -410,6 +450,64 @@ import Layout from '../../layouts/Layout.astro';
     const csca = pf * sumSca;
     const cext = pf * sumExt;
     return { csca, cext, cabs: Math.max(0, cext - csca) };
+  }
+
+  // ===== Colorimetry (Wyman-Sloan-Shirley analytic CIE 1931 CMFs, illuminant E) =====
+
+  function _gauss(lam: number, mu: number, s1: number, s2: number): number {
+    const t = lam - mu;
+    return t < 0
+      ? Math.exp(-0.5 * (t / s1) * (t / s1))
+      : Math.exp(-0.5 * (t / s2) * (t / s2));
+  }
+  function xBar(l: number): number {
+    return 0.362 * _gauss(l, 442.0, 16.0, 26.7)
+         + 1.056 * _gauss(l, 599.8, 37.9, 31.0)
+         - 0.065 * _gauss(l, 501.1, 20.4, 26.2);
+  }
+  function yBar(l: number): number {
+    return 0.821 * _gauss(l, 568.8, 46.9, 40.5)
+         + 0.286 * _gauss(l, 530.9, 16.3, 31.1);
+  }
+  function zBar(l: number): number {
+    return 1.217 * _gauss(l, 437.0, 11.8, 36.0)
+         + 0.681 * _gauss(l, 459.0, 26.0, 13.8);
+  }
+
+  /** Integrate a reflectance spectrum R(λ) with illuminant E and return an sRGB hex color. */
+  function spectrumToHex(lams: Float64Array, R: Float64Array): string {
+    let X = 0, Y = 0, Z = 0, N = 0;
+    for (let i = 0; i < lams.length; i++) {
+      const l = lams[i];
+      if (l < 380 || l > 780) continue;
+      const dl = i > 0 ? (lams[i] - lams[i - 1]) : 1;
+      const xb = xBar(l), yb = yBar(l), zb = zBar(l);
+      X += R[i] * xb * dl;
+      Y += R[i] * yb * dl;
+      Z += R[i] * zb * dl;
+      N += yb * dl;
+    }
+    if (N <= 0) return '#222222';
+    X /= N; Y /= N; Z /= N;
+
+    // XYZ → linear sRGB (D65)
+    let r =  3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z;
+    let g = -0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z;
+    let b =  0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
+
+    // Desaturate out-of-gamut (negative channels): shift all by the min so lowest becomes 0
+    const minC = Math.min(r, g, b, 0);
+    if (minC < 0) { r -= minC; g -= minC; b -= minC; }
+    // Scale so max channel is 1 (perceptual brightness normalization)
+    const maxC = Math.max(r, g, b, 1e-9);
+    r /= maxC; g /= maxC; b /= maxC;
+
+    // Gamma (sRGB transfer)
+    const gamma = (c: number) =>
+      c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    const toHex = (c: number) =>
+      Math.max(0, Math.min(255, Math.round(gamma(c) * 255))).toString(16).padStart(2, '0');
+    return '#' + toHex(r) + toHex(g) + toHex(b);
   }
 
   // ===== Optical-constants interpolation =====
@@ -526,8 +624,33 @@ import Layout from '../../layouts/Layout.astro';
 
     (document.getElementById('material-ref') as HTMLElement).textContent = mat.ref;
 
+    updateColors();
     drawProfile(dT);
     drawChart();
+  }
+
+  function updateColors() {
+    if (!spectrum) return;
+    // Scattered color: reflectance = σ_sca(λ) / max(σ_sca)
+    const sMax = Math.max(...spectrum.csca);
+    const R_sca = new Float64Array(spectrum.csca.length);
+    if (sMax > 0) for (let i = 0; i < R_sca.length; i++) R_sca[i] = spectrum.csca[i] / sMax;
+
+    // Transmitted color (Beer-Lambert with normalized optical path):
+    // T(λ) = exp(-ln(10) · σ_ext(λ) / max σ_ext)  → peak extinction attenuates to 10 %
+    const eMax = Math.max(...spectrum.cext);
+    const R_trans = new Float64Array(spectrum.cext.length);
+    if (eMax > 0) {
+      const k = Math.log(10) / eMax;
+      for (let i = 0; i < R_trans.length; i++) R_trans[i] = Math.exp(-k * spectrum.cext[i]);
+    } else {
+      R_trans.fill(1);
+    }
+
+    const scaHex = spectrumToHex(spectrum.lambda, R_sca);
+    const transHex = spectrumToHex(spectrum.lambda, R_trans);
+    (document.getElementById('swatch-sca') as HTMLElement).style.background = scaHex;
+    (document.getElementById('swatch-trans') as HTMLElement).style.background = transHex;
   }
 
   // ===== Main chart =====
@@ -671,43 +794,79 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillStyle = '#FAFAFF';
     ctx.fillRect(0, 0, w, h);
 
+    const mL = 8, mR = 34, mT = 10, mB = 22;
+    const pw = w - mL - mR;
+    const ph = h - mT - mB;
+
+    // r/R range [1, 10]
+    const rMin = 1, rMax = 10;
+    const xTo = (r: number) => mL + pw * (r - rMin) / (rMax - rMin);
+    const yTo = (t: number) => mT + ph * (1 - t);  // t is normalized ΔT (0..1)
+
+    // Axes frame
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mL, mT); ctx.lineTo(mL, mT + ph); ctx.lineTo(mL + pw, mT + ph);
+    ctx.stroke();
+
     if (!isFinite(dTSurface) || dTSurface <= 0) {
       ctx.strokeStyle = '#D1D5DB';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(4, h - 6); ctx.lineTo(w - 4, h - 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mL, yTo(0)); ctx.lineTo(mL + pw, yTo(0)); ctx.stroke();
       return;
     }
 
-    const pad = 6;
-    const pw = w - 2 * pad;
-    const ph = h - 2 * pad;
+    // ===== Reference lines at ΔT/e and ΔT/e² =====
+    const refs = [
+      { y: 1 / Math.E,       label: '1/e',  color: '#9CA3AF' },
+      { y: 1 / (Math.E ** 2), label: '1/e²', color: '#D1D5DB' },
+    ];
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const r of refs) {
+      const yy = yTo(r.y);
+      ctx.strokeStyle = r.color;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(mL, yy); ctx.lineTo(mL + pw, yy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#64648B';
+      ctx.fillText(r.label, mL + pw + 3, yy);
+    }
 
-    // r from R to 10 R
-    const rMin = 1, rMax = 10;
-    const xTo = (r: number) => pad + pw * (r - rMin) / (rMax - rMin);
-    const yTo = (t: number) => pad + ph * (1 - t / dTSurface);
-
+    // ===== Curve T(r)/ΔT = R/r =====
     ctx.strokeStyle = '#EF4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    const N = 80;
+    const N = 120;
     for (let i = 0; i < N; i++) {
       const r = rMin + (rMax - rMin) * i / (N - 1);
-      const t = dTSurface / r;
+      const t = 1 / r;
       const x = xTo(r), y = yTo(t);
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    // Baseline
-    ctx.strokeStyle = '#D1D5DB';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 3]);
-    ctx.beginPath();
-    ctx.moveTo(pad, yTo(0));
-    ctx.lineTo(pad + pw, yTo(0));
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // Intersection dots at r/R = e and r/R = e²
+    for (const rr of [Math.E, Math.E ** 2]) {
+      if (rr >= rMin && rr <= rMax) {
+        ctx.fillStyle = '#EF4444';
+        ctx.beginPath(); ctx.arc(xTo(rr), yTo(1 / rr), 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // ===== X-axis ticks at r/R = 1, 2, 5, 10 =====
+    ctx.fillStyle = '#64648B';
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const rr of [1, 2, 5, 10]) {
+      const xx = xTo(rr);
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.beginPath(); ctx.moveTo(xx, mT + ph); ctx.lineTo(xx, mT + ph + 2); ctx.stroke();
+      ctx.fillText(String(rr), xx, mT + ph + 4);
+    }
   }
 
   // ===== Binding helpers =====

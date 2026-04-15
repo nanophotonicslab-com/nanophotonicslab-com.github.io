@@ -16,6 +16,22 @@ import Layout from '../../layouts/Layout.astro';
 
   <section class="section">
     <div class="container">
+      <div class="warning-banner">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <path d="M12 9v4"/><path d="M12 17h.01"/>
+        </svg>
+        <div>
+          <strong>Heavy warning: experimental, and honestly a bit dumb.</strong>
+          This assistant does <em>not</em> reason and does <em>not</em> use an LLM.
+          It runs semantic search with <code>all-MiniLM-L6-v2</code> over a small
+          internal corpus of course notes, and returns the most similar passages verbatim.
+          No synthesis, no memory between turns, no guarantee the retrieved passage actually
+          answers your question. Treat every answer as a hint, not a statement. More
+          material will be added as it is curated.
+        </div>
+      </div>
+
       <div class="chat-card card">
         <header class="chat-header">
           <div class="chat-avatar">
@@ -29,7 +45,7 @@ import Layout from '../../layouts/Layout.astro';
             <h3 class="chat-title">Methods Assistant</h3>
             <span class="chat-subtitle">Nanophotonics solver recommendations</span>
           </div>
-          <span class="chat-badge" title="No LLM backend yet — keyword matching only">Preview</span>
+          <span class="chat-badge" title="Semantic retrieval over course script — no LLM, no hallucination">Retrieval</span>
           <button id="clear-btn" class="chat-clear" title="Clear conversation" aria-label="Clear">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6 18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -44,24 +60,25 @@ import Layout from '../../layouts/Layout.astro';
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
             </div>
-            <h4>How can I help?</h4>
+            <h4>Ask the notes</h4>
             <p>
-              Ask about a geometry, material, or observable. Right now I match keywords and
-              point you to the right tool. A real LLM backed by our Computational Photonics
-              notes is planned for May&nbsp;2026.
+              Semantic search over an internal corpus of computational-photonics course notes.
+              Ask a physics or numerical-method question and I return the most relevant
+              passages with their section and page.
+              <br/><strong>First query downloads the embedding model (~20&nbsp;MB, cached).</strong>
             </p>
             <div class="examples">
-              <button class="example" data-prompt="Which method should I use for a 100 nm gold sphere on a glass substrate?">
-                100&nbsp;nm Au sphere on a glass substrate?
+              <button class="example" data-prompt="How does the Yee grid work for FDTD in 3D?">
+                Yee grid for FDTD in 3D
               </button>
-              <button class="example" data-prompt="How much does a 50 nm Au nanoparticle heat up under a 1 mW 532 nm laser?">
-                Heating of a 50&nbsp;nm Au NP under a 1&nbsp;mW laser?
+              <button class="example" data-prompt="What is the Crank-Nicolson method used for in BPM?">
+                Crank&ndash;Nicolson in BPM
               </button>
-              <button class="example" data-prompt="What is the difference between BEM and DGTD?">
-                BEM vs. DGTD — when to use each?
+              <button class="example" data-prompt="How to implement perfectly matched layer boundaries?">
+                PML boundary conditions
               </button>
-              <button class="example" data-prompt="I need EELS spectra for a silver nanorod">
-                EELS for a silver nanorod
+              <button class="example" data-prompt="Weak formulation for the finite element method in photonics">
+                FEM weak formulation
               </button>
             </div>
           </div>
@@ -78,9 +95,11 @@ import Layout from '../../layouts/Layout.astro';
       </div>
 
       <p class="chat-disclaimer">
-        <strong>Note:</strong> this is a UI skeleton. Responses are keyword-matched, not generated
-        by an LLM. We're building the real assistant on top of our nanophotonics notes and the
-        tools in this Lab.
+        <strong>How it works:</strong> your query is embedded in the browser with
+        <code>all-MiniLM-L6-v2</code> (via <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>)
+        and matched by cosine similarity against a few hundred pre-computed chunks of internal
+        course notes. No LLM, no server, no hallucination &mdash; every passage you see is a
+        literal excerpt. More material will be added as it is curated.
       </p>
     </div>
   </section>
@@ -94,6 +113,32 @@ import Layout from '../../layouts/Layout.astro';
   .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
+
+  /* Warning banner */
+  .warning-banner {
+    max-width: 760px;
+    margin: 0 auto var(--space-md);
+    padding: var(--space-md);
+    display: flex;
+    gap: var(--space-sm);
+    align-items: flex-start;
+    border: 1px solid #F59E0B;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+    color: #78350F;
+  }
+  .warning-banner svg { color: #D97706; flex-shrink: 0; margin-top: 1px; }
+  .warning-banner div { font-size: 0.8125rem; line-height: 1.6; }
+  .warning-banner strong { color: #78350F; display: inline; }
+  .warning-banner em { color: #92400E; font-style: italic; }
+  .warning-banner code {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    background: rgba(217,119,6,0.15);
+    color: #92400E;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+  }
 
   /* Chat card */
   .chat-card {
@@ -128,7 +173,7 @@ import Layout from '../../layouts/Layout.astro';
   .chat-badge {
     font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
     padding: 0.2rem 0.55rem; border-radius: var(--radius-full);
-    background: #FEF3C7; color: #92400E;
+    background: rgba(139,92,246,0.12); color: #6D28D9;
   }
   .chat-clear {
     width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
@@ -258,6 +303,8 @@ import Layout from '../../layouts/Layout.astro';
     color: var(--text-muted);
   }
 
+  .typing-row { display: inline-flex; align-items: center; gap: 0.6rem; }
+  .typing-status { font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
   .typing {
     display: inline-flex; gap: 4px; padding: 0.2rem 0;
   }
@@ -272,6 +319,39 @@ import Layout from '../../layouts/Layout.astro';
     0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
     30% { transform: translateY(-4px); opacity: 1; }
   }
+
+  /* Retrieved passages */
+  .passage {
+    margin-top: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-left: 2px solid #8B5CF6;
+    background: rgba(139,92,246,0.04);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .passage-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 0.25rem;
+    font-size: 0.6875rem;
+  }
+  .passage-page { font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 0.05em; }
+  .passage-score { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .passage-path {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 0.35rem;
+  }
+  .passage-text {
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.55;
+    font-family: 'Iowan Old Style', 'Georgia', serif;
+  }
+  .passage-text p { margin: 0 0 0.5rem 0 !important; }
+  .passage-text p:last-child { margin-bottom: 0 !important; }
+  .passage-text .katex { font-size: 1em; }
+  .passage-text .katex-display { margin: 0.4rem 0; }
 
   /* Input form */
   .chat-input-form {
@@ -323,6 +403,8 @@ import Layout from '../../layouts/Layout.astro';
     text-align: center;
   }
   .chat-disclaimer strong { color: var(--text-soft); }
+  .chat-disclaimer code { font-family: 'SF Mono', Menlo, Consolas, monospace; background: rgba(139,92,246,0.1); color: #6D28D9; padding: 0.05rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  .chat-disclaimer a { color: #8B5CF6; font-weight: 600; }
 
   @media (max-width: 640px) {
     .chat-card { height: 560px; }
@@ -333,188 +415,150 @@ import Layout from '../../layouts/Layout.astro';
 
 <!-- ===== Script ===== -->
 <script>
-  // ===== Canned knowledge base (keyword-matched) =====
+  import { pipeline, env } from '@huggingface/transformers';
+  import renderMathInElement from 'katex/dist/contrib/auto-render.mjs';
+  import 'katex/dist/katex.min.css';
 
-  interface CannedResponse {
-    keywords: string[];
-    response: string; // HTML
+  // Transformers.js: fetch model weights from HF Hub, cache in browser.
+  env.allowLocalModels = false;
+  env.useBrowserCache = true;
+
+  // ===== Retrieval state =====
+
+  interface CorpusChunk {
+    id: number;
+    text: string;
+    section_path?: string;
+    section_title?: string;
+    page_start?: number;
+    page_end?: number;
+  }
+  interface Corpus {
+    model: string;
+    dim: number;
+    quantization: string;
+    quant_scale: number;
+    source: { file: string; title: string; author: string; institution: string; year: number };
+    chunks: CorpusChunk[];
+    vectors: Float32Array[]; // dequantized at load time
   }
 
-  const RESPONSES: CannedResponse[] = [
-    {
-      keywords: ['photothermal', 'heat', 'heating', 'temperature', 'thermal', 'delta t', 'κ', 'kappa'],
-      response: `
-        <p>For the steady-state temperature rise of a laser-illuminated nanoparticle, use the
-        <a href="/lab/photothermal/">Photothermal Calculator</a> — it computes
-        ΔT = σ<sub>abs</sub>·I/(4π·κ·R) from exact Mie theory, with a power-budget breakdown
-        and radial T(r) profile.</p>
-        <p>For non-spherical geometries or particles on a substrate, BEM is the right tool
-        (in development — see the roadmap).</p>
-        <p><em>Reference: Baffou & Quidant, Laser & Photonics Reviews 7, 171 (2013).</em></p>
-      `,
-    },
-    {
-      keywords: ['mie', 'sphere', 'core-shell', 'core shell', 'multi-shell', 'multi shell', 'nanoparticle', 'nanosphere', 'cross-section', 'cross section', 'extinction', 'albedo'],
-      response: `
-        <p>For spherical particles the right tool is <strong>exact Mie theory</strong> — it's analytical,
-        fast, and there's no approximation. Our <a href="/lab/mie-scattering/">Mie Scattering Calculator</a>
-        handles single spheres and concentric multi-shell geometries (up to 5 shells) with
-        tabulated <em>n</em>,<em>k</em> from refractiveindex.info plus custom dielectrics.</p>
-        <p>It also gives you multipole decomposition, electric/magnetic split, far-field angular patterns
-        and a 2D near-field map.</p>
-        <p><em>Reference: Bohren & Huffman, Absorption and Scattering of Light by Small Particles (1983).</em></p>
-      `,
-    },
-    {
-      keywords: ['substrate', 'on glass', 'on silicon', 'film', 'layered', 'interface', 'half-space'],
-      response: `
-        <p>Substrates break spherical symmetry, so Mie alone doesn't work. You need
-        <strong>BEM</strong> with Green's functions for a layered half-space, or FDTD/DGTD.</p>
-        <p>Our Python+CUDA port of Hohenester's BEM with substrate is in development — target
-        Q3&nbsp;2026. In the meantime you can use the slower browser version:
-        <a href="/lab/bem-solver/">BEM Solver</a>.</p>
-      `,
-    },
-    {
-      keywords: ['roughness', 'rough', 'bump', 'gaussian surface'],
-      response: `
-        <p>Surface roughness on spheres is covered by <strong>BEM + a perturbative expansion</strong>
-        on a Gaussian-field description of the bumps. Our integrated solver (BEM + roughness) is
-        in the roadmap for Q3&nbsp;2026.</p>
-        <p>We're also investigating normalizing flows to generalize roughness from spheres to
-        arbitrary shapes — see <a href="https://github.com/nanophotonicslab-com/nf-roughness" target="_blank">nf-roughness</a>.</p>
-      `,
-    },
-    {
-      keywords: ['cylinder', 'wire', 'nanowire', 'nanorod', 'rod', 'plasmonic waveguide', 'waveguide'],
-      response: `
-        <p>For <strong>infinite cylinders</strong> there are semi-analytical solutions (ω-k dispersion
-        or mode-number representation). A dedicated widget for cylinder modes and their analytical
-        EELS is planned for <strong>May&nbsp;2026</strong>.</p>
-        <p>For <strong>finite rods</strong>, the rigorous tool is BEM. The Mie widget has a simple
-        "nanorod length" parameter but it's a crude approximation; don't trust it for high aspect ratios.</p>
-      `,
-    },
-    {
-      keywords: ['eels', 'electron energy loss', 'energy loss spectroscopy', 'loss probability'],
-      response: `
-        <p><strong>EELS</strong> in the quasi-electrostatic limit can be computed for spheres analytically
-        (Bohren–Huffman approach) and for arbitrary geometries via BEM (Hohenester's MNPBEM toolbox).</p>
-        <p>For the kinematics side (electron velocity, wavelength, γ) use the
-        <a href="/lab/electron/">Relativistic Electron Calculator</a>. A cylinder-EELS widget based
-        on Álvaro's analytical solutions is planned.</p>
-      `,
-    },
-    {
-      keywords: ['bem', 'boundary element', 'hohenester', 'mnpbem'],
-      response: `
-        <p><strong>BEM (Boundary Element Method)</strong> is the workhorse for plasmonic simulations:
-        discretize only the particle surface, solve a linear system for the surface currents. Excellent
-        for homogeneous particles in a homogeneous background, and extensible to layered media via
-        appropriate Green's functions.</p>
-        <p>We run a browser BEM demo at <a href="/lab/bem-solver/">/lab/bem-solver/</a>. A much faster
-        Python+CUDA port of Hohenester's code is being built (H1 2026).</p>
-      `,
-    },
-    {
-      keywords: ['dgtd', 'discontinuous galerkin', 'time domain', 'broadband', 'transient'],
-      response: `
-        <p><strong>DGTD (Discontinuous Galerkin Time-Domain)</strong> is the most modern family of
-        Maxwell solvers: high-order accurate, handles curved geometries well, and naturally broadband.
-        Good for transient/nonlinear/ultrafast problems. Kurt Busch's group (Hannover) pioneered
-        it for nanophotonics; Lumerical has recently added it commercially.</p>
-        <p>In our roadmap, DGTD is the second backend alongside BEM (H2, 2027).</p>
-      `,
-    },
-    {
-      keywords: ['fdtd', 'finite difference', 'yee', 'lumerical'],
-      response: `
-        <p><strong>FDTD</strong> is the traditional time-domain solver — easy to implement, broadband,
-        but staircasing errors on curved surfaces and memory-hungry for large domains. Lumerical is
-        the de-facto commercial tool.</p>
-        <p>For plasmonic nanoparticles FDTD works but BEM is usually faster and more accurate.
-        DGTD is the more modern choice.</p>
-      `,
-    },
-    {
-      keywords: ['rcwa', 'fourier modal', 'fmm', 'periodic', 'metalens', 'metasurface', 'grating'],
-      response: `
-        <p>For <strong>periodic structures</strong> (gratings, metasurfaces, metalenses), the standard
-        tool is <strong>RCWA (Rigorous Coupled-Wave Analysis)</strong>, also known as the Fourier
-        Modal Method. Commercial: Lumerical's RCWA module; open source: S4 (Stanford), grcwa.</p>
-        <p>RCWA is on our radar (demand detected in World SERP 2026) but not yet committed to the roadmap.</p>
-      `,
-    },
-    {
-      keywords: ['non-local', 'nonlocal', 'd-parameter', 'd parameter', 'feibelman'],
-      response: `
-        <p><strong>Non-local response</strong> (spatial dispersion, hydrodynamic model, Feibelman
-        d-parameters) becomes important below ~10 nm feature size. It shifts plasmon resonances
-        and adds size-dependent damping.</p>
-        <p>Hohenester's group has implemented d-parameters in BEM. We're targeting implementation
-        in DGTD as a differentiator — no commercial solver currently supports it (H2 2027).</p>
-      `,
-    },
-    {
-      keywords: ['photon', 'wavelength', 'hc/lambda', 'laser wavelength', 'frequency', 'angular frequency', 'wavenumber'],
-      response: `
-        <p>For quick photon unit conversions (λ, E, ν, ω, <span>&#7819;</span>, T) use the
-        <a href="/lab/photon/">Photon Calculator</a> — it includes common laser presets and a
-        visual EM-spectrum chart.</p>
-      `,
-    },
-    {
-      keywords: ['electron', 'tem', 'sem', 'de broglie', 'relativistic', 'gamma factor'],
-      response: `
-        <p>Use the <a href="/lab/electron/">Relativistic Electron Calculator</a> for electron
-        kinematics — v/c, kinetic energy (keV/eV), de Broglie wavelength, γ factor, with SEM/TEM
-        reference points (30, 80, 120, 200, 300&nbsp;kV).</p>
-      `,
-    },
-    {
-      keywords: ['unit', 'convert', 'cgs', 'esu', 'atomic unit', 'si units'],
-      response: `
-        <p>Our <a href="/lab/units/">Scientific Unit Converter</a> handles 11 physical quantities
-        across SI, CGS/ESU, and atomic units — useful for reconciling nanophotonics papers across
-        different traditions (theory papers in a.u., experiment papers in SI).</p>
-      `,
-    },
-    {
-      keywords: ['drude', 'dielectric function', 'optical constants', 'refractive index', 'n and k', 'epsilon'],
-      response: `
-        <p>Optical constants for common metals (Au, Ag, Al, Si, TiO<sub>2</sub>) are built in to our
-        <a href="/lab/mie-scattering/">Mie Calculator</a>, sourced from refractiveindex.info.
-        You can also search the full refractiveindex.info database (~3560 materials) directly from
-        the widget, or upload your own CSV/TSV.</p>
-        <p>For a custom Drude model, use the "Custom dielectric" option with a real ε<sub>r</sub>
-        slider (lossless case) or upload a file with complex (n, k).</p>
-      `,
-    },
-  ];
+  let corpus: Corpus | null = null;
+  let extractor: any = null;
+  let readyPromise: Promise<void> | null = null;
+  const MIN_SIMILARITY = 0.25;
 
-  const DEFAULT_RESPONSE = `
-    <p>I'm a keyword-matching placeholder — I currently recognize terms like <em>Mie, sphere,
-    photothermal, cylinder, EELS, BEM, DGTD, FDTD, RCWA, substrate, roughness, non-local,
-    Drude, photon, electron, units</em> and point you to the right tool or roadmap item.</p>
-    <p>The real assistant (connected to our Computational Photonics notes and capable of
-    reasoning across methods) is planned for <strong>May&nbsp;2026</strong>. Meanwhile, try
-    rephrasing with one of those keywords, or explore <a href="/lab/">the Lab</a> directly.</p>
-  `;
+  async function loadCorpus(): Promise<Corpus> {
+    const res = await fetch('/data/cpho16_embeddings.json');
+    if (!res.ok) throw new Error(`corpus fetch failed: ${res.status}`);
+    const raw = await res.json();
+    const scale = raw.quant_scale || 127;
+    const vecs: Float32Array[] = raw.vectors.map((v: number[]) => {
+      const f = new Float32Array(v.length);
+      for (let i = 0; i < v.length; i++) f[i] = v[i] / scale;
+      // Renormalize after dequantization (quantization errors slightly perturb unit length)
+      let n = 0;
+      for (let i = 0; i < f.length; i++) n += f[i] * f[i];
+      n = Math.sqrt(n);
+      if (n > 0) for (let i = 0; i < f.length; i++) f[i] /= n;
+      return f;
+    });
+    return { ...raw, vectors: vecs };
+  }
 
-  function matchResponse(text: string): string {
-    const lower = text.toLowerCase();
-    for (const r of RESPONSES) {
-      for (const kw of r.keywords) {
-        if (lower.includes(kw)) return r.response;
-      }
+  async function ensureReady(onProgress?: (msg: string) => void): Promise<void> {
+    if (!readyPromise) {
+      readyPromise = (async () => {
+        onProgress?.('Loading knowledge base…');
+        corpus = await loadCorpus();
+        onProgress?.('Downloading embedding model (one-time, ~20 MB)…');
+        extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+          progress_callback: (p: any) => {
+            if (p?.status === 'progress' && typeof p.progress === 'number') {
+              onProgress?.(`Downloading model… ${p.progress.toFixed(0)}%`);
+            } else if (p?.status === 'ready') {
+              onProgress?.('Model ready.');
+            }
+          },
+        });
+      })();
     }
-    return DEFAULT_RESPONSE;
+    return readyPromise;
+  }
+
+  interface Hit { score: number; chunk: CorpusChunk; }
+
+  async function retrieve(query: string, topK = 3): Promise<Hit[]> {
+    if (!corpus || !extractor) return [];
+    const out = await extractor(query, { pooling: 'mean', normalize: true });
+    const q = out.data as Float32Array;
+    const sims = new Float32Array(corpus.vectors.length);
+    for (let i = 0; i < corpus.vectors.length; i++) {
+      const v = corpus.vectors[i];
+      let s = 0;
+      for (let k = 0; k < v.length; k++) s += v[k] * q[k];
+      sims[i] = s;
+    }
+    const idx = Array.from(sims.keys()).sort((a, b) => sims[b] - sims[a]).slice(0, topK);
+    return idx.map(i => ({ score: sims[i], chunk: corpus!.chunks[i] }));
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderHits(hits: Hit[]): string {
+    if (!corpus) return `<p>Corpus not loaded.</p>`;
+    const good = hits.filter(h => h.score >= MIN_SIMILARITY);
+    if (good.length === 0) {
+      return `
+        <p>I couldn't find anything relevant in my current corpus.</p>
+        <p>Try rephrasing with more method/physics terms (e.g. "FDTD boundary conditions",
+        "BPM wide-angle Padé", "finite-element weak formulation"), or explore
+        <a href="/lab/">the Lab</a> directly.</p>
+      `;
+    }
+    const header = `<p>Relevant passages from the internal course-notes corpus:</p>`;
+    const blocks = good.map(h => {
+      const c = h.chunk;
+      let cite: string;
+      if (c.section_title) {
+        cite = escapeHtml(c.section_title);
+      } else if (c.page_start != null && c.page_end != null) {
+        cite = c.page_start === c.page_end ? `p. ${c.page_start}` : `pp. ${c.page_start}–${c.page_end}`;
+      } else {
+        cite = `chunk #${c.id}`;
+      }
+      const pathLine = c.section_path ? `<span class="passage-path">${escapeHtml(c.section_path)}</span>` : '';
+      const pct = (h.score * 100).toFixed(0);
+      return `
+        <div class="passage">
+          <div class="passage-header">
+            <span class="passage-page">${cite}</span>
+            <span class="passage-score">similarity ${pct}%</span>
+          </div>
+          ${pathLine}
+          <div class="passage-text">${renderPassageBody(c.text)}</div>
+        </div>
+      `;
+    }).join('');
+    return header + blocks;
+  }
+
+  /**
+   * Convert a raw markdown-ish chunk to safe HTML.
+   * Preserves paragraph breaks and inline math delimiters ($...$, $$...$$, \(...\), \[...\])
+   * which KaTeX auto-render will replace after insertion.
+   */
+  function renderPassageBody(text: string): string {
+    // Split on blank lines → paragraphs. Preserve math as-is.
+    const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    return paras.map(p => `<p>${escapeHtml(p).replace(/\n/g, ' ')}</p>`).join('');
   }
 
   // ===== Chat logic =====
 
   interface Message { role: 'user' | 'assistant'; html: string; }
-
   const messages: Message[] = [];
 
   const scrollEl = document.getElementById('chat-scroll') as HTMLElement;
@@ -524,50 +568,69 @@ import Layout from '../../layouts/Layout.astro';
   const sendBtn = document.getElementById('chat-send') as HTMLButtonElement;
   const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
 
-  function scrollToBottom() {
-    scrollEl.scrollTop = scrollEl.scrollHeight;
-  }
-
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  function scrollToBottom() { scrollEl.scrollTop = scrollEl.scrollHeight; }
 
   function renderMessage(msg: Message): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = `msg msg--${msg.role}`;
-
     const icon = document.createElement('div');
     icon.className = 'msg-icon';
     icon.textContent = msg.role === 'user' ? 'You' : 'MA';
-
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     bubble.innerHTML = msg.html;
-
     wrap.appendChild(icon);
     wrap.appendChild(bubble);
     return wrap;
   }
 
-  function addMessage(role: 'user' | 'assistant', html: string) {
+  function addMessage(role: 'user' | 'assistant', html: string): HTMLElement {
     if (emptyEl.parentElement) emptyEl.remove();
     const msg: Message = { role, html };
     messages.push(msg);
-    scrollEl.appendChild(renderMessage(msg));
+    const el = renderMessage(msg);
+    scrollEl.appendChild(el);
     scrollToBottom();
+    if (role === 'assistant') {
+      const bubble = el.querySelector('.msg-bubble') as HTMLElement | null;
+      if (bubble) {
+        try {
+          renderMathInElement(bubble, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '\\[', right: '\\]', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\(', right: '\\)', display: false },
+            ],
+            throwOnError: false,
+          });
+        } catch {}
+      }
+    }
+    return el;
   }
 
-  function addTyping(): HTMLElement {
+  function addTyping(statusText = ''): { el: HTMLElement; setStatus: (s: string) => void } {
     const wrap = document.createElement('div');
     wrap.className = 'msg msg--assistant';
     wrap.id = 'typing-indicator';
     wrap.innerHTML = `
       <div class="msg-icon">MA</div>
-      <div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+      <div class="msg-bubble">
+        <div class="typing-row">
+          <div class="typing"><span></span><span></span><span></span></div>
+          <span class="typing-status" id="typing-status">${statusText}</span>
+        </div>
+      </div>
     `;
     scrollEl.appendChild(wrap);
     scrollToBottom();
-    return wrap;
+    const setStatus = (s: string) => {
+      const el = document.getElementById('typing-status');
+      if (el) el.textContent = s;
+      scrollToBottom();
+    };
+    return { el: wrap, setStatus };
   }
 
   function removeTyping() {
@@ -575,19 +638,28 @@ import Layout from '../../layouts/Layout.astro';
     if (el) el.remove();
   }
 
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
     addMessage('user', `<p>${escapeHtml(trimmed)}</p>`);
     input.value = '';
     autosize();
+    sendBtn.disabled = true;
 
-    const typing = addTyping();
-    // Small delay so the typing indicator is visible — it's a placeholder, not a real LLM call
-    setTimeout(() => {
+    const typing = addTyping('Thinking…');
+    try {
+      await ensureReady((msg) => typing.setStatus(msg));
+      typing.setStatus('Searching corpus…');
+      const hits = await retrieve(trimmed, 3);
       removeTyping();
-      addMessage('assistant', matchResponse(trimmed));
-    }, 450);
+      addMessage('assistant', renderHits(hits));
+    } catch (err) {
+      removeTyping();
+      addMessage('assistant', `<p>Something went wrong loading the corpus or the embedding model: <code>${escapeHtml((err as Error).message)}</code>. Check your network connection — the model is fetched from the Hugging Face CDN on first use.</p>`);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
   }
 
   function autosize() {
@@ -597,10 +669,7 @@ import Layout from '../../layouts/Layout.astro';
 
   // ===== Event bindings =====
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    send(input.value);
-  });
+  form.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
 
   input.addEventListener('input', autosize);
   input.addEventListener('keydown', (e) => {
@@ -625,6 +694,5 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   input.focus();
+
 </script>
-</content>
-</invoke>

@@ -23,3 +23,8 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 MieShells/
+
+# python venv for scripts/
+scripts/.venv/
+scripts/out/
+**/__pycache__/
