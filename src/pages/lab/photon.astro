@@ -1,0 +1,605 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Photon Calculator" description="Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons — with live spectral chart and common laser references.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Photon <span class="gradient-text">Calculator</span></h1>
+      <p class="widget-hero__subtitle">
+        Enter any photon quantity and all others update in real time.
+        The chart shows the electromagnetic spectrum with common laser lines,
+        spectral bands, and your operating point.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="fields">
+            <div class="field">
+              <label for="lam">&lambda; (nm)</label>
+              <input type="text" class="field-input" id="lam" inputmode="decimal" placeholder="532">
+            </div>
+            <div class="field">
+              <label for="ev">E (eV)</label>
+              <input type="text" class="field-input" id="ev" inputmode="decimal" placeholder="2.331">
+            </div>
+            <div class="field">
+              <label for="nu">&nu; (THz)</label>
+              <input type="text" class="field-input" id="nu" inputmode="decimal" placeholder="563.5">
+            </div>
+            <div class="field">
+              <label for="om">&omega; (rad/fs)</label>
+              <input type="text" class="field-input" id="om" inputmode="decimal" placeholder="3.541">
+            </div>
+            <div class="field">
+              <label for="wn">&#7819; (cm<sup>&minus;1</sup>)</label>
+              <input type="text" class="field-input" id="wn" inputmode="decimal" placeholder="18797">
+            </div>
+            <div class="field">
+              <label for="per">T (fs)</label>
+              <input type="text" class="field-input" id="per" inputmode="decimal" placeholder="1.775">
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label>Common lasers</label></div>
+            <div class="preset-row" id="presets">
+              <button class="preset-btn" data-nm="405">405</button>
+              <button class="preset-btn" data-nm="532">532</button>
+              <button class="preset-btn" data-nm="633">633</button>
+              <button class="preset-btn" data-nm="780">780</button>
+              <button class="preset-btn" data-nm="1064">1064</button>
+              <button class="preset-btn" data-nm="1550">1550</button>
+            </div>
+          </div>
+
+          <!-- Spectral region indicator -->
+          <div class="gauge">
+            <div class="gauge-header">
+              <span class="gauge-label">Region</span>
+              <span class="gauge-value" id="region-name">&mdash;</span>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="region-fill"></div>
+            </div>
+          </div>
+
+          <button class="clear-btn" id="clear-btn">Clear all</button>
+
+          <p class="theory-note">
+            <strong>Photon relations.</strong>
+            E&nbsp;=&nbsp;h&thinsp;c/&lambda;&nbsp;=&nbsp;&hbar;&omega;, &ensp;
+            &nu;&nbsp;=&nbsp;c/&lambda;, &ensp;
+            T&nbsp;=&nbsp;1/&nu;, &ensp;
+            &#7819;&nbsp;=&nbsp;1/&lambda;.
+            h&thinsp;c&nbsp;&approx;&nbsp;1239.84&nbsp;eV&middot;nm.
+            Constants: CODATA 2018.
+          </p>
+        </div>
+
+        <!-- ===== Chart ===== -->
+        <div class="chart-panel card">
+          <div class="chart-header">
+            <span class="chart-title">Electromagnetic spectrum &mdash; &lambda;, E, and common lasers</span>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="photon-chart"></canvas>
+          </div>
+          <div class="chart-refs">
+            <span class="chart-refs-label">Bands</span>
+            <span class="ref-tag ref-tag--uv">UV</span>
+            <span class="ref-tag ref-tag--vis">Visible</span>
+            <span class="ref-tag ref-tag--nir">NIR</span>
+            <span class="ref-tag ref-tag--swir">SWIR</span>
+            <span class="ref-tag ref-tag--mir">MIR / LWIR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== Scoped styles ===== -->
+<style>
+  /* Hero */
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  /* Layout */
+  .widget-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--space-lg)); }
+  .controls h3 { font-size: 1rem; }
+
+  /* Fields */
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .field { display: flex; flex-direction: column; gap: 0.2rem; }
+  .field label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .field-input {
+    width: 100%; padding: 0.35rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--primary); text-align: right; outline: none; background: var(--bg); transition: border-color 0.15s;
+  }
+  .field-input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
+  .field-input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+  /* Presets */
+  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-header label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .preset-row { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.25rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); }
+
+  /* Region indicator */
+  .gauge { display: flex; flex-direction: column; gap: 0.3rem; }
+  .gauge-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .gauge-label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
+  .gauge-value { font-size: 0.8125rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+  .gauge-track {
+    height: 8px; border-radius: var(--radius-full); background: var(--bg-muted); overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill {
+    height: 100%; border-radius: var(--radius-full); width: 0%;
+    background: #6366F1;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+
+  /* Clear */
+  .clear-btn {
+    align-self: flex-start; padding: 0.4rem 1rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  /* Theory note */
+  .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
+  .theory-note strong { color: var(--text-soft); }
+
+  /* Chart */
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-header { display: flex; align-items: center; }
+  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  .chart-refs { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .chart-refs-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .ref-tag {
+    font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: var(--radius-full);
+  }
+  .ref-tag--uv   { background: #EDE9FE; color: #5B21B6; }
+  .ref-tag--vis  { background: #D1FAE5; color: #047857; }
+  .ref-tag--nir  { background: #FEE2E2; color: #B91C1C; }
+  .ref-tag--swir { background: #FEF3C7; color: #92400E; }
+  .ref-tag--mir  { background: #E7E5E4; color: #44403C; }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+    .fields { grid-template-columns: 1fr; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+  }
+</style>
+
+<!-- ===== Script ===== -->
+<script>
+  // ===== Physical constants (CODATA 2018) =====
+  const C  = 299792458.0;            // m/s
+  const H  = 6.62607015e-34;         // J·s
+  const EV = 1.602176634e-19;        // J/eV
+  const HC_EV_NM = H * C / EV * 1e9; // eV·nm ≈ 1239.84
+
+  // ===== Conversions (canonical: wavelength in meters) =====
+
+  function fromLam(lambdaM: number) {
+    const lam_nm = lambdaM * 1e9;
+    const E_eV = HC_EV_NM / lam_nm;
+    const nu_THz = C / lambdaM / 1e12;
+    const omega_radFs = 2 * Math.PI * C / lambdaM / 1e15;
+    const wvnum_cm1 = 1 / (lambdaM * 100);
+    const T_fs = (lambdaM / C) * 1e15;
+    return { lam_nm, E_eV, nu_THz, omega_radFs, wvnum_cm1, T_fs };
+  }
+
+  function toLambda(field: string, val: number): number {
+    if (!isFinite(val) || val <= 0) return NaN;
+    switch (field) {
+      case 'lam': return val * 1e-9;                     // nm → m
+      case 'ev':  return HC_EV_NM / val * 1e-9;          // eV → m
+      case 'nu':  return C / (val * 1e12);               // THz → m
+      case 'om':  return (2 * Math.PI * C) / (val * 1e15); // rad/fs → m
+      case 'wn':  return 1 / (val * 100);                // cm⁻¹ → m
+      case 'per': return (val * 1e-15) * C;              // fs → m
+      default:    return NaN;
+    }
+  }
+
+  // ===== Formatting =====
+
+  function fmt(v: number): string {
+    if (!isFinite(v)) return '';
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a < 1e-3 || a >= 1e6) return v.toExponential(3);
+    return parseFloat(v.toPrecision(6)).toString();
+  }
+
+  // ===== Spectral regions =====
+
+  type Region = { name: string; color: string };
+
+  function regionOf(nm: number): Region {
+    if (nm < 100)    return { name: 'X-ray',   color: '#312E81' };
+    if (nm < 280)    return { name: 'UV-C',    color: '#6B21A8' };
+    if (nm < 315)    return { name: 'UV-B',    color: '#8B5CF6' };
+    if (nm < 380)    return { name: 'UV-A',    color: '#A78BFA' };
+    if (nm < 450)    return { name: 'Violet',  color: '#7C3AED' };
+    if (nm < 485)    return { name: 'Blue',    color: '#3B82F6' };
+    if (nm < 500)    return { name: 'Cyan',    color: '#06B6D4' };
+    if (nm < 565)    return { name: 'Green',   color: '#10B981' };
+    if (nm < 590)    return { name: 'Yellow',  color: '#F59E0B' };
+    if (nm < 625)    return { name: 'Orange',  color: '#F97316' };
+    if (nm < 780)    return { name: 'Red',     color: '#EF4444' };
+    if (nm < 1400)   return { name: 'NIR',     color: '#DC2626' };
+    if (nm < 3000)   return { name: 'SWIR',    color: '#991B1B' };
+    if (nm < 8000)   return { name: 'MWIR',    color: '#7C2D12' };
+    if (nm < 15000)  return { name: 'LWIR',    color: '#44403C' };
+    if (nm < 1e6)    return { name: 'Far-IR',  color: '#1C1917' };
+    return { name: 'Microwave', color: '#0C0A09' };
+  }
+
+  // ===== DOM =====
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  const inputs: Record<string, HTMLInputElement> = {
+    lam: $('lam'), ev: $('ev'), nu: $('nu'),
+    om: $('om'),   wn: $('wn'), per: $('per'),
+  };
+
+  const regionFill = $('region-fill');
+  const regionName = document.getElementById('region-name')!;
+
+  let activeField: string | null = null;
+  let currentLambda = NaN; // meters
+
+  // ===== Update logic =====
+
+  function updateFrom(lambdaM: number, source: string) {
+    if (!isFinite(lambdaM) || lambdaM <= 0) return;
+    currentLambda = lambdaM;
+    const q = fromLam(lambdaM);
+
+    if (source !== 'lam') inputs.lam.value = fmt(q.lam_nm);
+    if (source !== 'ev')  inputs.ev.value  = fmt(q.E_eV);
+    if (source !== 'nu')  inputs.nu.value  = fmt(q.nu_THz);
+    if (source !== 'om')  inputs.om.value  = fmt(q.omega_radFs);
+    if (source !== 'wn')  inputs.wn.value  = fmt(q.wvnum_cm1);
+    if (source !== 'per') inputs.per.value = fmt(q.T_fs);
+
+    updateRegion(q.lam_nm);
+    updatePresets(q.lam_nm);
+    drawChart();
+  }
+
+  function clearAll() {
+    for (const inp of Object.values(inputs)) inp.value = '';
+    currentLambda = NaN;
+    regionFill.style.width = '0%';
+    regionFill.style.background = '#6366F1';
+    regionName.innerHTML = '&mdash;';
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    drawChart();
+  }
+
+  function updateRegion(nm: number) {
+    if (!isFinite(nm) || nm <= 0) {
+      regionFill.style.width = '0%';
+      regionName.innerHTML = '&mdash;';
+      return;
+    }
+    const r = regionOf(nm);
+    const logMin = Math.log10(100);      // 100 nm
+    const logMax = Math.log10(100000);   // 100 µm
+    const log = Math.log10(Math.max(100, Math.min(100000, nm)));
+    const pct = (log - logMin) / (logMax - logMin) * 100;
+    regionFill.style.width = Math.max(2, pct) + '%';
+    regionFill.style.background = r.color;
+    regionName.textContent = r.name;
+  }
+
+  function updatePresets(nm: number) {
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      const pn = parseFloat((b as HTMLElement).dataset.nm!);
+      b.classList.toggle('active', Math.abs(nm - pn) / pn < 0.001);
+    });
+  }
+
+  // ===== Input handlers =====
+
+  for (const [name, inp] of Object.entries(inputs)) {
+    inp.addEventListener('focus', () => { activeField = name; });
+    inp.addEventListener('input', () => {
+      if (activeField !== name) return;
+      const raw = inp.value.trim();
+      if (raw === '') { clearAll(); return; }
+      const num = parseFloat(raw);
+      if (isNaN(num)) return;
+      const lam = toLambda(name, num);
+      if (!isNaN(lam) && lam > 0) updateFrom(lam, name);
+    });
+  }
+
+  // Presets
+  document.getElementById('presets')!.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
+    if (!btn) return;
+    const nm = parseFloat(btn.dataset.nm!);
+    activeField = 'lam';
+    inputs.lam.value = nm.toString();
+    updateFrom(nm * 1e-9, 'lam');
+    inputs.lam.focus();
+  });
+
+  // Clear
+  document.getElementById('clear-btn')!.addEventListener('click', clearAll);
+
+  // ===== Chart =====
+
+  const CHART = {
+    lamMin: 100,     // nm
+    lamMax: 100000,  // nm (100 µm)
+    margin: { top: 26, right: 24, bottom: 60, left: 24 },
+    lasers: [
+      { nm: 405,  label: '405' },
+      { nm: 532,  label: '532' },
+      { nm: 633,  label: '633' },
+      { nm: 780,  label: '780' },
+      { nm: 1064, label: '1064' },
+      { nm: 1550, label: '1550' },
+    ],
+    bands: [
+      { min: 100,   max: 280,    name: 'UV-C',  color: '#6B21A8' },
+      { min: 280,   max: 315,    name: 'UV-B',  color: '#8B5CF6' },
+      { min: 315,   max: 380,    name: 'UV-A',  color: '#A78BFA' },
+      // 380–780 handled as rainbow gradient
+      { min: 780,   max: 1400,   name: 'NIR',   color: '#DC2626' },
+      { min: 1400,  max: 3000,   name: 'SWIR',  color: '#991B1B' },
+      { min: 3000,  max: 8000,   name: 'MWIR',  color: '#7C2D12' },
+      { min: 8000,  max: 100000, name: 'LWIR',  color: '#44403C' },
+    ],
+  };
+
+  const logLMin = Math.log10(CHART.lamMin);
+  const logLMax = Math.log10(CHART.lamMax);
+
+  function drawChart() {
+    const canvas = document.getElementById('photon-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const m = CHART.margin;
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+
+    const nmToX = (nm: number) =>
+      m.left + pw * (Math.log10(nm) - logLMin) / (logLMax - logLMin);
+
+    // Vertical layout inside plot area
+    const barHeight = Math.round(ph * 0.45);
+    const barY0 = m.top + Math.round(ph * 0.22);
+    const barY1 = barY0 + barHeight;
+
+    // Background
+    ctx.fillStyle = '#FAFAFF';
+    ctx.fillRect(m.left, m.top, pw, ph);
+
+    // ===== Spectrum bar =====
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(m.left, barY0, pw, barHeight);
+    ctx.clip();
+
+    // Non-visible bands (solid colors)
+    for (const band of CHART.bands) {
+      const x0 = Math.max(nmToX(band.min), m.left);
+      const x1 = Math.min(nmToX(band.max), m.left + pw);
+      if (x1 <= x0) continue;
+      ctx.fillStyle = band.color;
+      ctx.fillRect(x0, barY0, x1 - x0, barHeight);
+    }
+
+    // Visible rainbow gradient (380–780 nm)
+    const vx0 = nmToX(380);
+    const vx1 = nmToX(780);
+    const grad = ctx.createLinearGradient(vx0, 0, vx1, 0);
+    grad.addColorStop(0.00, '#7C3AED'); // violet
+    grad.addColorStop(0.18, '#3B82F6'); // blue
+    grad.addColorStop(0.28, '#06B6D4'); // cyan
+    grad.addColorStop(0.46, '#10B981'); // green
+    grad.addColorStop(0.58, '#FCD34D'); // yellow
+    grad.addColorStop(0.70, '#F59E0B'); // orange
+    grad.addColorStop(0.86, '#EF4444'); // red
+    grad.addColorStop(1.00, '#991B1B'); // deep red
+    ctx.fillStyle = grad;
+    ctx.fillRect(vx0, barY0, vx1 - vx0, barHeight);
+
+    ctx.restore();
+
+    // Bar border
+    ctx.strokeStyle = '#1E1B4B';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(m.left + 0.5, barY0 + 0.5, pw - 1, barHeight - 1);
+
+    // Band labels (inside bar)
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bandLabels = [
+      { min: 100,  max: 380,    name: 'UV',     fg: '#FFFFFF' },
+      { min: 380,  max: 780,    name: 'VIS',    fg: '#1E1B4B' },
+      { min: 780,  max: 1400,   name: 'NIR',    fg: '#FFFFFF' },
+      { min: 1400, max: 3000,   name: 'SWIR',   fg: '#FFFFFF' },
+      { min: 3000, max: 8000,   name: 'MWIR',   fg: '#FFFFFF' },
+      { min: 8000, max: 100000, name: 'LWIR',   fg: '#FFFFFF' },
+    ];
+    for (const bl of bandLabels) {
+      const x0 = Math.max(nmToX(bl.min), m.left);
+      const x1 = Math.min(nmToX(bl.max), m.left + pw);
+      if (x1 - x0 < 26) continue;
+      ctx.fillStyle = bl.fg;
+      ctx.fillText(bl.name, (x0 + x1) / 2, barY0 + barHeight / 2);
+    }
+
+    // ===== Top axis: wavelength =====
+    ctx.fillStyle = '#64648B';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    const lamTicks = [
+      { nm: 100,    lbl: '100 nm' },
+      { nm: 300,    lbl: '300' },
+      { nm: 1000,   lbl: '1 µm' },
+      { nm: 3000,   lbl: '3' },
+      { nm: 10000,  lbl: '10' },
+      { nm: 30000,  lbl: '30' },
+      { nm: 100000, lbl: '100 µm' },
+    ];
+    for (const t of lamTicks) {
+      const x = nmToX(t.nm);
+      ctx.fillText(t.lbl, x, barY0 - 4);
+      ctx.strokeStyle = '#1E1B4B';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, barY0); ctx.lineTo(x, barY0 - 3); ctx.stroke();
+    }
+
+    // ===== Bottom axis: energy =====
+    ctx.fillStyle = '#64648B';
+    ctx.textBaseline = 'top';
+    const evTicks = [
+      { eV: 12.4,  nm: HC_EV_NM / 12.4,  lbl: '12.4 eV' },
+      { eV: 4.13,  nm: HC_EV_NM / 4.13,  lbl: '4.1' },
+      { eV: 1.24,  nm: HC_EV_NM / 1.24,  lbl: '1.24' },
+      { eV: 0.413, nm: HC_EV_NM / 0.413, lbl: '0.41' },
+      { eV: 0.124, nm: HC_EV_NM / 0.124, lbl: '0.12' },
+      { eV: 0.0413, nm: HC_EV_NM / 0.0413, lbl: '0.04' },
+      { eV: 0.0124, nm: HC_EV_NM / 0.0124, lbl: '0.012 eV' },
+    ];
+    for (const t of evTicks) {
+      if (t.nm < CHART.lamMin || t.nm > CHART.lamMax) continue;
+      const x = nmToX(t.nm);
+      ctx.fillText(t.lbl, x, barY1 + 4);
+      ctx.strokeStyle = '#1E1B4B';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, barY1); ctx.lineTo(x, barY1 + 3); ctx.stroke();
+    }
+
+    // Axis titles
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('λ', m.left, barY0 - 18);
+    ctx.textBaseline = 'top';
+    ctx.fillText('E', m.left, barY1 + 18);
+
+    // ===== Laser markers (below bar) =====
+    const laserY = barY1 + 22;
+    for (const ls of CHART.lasers) {
+      const x = nmToX(ls.nm);
+
+      // Dashed vertical line down from bar
+      ctx.setLineDash([2, 3]);
+      ctx.strokeStyle = '#6366F160';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, barY1); ctx.lineTo(x, laserY + 14); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Marker dot at top of bar
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#1E1B4B';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, barY0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Label (vertical)
+      ctx.save();
+      ctx.fillStyle = '#64648B';
+      ctx.font = '9px Inter, system-ui, sans-serif';
+      ctx.translate(x + 3, laserY + 14);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ls.label, 0, 0);
+      ctx.restore();
+    }
+
+    // ===== Operating point =====
+    if (isFinite(currentLambda) && currentLambda > 0) {
+      const nm = currentLambda * 1e9;
+      if (nm >= CHART.lamMin && nm <= CHART.lamMax) {
+        const x = nmToX(nm);
+
+        // Full-height crosshair
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = '#F43F5E80';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, barY1 + 14); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Glow on bar
+        const gr = ctx.createRadialGradient(x, (barY0 + barY1) / 2, 0, x, (barY0 + barY1) / 2, 16);
+        gr.addColorStop(0, 'rgba(244,63,94,0.35)');
+        gr.addColorStop(1, 'rgba(244,63,94,0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 16, 0, Math.PI * 2); ctx.fill();
+
+        // Marker
+        ctx.fillStyle = '#F43F5E';
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // Value label
+        const E_eV = HC_EV_NM / nm;
+        ctx.fillStyle = '#1E1B4B';
+        ctx.font = '600 10px Inter, system-ui, sans-serif';
+        ctx.textBaseline = 'alphabetic';
+        const lamLabel = nm >= 1000 ? `${fmt(nm / 1000)} µm` : `${fmt(nm)} nm`;
+        const txt = `${lamLabel}, ${fmt(E_eV)} eV`;
+        const tw = ctx.measureText(txt).width;
+        const tx = Math.max(m.left, Math.min(m.left + pw - tw, x + 8));
+        ctx.fillText(txt, tx, m.top + 14);
+      }
+    }
+  }
+
+  // Resize handling
+  new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
+
+  // Initial draw
+  drawChart();
+</script>
+</content>
+</invoke>
