@@ -23,8 +23,10 @@ import Layout from '../../layouts/Layout.astro';
         <button class="calc-tab" data-tab="gdd">Dispersion</button>
         <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
         <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
+        <button class="calc-tab" data-tab="chirp">Chirp</button>
         <button class="calc-tab" data-tab="nlc">Nonlinear Conversion</button>
         <button class="calc-tab" data-tab="bright">Brightness</button>
+        <button class="calc-tab" data-tab="modes">Beam Modes</button>
       </div>
 
       <!-- ============================================================ -->
@@ -223,12 +225,8 @@ import Layout from '../../layouts/Layout.astro';
                   </select>
                 </div>
                 <div class="field">
-                  <label for="gdd-wl">Wavelength</label>
-                  <select class="field-input" id="gdd-wl">
-                    <option value="800">800 nm</option>
-                    <option value="1030">1030 nm</option>
-                    <option value="1550">1550 nm</option>
-                  </select>
+                  <label for="gdd-wl">&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="gdd-wl" inputmode="decimal" value="800">
                 </div>
                 <div class="field">
                   <label for="gdd-gvd">GVD (fs&sup2;/mm)</label>
@@ -447,7 +445,94 @@ import Layout from '../../layouts/Layout.astro';
       </div>
 
       <!-- ============================================================ -->
-      <!-- TAB 6: Nonlinear Conversion                                   -->
+      <!-- TAB 6: Chirp / Compressor                                     -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-chirp">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Chirp &amp; Compressor</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Measured pulse</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="chirp-dt">&Delta;t<sub>actual</sub> (fs)</label>
+                  <input type="text" class="field-input" id="chirp-dt" inputmode="decimal" value="500">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Transform limit</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="chirp-lam">&lambda;<sub>0</sub> (nm)</label>
+                  <input type="text" class="field-input" id="chirp-lam" inputmode="decimal" value="800">
+                </div>
+                <div class="field">
+                  <label for="chirp-dlam">&Delta;&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="chirp-dlam" inputmode="decimal" value="30">
+                </div>
+                <div class="field">
+                  <label for="chirp-dtTL">&Delta;t<sub>TL</sub> (fs)</label>
+                  <input type="text" class="field-input" id="chirp-dtTL" inputmode="decimal" readonly>
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Compressor material</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="chirp-mat">Material</label>
+                  <select class="field-input" id="chirp-mat">
+                    <option value="sio2">Fused silica</option>
+                    <option value="bk7">BK7</option>
+                    <option value="caf2">CaF&sub2;</option>
+                    <option value="sapphire">Sapphire</option>
+                    <option value="sf10">SF10</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Chirp compensation.</strong>
+              GDD&nbsp;=&nbsp;&plusmn;&Delta;t<sub>in</sub>&thinsp;&radic;((&Delta;t<sub>actual</sub>/&Delta;t<sub>TL</sub>)&sup2;&minus;1)/(4&thinsp;ln2).
+              L&nbsp;=&nbsp;|GDD|/GVD.
+              Sign of GDD tells you if pulse has positive or negative chirp.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Chirp ratio &Delta;t/&Delta;t<sub>TL</sub></span>
+                <span class="result-value" id="chirp-out-ratio">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">GDD on the pulse</span>
+                <span class="result-value" id="chirp-out-gdd">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Compensating GDD</span>
+                <span class="result-value" id="chirp-out-comp">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Material needed</span>
+                <span class="result-value" id="chirp-out-mat">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="chirp-chart" aria-label="Pulse duration vs GDD"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 7: Nonlinear Conversion                                   -->
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-nlc">
         <div class="widget-layout">
@@ -624,6 +709,86 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
       </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 9: Beam Modes (LG/HG)                                    -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-modes">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Beam Modes</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Mode family</span>
+              <div class="shape-row" id="modes-family">
+                <button class="preset-btn active" data-shape="lg">Laguerre-Gauss</button>
+                <button class="preset-btn" data-shape="hg">Hermite-Gauss</button>
+              </div>
+            </div>
+
+            <div class="param-group" id="modes-lg-params">
+              <span class="param-group__title">LG indices</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="modes-l">&ell; (azimuthal)</label>
+                  <input type="text" class="field-input" id="modes-l" inputmode="decimal" value="1">
+                </div>
+                <div class="field">
+                  <label for="modes-p">p (radial)</label>
+                  <input type="text" class="field-input" id="modes-p" inputmode="decimal" value="0">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group" id="modes-hg-params" style="display:none">
+              <span class="param-group__title">HG indices</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="modes-m">m (horizontal)</label>
+                  <input type="text" class="field-input" id="modes-m" inputmode="decimal" value="2">
+                </div>
+                <div class="field">
+                  <label for="modes-n">n (vertical)</label>
+                  <input type="text" class="field-input" id="modes-n" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Beam</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="modes-w0">w<sub>0</sub> (&mu;m)</label>
+                  <input type="text" class="field-input" id="modes-w0" inputmode="decimal" value="100">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note" id="modes-note">
+              <strong>LG<sub>&ell;,p</sub>.</strong>
+              Modes with orbital angular momentum &ell;&hbar; per photon
+              and p radial nodes. Donut profile for &ell;&ne;0.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Intensity profile</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Mode label</span>
+                <span class="result-value" id="modes-out-label">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">OAM per photon</span>
+                <span class="result-value" id="modes-out-oam">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="modes-chart" aria-label="Beam mode intensity profile"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </Layout>
@@ -762,8 +927,10 @@ import Layout from '../../layouts/Layout.astro';
         else if (tab.dataset.tab === 'gdd') calcGDD();
         else if (tab.dataset.tab === 'beam') calcBeam();
         else if (tab.dataset.tab === 'focus') calcFocus();
+        else if (tab.dataset.tab === 'chirp') calcChirp();
         else if (tab.dataset.tab === 'nlc') calcNLC();
         else if (tab.dataset.tab === 'bright') calcBrightness();
+        else if (tab.dataset.tab === 'modes') calcModes();
       });
     });
   });
@@ -778,14 +945,39 @@ import Layout from '../../layouts/Layout.astro';
   const TBP: Record<string, number> = { gaussian: 0.4413, sech2: 0.3148, lorentzian: 0.2206 };
   const SHAPE_K: Record<string, number> = { gaussian: 0.9394, sech2: 0.8813, rect: 1.0 };
 
-  // GVD table: material → { wavelength → GVD in fs²/mm }
-  const GVD_TABLE: Record<string, Record<string, number>> = {
-    sio2:     { '800': 36.1,  '1030': 23.5, '1550': -11.2 },
-    bk7:      { '800': 44.6,  '1030': 28.6, '1550': -4.7  },
-    caf2:     { '800': 27.4,  '1030': 17.5, '1550': -16.1 },
-    sapphire: { '800': 58.0,  '1030': 38.0, '1550': 2.5   },
-    sf10:     { '800': 159.0, '1030': 88.0, '1550': 20.3  },
+  // Sellmeier coefficients: n²(λ) = 1 + Σ Bᵢλ²/(λ²-Cᵢ)  where λ in µm
+  const SELLMEIER: Record<string, { B: number[]; C: number[] }> = {
+    sio2:     { B: [0.6961663, 0.4079426, 0.8974794], C: [0.0684043*0.0684043, 0.1162414*0.1162414, 9.896161*9.896161] },
+    bk7:      { B: [1.03961212, 0.231792344, 1.01046945], C: [0.00600069867, 0.0200179144, 103.560653] },
+    caf2:     { B: [0.5675888, 0.4710914, 3.8484723], C: [0.050263605*0.050263605, 0.1003909*0.1003909, 34.649040*34.649040] },
+    sapphire: { B: [1.4313493, 0.65054713, 5.3414021], C: [0.0726631*0.0726631, 0.1193242*0.1193242, 18.028251*18.028251] },
+    sf10:     { B: [1.62153902, 0.256287842, 1.64447552], C: [0.0122241457, 0.0595736775, 147.468793] },
   };
+
+  /** Compute GVD (fs²/mm) from Sellmeier coefficients at wavelength λ (nm). */
+  function sellmeierGVD(mat: string, lam_nm: number): number {
+    const s = SELLMEIER[mat];
+    if (!s) return NaN;
+    const lam = lam_nm / 1000;  // µm
+    const lam2 = lam * lam;
+    // n(λ) and derivatives via finite differences (robust and simple)
+    const dl = 0.0001; // µm step
+    function nAtLam(l: number): number {
+      const l2 = l * l;
+      let n2 = 1;
+      for (let i = 0; i < s.B.length; i++) n2 += s.B[i] * l2 / (l2 - s.C[i]);
+      return Math.sqrt(n2);
+    }
+    const n0 = nAtLam(lam);
+    const np = nAtLam(lam + dl);
+    const nm = nAtLam(lam - dl);
+    const d2n = (np - 2 * n0 + nm) / (dl * dl);  // d²n/dλ² in 1/µm²
+    // GVD = (λ³/(2πc²)) × d²n/dλ²  — but we want fs²/mm
+    // c = 299792.458 µm/ps = 0.299792458 µm/fs
+    const c_um_fs = 0.299792458;
+    const gvd = (lam * lam * lam) / (2 * Math.PI * c_um_fs * c_um_fs) * d2n;  // fs²/µm
+    return gvd * 1000;  // fs²/mm
+  }
 
   /* ================================================================ */
   /*  Helpers                                                          */
@@ -908,7 +1100,7 @@ import Layout from '../../layouts/Layout.astro';
   /*  Calculator 3: Dispersion (GDD)                                   */
   /* ================================================================ */
   const gddMat = el<HTMLSelectElement>('gdd-mat');
-  const gddWl = el<HTMLSelectElement>('gdd-wl');
+  const gddWl = el<HTMLInputElement>('gdd-wl');
   const gddGvd = el<HTMLInputElement>('gdd-gvd');
 
   function updateGVD() {
@@ -919,9 +1111,10 @@ import Layout from '../../layouts/Layout.astro';
     } else {
       gddGvd.readOnly = true;
       gddGvd.style.opacity = '0.7';
-      const wl = gddWl.value;
-      const val = GVD_TABLE[mat]?.[wl];
-      gddGvd.value = val != null ? String(val) : '—';
+      const wl = parseFloat(gddWl.value);
+      if (!wl || wl <= 0) return;
+      const val = sellmeierGVD(mat, wl);
+      gddGvd.value = isNaN(val) ? '\u2014' : val.toFixed(2);
     }
     calcGDD();
   }
@@ -947,7 +1140,7 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   gddMat.addEventListener('change', updateGVD);
-  gddWl.addEventListener('change', updateGVD);
+  gddWl.addEventListener('input', updateGVD);
   gddGvd.addEventListener('input', calcGDD);
   el<HTMLInputElement>('gdd-dt').addEventListener('input', calcGDD);
   el<HTMLInputElement>('gdd-L').addEventListener('input', calcGDD);
@@ -1061,7 +1254,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.restore();
   }
 
-  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); calcNLC(); calcBrightness(); }
+  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); calcChirp(); calcNLC(); calcBrightness(); calcModes(); }
   onThemeChange(redrawAll);
   window.addEventListener('resize', redrawAll);
 
@@ -2107,6 +2300,313 @@ import Layout from '../../layouts/Layout.astro';
   );
   ['brt-pavg-u', 'brt-frep-u'].forEach(id =>
     el<HTMLSelectElement>(id).addEventListener('change', calcBrightness)
+  );
+
+  /* ================================================================ */
+  /*  Calculator: Chirp / Compressor                                   */
+  /* ================================================================ */
+  function calcChirp() {
+    const dt_actual = parseFloat(el<HTMLInputElement>('chirp-dt').value);
+    const lam0 = parseFloat(el<HTMLInputElement>('chirp-lam').value);
+    const dlam = parseFloat(el<HTMLInputElement>('chirp-dlam').value);
+    const mat = el<HTMLSelectElement>('chirp-mat').value;
+
+    if (!dt_actual || !lam0 || !dlam) return;
+
+    // TL duration (Gaussian TBP)
+    const dnu_THz = c_nm_fs * dlam / (lam0 * lam0) * 1e3;
+    const dt_TL = TBP.gaussian / (dnu_THz * 1e-3);
+    el<HTMLInputElement>('chirp-dtTL').value = dt_TL.toFixed(1);
+
+    if (dt_actual < dt_TL) {
+      el<HTMLElement>('chirp-out-ratio').textContent = 'Actual < TL (check inputs)';
+      return;
+    }
+
+    const ratio = dt_actual / dt_TL;
+    el<HTMLElement>('chirp-out-ratio').textContent = ratio.toFixed(2) + '\u00d7';
+
+    // GDD from: dt_out = dt_TL * sqrt(1 + (4ln2 * GDD / dt_TL²)²)
+    // → (dt_out/dt_TL)² = 1 + (4ln2 * GDD / dt_TL²)²
+    // → GDD = ± dt_TL² * sqrt((dt_out/dt_TL)² - 1) / (4ln2)
+    const gddAbs = dt_TL * dt_TL * Math.sqrt(ratio * ratio - 1) / (4 * ln2);
+    el<HTMLElement>('chirp-out-gdd').textContent = '\u00b1' + gddAbs.toFixed(0) + ' fs\u00b2';
+    el<HTMLElement>('chirp-out-comp').textContent = '\u2213' + gddAbs.toFixed(0) + ' fs\u00b2';
+
+    // Material needed
+    const gvd = sellmeierGVD(mat, lam0);
+    if (!isNaN(gvd) && gvd !== 0) {
+      const L_mm = Math.abs(gddAbs / gvd);
+      const matNames: Record<string, string> = { sio2: 'fused silica', bk7: 'BK7', caf2: 'CaF\u2082', sapphire: 'sapphire', sf10: 'SF10' };
+      el<HTMLElement>('chirp-out-mat').textContent = L_mm.toFixed(1) + ' mm ' + (matNames[mat] || mat) + ` (GVD = ${gvd.toFixed(1)} fs\u00b2/mm)`;
+    }
+
+    drawChirpChart(dt_TL, gddAbs);
+  }
+
+  function drawChirpChart(dt_TL: number, gdd_current: number) {
+    const canvas = el<HTMLCanvasElement>('chirp-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 50 * fs, mr = 16 * fs, mt = 12 * fs, mb = 36 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // Plot: Δt vs GDD, symmetric around 0
+    const gddMax = Math.max(gdd_current * 1.5, 100);
+    const nPts = 200;
+    let yMax = dt_TL;
+    const xs = new Float64Array(nPts);
+    const ys = new Float64Array(nPts);
+    for (let i = 0; i < nPts; i++) {
+      const gdd = -gddMax + (2 * gddMax * i) / (nPts - 1);
+      const r = 4 * ln2 * gdd / (dt_TL * dt_TL);
+      xs[i] = gdd;
+      ys[i] = dt_TL * Math.sqrt(1 + r * r);
+      if (ys[i] > yMax) yMax = ys[i];
+    }
+    yMax *= 1.15;
+
+    // Grid
+    ctx.strokeStyle = ct.grid; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = mt + (i / 4) * ph;
+      ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke();
+    }
+    // Zero GDD line
+    const zeroX = ml + pw / 2;
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = ct.textMuted; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(zeroX, mt); ctx.lineTo(zeroX, mt + ph); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Curve
+    ctx.beginPath(); ctx.strokeStyle = ct.primary; ctx.lineWidth = 2;
+    for (let i = 0; i < nPts; i++) {
+      const x = ml + ((xs[i] + gddMax) / (2 * gddMax)) * pw;
+      const y = mt + ph - (ys[i] / yMax) * ph;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Operating points (±GDD)
+    for (const sign of [-1, 1]) {
+      const gdd = sign * gdd_current;
+      const r = 4 * ln2 * gdd / (dt_TL * dt_TL);
+      const dt = dt_TL * Math.sqrt(1 + r * r);
+      const x = ml + ((gdd + gddMax) / (2 * gddMax)) * pw;
+      const y = mt + ph - (dt / yMax) * ph;
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = sign > 0 ? '#EC4899' : '#10B981';
+      ctx.fill();
+    }
+
+    // TL point at center
+    const tlY = mt + ph - (dt_TL / yMax) * ph;
+    ctx.beginPath(); ctx.arc(zeroX, tlY, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = ct.primary; ctx.fill();
+    ctx.fillStyle = ct.primary; ctx.font = `bold ${10 * fs}px ${font}`;
+    ctx.textAlign = 'left';
+    ctx.fillText('TL', zeroX + 8 * fs, tlY + 3 * fs);
+
+    // Axes
+    ctx.fillStyle = ct.textSoft; ctx.font = `${11 * fs}px ${font}`; ctx.textAlign = 'center';
+    for (let i = 0; i <= 4; i++) {
+      const v = -gddMax + (i / 4) * 2 * gddMax;
+      ctx.fillText(v.toFixed(0), ml + (i / 4) * pw, mt + ph + 14 * fs);
+    }
+    ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('GDD (fs\u00b2)', ml + pw / 2, mt + ph + 30 * fs);
+
+    ctx.textAlign = 'right'; ctx.font = `${11 * fs}px ${font}`;
+    for (let i = 0; i <= 4; i++) {
+      const v = yMax * (1 - i / 4);
+      ctx.fillText(v.toFixed(0), ml - 6 * fs, mt + (i / 4) * ph + 4 * fs);
+    }
+    ctx.save(); ctx.translate(12 * fs, mt + ph / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('\u0394t (fs)', 0, 0); ctx.restore();
+  }
+
+  ['chirp-dt', 'chirp-lam', 'chirp-dlam'].forEach(id =>
+    el<HTMLInputElement>(id).addEventListener('input', calcChirp)
+  );
+  el<HTMLSelectElement>('chirp-mat').addEventListener('change', calcChirp);
+
+  /* ================================================================ */
+  /*  Calculator: Beam Modes (LG / HG)                                 */
+  /* ================================================================ */
+  function modesFamily(): string { return getActiveShape('modes-family'); }
+
+  // Generalized Laguerre polynomial L_p^|l|(x)
+  function laguerreL(p: number, absL: number, x: number): number {
+    if (p === 0) return 1;
+    if (p === 1) return 1 + absL - x;
+    let prev2 = 1, prev1 = 1 + absL - x;
+    for (let k = 2; k <= p; k++) {
+      const curr = ((2 * k - 1 + absL - x) * prev1 - (k - 1 + absL) * prev2) / k;
+      prev2 = prev1; prev1 = curr;
+    }
+    return prev1;
+  }
+
+  // Hermite polynomial H_n(x)
+  function hermiteH(n: number, x: number): number {
+    if (n === 0) return 1;
+    if (n === 1) return 2 * x;
+    let prev2 = 1, prev1 = 2 * x;
+    for (let k = 2; k <= n; k++) {
+      const curr = 2 * x * prev1 - 2 * (k - 1) * prev2;
+      prev2 = prev1; prev1 = curr;
+    }
+    return prev1;
+  }
+
+  function calcModes() {
+    const family = modesFamily();
+    const w0 = parseFloat(el<HTMLInputElement>('modes-w0').value) || 100;
+
+    el<HTMLElement>('modes-lg-params').style.display = family === 'lg' ? '' : 'none';
+    el<HTMLElement>('modes-hg-params').style.display = family === 'hg' ? '' : 'none';
+
+    if (family === 'lg') {
+      const l = parseInt(el<HTMLInputElement>('modes-l').value) || 0;
+      const p = parseInt(el<HTMLInputElement>('modes-p').value) || 0;
+      el<HTMLElement>('modes-out-label').textContent = `LG\u2097\u209A = LG${l},${p}`;
+      el<HTMLElement>('modes-out-oam').textContent = l === 0 ? '0 (no OAM)' : `${l}\u210f per photon`;
+      el<HTMLElement>('modes-note').innerHTML = `<strong>LG<sub>${l},${p}</sub>.</strong> ` +
+        (l === 0 && p === 0 ? 'Fundamental Gaussian (TEM\u2080\u2080).' :
+         l !== 0 && p === 0 ? `Donut mode with ${Math.abs(l)}\u210f OAM. Central null from phase singularity.` :
+         `${p} radial node${p > 1 ? 's' : ''}, ${Math.abs(l)}\u210f OAM.`);
+    } else {
+      const m = parseInt(el<HTMLInputElement>('modes-m').value) || 0;
+      const n = parseInt(el<HTMLInputElement>('modes-n').value) || 0;
+      el<HTMLElement>('modes-out-label').textContent = `HG${m},${n} (TEM${m}${n})`;
+      el<HTMLElement>('modes-out-oam').textContent = 'N/A (no OAM)';
+      el<HTMLElement>('modes-note').innerHTML = `<strong>HG<sub>${m},${n}</sub>.</strong> ` +
+        `${m} horizontal node${m !== 1 ? 's' : ''}, ${n} vertical node${n !== 1 ? 's' : ''}. ` +
+        (m === 0 && n === 0 ? 'Fundamental Gaussian.' : `${(m + 1) * (n + 1)} lobes.`);
+    }
+
+    drawModesChart(family, w0);
+  }
+
+  function drawModesChart(family: string, w0: number) {
+    const canvas = el<HTMLCanvasElement>('modes-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 16 * fs, mr = 50 * fs, mt = 8 * fs, mb = 8 * fs;
+    const side = Math.min(W - ml - mr, H - mt - mb);
+    if (side < 10) return;
+    const ox = ml + (W - ml - mr - side) / 2;
+    const oy = mt + (H - mt - mb - side) / 2;
+
+    const N = 200;
+    const extent = 3; // in units of w0
+    const imgData = ctx.createImageData(Math.round(side * dpr), Math.round(side * dpr));
+    const pxW = imgData.width, pxH = imgData.height;
+
+    // Inferno colormap
+    const INFERNO: [number,number,number][] = [
+      [0,0,4],[40,11,84],[101,21,110],[159,42,99],
+      [212,72,66],[245,125,21],[250,193,39],[252,255,164],
+    ];
+    function inferno(t: number): [number,number,number] {
+      t = Math.max(0, Math.min(1, t));
+      const s = t * (INFERNO.length - 1);
+      const i = Math.floor(s), f = s - i;
+      const a = INFERNO[i], b = INFERNO[Math.min(i+1, INFERNO.length-1)];
+      return [a[0]+f*(b[0]-a[0]), a[1]+f*(b[1]-a[1]), a[2]+f*(b[2]-a[2])];
+    }
+
+    let maxI = 0;
+
+    // Precompute intensity
+    const intensity = new Float64Array(pxW * pxH);
+    for (let py = 0; py < pxH; py++) {
+      const y = (1 - py / (pxH - 1)) * 2 * extent - extent; // in w0 units
+      for (let px = 0; px < pxW; px++) {
+        const x = (px / (pxW - 1)) * 2 * extent - extent;
+        let I = 0;
+        if (family === 'lg') {
+          const l = parseInt(el<HTMLInputElement>('modes-l').value) || 0;
+          const p = parseInt(el<HTMLInputElement>('modes-p').value) || 0;
+          const r = Math.sqrt(x * x + y * y);
+          const rho = r * Math.SQRT2;
+          const rho2 = rho * rho;
+          const L = laguerreL(p, Math.abs(l), rho2);
+          I = Math.pow(rho, 2 * Math.abs(l)) * L * L * Math.exp(-rho2);
+        } else {
+          const m = parseInt(el<HTMLInputElement>('modes-m').value) || 0;
+          const n = parseInt(el<HTMLInputElement>('modes-n').value) || 0;
+          const hm = hermiteH(m, x * Math.SQRT2);
+          const hn = hermiteH(n, y * Math.SQRT2);
+          I = hm * hm * hn * hn * Math.exp(-2 * (x * x + y * y));
+        }
+        intensity[py * pxW + px] = I;
+        if (I > maxI) maxI = I;
+      }
+    }
+
+    // Render
+    const invMax = maxI > 0 ? 1 / maxI : 1;
+    for (let py = 0; py < pxH; py++) {
+      for (let px = 0; px < pxW; px++) {
+        const t = intensity[py * pxW + px] * invMax;
+        const [r, g, b] = inferno(t);
+        const off = (py * pxW + px) * 4;
+        imgData.data[off] = r; imgData.data[off+1] = g; imgData.data[off+2] = b; imgData.data[off+3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, ox * dpr, oy * dpr);
+
+    // Colorbar
+    const cbW = 10 * fs, cbGap = 10 * fs;
+    const cbX = ox + side + cbGap;
+    const cbH = side * 0.7;
+    const cbY = oy + (side - cbH) / 2;
+    for (let i = 0; i < cbH; i++) {
+      const t = 1 - i / cbH;
+      const [r, g, b] = inferno(t);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(cbX, cbY + i, cbW, 1);
+    }
+    ctx.strokeStyle = ct.textMuted; ctx.lineWidth = 0.5;
+    ctx.strokeRect(cbX, cbY, cbW, cbH);
+
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+    ctx.fillStyle = ct.textSoft; ctx.font = `${9 * fs}px ${font}`; ctx.textAlign = 'left';
+    ctx.fillText('max', cbX + cbW + 3 * fs, cbY + 4 * fs);
+    ctx.fillText('0', cbX + cbW + 3 * fs, cbY + cbH + 1 * fs);
+  }
+
+  setupShapeButtons('modes-family', calcModes);
+  ['modes-l', 'modes-p', 'modes-m', 'modes-n', 'modes-w0'].forEach(id =>
+    el<HTMLInputElement>(id).addEventListener('input', calcModes)
   );
 
   /* ================================================================ */
