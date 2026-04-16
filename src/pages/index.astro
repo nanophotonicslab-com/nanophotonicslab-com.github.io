@@ -1,13 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getLocaleFromPath, t } from '../i18n/translations';
-
 const base = import.meta.env.BASE_URL;
-const locale = getLocaleFromPath(Astro.url.pathname);
-const prefix = locale === 'en' ? '' : '/es';
 ---
 
-<Layout title={t(locale, 'home.title')}>
+<Layout title="Home">
   <!-- Hero -->
   <section class="hero">
     <div class="hero__bg" aria-hidden="true">
@@ -18,14 +14,16 @@ const prefix = locale === 'en' ? '' : '/es';
     </div>
     <div class="container hero__content">
       <h1>
-        {t(locale, 'home.hero.pre')}
-        <span class="hero__gradient-text">{t(locale, 'home.hero.gradient')}</span>
+        Light at the
+        <span class="hero__gradient-text">nanoscale</span>
       </h1>
       <p class="hero__subtitle">
-        {t(locale, 'home.hero.subtitle')}
+        We investigate light-matter interactions in nanostructures — from
+        plasmonics and photonic crystals to quantum optics. Building the tools
+        and knowledge to control photons at their smallest scale.
       </p>
       <div class="hero__actions">
-        <a href={`${prefix}${base}lab/`} class="btn btn--primary">{t(locale, 'home.hero.cta')}</a>
+        <a href={`${base}lab/`} class="btn btn--primary">Try our simulators</a>
       </div>
     </div>
   </section>

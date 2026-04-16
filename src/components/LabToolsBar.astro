@@ -1,13 +1,9 @@
 ---
-import { getLocaleFromPath } from '../i18n/translations';
-
 const base = import.meta.env.BASE_URL;
 const currentPath = Astro.url.pathname;
-const locale = getLocaleFromPath(currentPath);
-const prefix = locale === 'en' ? '' : '/es';
 
 const tools = [
-  { href: `${prefix}${base}lab/`,      label: 'Lab',          icon: 'home' },
+  { href: `${base}lab/`,               label: 'Lab',          icon: 'home' },
   { href: `${base}lab/mie-scattering/`, label: 'Mie',          icon: 'bolt' },
   { href: `${base}lab/cylinder/`,       label: 'Cylinder',     icon: 'cylinder' },
   { href: `${base}lab/photothermal/`,   label: 'Photothermal', icon: 'flame' },
