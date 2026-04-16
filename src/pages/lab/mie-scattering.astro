@@ -238,6 +238,17 @@ import Layout from '../../layouts/Layout.astro';
             <canvas id="chart-overlay" aria-hidden="true"></canvas>
             <div class="chart-tooltip" id="chart-tooltip"></div>
           </div>
+          <div class="color-swatches" id="color-swatches">
+            <span class="swatch-label">Apparent color</span>
+            <div class="swatch-item">
+              <div class="swatch-box" id="swatch-sca"></div>
+              <span class="swatch-name">scattered</span>
+            </div>
+            <div class="swatch-item">
+              <div class="swatch-box" id="swatch-trans"></div>
+              <span class="swatch-name">transmitted</span>
+            </div>
+          </div>
           <div class="download-bar">
             <span class="download-label">Export</span>
             <button id="dl-png" class="dl-btn" title="Download chart as PNG image">
@@ -376,7 +387,12 @@ import Layout from '../../layouts/Layout.astro';
   #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
   .chart-tooltip { position: absolute; pointer-events: none; background: rgba(30,27,75,0.92); color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.6875rem; font-family: var(--font); font-variant-numeric: tabular-nums; line-height: 1.5; white-space: nowrap; display: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
   .chart-tooltip.visible { display: block; }
-  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
+  .color-swatches { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
+  .swatch-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  .swatch-item { display: flex; align-items: center; gap: 0.35rem; }
+  .swatch-box { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid var(--bg-muted); background: #222; transition: background 0.3s; }
+  .swatch-name { font-size: 0.75rem; color: var(--text-soft); }
+  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
   .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
   .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
   .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
@@ -401,19 +417,8 @@ import Layout from '../../layouts/Layout.astro';
 <script>
   import { MATERIALS } from '../../data/optical-constants';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
-
-  // === Interpolation ===
-
-  function interpolateNK(data: number[][], lambdaNm: number): [number, number] {
-    const lam = lambdaNm / 1000;
-    if (lam <= data[0][0]) return [data[0][1], data[0][2]];
-    const last = data.length - 1;
-    if (lam >= data[last][0]) return [data[last][1], data[last][2]];
-    let lo = 0, hi = last;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (data[mid][0] <= lam) lo = mid; else hi = mid; }
-    const t = (lam - data[lo][0]) / (data[hi][0] - data[lo][0]);
-    return [data[lo][1] + t * (data[hi][1] - data[lo][1]), data[lo][2] + t * (data[hi][2] - data[lo][2])];
-  }
+  import { interpolateNK } from '../../lib/mie';
+  import { spectrumToHex } from '../../lib/colorimetry';
 
   // === File-based optical constants ===
 
@@ -2254,6 +2259,32 @@ import Layout from '../../layouts/Layout.astro';
     return { xArr, series, xLabel, yLabel };
   }
 
+  const swatchSca = document.getElementById('swatch-sca') as HTMLElement;
+  const swatchTrans = document.getElementById('swatch-trans') as HTMLElement;
+
+  function updateSwatches() {
+    if (!data) return;
+    const n = data.lambda.length;
+    // Scattered color: weight by σ_sca(λ)
+    const scaMax = Math.max(...data.csca);
+    if (scaMax > 0) {
+      const R = new Float64Array(n);
+      for (let i = 0; i < n; i++) R[i] = data.csca[i] / scaMax;
+      swatchSca.style.background = spectrumToHex(data.lambda, R);
+    } else {
+      swatchSca.style.background = '#222';
+    }
+    // Transmitted color: Beer-Lambert attenuation (thin slab, arbitrary optical depth)
+    const extMax = Math.max(...data.cext);
+    if (extMax > 0) {
+      const T = new Float64Array(n);
+      for (let i = 0; i < n; i++) T[i] = Math.exp(-2 * data.cext[i] / extMax);
+      swatchTrans.style.background = spectrumToHex(data.lambda, T);
+    } else {
+      swatchTrans.style.background = '#222';
+    }
+  }
+
   function render() {
     if (!data) return;
     if (viewTabs.value === 'angular') { renderAngular(); return; }
@@ -2265,6 +2296,7 @@ import Layout from '../../layouts/Layout.astro';
     chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, opts);
     zoomHint.classList.toggle('visible', !!zoomBounds);
     clearOverlay();
+    updateSwatches();
   }
 
   function renderAngular() {
