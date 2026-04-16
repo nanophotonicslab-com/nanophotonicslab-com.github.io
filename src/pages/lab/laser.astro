@@ -24,6 +24,7 @@ import Layout from '../../layouts/Layout.astro';
         <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
         <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
         <button class="calc-tab" data-tab="nlc">Nonlinear Conversion</button>
+        <button class="calc-tab" data-tab="bright">Brightness</button>
       </div>
 
       <!-- ============================================================ -->
@@ -511,6 +512,118 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
       </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 7: Brightness                                             -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-bright">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Spectral Brightness</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Source</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="brt-pavg">P<sub>avg</sub></label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="brt-pavg" inputmode="decimal" value="2.3">
+                    <select class="unit-sel" id="brt-pavg-u">
+                      <option value="1" selected>W</option>
+                      <option value="1e-3">mW</option>
+                      <option value="1e-6">&mu;W</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="brt-frep">f<sub>rep</sub></label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="brt-frep" inputmode="decimal" value="160">
+                    <select class="unit-sel" id="brt-frep-u">
+                      <option value="1e3" selected>kHz</option>
+                      <option value="1e6">MHz</option>
+                      <option value="1">Hz</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="brt-dt">&Delta;t (fs)</label>
+                  <input type="text" class="field-input" id="brt-dt" inputmode="decimal" value="2">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Spectrum</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="brt-lam">&lambda;<sub>0</sub> (nm)</label>
+                  <input type="text" class="field-input" id="brt-lam" inputmode="decimal" value="3000">
+                </div>
+                <div class="field">
+                  <label for="brt-dlam">&Delta;&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="brt-dlam" inputmode="decimal" value="4000">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Beam quality</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="brt-w0">w<sub>0</sub> (&mu;m)</label>
+                  <input type="text" class="field-input" id="brt-w0" inputmode="decimal" value="46">
+                </div>
+                <div class="field">
+                  <label for="brt-M2">M&sup2;</label>
+                  <input type="text" class="field-input" id="brt-M2" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Spectral brightness.</strong>
+              B&nbsp;=&nbsp;P/(&Delta;&lambda;&thinsp;&middot;&thinsp;A&thinsp;&middot;&thinsp;&Omega;).
+              For Gaussian beam: A&middot;&Omega;&nbsp;=&nbsp;M<sup>4</sup>&lambda;&sup2;, so
+              B&nbsp;=&nbsp;P/(M<sup>4</sup>&lambda;&sup2;&Delta;&lambda;).
+              Defaults from Elu&nbsp;et&nbsp;al., Nature Photon. (2021).
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Pulse energy</span>
+                <span class="result-value" id="brt-out-energy">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak power</span>
+                <span class="result-value" id="brt-out-ppeak">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Avg spectral density</span>
+                <span class="result-value" id="brt-out-savg">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak spectral density</span>
+                <span class="result-value" id="brt-out-speak">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Avg spectral brightness</span>
+                <span class="result-value" id="brt-out-bavg">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak spectral brightness</span>
+                <span class="result-value" id="brt-out-bpeak">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="brt-chart" aria-label="Brightness comparison"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </Layout>
@@ -650,6 +763,7 @@ import Layout from '../../layouts/Layout.astro';
         else if (tab.dataset.tab === 'beam') calcBeam();
         else if (tab.dataset.tab === 'focus') calcFocus();
         else if (tab.dataset.tab === 'nlc') calcNLC();
+        else if (tab.dataset.tab === 'bright') calcBrightness();
       });
     });
   });
@@ -947,7 +1061,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.restore();
   }
 
-  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); calcNLC(); }
+  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); calcNLC(); calcBrightness(); }
   onThemeChange(redrawAll);
   window.addEventListener('resize', redrawAll);
 
@@ -1811,6 +1925,189 @@ import Layout from '../../layouts/Layout.astro';
   el<HTMLInputElement>('nlc-lam1').addEventListener('input', calcNLC);
   el<HTMLInputElement>('nlc-lam2').addEventListener('input', calcNLC);
   setupShapeButtons('nlc-process', calcNLC);
+
+  /* ================================================================ */
+  /*  Calculator 7: Brightness                                         */
+  /* ================================================================ */
+
+  // Reference sources for comparison (peak spectral brightness in ph/s/mm²/mrad²/0.1%BW)
+  // We'll show a log-scale bar chart comparing the user's source to known references.
+  const BRIGHTNESS_REFS: { name: string; bpeak: number; color: string }[] = [
+    { name: 'Thermal (lamp)',    bpeak: 1e10,  color: '#9CA3AF' },
+    { name: 'Synchrotron (3rd gen)', bpeak: 1e20, color: '#60A5FA' },
+    { name: 'HHG table-top',    bpeak: 1e22,  color: '#A78BFA' },
+    { name: 'XFEL',             bpeak: 1e33,  color: '#F87171' },
+  ];
+
+  function calcBrightness() {
+    const pavg_raw = parseFloat(el<HTMLInputElement>('brt-pavg').value);
+    const pavg_mul = parseFloat(el<HTMLSelectElement>('brt-pavg-u').value);
+    const frep_raw = parseFloat(el<HTMLInputElement>('brt-frep').value);
+    const frep_mul = parseFloat(el<HTMLSelectElement>('brt-frep-u').value);
+    const dt_fs = parseFloat(el<HTMLInputElement>('brt-dt').value);
+    const lam_nm = parseFloat(el<HTMLInputElement>('brt-lam').value);
+    const dlam_nm = parseFloat(el<HTMLInputElement>('brt-dlam').value);
+    const w0_um = parseFloat(el<HTMLInputElement>('brt-w0').value);
+    const M2 = parseFloat(el<HTMLInputElement>('brt-M2').value) || 1;
+
+    if (!pavg_raw || !frep_raw || !dt_fs || !lam_nm || !dlam_nm || !w0_um) return;
+
+    const P_avg = pavg_raw * pavg_mul;
+    const f_rep = frep_raw * frep_mul;
+    const dt_s = dt_fs * 1e-15;
+    const E_J = P_avg / f_rep;
+    const P_peak = 0.9394 * E_J / dt_s;
+
+    // Spectral power density (W/nm)
+    const S_avg = P_avg / dlam_nm;
+    const S_peak = P_peak / dlam_nm;
+
+    // Spectral brightness: B = P / (Δλ × M⁴ × λ²)
+    // With λ in mm, Δλ in mm → B in W/(mm² × mrad²) per nm bandwidth
+    // Actually let's use consistent units:
+    // A·Ω = M⁴λ² where λ in m → A·Ω in m²·sr
+    // B = P/(Δλ × A·Ω) with Δλ in nm → need to convert
+    // Let's compute in SI then display nicely
+
+    const lam_m = lam_nm * 1e-9;
+    const AO = M2 * M2 * M2 * M2 * lam_m * lam_m;  // m²·sr
+
+    // Convert Δλ to Δν for "per 0.1% bandwidth" comparison
+    // 0.1% BW at λ₀: Δλ_01 = λ₀ × 0.001
+    // Spectral density per 0.1%BW = S × (λ₀ × 0.001)
+    const dlam_01 = lam_nm * 0.001;  // 0.1% bandwidth in nm
+
+    // Brightness in W/(m²·sr) per 0.1%BW
+    const B_avg_01 = (P_avg / (AO)) * (dlam_01 / dlam_nm);
+    const B_peak_01 = (P_peak / (AO)) * (dlam_01 / dlam_nm);
+
+    // Convert to photons/s: divide by photon energy
+    const hc = 6.626e-34 * 2.998e8;
+    const E_photon = hc / lam_m;
+    const B_avg_ph = B_avg_01 / E_photon;    // ph/s/mm²/mrad² (per 0.1%BW) — need to convert m²·sr → mm²·mrad²
+    // 1 m² = 1e6 mm², 1 sr = 1e6 mrad² → 1 m²·sr = 1e12 mm²·mrad²
+    // So B in ph/s/(m²·sr)/0.1%BW → B in ph/s/(mm²·mrad²)/0.1%BW = B / 1e12
+    const B_avg_ph_display = B_avg_01 / E_photon / 1e12;
+    const B_peak_ph_display = B_peak_01 / E_photon / 1e12;
+
+    // Display
+    el<HTMLElement>('brt-out-energy').textContent = autoScale(E_J, energyUnits);
+    el<HTMLElement>('brt-out-ppeak').textContent = autoScale(P_peak, powerUnits);
+
+    // Spectral density
+    if (S_avg >= 1) el<HTMLElement>('brt-out-savg').textContent = S_avg.toPrecision(3) + ' W/nm';
+    else if (S_avg >= 1e-3) el<HTMLElement>('brt-out-savg').textContent = (S_avg * 1e3).toPrecision(3) + ' mW/nm';
+    else el<HTMLElement>('brt-out-savg').textContent = (S_avg * 1e6).toPrecision(3) + ' \u00b5W/nm';
+
+    if (S_peak >= 1e6) el<HTMLElement>('brt-out-speak').textContent = (S_peak / 1e6).toPrecision(3) + ' MW/nm';
+    else if (S_peak >= 1e3) el<HTMLElement>('brt-out-speak').textContent = (S_peak / 1e3).toPrecision(3) + ' kW/nm';
+    else el<HTMLElement>('brt-out-speak').textContent = S_peak.toPrecision(3) + ' W/nm';
+
+    // Brightness
+    el<HTMLElement>('brt-out-bavg').textContent = B_avg_ph_display.toExponential(2) + ' ph/s/mm\u00b2/mrad\u00b2/0.1%BW';
+    el<HTMLElement>('brt-out-bpeak').textContent = B_peak_ph_display.toExponential(2) + ' ph/s/mm\u00b2/mrad\u00b2/0.1%BW';
+
+    drawBrightnessChart(B_peak_ph_display);
+  }
+
+  function drawBrightnessChart(userBpeak: number) {
+    const canvas = el<HTMLCanvasElement>('brt-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 110 * fs, mr = 50 * fs, mt = 16 * fs, mb = 36 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // All entries: references + user
+    const entries = [
+      ...BRIGHTNESS_REFS.map(r => ({ name: r.name, val: r.bpeak, color: r.color })),
+      { name: 'Your source', val: userBpeak, color: ct.primary },
+    ];
+
+    // Log scale range
+    const allVals = entries.map(e => e.val).filter(v => v > 0);
+    const logMin = Math.floor(Math.log10(Math.min(...allVals))) - 1;
+    const logMax = Math.ceil(Math.log10(Math.max(...allVals))) + 1;
+    const logRange = logMax - logMin;
+
+    const barH = Math.min(24 * fs, ph / entries.length - 6 * fs);
+    const gap = (ph - barH * entries.length) / (entries.length + 1);
+
+    // Grid lines (powers of 10)
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = `${9 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    for (let p = logMin; p <= logMax; p += 3) {
+      const x = ml + ((p - logMin) / logRange) * pw;
+      ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + ph); ctx.stroke();
+      ctx.fillText(`10${superscript(p)}`, x, mt + ph + 14 * fs);
+    }
+
+    // X-axis label
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.fillText('Peak brightness (ph/s/mm\u00b2/mrad\u00b2/0.1%BW)', ml + pw / 2, mt + ph + 30 * fs);
+
+    // Bars
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const y = mt + gap + i * (barH + gap);
+      const logVal = e.val > 0 ? Math.log10(e.val) : logMin;
+      const barW = Math.max(2, ((logVal - logMin) / logRange) * pw);
+
+      // Bar
+      ctx.fillStyle = e.color + '30';
+      ctx.fillRect(ml, y, barW, barH);
+      ctx.fillStyle = e.color;
+      ctx.fillRect(ml, y, barW, barH);
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(ml, y, barW, barH);
+      ctx.globalAlpha = 1;
+
+      // Solid left edge
+      ctx.fillStyle = e.color;
+      ctx.fillRect(ml + barW - 3, y, 3, barH);
+
+      // Label
+      ctx.fillStyle = ct.text;
+      ctx.font = `${10 * fs}px ${font}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(e.name, ml - 6 * fs, y + barH / 2 + 3 * fs);
+
+      // Value at end of bar
+      ctx.fillStyle = ct.textSoft;
+      ctx.font = `${9 * fs}px ${font}`;
+      ctx.textAlign = 'left';
+      ctx.fillText(e.val.toExponential(1), ml + barW + 4 * fs, y + barH / 2 + 3 * fs);
+    }
+  }
+
+  // Unicode superscript digits for axis labels
+  function superscript(n: number): string {
+    const sup: Record<string, string> = { '-': '\u207B', '0': '\u2070', '1': '\u00B9', '2': '\u00B2', '3': '\u00B3', '4': '\u2074', '5': '\u2075', '6': '\u2076', '7': '\u2077', '8': '\u2078', '9': '\u2079' };
+    return String(n).split('').map(c => sup[c] || c).join('');
+  }
+
+  ['brt-pavg', 'brt-frep', 'brt-dt', 'brt-lam', 'brt-dlam', 'brt-w0', 'brt-M2'].forEach(id =>
+    el<HTMLInputElement>(id).addEventListener('input', calcBrightness)
+  );
+  ['brt-pavg-u', 'brt-frep-u'].forEach(id =>
+    el<HTMLSelectElement>(id).addEventListener('change', calcBrightness)
+  );
 
   /* ================================================================ */
   /*  Init                                                             */
