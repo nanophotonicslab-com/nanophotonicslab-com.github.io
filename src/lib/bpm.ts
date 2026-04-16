@@ -24,6 +24,9 @@ export interface BpmParams {
   beamOffset?: number;     // offset beam center from x=0 [um]
   nProfile?: Float64Array; // custom n(x) profile (overrides single waveguide)
   boundaries?: number[];   // x-positions for waveguide boundary overlays
+  bcType?: 'none' | 'absorbing';  // boundary condition at window edges
+  bcWidthFrac?: number;    // width of absorbing layer as fraction of xa (default 0.1)
+  bcStrength?: number;     // max imaginary n at the edge (default 0.05)
 }
 
 export interface BpmResult {
@@ -137,32 +140,55 @@ export function beampropCN(p: BpmParams): BpmResult {
   const dx = xa / (Nx - 1);
   const k_m = (2 * Math.PI / lambda) * nd;
 
-  // Pre-compute W[j] = i * (k[j]^2 - k_m^2) * dz / (2*k_m)   (pure imaginary × real)
-  // and a = i * dz / (2*k_m*dx^2)                               (pure imaginary scalar)
-  const aIm = dz / (2 * k_m * dx * dx);  // a = i * aIm  ⇒  aRe = 0
+  // Absorbing BC: quadratic ramp of imaginary n at edges. n_complex = n + i*α(x).
+  // α is zero in the interior and grows quadratically to bcStrength at the window edges.
+  const alpha = new Float64Array(Nx);
+  if (p.bcType === 'absorbing') {
+    const widthFrac = p.bcWidthFrac ?? 0.1;
+    const alphaMax = p.bcStrength ?? 0.05;
+    const bcCells = Math.max(1, Math.round(widthFrac * Nx));
+    for (let j = 0; j < Nx; j++) {
+      let t = 0;
+      if (j < bcCells) t = (bcCells - j) / bcCells;
+      else if (j >= Nx - bcCells) t = (j - (Nx - 1 - bcCells)) / bcCells;
+      alpha[j] = alphaMax * t * t;
+    }
+  }
 
-  // W[j] is pure imaginary:  W_im[j] = (k[j]^2 - k_m^2) * dz / (2*k_m)
+  // Pre-compute W[j] = i * (k[j]^2 - k_m^2) * dz / (2*k_m)
+  // k[j] = (2π/λ)(n[j] + i*α[j]). With absorption, k² = (2π/λ)²(n² − α² + 2i·n·α).
+  // W[j] is generally complex when α != 0:
+  //   Re(W[j]) = -Im(k²) · dz/(2k_m) = -(2π/λ)² · 2·n·α · dz/(2k_m)   → negative when α > 0
+  //   Im(W[j]) =  Re(k² - k_m²) · dz/(2k_m)
+  // a = i * dz / (2*k_m*dx^2)  (pure imaginary scalar, unchanged)
+  const aIm = dz / (2 * k_m * dx * dx);
+
+  const Wre = new Float64Array(Nx);
   const Wim = new Float64Array(Nx);
   const k_m2 = k_m * k_m;
+  const twoPiLam = 2 * Math.PI / lambda;
   for (let j = 0; j < Nx; j++) {
-    const kj = (2 * Math.PI / lambda) * n[j];
-    Wim[j] = (kj * kj - k_m2) * dz / (2 * k_m);
+    const nj = n[j];
+    const aj = alpha[j];
+    const k2Re = twoPiLam * twoPiLam * (nj * nj - aj * aj);
+    const k2Im = twoPiLam * twoPiLam * 2 * nj * aj;
+    Wre[j] = -k2Im * dz / (2 * k_m);
+    Wim[j] = (k2Re - k_m2) * dz / (2 * k_m);
   }
 
   // Build A and B diagonals (constant across z-steps):
-  //   B_main[j] = 1 + W[j]/2 - a  =  (1)  + i*(Wim[j]/2 - aIm)
-  //   B_off     =     a/2          =  0    + i*(aIm/2)
-  //   A_main[j] = 1 - W[j]/2 + a  =  (1)  + i*(-Wim[j]/2 + aIm)
-  //   A_off     =    -a/2          =  0    + i*(-aIm/2)
+  //   B_main[j] = 1 + W[j]/2 - a
+  //   A_main[j] = 1 - W[j]/2 + a
+  //   B_off / A_off: unchanged (purely imaginary)
 
   const AmRe = new Float64Array(Nx);
   const AmIm = new Float64Array(Nx);
   const BmRe = new Float64Array(Nx);
   const BmIm = new Float64Array(Nx);
   for (let j = 0; j < Nx; j++) {
-    AmRe[j] = 1;
+    AmRe[j] = 1 - Wre[j] / 2;
     AmIm[j] = -Wim[j] / 2 + aIm;
-    BmRe[j] = 1;
+    BmRe[j] = 1 + Wre[j] / 2;
     BmIm[j] = Wim[j] / 2 - aIm;
   }
   const AoffRe = 0;

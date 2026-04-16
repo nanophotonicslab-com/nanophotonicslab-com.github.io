@@ -105,6 +105,28 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <!-- Boundary conditions -->
+          <div class="param-group">
+            <span class="param-group__title">Boundary conditions</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-bc">Type</label>
+                <select class="field-input" id="p-bc">
+                  <option value="none">None (reflecting)</option>
+                  <option value="absorbing" selected>Absorbing</option>
+                </select>
+              </div>
+              <div class="field" id="field-bc-width">
+                <label for="p-bcw">Width [%]</label>
+                <input type="text" class="field-input" id="p-bcw" inputmode="decimal" value="10">
+              </div>
+              <div class="field" id="field-bc-strength">
+                <label for="p-bca">&alpha;<sub>max</sub></label>
+                <input type="text" class="field-input" id="p-bca" inputmode="decimal" value="0.05">
+              </div>
+            </div>
+          </div>
+
           <button class="run-btn" id="run-btn" data-umami-event="bpm-run">Run simulation</button>
 
           <p class="theory-note">
@@ -112,6 +134,7 @@ import Layout from '../../layouts/Layout.astro';
             Solves the paraxial Helmholtz equation
             &part;<sub>z</sub>u&nbsp;=&nbsp;(i/2k<sub>m</sub>)&thinsp;(&part;<sup>2</sup><sub>x</sub>u&nbsp;+&nbsp;(k&sup2;&minus;k<sub>m</sub>&sup2;)&thinsp;u)
             with a second-order implicit scheme that is unconditionally stable.
+            Absorbing BCs add a quadratic imaginary-n ramp at the window edges to damp outgoing waves.
           </p>
         </div>
 
@@ -328,12 +351,16 @@ import Layout from '../../layouts/Layout.astro';
   /* ---- DOM refs ---- */
   const ids = ['p-z','p-dz','p-delta','p-lambda','p-w','p-nd','p-Nx','p-xa','p-xb','p-nclad','p-ncore'] as const;
   const inputs = Object.fromEntries(ids.map(id => [id, document.getElementById(id) as HTMLInputElement]));
+  const bcSelect = document.getElementById('p-bc') as HTMLSelectElement;
+  const bcWidthInput = document.getElementById('p-bcw') as HTMLInputElement;
+  const bcStrengthInput = document.getElementById('p-bca') as HTMLInputElement;
   const canvas = document.getElementById('bpm-canvas') as HTMLCanvasElement;
   const statusEl = document.getElementById('status')!;
   const runBtn = document.getElementById('run-btn') as HTMLButtonElement;
 
   /* ---- Read / write params ---- */
   function readParams(): BpmParams {
+    const bcType = (bcSelect.value as 'none' | 'absorbing') || 'absorbing';
     return {
       z:         parseFloat(inputs['p-z'].value)     || 100,
       dz:        parseFloat(inputs['p-dz'].value)    || 0.005,
@@ -346,6 +373,9 @@ import Layout from '../../layouts/Layout.astro';
       xb:        parseFloat(inputs['p-xb'].value)     || 2,
       nCladding: parseFloat(inputs['p-nclad'].value)  || 1.45,
       nCore:     parseFloat(inputs['p-ncore'].value)  || 1.46,
+      bcType,
+      bcWidthFrac: (parseFloat(bcWidthInput.value) || 10) / 100,
+      bcStrength:  parseFloat(bcStrengthInput.value) || 0.05,
     };
   }
 
@@ -639,6 +669,9 @@ import Layout from '../../layouts/Layout.astro';
     p.set('xb', String(params.xb));
     p.set('nclad', String(params.nCladding));
     p.set('ncore', String(params.nCore));
+    p.set('bc', bcSelect.value);
+    p.set('bcw', bcWidthInput.value);
+    p.set('bca', bcStrengthInput.value);
     return p.toString();
   }
 
@@ -670,8 +703,19 @@ import Layout from '../../layouts/Layout.astro';
       nCladding: parseFloat(p.get('nclad')!)  || 1.45,
       nCore:     parseFloat(p.get('ncore')!)  || 1.46,
     });
+    if (p.has('bc')) bcSelect.value = p.get('bc')!;
+    if (p.has('bcw')) bcWidthInput.value = p.get('bcw')!;
+    if (p.has('bca')) bcStrengthInput.value = p.get('bca')!;
+    updateBcVisibility();
     return true;
   }
+
+  function updateBcVisibility() {
+    const show = bcSelect.value !== 'none';
+    (document.getElementById('field-bc-width') as HTMLElement).style.display = show ? '' : 'none';
+    (document.getElementById('field-bc-strength') as HTMLElement).style.display = show ? '' : 'none';
+  }
+  bcSelect.addEventListener('change', updateBcVisibility);
 
   const shareBtn = document.getElementById('share-btn')!;
   shareBtn.addEventListener('click', () => {
