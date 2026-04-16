@@ -1,6 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { getLocaleFromPath, t } from '../../i18n/translations';
+
 const base = import.meta.env.BASE_URL;
+const locale = getLocaleFromPath(Astro.url.pathname);
 
 const widgets = [
   {
@@ -86,16 +89,15 @@ const widgets = [
 ];
 ---
 
-<Layout title="Lab" description="Interactive simulation tools for nanophotonics — explore, learn, and play.">
+<Layout title={t(locale, 'lab.title')} description="Interactive simulation tools for nanophotonics — explore, learn, and play.">
   <section class="page-hero">
     <div class="container">
       <h1>
-        Simulation
-        <span class="hero__gradient-text">playground</span>
+        {t(locale, 'lab.hero.title')}
+        <span class="hero__gradient-text">{t(locale, 'lab.hero.gradient')}</span>
       </h1>
       <p class="page-hero__subtitle">
-        Interactive tools built by our lab. Explore nanophotonic phenomena
-        right in your browser — no installation required.
+        {t(locale, 'lab.hero.subtitle')}
       </p>
     </div>
   </section>
@@ -179,7 +181,7 @@ const widgets = [
             <p>{widget.description}</p>
             {widget.status === 'Live' && (
               <span class="widget-cta">
-                Launch simulator &rarr;
+                {t(locale, 'lab.cta')} &rarr;
               </span>
             )}
           </a>

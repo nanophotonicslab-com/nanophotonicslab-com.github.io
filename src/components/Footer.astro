@@ -1,5 +1,9 @@
 ---
+import { getLocaleFromPath, t } from '../i18n/translations';
+
 const year = new Date().getFullYear();
+const locale = getLocaleFromPath(Astro.url.pathname);
+const prefix = locale === 'en' ? '' : '/es';
 ---
 
 <footer class="footer">
@@ -8,22 +12,22 @@ const year = new Date().getFullYear();
     <div class="footer__grid">
       <div class="footer__about">
         <p class="footer__heading">NanophotonicsLab</p>
-        <p>Exploring light-matter interactions at the nanoscale.</p>
+        <p>{t(locale, 'footer.about')}</p>
       </div>
       <div class="footer__nav">
-        <p class="footer__heading">Navigate</p>
+        <p class="footer__heading">{t(locale, 'footer.nav')}</p>
         <ul>
-          <li><a href={`${import.meta.env.BASE_URL}`}>Home</a></li>
-          <li><a href={`${import.meta.env.BASE_URL}lab/`}>Lab</a></li>
+          <li><a href={`${prefix}${import.meta.env.BASE_URL}`}>{t(locale, 'nav.home')}</a></li>
+          <li><a href={`${prefix}${import.meta.env.BASE_URL}lab/`}>{t(locale, 'nav.lab')}</a></li>
         </ul>
       </div>
       <div class="footer__contact">
-        <p class="footer__heading">Contact</p>
+        <p class="footer__heading">{t(locale, 'footer.contact')}</p>
         <p>info@nanophotonicslab.com</p>
       </div>
     </div>
     <div class="footer__bottom">
-      <p>&copy; {year} NanophotonicsLab. All rights reserved.</p>
+      <p>&copy; {year} NanophotonicsLab. {t(locale, 'footer.rights')}</p>
     </div>
   </div>
 </footer>
