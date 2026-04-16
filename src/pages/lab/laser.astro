@@ -23,6 +23,7 @@ import Layout from '../../layouts/Layout.astro';
         <button class="calc-tab" data-tab="gdd">Dispersion</button>
         <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
         <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
+        <button class="calc-tab" data-tab="nlc">Nonlinear Conversion</button>
       </div>
 
       <!-- ============================================================ -->
@@ -443,6 +444,73 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
       </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 6: Nonlinear Conversion                                   -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-nlc">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Nonlinear Conversion</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Process</span>
+              <div class="shape-row" id="nlc-process">
+                <button class="preset-btn active" data-shape="shg">SHG</button>
+                <button class="preset-btn" data-shape="thg">THG</button>
+                <button class="preset-btn" data-shape="sfg">SFG</button>
+                <button class="preset-btn" data-shape="dfg">DFG</button>
+                <button class="preset-btn" data-shape="opa">OPA</button>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Input wavelengths</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="nlc-lam1">&lambda;<sub>1</sub> (nm)</label>
+                  <input type="text" class="field-input" id="nlc-lam1" inputmode="decimal" value="800">
+                </div>
+                <div class="field" id="nlc-lam2-field">
+                  <label for="nlc-lam2">&lambda;<sub>2</sub> (nm)</label>
+                  <input type="text" class="field-input" id="nlc-lam2" inputmode="decimal" value="1064" placeholder="(for SFG/DFG/OPA)">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note" id="nlc-note">
+              <strong>SHG.</strong>
+              &omega; + &omega; &rarr; 2&omega;.
+              &lambda;<sub>out</sub> = &lambda;/2.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid" id="nlc-results">
+              <div class="result-item">
+                <span class="result-label">Output wavelength</span>
+                <span class="result-value" id="nlc-out-lam">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Output energy</span>
+                <span class="result-value" id="nlc-out-ev">&mdash;</span>
+              </div>
+              <div class="result-item" id="nlc-sig-item" style="display:none">
+                <span class="result-label">Signal &lambda;<sub>s</sub></span>
+                <span class="result-value" id="nlc-out-sig">&mdash;</span>
+              </div>
+              <div class="result-item" id="nlc-idl-item" style="display:none">
+                <span class="result-label">Idler &lambda;<sub>i</sub></span>
+                <span class="result-value" id="nlc-out-idl">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="nlc-chart" aria-label="Nonlinear conversion energy diagram"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </Layout>
@@ -581,6 +649,7 @@ import Layout from '../../layouts/Layout.astro';
         else if (tab.dataset.tab === 'gdd') calcGDD();
         else if (tab.dataset.tab === 'beam') calcBeam();
         else if (tab.dataset.tab === 'focus') calcFocus();
+        else if (tab.dataset.tab === 'nlc') calcNLC();
       });
     });
   });
@@ -878,7 +947,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.restore();
   }
 
-  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); }
+  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); calcNLC(); }
   onThemeChange(redrawAll);
   window.addEventListener('resize', redrawAll);
 
@@ -1482,6 +1551,266 @@ import Layout from '../../layouts/Layout.astro';
   ['foc-energy-u'].forEach(id =>
     el<HTMLSelectElement>(id).addEventListener('change', calcFocus)
   );
+
+  /* ================================================================ */
+  /*  Calculator 6: Nonlinear Conversion                               */
+  /* ================================================================ */
+  const hc_eV_nm = 1239.84193;  // h·c in eV·nm
+
+  function nlcProcess(): string { return getActiveShape('nlc-process'); }
+
+  function calcNLC() {
+    const proc = nlcProcess();
+    const lam1 = parseFloat(el<HTMLInputElement>('nlc-lam1').value);
+    if (!lam1 || lam1 <= 0) return;
+    const lam2 = parseFloat(el<HTMLInputElement>('nlc-lam2').value);
+
+    const lam2Field = el<HTMLElement>('nlc-lam2-field');
+    const sigItem = el<HTMLElement>('nlc-sig-item');
+    const idlItem = el<HTMLElement>('nlc-idl-item');
+    const noteEl = el<HTMLElement>('nlc-note');
+
+    // Hide/show λ₂ and signal/idler fields based on process
+    const needsLam2 = proc === 'sfg' || proc === 'dfg' || proc === 'opa';
+    lam2Field.style.display = needsLam2 ? 'flex' : 'none';
+    sigItem.style.display = proc === 'opa' ? '' : 'none';
+    idlItem.style.display = proc === 'opa' ? '' : 'none';
+
+    let lamOut = 0;
+    let lamSig = 0, lamIdl = 0;
+
+    switch (proc) {
+      case 'shg':
+        lamOut = lam1 / 2;
+        noteEl.innerHTML = '<strong>SHG.</strong> \u03c9 + \u03c9 \u2192 2\u03c9. \u03bb<sub>out</sub> = \u03bb/2.';
+        break;
+      case 'thg':
+        lamOut = lam1 / 3;
+        noteEl.innerHTML = '<strong>THG.</strong> \u03c9 + \u03c9 + \u03c9 \u2192 3\u03c9. \u03bb<sub>out</sub> = \u03bb/3.';
+        break;
+      case 'sfg':
+        if (!lam2 || lam2 <= 0) return;
+        lamOut = 1 / (1 / lam1 + 1 / lam2);
+        noteEl.innerHTML = '<strong>SFG.</strong> 1/\u03bb<sub>out</sub> = 1/\u03bb<sub>1</sub> + 1/\u03bb<sub>2</sub>.';
+        break;
+      case 'dfg':
+        if (!lam2 || lam2 <= 0) return;
+        lamOut = 1 / Math.abs(1 / lam1 - 1 / lam2);
+        noteEl.innerHTML = '<strong>DFG.</strong> 1/\u03bb<sub>out</sub> = |1/\u03bb<sub>1</sub> \u2212 1/\u03bb<sub>2</sub>|.';
+        break;
+      case 'opa':
+        if (!lam2 || lam2 <= 0) return;
+        if (lam2 <= lam1) {
+          el<HTMLElement>('nlc-out-lam').textContent = '\u2014';
+          el<HTMLElement>('nlc-out-ev').textContent = 'Signal must be longer than pump';
+          return;
+        }
+        // λ1 = pump, λ2 = signal → idler from energy conservation
+        // 1/λ_pump = 1/λ_signal + 1/λ_idler
+        lamSig = lam2;
+        lamIdl = 1 / (1 / lam1 - 1 / lam2);
+        lamOut = lamIdl;
+        noteEl.innerHTML = '<strong>OPA.</strong> \u03bb<sub>1</sub> = pump, \u03bb<sub>2</sub> = signal (\u03bb<sub>s</sub> > \u03bb<sub>p</sub>). 1/\u03bb<sub>p</sub> = 1/\u03bb<sub>s</sub> + 1/\u03bb<sub>i</sub>.';
+        break;
+    }
+
+    if (lamOut <= 0 || !isFinite(lamOut)) {
+      el<HTMLElement>('nlc-out-lam').textContent = 'Invalid';
+      el<HTMLElement>('nlc-out-ev').textContent = '\u2014';
+      return;
+    }
+
+    const evOut = hc_eV_nm / lamOut;
+    el<HTMLElement>('nlc-out-lam').textContent = lamOut >= 100 ? lamOut.toFixed(1) + ' nm' : lamOut.toFixed(3) + ' nm';
+    el<HTMLElement>('nlc-out-ev').textContent = evOut.toFixed(4) + ' eV';
+
+    if (proc === 'opa') {
+      el<HTMLElement>('nlc-out-sig').textContent = lamSig.toFixed(1) + ' nm (' + (hc_eV_nm / lamSig).toFixed(3) + ' eV)';
+      if (lamIdl > 0 && isFinite(lamIdl))
+        el<HTMLElement>('nlc-out-idl').textContent = lamIdl.toFixed(1) + ' nm (' + (hc_eV_nm / lamIdl).toFixed(3) + ' eV)';
+      else
+        el<HTMLElement>('nlc-out-idl').textContent = 'Signal must be longer than pump';
+    }
+
+    drawNLCChart(proc, lam1, lam2, lamOut, lamSig, lamIdl);
+  }
+
+  // Wavelength to visible color (approximate)
+  function wlToColor(nm: number): string {
+    if (nm < 380) return '#7F00FF';      // UV → violet
+    if (nm < 440) return `hsl(${270 - (nm - 380) / 60 * 30}, 100%, 50%)`;
+    if (nm < 490) return `hsl(${240 - (nm - 440) / 50 * 60}, 100%, 50%)`;
+    if (nm < 510) return `hsl(${180 - (nm - 490) / 20 * 60}, 100%, 45%)`;
+    if (nm < 580) return `hsl(${120 - (nm - 510) / 70 * 60}, 100%, 45%)`;
+    if (nm < 645) return `hsl(${60 - (nm - 580) / 65 * 60}, 100%, 50%)`;
+    if (nm < 780) return `hsl(0, 100%, ${50 - (nm - 645) / 135 * 20}%)`;
+    return '#880000';  // IR → dark red
+  }
+
+  function drawNLCChart(proc: string, lam1: number, lam2: number, lamOut: number, lamSig: number, lamIdl: number) {
+    const canvas = el<HTMLCanvasElement>('nlc-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Spectral axis layout
+    const ml = 50 * fs, mr = 16 * fs, mt = 16 * fs, mb = 38 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // Collect wavelengths
+    const photons: { lam: number; label: string; kind: 'in' | 'out' }[] = [];
+    if (proc === 'shg') {
+      photons.push({ lam: lam1, label: '\u03c9', kind: 'in' });
+      photons.push({ lam: lamOut, label: '2\u03c9', kind: 'out' });
+    } else if (proc === 'thg') {
+      photons.push({ lam: lam1, label: '\u03c9', kind: 'in' });
+      photons.push({ lam: lamOut, label: '3\u03c9', kind: 'out' });
+    } else if (proc === 'sfg') {
+      photons.push({ lam: lam1, label: '\u03c9\u2081', kind: 'in' });
+      if (lam2 > 0) photons.push({ lam: lam2, label: '\u03c9\u2082', kind: 'in' });
+      if (lamOut > 0 && isFinite(lamOut)) photons.push({ lam: lamOut, label: '\u03c9\u2081+\u03c9\u2082', kind: 'out' });
+    } else if (proc === 'dfg') {
+      photons.push({ lam: lam1, label: '\u03c9\u2081', kind: 'in' });
+      if (lam2 > 0) photons.push({ lam: lam2, label: '\u03c9\u2082', kind: 'in' });
+      if (lamOut > 0 && isFinite(lamOut)) photons.push({ lam: lamOut, label: '\u0394\u03c9', kind: 'out' });
+    } else if (proc === 'opa') {
+      photons.push({ lam: lam1, label: 'pump', kind: 'in' });
+      if (lamSig > 0) photons.push({ lam: lamSig, label: 'signal', kind: 'out' });
+      if (lamIdl > 0 && isFinite(lamIdl)) photons.push({ lam: lamIdl, label: 'idler', kind: 'out' });
+    }
+
+    const allLam = photons.map(p => p.lam).filter(l => l > 0 && isFinite(l));
+    if (allLam.length === 0) return;
+    const lamMin = Math.min(...allLam) * 0.7;
+    const lamMax = Math.max(...allLam) * 1.4;
+
+    // Log scale for wavelength axis
+    const logMin = Math.log10(lamMin);
+    const logMax = Math.log10(lamMax);
+    const toX = (lam: number) => ml + ((Math.log10(lam) - logMin) / (logMax - logMin)) * pw;
+
+    // Visible spectrum background band (380–780 nm)
+    const visL = Math.max(380, lamMin);
+    const visR = Math.min(780, lamMax);
+    if (visR > visL) {
+      const x1 = toX(visL), x2 = toX(visR);
+      const grad = ctx.createLinearGradient(x1, 0, x2, 0);
+      const visStops = [380, 440, 490, 510, 580, 645, 780];
+      const visColors = ['#7F00FF', '#0000FF', '#00BFFF', '#00FF00', '#FFFF00', '#FF0000', '#880000'];
+      for (let i = 0; i < visStops.length; i++) {
+        const s = visStops[i];
+        if (s >= visL && s <= visR) {
+          grad.addColorStop((s - visL) / (visR - visL), visColors[i] + '25');
+        }
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(x1, mt, x2 - x1, ph);
+    }
+
+    // Axis baseline
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ml, mt + ph); ctx.lineTo(ml + pw, mt + ph); ctx.stroke();
+
+    // Wavelength ticks (log scale)
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    const tickValues = [100, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 3000, 5000, 10000];
+    for (const tv of tickValues) {
+      if (tv >= lamMin && tv <= lamMax) {
+        const x = toX(tv);
+        ctx.fillStyle = ct.grid;
+        ctx.fillRect(x, mt + ph, 1, 4);
+        ctx.fillStyle = ct.textSoft;
+        ctx.fillText(tv >= 1000 ? (tv / 1000).toFixed(1) + ' \u00b5m' : tv + '', x, mt + ph + 16 * fs);
+      }
+    }
+    ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('Wavelength', ml + pw / 2, mt + ph + 32 * fs);
+
+    // Draw photon bars
+    const barW = Math.max(6, 16 * fs);
+    for (const p of photons) {
+      const x = toX(p.lam);
+      const color = wlToColor(p.lam);
+      const isOut = p.kind === 'out';
+      const barH = isOut ? ph * 0.85 : ph * 0.6;
+      const barY = mt + ph - barH;
+
+      // Bar with glow
+      ctx.fillStyle = color + '30';
+      ctx.fillRect(x - barW / 2 - 2, barY, barW + 4, barH);
+      ctx.fillStyle = color;
+      ctx.fillRect(x - barW / 2, barY, barW, barH);
+
+      // Output bars get a highlight
+      if (isOut) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - barW / 2 - 1, barY - 1, barW + 2, barH + 2);
+      }
+
+      // Label above bar
+      ctx.fillStyle = ct.text;
+      ctx.font = `bold ${11 * fs}px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.label, x, barY - 14 * fs);
+
+      // Wavelength value
+      ctx.font = `${10 * fs}px ${font}`;
+      ctx.fillStyle = ct.textSoft;
+      const lamStr = p.lam >= 1000 ? (p.lam / 1000).toFixed(2) + ' \u00b5m' : p.lam.toFixed(0) + ' nm';
+      ctx.fillText(lamStr, x, barY - 3 * fs);
+
+      // "in"/"out" tag
+      ctx.font = `${8 * fs}px ${font}`;
+      ctx.fillStyle = isOut ? '#059669' : ct.textMuted;
+      ctx.fillText(isOut ? 'OUT' : 'IN', x, mt + ph - 4 * fs);
+    }
+
+    // Arrow from input centroid to each output
+    const ins = photons.filter(p => p.kind === 'in');
+    const outs = photons.filter(p => p.kind === 'out');
+    if (ins.length > 0 && outs.length > 0) {
+      const inCx = ins.reduce((s, p) => s + toX(p.lam), 0) / ins.length;
+      const arrowY = mt + ph * 0.5;
+      for (const o of outs) {
+        const outX = toX(o.lam);
+        const dir = outX > inCx ? 1 : -1;
+        const aStart = inCx + dir * (barW + 4);
+        const aEnd = outX - dir * (barW + 4);
+        if (Math.abs(aEnd - aStart) < 10) continue;
+        ctx.strokeStyle = ct.textMuted;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(aStart, arrowY); ctx.lineTo(aEnd, arrowY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = ct.textMuted;
+        ctx.beginPath();
+        ctx.moveTo(aEnd, arrowY);
+        ctx.lineTo(aEnd - dir * 8, arrowY - 4);
+        ctx.lineTo(aEnd - dir * 8, arrowY + 4);
+        ctx.fill();
+      }
+    }
+  }
+
+  el<HTMLInputElement>('nlc-lam1').addEventListener('input', calcNLC);
+  el<HTMLInputElement>('nlc-lam2').addEventListener('input', calcNLC);
+  setupShapeButtons('nlc-process', calcNLC);
 
   /* ================================================================ */
   /*  Init                                                             */
