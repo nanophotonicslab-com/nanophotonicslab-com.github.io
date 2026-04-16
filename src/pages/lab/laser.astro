@@ -17,16 +17,22 @@ import Layout from '../../layouts/Layout.astro';
   <section class="section">
     <div class="container">
       <!-- Tabs -->
-      <div class="calc-tabs" id="calc-tabs">
-        <button class="calc-tab active" data-tab="tbp">Pulse &harr; Bandwidth</button>
-        <button class="calc-tab" data-tab="peak">Peak Power</button>
-        <button class="calc-tab" data-tab="gdd">Dispersion</button>
-        <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
-        <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
-        <button class="calc-tab" data-tab="chirp">Chirp</button>
-        <button class="calc-tab" data-tab="nlc">Nonlinear Conversion</button>
-        <button class="calc-tab" data-tab="bright">Brightness</button>
-        <button class="calc-tab" data-tab="modes">Beam Modes</button>
+      <div class="calc-tabs-row">
+        <div class="calc-tabs" id="calc-tabs">
+          <button class="calc-tab active" data-tab="tbp">Pulse &harr; Bandwidth</button>
+          <button class="calc-tab" data-tab="peak">Peak Power</button>
+          <button class="calc-tab" data-tab="gdd">Dispersion</button>
+          <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
+          <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
+          <button class="calc-tab" data-tab="chirp">Chirp</button>
+          <button class="calc-tab" data-tab="nlc">Nonlinear Conversion</button>
+          <button class="calc-tab" data-tab="bright">Brightness</button>
+          <button class="calc-tab" data-tab="modes">Beam Modes</button>
+        </div>
+        <button id="share-btn" class="share-btn" title="Copy shareable link to clipboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Share
+        </button>
       </div>
 
       <!-- ============================================================ -->
@@ -811,10 +817,25 @@ import Layout from '../../layouts/Layout.astro';
   .back-link:hover { color: var(--primary); }
 
   /* ---- Tabs ---- */
-  .calc-tabs {
-    display: flex; gap: 0.25rem; margin-bottom: var(--space-lg);
-    border-bottom: 2px solid var(--bg-muted); padding-bottom: 0;
+  .calc-tabs-row {
+    display: flex; align-items: flex-end; gap: 0.75rem;
+    margin-bottom: var(--space-lg);
   }
+  .calc-tabs {
+    display: flex; gap: 0.25rem; flex: 1; min-width: 0;
+    border-bottom: 2px solid var(--bg-muted); padding-bottom: 0;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .calc-tabs::-webkit-scrollbar { display: none; }
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem; flex-shrink: 0;
+    padding: 0.3rem 0.7rem; margin-bottom: 4px;
+    font-size: 0.78rem; font-weight: 500;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
   .calc-tab {
     padding: 0.6rem 1.2rem; font-size: 0.875rem; font-weight: 500;
     background: none; border: none; border-bottom: 2px solid transparent;
@@ -2610,10 +2631,97 @@ import Layout from '../../layouts/Layout.astro';
   );
 
   /* ================================================================ */
+  /*  Share / URL State                                                */
+  /* ================================================================ */
+  const SHARE_INPUTS = [
+    'tbp-lam','tbp-dlam','tbp-dt',
+    'peak-pavg','peak-frep','peak-dt',
+    'gdd-dt','gdd-mat','gdd-wl','gdd-L','gdd-passes',
+    'beam-lam','beam-w0','beam-M2','beam-z',
+    'foc-lam','foc-d','foc-M2','foc-f','foc-energy','foc-dt',
+    'chirp-dt','chirp-lam','chirp-dlam','chirp-mat',
+    'nlc-lam1','nlc-lam2',
+    'brt-pavg','brt-frep','brt-dt','brt-lam','brt-dlam','brt-w0','brt-M2',
+    'modes-l','modes-p','modes-m','modes-n','modes-w0',
+  ];
+  const SHARE_UNITS = [
+    'peak-pavg-u','peak-frep-u','peak-dt-u',
+    'foc-energy-u',
+    'brt-pavg-u','brt-frep-u',
+  ];
+  const SHARE_SHAPES = ['tbp-shape','peak-shape','nlc-process','modes-family'];
+
+  function serializeState(): string {
+    const p = new URLSearchParams();
+    const activeTab = document.querySelector('.calc-tab.active') as HTMLElement;
+    if (activeTab?.dataset.tab) p.set('tab', activeTab.dataset.tab);
+    for (const id of SHARE_INPUTS) {
+      const inp = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (inp && inp.value) p.set(id, inp.value);
+    }
+    for (const id of SHARE_UNITS) {
+      const sel = document.getElementById(id) as HTMLSelectElement | null;
+      if (sel) p.set(id, sel.value);
+    }
+    for (const id of SHARE_SHAPES) {
+      const active = document.querySelector(`#${id} .preset-btn.active`) as HTMLElement | null;
+      if (active?.dataset.shape) p.set(id, active.dataset.shape);
+    }
+    return p.toString();
+  }
+
+  function restoreState(): boolean {
+    const hash = location.hash.slice(1);
+    if (!hash) return false;
+    const p = new URLSearchParams(hash);
+    if (!p.has('tab')) return false;
+    // Restore inputs
+    for (const id of SHARE_INPUTS) {
+      if (!p.has(id)) continue;
+      const inp = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (inp) inp.value = p.get(id)!;
+    }
+    // Restore unit selectors
+    for (const id of SHARE_UNITS) {
+      if (!p.has(id)) continue;
+      const sel = document.getElementById(id) as HTMLSelectElement | null;
+      if (sel) sel.value = p.get(id)!;
+    }
+    // Restore shape buttons
+    for (const id of SHARE_SHAPES) {
+      if (!p.has(id)) continue;
+      const shape = p.get(id)!;
+      const btn = document.querySelector(`#${id} .preset-btn[data-shape="${shape}"]`) as HTMLButtonElement | null;
+      if (btn) {
+        document.querySelectorAll(`#${id} .preset-btn`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    }
+    // Activate tab
+    const tab = p.get('tab')!;
+    const tabBtn = document.querySelector(`.calc-tab[data-tab="${tab}"]`) as HTMLButtonElement | null;
+    if (tabBtn) tabBtn.click();
+    return true;
+  }
+
+  const shareBtn = document.getElementById('share-btn')!;
+  shareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + serializeState();
+    navigator.clipboard.writeText(url).then(() => {
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+      }, 1500);
+    });
+  });
+
+  /* ================================================================ */
   /*  Init                                                             */
   /* ================================================================ */
-  tbpDlam.value = '10';
-  calcTBP();
+  if (!restoreState()) {
+    tbpDlam.value = '10';
+    calcTBP();
+  }
   calcPeak();
   updateGVD();
 </script>

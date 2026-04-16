@@ -118,7 +118,13 @@ import Layout from '../../layouts/Layout.astro';
         <div class="chart-panel card">
           <div class="chart-header">
             <span class="chart-title">Intensity |v(x,z)|&sup2;</span>
-            <span class="chart-status" id="status"></span>
+            <span class="chart-header__right">
+              <button id="share-btn" class="share-btn" title="Copy shareable link to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
+              <span class="chart-status" id="status"></span>
+            </span>
           </div>
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="bpm-canvas" aria-label="BPM intensity heatmap"></canvas>
@@ -270,7 +276,23 @@ import Layout from '../../layouts/Layout.astro';
     margin-bottom: var(--space-sm);
   }
   .chart-title { font-weight: 600; font-size: 0.95rem; }
+  .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
   .chart-status { font-size: 0.8rem; color: var(--text-muted); }
+  .share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
 
   .chart-wrap { position: relative; }
   .chart-wrap canvas {
@@ -514,7 +536,71 @@ import Layout from '../../layouts/Layout.astro';
   onThemeChange(drawHeatmap);
   window.addEventListener('resize', drawHeatmap);
 
-  /* ---- Init with Task 1 ---- */
-  writeParams(TASKS['1']);
+  /* ---- Share / URL State ---- */
+  function serializeState(): string {
+    const p = new URLSearchParams();
+    const activePreset = document.querySelector('#presets .preset-btn.active') as HTMLButtonElement | null;
+    if (activePreset?.dataset.task) p.set('task', activePreset.dataset.task);
+    const params = readParams();
+    p.set('z', String(params.z));
+    p.set('dz', String(params.dz));
+    p.set('delta', String(params.delta));
+    p.set('lam', String(params.lambda));
+    p.set('w', String(params.w));
+    p.set('nd', String(params.nd));
+    p.set('Nx', String(params.Nx));
+    p.set('xa', String(params.xa));
+    p.set('xb', String(params.xb));
+    p.set('nclad', String(params.nCladding));
+    p.set('ncore', String(params.nCore));
+    return p.toString();
+  }
+
+  function restoreState(): boolean {
+    const hash = location.hash.slice(1);
+    if (!hash) return false;
+    const p = new URLSearchParams(hash);
+    if (!p.has('z')) return false;
+    const task = p.get('task');
+    if (task) {
+      const btn = document.querySelector(`#presets .preset-btn[data-task="${task}"]`) as HTMLButtonElement | null;
+      if (btn) {
+        document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    } else {
+      document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
+    }
+    writeParams({
+      z:         parseFloat(p.get('z')!)     || 100,
+      dz:        parseFloat(p.get('dz')!)    || 0.005,
+      delta:     parseInt(p.get('delta')!)    || 200,
+      lambda:    parseFloat(p.get('lam')!)    || 1,
+      w:         parseFloat(p.get('w')!)      || 4,
+      nd:        parseFloat(p.get('nd')!)     || 1.455,
+      Nx:        parseInt(p.get('Nx')!)       || 200,
+      xa:        parseFloat(p.get('xa')!)     || 50,
+      xb:        parseFloat(p.get('xb')!)     || 2,
+      nCladding: parseFloat(p.get('nclad')!)  || 1.45,
+      nCore:     parseFloat(p.get('ncore')!)  || 1.46,
+    });
+    return true;
+  }
+
+  const shareBtn = document.getElementById('share-btn')!;
+  shareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + serializeState();
+    navigator.clipboard.writeText(url).then(() => {
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+      }, 1500);
+    });
+  });
+
+  /* ---- Init ---- */
+  if (!restoreState()) {
+    writeParams(TASKS['1']);
+  }
   runSimulation();
 </script>

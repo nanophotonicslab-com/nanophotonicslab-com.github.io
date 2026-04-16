@@ -157,8 +157,24 @@ function isActive(href: string): boolean {
 
   @media (max-width: 640px) {
     .lab-bar__label { display: none; }
-    .lab-tool { padding: 0.3rem 0.55rem; }
+    .lab-tool { padding: 0.5rem 0.65rem; min-height: 44px; min-width: 44px; justify-content: center; }
     .lab-tool__label { display: none; }
     .lab-tool.active .lab-tool__label { display: inline; }
+    /* Fade hint at trailing edge to signal scrollability */
+    .lab-bar { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+    .lab-bar.scrolled-end { -webkit-mask-image: none; mask-image: none; }
   }
 </style>
+
+<script>
+  const bar = document.querySelector('.lab-bar') as HTMLElement | null;
+  const inner = document.querySelector('.lab-bar__inner') as HTMLElement | null;
+  if (bar && inner) {
+    function checkScroll() {
+      const atEnd = inner!.scrollLeft + inner!.clientWidth >= inner!.scrollWidth - 2;
+      bar!.classList.toggle('scrolled-end', atEnd);
+    }
+    inner.addEventListener('scroll', checkScroll, { passive: true });
+    checkScroll();
+  }
+</script>
