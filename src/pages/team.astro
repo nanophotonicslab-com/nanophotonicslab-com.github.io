@@ -5,7 +5,7 @@ const pi = {
   name: 'Prof. Name Surname',
   role: 'Principal Investigator',
   bio: 'Brief biography about the PI, their research interests, academic trajectory, and vision for the lab. Include key achievements and current focus areas.',
-  links: { scholar: '#', email: 'mailto:pi@nanophotonicslab.com' },
+  links: { email: 'mailto:pi@nanophotonicslab.com' },
 };
 
 const members = [
@@ -47,7 +47,7 @@ const alumni = [
           <span class="tag">{pi.role}</span>
           <p>{pi.bio}</p>
           <div class="pi-links">
-            <a href={pi.links.scholar} class="btn btn--outline">Google Scholar</a>
+            <!-- TODO: add Google Scholar link -->
             <a href={pi.links.email} class="btn btn--outline">Email</a>
           </div>
         </div>

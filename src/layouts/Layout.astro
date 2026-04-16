@@ -10,6 +10,8 @@ interface Props {
 }
 
 const { title, description = 'Nanophotonics research lab — exploring light-matter interactions at the nanoscale.' } = Astro.props;
+const siteTitle = `${title} | NanophotonicsLab`;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://nanophotonicslab.com');
 ---
 
 <!doctype html>
@@ -17,10 +19,18 @@ const { title, description = 'Nanophotonics research lab — exploring light-mat
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}favicon.svg`} />
+    <link rel="icon" type="image/x-icon" href={`${import.meta.env.BASE_URL}favicon.ico`} />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} | NanophotonicsLab</title>
+    <meta property="og:title" content={siteTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL.href} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={siteTitle} />
+    <meta name="twitter:description" content={description} />
+    <title>{siteTitle}</title>
   </head>
   <body>
     <Navbar />

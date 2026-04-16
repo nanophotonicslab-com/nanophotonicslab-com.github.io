@@ -120,7 +120,7 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
           <div class="chart-wrap" id="chart-wrap">
-            <canvas id="mie-chart"></canvas>
+            <canvas id="mie-chart" aria-label="Absorption and scattering cross-section spectra"></canvas>
           </div>
         </div>
 
@@ -187,7 +187,7 @@ import Layout from '../../layouts/Layout.astro';
             <span class="delta-t-label">&Delta;T at surface</span>
             <div class="delta-t-value"><span id="out-dt">&mdash;</span><span class="delta-t-unit">K</span></div>
             <div class="profile-wrap" id="profile-wrap">
-              <canvas id="profile-chart"></canvas>
+              <canvas id="profile-chart" aria-label="Radial temperature profile T(r)"></canvas>
             </div>
             <span class="profile-label">
               T(r) &minus; T<sub>&infin;</sub> vs. r / R &ensp;&middot;&ensp;

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
 
 const widgets = [
   {
@@ -8,7 +9,7 @@ const widgets = [
     color: '#F59E0B',
     icon: 'bolt',
     status: 'Live',
-    url: '/lab/mie-scattering/',
+    url: `${base}lab/mie-scattering/`,
   },
   {
     title: 'Relativistic Electron Calculator',
@@ -16,7 +17,7 @@ const widgets = [
     color: '#7C3AED',
     icon: 'electron',
     status: 'Live',
-    url: '/lab/electron/',
+    url: `${base}lab/electron/`,
   },
   {
     title: 'Photon Calculator',
@@ -24,7 +25,7 @@ const widgets = [
     color: '#10B981',
     icon: 'photon',
     status: 'Live',
-    url: '/lab/photon/',
+    url: `${base}lab/photon/`,
   },
   {
     title: 'Cylinder Dispersion',
@@ -32,7 +33,7 @@ const widgets = [
     color: '#6366F1',
     icon: 'cylinder',
     status: 'Live',
-    url: '/lab/cylinder/',
+    url: `${base}lab/cylinder/`,
   },
   {
     title: 'Photothermal Calculator',
@@ -40,7 +41,7 @@ const widgets = [
     color: '#EF4444',
     icon: 'flame',
     status: 'Live',
-    url: '/lab/photothermal/',
+    url: `${base}lab/photothermal/`,
   },
   {
     title: 'Scientific Unit Converter',
@@ -48,7 +49,7 @@ const widgets = [
     color: '#06B6D4',
     icon: 'ruler',
     status: 'Live',
-    url: '/lab/units/',
+    url: `${base}lab/units/`,
   },
 ];
 ---

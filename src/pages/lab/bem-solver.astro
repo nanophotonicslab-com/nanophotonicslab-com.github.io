@@ -5,7 +5,7 @@ import Layout from '../../layouts/Layout.astro';
 <Layout title="BEM Solver" description="Full-wave electromagnetic solver for nanoparticles — retarded BEM with 3D visualization, powered by Pyodide.">
   <section class="widget-hero">
     <div class="container">
-      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <a href={`${import.meta.env.BASE_URL}lab/`} class="back-link">&larr; Back to Lab</a>
       <h1>BEM <span class="gradient-text">Solver</span></h1>
       <p class="widget-hero__subtitle">
         Solve Maxwell's equations for metallic nanoparticles using Galerkin BEM with
@@ -108,7 +108,7 @@ import Layout from '../../layouts/Layout.astro';
             <button id="reset-view-btn" class="toolbar-btn" title="Reset camera">&#8634;</button>
           </div>
           <div id="viewport-container" class="viewport-canvas"></div>
-          <canvas id="colorbar" class="colorbar-canvas" width="80" height="300"></canvas>
+          <canvas id="colorbar" class="colorbar-canvas" width="80" height="300" aria-label="Near-field intensity color scale"></canvas>
         </div>
 
         <!-- Right: Summary -->
@@ -124,7 +124,7 @@ import Layout from '../../layouts/Layout.astro';
       <!-- Spectrum: full width below -->
       <div class="spectrum-panel card">
         <h3>Spectrum</h3>
-        <canvas id="spectrum-canvas" class="spectrum-canvas" width="1200" height="400"></canvas>
+        <canvas id="spectrum-canvas" class="spectrum-canvas" width="1200" height="400" aria-label="Cross-section spectrum"></canvas>
         <p class="hint">Click on the chart to select a wavelength for 3D field view.</p>
       </div>
 

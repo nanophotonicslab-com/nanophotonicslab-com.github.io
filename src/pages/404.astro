@@ -1,0 +1,60 @@
+---
+import Layout from '../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Page not found" description="The page you're looking for doesn't exist.">
+  <section class="error-hero">
+    <div class="container error-content">
+      <span class="error-code">404</span>
+      <h1>Page not found</h1>
+      <p>The page you're looking for doesn't exist or has been moved.</p>
+      <div class="error-actions">
+        <a href={base} class="btn btn--primary">Go home</a>
+        <a href={`${base}lab/`} class="btn btn--outline">Try the lab</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .error-hero {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-3xl) 0;
+  }
+
+  .error-content {
+    max-width: 480px;
+  }
+
+  .error-code {
+    font-size: clamp(5rem, 12vw, 8rem);
+    font-weight: 900;
+    line-height: 1;
+    background: var(--spectrum);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .error-hero h1 {
+    margin: var(--space-md) 0 var(--space-sm);
+    font-size: 1.5rem;
+  }
+
+  .error-hero p {
+    color: var(--text-soft);
+    margin-bottom: var(--space-xl);
+  }
+
+  .error-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+</style>
