@@ -1,0 +1,1493 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Laser Pulse Calculator" description="Pulse duration, bandwidth, peak power, and dispersion for ultrafast laser pulses. Time-bandwidth product, GDD broadening, and peak power from average power.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Laser Pulse <span class="gradient-text">Calculator</span></h1>
+      <p class="widget-hero__subtitle">
+        Essential calculations for ultrafast laser labs: time-bandwidth product,
+        peak power from average power, and pulse broadening through dispersive media.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <!-- Tabs -->
+      <div class="calc-tabs" id="calc-tabs">
+        <button class="calc-tab active" data-tab="tbp">Pulse &harr; Bandwidth</button>
+        <button class="calc-tab" data-tab="peak">Peak Power</button>
+        <button class="calc-tab" data-tab="gdd">Dispersion</button>
+        <button class="calc-tab" data-tab="beam">Gaussian Beam</button>
+        <button class="calc-tab" data-tab="focus">Focus &amp; Fluence</button>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 1: Pulse ↔ Bandwidth                                     -->
+      <!-- ============================================================ -->
+      <div class="tab-panel active" id="panel-tbp">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Time-Bandwidth Product</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Pulse shape</span>
+              <div class="shape-row" id="tbp-shape">
+                <button class="preset-btn active" data-shape="gaussian">Gaussian</button>
+                <button class="preset-btn" data-shape="sech2">sech&sup2;</button>
+                <button class="preset-btn" data-shape="lorentzian">Lorentzian</button>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Input (edit either)</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="tbp-lam">&lambda;<sub>0</sub> (nm)</label>
+                  <input type="text" class="field-input" id="tbp-lam" inputmode="decimal" value="800">
+                </div>
+                <div class="field">
+                  <label for="tbp-dlam">&Delta;&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="tbp-dlam" inputmode="decimal" placeholder="10">
+                </div>
+                <div class="field">
+                  <label for="tbp-dt">&Delta;t (fs)</label>
+                  <input type="text" class="field-input" id="tbp-dt" inputmode="decimal" placeholder="auto">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Time-bandwidth product.</strong>
+              &Delta;t&thinsp;&middot;&thinsp;&Delta;&nu;&nbsp;&ge;&nbsp;TBP.
+              Gaussian:&nbsp;0.4413, sech&sup2;:&nbsp;0.3148, Lorentzian:&nbsp;0.2206.
+              &Delta;&nu;&nbsp;=&nbsp;c&thinsp;&Delta;&lambda;/&lambda;&sup2;.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Transform-limited &Delta;t</span>
+                <span class="result-value" id="tbp-out-dt">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Frequency bandwidth &Delta;&nu;</span>
+                <span class="result-value" id="tbp-out-dnu">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Optical cycles</span>
+                <span class="result-value" id="tbp-out-cycles">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">TBP (actual / minimum)</span>
+                <span class="result-value" id="tbp-out-ratio">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap dual-chart">
+              <canvas id="tbp-chart-time" aria-label="Temporal pulse profile"></canvas>
+              <canvas id="tbp-chart-spec" aria-label="Spectral profile"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 2: Peak Power                                             -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-peak">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Peak Power</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Pulse shape</span>
+              <div class="shape-row" id="peak-shape">
+                <button class="preset-btn active" data-shape="gaussian">Gaussian</button>
+                <button class="preset-btn" data-shape="sech2">sech&sup2;</button>
+                <button class="preset-btn" data-shape="rect">Rectangular</button>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Parameters</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="peak-pavg">P<sub>avg</sub></label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="peak-pavg" inputmode="decimal" value="1">
+                    <select class="unit-sel" id="peak-pavg-u">
+                      <option value="1">W</option>
+                      <option value="1e-3">mW</option>
+                      <option value="1e-6">&mu;W</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="peak-frep">f<sub>rep</sub></label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="peak-frep" inputmode="decimal" value="80">
+                    <select class="unit-sel" id="peak-frep-u">
+                      <option value="1e6" selected>MHz</option>
+                      <option value="1e3">kHz</option>
+                      <option value="1e9">GHz</option>
+                      <option value="1">Hz</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="peak-dt">&Delta;t</label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="peak-dt" inputmode="decimal" value="100">
+                    <select class="unit-sel" id="peak-dt-u">
+                      <option value="1e-15" selected>fs</option>
+                      <option value="1e-12">ps</option>
+                      <option value="1e-9">ns</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Peak power.</strong>
+              E&nbsp;=&nbsp;P<sub>avg</sub>/f<sub>rep</sub>, &ensp;
+              P<sub>peak</sub>&nbsp;=&nbsp;k&thinsp;E/&Delta;t.
+              k: Gaussian&nbsp;0.94, sech&sup2;&nbsp;0.88, rect&nbsp;1.0.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Pulse energy</span>
+                <span class="result-value" id="peak-out-energy">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak power</span>
+                <span class="result-value" id="peak-out-ppeak">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Duty cycle</span>
+                <span class="result-value" id="peak-out-duty">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak / Average ratio</span>
+                <span class="result-value" id="peak-out-ratio">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="peak-chart" aria-label="Pulse train and peak power diagram"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 3: Dispersion                                             -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-gdd">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>GDD Pulse Broadening</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Input pulse</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="gdd-dt">&Delta;t<sub>in</sub> (fs)</label>
+                  <input type="text" class="field-input" id="gdd-dt" inputmode="decimal" value="100">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Material</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="gdd-mat">Material</label>
+                  <select class="field-input" id="gdd-mat">
+                    <option value="sio2">Fused silica</option>
+                    <option value="bk7">BK7</option>
+                    <option value="caf2">CaF&sub2;</option>
+                    <option value="sapphire">Sapphire</option>
+                    <option value="sf10">SF10</option>
+                    <option value="custom">Custom GVD</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="gdd-wl">Wavelength</label>
+                  <select class="field-input" id="gdd-wl">
+                    <option value="800">800 nm</option>
+                    <option value="1030">1030 nm</option>
+                    <option value="1550">1550 nm</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="gdd-gvd">GVD (fs&sup2;/mm)</label>
+                  <input type="text" class="field-input" id="gdd-gvd" inputmode="decimal" readonly>
+                </div>
+                <div class="field">
+                  <label for="gdd-L">Thickness (mm)</label>
+                  <input type="text" class="field-input" id="gdd-L" inputmode="decimal" value="10">
+                </div>
+                <div class="field">
+                  <label for="gdd-passes">Passes</label>
+                  <input type="text" class="field-input" id="gdd-passes" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>GDD broadening (Gaussian).</strong>
+              &Delta;t<sub>out</sub>&nbsp;=&nbsp;&Delta;t<sub>in</sub>&thinsp;&radic;(1&nbsp;+&nbsp;(4&thinsp;ln2&thinsp;&middot;&thinsp;GDD/&Delta;t<sub>in</sub>&sup2;)&sup2;).
+              GDD&nbsp;=&nbsp;GVD&thinsp;&times;&thinsp;L&thinsp;&times;&thinsp;passes.
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Total GDD</span>
+                <span class="result-value" id="gdd-out-gdd">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Output &Delta;t</span>
+                <span class="result-value" id="gdd-out-dt">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Broadening factor</span>
+                <span class="result-value" id="gdd-out-factor">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap" id="gdd-chart-wrap">
+              <canvas id="gdd-chart" aria-label="Pulse duration vs material thickness"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 4: Gaussian Beam                                          -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-beam">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Gaussian Beam</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Parameters</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="beam-lam">&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="beam-lam" inputmode="decimal" value="800">
+                </div>
+                <div class="field">
+                  <label for="beam-w0">w<sub>0</sub> (&mu;m)</label>
+                  <input type="text" class="field-input" id="beam-w0" inputmode="decimal" value="10">
+                </div>
+                <div class="field">
+                  <label for="beam-M2">M&sup2;</label>
+                  <input type="text" class="field-input" id="beam-M2" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Evaluate at distance</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="beam-z">z (mm)</label>
+                  <input type="text" class="field-input" id="beam-z" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Gaussian beam.</strong>
+              z<sub>R</sub>&nbsp;=&nbsp;&pi;w<sub>0</sub>&sup2;/(M&sup2;&lambda;), &ensp;
+              w(z)&nbsp;=&nbsp;w<sub>0</sub>&radic;(1+(z/z<sub>R</sub>)&sup2;), &ensp;
+              &theta;&nbsp;=&nbsp;M&sup2;&lambda;/(&pi;w<sub>0</sub>).
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Rayleigh range z<sub>R</sub></span>
+                <span class="result-value" id="beam-out-zr">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Divergence &theta; (half-angle)</span>
+                <span class="result-value" id="beam-out-div">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Confocal parameter 2z<sub>R</sub></span>
+                <span class="result-value" id="beam-out-conf">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">w(z) at selected z</span>
+                <span class="result-value" id="beam-out-wz">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="beam-chart" aria-label="Beam radius vs propagation distance"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 5: Focus & Fluence                                        -->
+      <!-- ============================================================ -->
+      <div class="tab-panel" id="panel-focus">
+        <div class="widget-layout">
+          <div class="controls card">
+            <h3>Focus &amp; Fluence</h3>
+
+            <div class="param-group">
+              <span class="param-group__title">Beam before lens</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="foc-lam">&lambda; (nm)</label>
+                  <input type="text" class="field-input" id="foc-lam" inputmode="decimal" value="800">
+                </div>
+                <div class="field">
+                  <label for="foc-d">Beam &empty; (mm)</label>
+                  <input type="text" class="field-input" id="foc-d" inputmode="decimal" value="5">
+                </div>
+                <div class="field">
+                  <label for="foc-M2">M&sup2;</label>
+                  <input type="text" class="field-input" id="foc-M2" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Focusing optic</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="foc-f">f (mm)</label>
+                  <input type="text" class="field-input" id="foc-f" inputmode="decimal" value="100">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Pulse</span>
+              <div class="fields">
+                <div class="field">
+                  <label for="foc-energy">Energy</label>
+                  <div class="input-with-unit">
+                    <input type="text" class="field-input" id="foc-energy" inputmode="decimal" value="1">
+                    <select class="unit-sel" id="foc-energy-u">
+                      <option value="1e-3">mJ</option>
+                      <option value="1e-6" selected>&mu;J</option>
+                      <option value="1e-9">nJ</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="foc-dt">&Delta;t (fs)</label>
+                  <input type="text" class="field-input" id="foc-dt" inputmode="decimal" value="100">
+                </div>
+              </div>
+            </div>
+
+            <p class="theory-note">
+              <strong>Focus.</strong>
+              w<sub>0</sub>&nbsp;&approx;&nbsp;M&sup2;&thinsp;&lambda;&thinsp;f/(&pi;&thinsp;w<sub>in</sub>).
+              I&nbsp;=&nbsp;P<sub>peak</sub>/(&pi;w<sub>0</sub>&sup2;).
+              F&nbsp;=&nbsp;E/(&pi;w<sub>0</sub>&sup2;).
+            </p>
+          </div>
+
+          <div class="results card">
+            <h3>Results</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <span class="result-label">Spot radius w<sub>0</sub></span>
+                <span class="result-value" id="foc-out-w0">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Spot diameter 2w<sub>0</sub></span>
+                <span class="result-value" id="foc-out-2w0">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Peak intensity</span>
+                <span class="result-value" id="foc-out-I">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Fluence</span>
+                <span class="result-value" id="foc-out-F">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Rayleigh range z<sub>R</sub></span>
+                <span class="result-value" id="foc-out-zr">&mdash;</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Depth of focus 2z<sub>R</sub></span>
+                <span class="result-value" id="foc-out-dof">&mdash;</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="foc-chart" aria-label="Focused beam profile and intensity"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* ---- Hero ---- */
+  .widget-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+  .widget-hero__subtitle { font-size: 1.1rem; max-width: 640px; color: var(--text-soft); }
+  .gradient-text {
+    background: var(--spectrum); background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .back-link {
+    display: inline-block; margin-bottom: var(--space-md);
+    font-size: 0.875rem; color: var(--text-muted); text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  /* ---- Tabs ---- */
+  .calc-tabs {
+    display: flex; gap: 0.25rem; margin-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--bg-muted); padding-bottom: 0;
+  }
+  .calc-tab {
+    padding: 0.6rem 1.2rem; font-size: 0.875rem; font-weight: 500;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; color: var(--text-muted); cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .calc-tab:hover { color: var(--text); }
+  .calc-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ---- Layout ---- */
+  .widget-layout {
+    display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start;
+  }
+  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+
+  /* ---- Controls ---- */
+  .controls { position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px); }
+  .controls h3 { margin-bottom: var(--space-md); }
+  .param-group {
+    margin-bottom: var(--space-md); padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-muted);
+  }
+  .param-group__title {
+    display: block; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); margin-bottom: 0.5rem;
+  }
+  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .field { display: flex; align-items: center; gap: 0.5rem; }
+  .field label {
+    flex: 0 0 auto; min-width: 80px; max-width: 100px;
+    font-size: 0.78rem; color: var(--text-soft);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .field-input {
+    flex: 1; min-width: 0; padding: 0.35rem 0.55rem; font-size: 0.85rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: var(--font);
+  }
+  .field-input:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  }
+  .field-input[readonly] { opacity: 0.7; cursor: default; }
+  select.field-input { cursor: pointer; }
+
+  .input-with-unit { flex: 1; display: flex; gap: 0; min-width: 0; }
+  .input-with-unit .field-input {
+    border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none;
+  }
+  .unit-sel {
+    padding: 0.35rem 0.3rem; font-size: 0.8rem;
+    border: 1px solid var(--bg-muted); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--bg-soft); color: var(--text-soft); cursor: pointer;
+    font-family: var(--font);
+  }
+
+  .shape-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 500;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: transparent; color: var(--text-soft); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .preset-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .theory-note {
+    margin-top: var(--space-md); font-size: 0.78rem;
+    line-height: 1.5; color: var(--text-muted);
+  }
+
+  /* ---- Results ---- */
+  .results h3 { margin-bottom: var(--space-md); }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+  @media (max-width: 600px) { .result-grid { grid-template-columns: 1fr; } }
+  .result-item { display: flex; flex-direction: column; gap: 0.2rem; }
+  .result-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .result-value { font-size: 1.4rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* ---- Charts ---- */
+  .chart-wrap { margin-top: var(--space-lg); }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 2; display: block; border-radius: var(--radius-sm); }
+  .dual-chart { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .dual-chart canvas { aspect-ratio: 4 / 3; }
+  @media (max-width: 600px) { .dual-chart { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+
+  /* ================================================================ */
+  /*  Tab switching                                                    */
+  /* ================================================================ */
+  const tabs = document.querySelectorAll<HTMLButtonElement>('.calc-tab');
+  const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`panel-${tab.dataset.tab}`)!.classList.add('active');
+      // Redraw charts now that the panel is visible
+      requestAnimationFrame(() => {
+        if (tab.dataset.tab === 'tbp') calcTBP();
+        else if (tab.dataset.tab === 'peak') calcPeak();
+        else if (tab.dataset.tab === 'gdd') calcGDD();
+        else if (tab.dataset.tab === 'beam') calcBeam();
+        else if (tab.dataset.tab === 'focus') calcFocus();
+      });
+    });
+  });
+
+  /* ================================================================ */
+  /*  Constants                                                        */
+  /* ================================================================ */
+  const c_nm_fs = 299792.458;  // speed of light in nm/fs
+  const c_m_s = 299792458;     // speed of light in m/s
+  const ln2 = Math.log(2);
+
+  const TBP: Record<string, number> = { gaussian: 0.4413, sech2: 0.3148, lorentzian: 0.2206 };
+  const SHAPE_K: Record<string, number> = { gaussian: 0.9394, sech2: 0.8813, rect: 1.0 };
+
+  // GVD table: material → { wavelength → GVD in fs²/mm }
+  const GVD_TABLE: Record<string, Record<string, number>> = {
+    sio2:     { '800': 36.1,  '1030': 23.5, '1550': -11.2 },
+    bk7:      { '800': 44.6,  '1030': 28.6, '1550': -4.7  },
+    caf2:     { '800': 27.4,  '1030': 17.5, '1550': -16.1 },
+    sapphire: { '800': 58.0,  '1030': 38.0, '1550': 2.5   },
+    sf10:     { '800': 159.0, '1030': 88.0, '1550': 20.3  },
+  };
+
+  /* ================================================================ */
+  /*  Helpers                                                          */
+  /* ================================================================ */
+  function el<T extends HTMLElement>(id: string) { return document.getElementById(id) as T; }
+
+  function autoScale(val: number, units: [number, string][]): string {
+    for (let i = units.length - 1; i >= 0; i--) {
+      if (Math.abs(val) >= units[i][0] * 0.999) {
+        return (val / units[i][0]).toPrecision(4) + ' ' + units[i][1];
+      }
+    }
+    return val.toExponential(3) + ' ' + units[0][1];
+  }
+
+  const powerUnits: [number, string][] = [[1, 'W'], [1e3, 'kW'], [1e6, 'MW'], [1e9, 'GW'], [1e12, 'TW']];
+  const energyUnits: [number, string][] = [[1e-15, 'fJ'], [1e-12, 'pJ'], [1e-9, 'nJ'], [1e-6, '\u00b5J'], [1e-3, 'mJ'], [1, 'J']];
+  const timeUnits: [number, string][] = [[1e-15, 'fs'], [1e-12, 'ps'], [1e-9, 'ns']];
+
+  function getActiveShape(containerId: string): string {
+    const active = document.querySelector(`#${containerId} .preset-btn.active`) as HTMLElement | null;
+    return active?.dataset.shape || 'gaussian';
+  }
+
+  function setupShapeButtons(containerId: string, onChange: () => void) {
+    document.getElementById(containerId)!.addEventListener('click', e => {
+      const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLButtonElement | null;
+      if (!btn) return;
+      document.querySelectorAll(`#${containerId} .preset-btn`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onChange();
+    });
+  }
+
+  /* ================================================================ */
+  /*  Calculator 1: Pulse ↔ Bandwidth                                 */
+  /* ================================================================ */
+  const tbpLam = el<HTMLInputElement>('tbp-lam');
+  const tbpDlam = el<HTMLInputElement>('tbp-dlam');
+  const tbpDt = el<HTMLInputElement>('tbp-dt');
+  let tbpLastEdited: 'dlam' | 'dt' = 'dlam';
+
+  function calcTBP() {
+    const lam0 = parseFloat(tbpLam.value);
+    const shape = getActiveShape('tbp-shape');
+    const tbp = TBP[shape];
+    if (!lam0 || lam0 <= 0) return;
+
+    if (tbpLastEdited === 'dlam') {
+      const dlam = parseFloat(tbpDlam.value);
+      if (!dlam || dlam <= 0) return;
+      // Δν = c · Δλ / λ²  (all in nm & fs → THz)
+      const dnu_THz = c_nm_fs * dlam / (lam0 * lam0) * 1e3;  // ×1e3: nm/fs→THz
+      const dt_TL_fs = tbp / (dnu_THz * 1e-3);  // TBP / (Δν in 1/fs) = TBP / (dnu_THz × 1e-3)
+      tbpDt.value = dt_TL_fs.toFixed(1);
+      el<HTMLElement>('tbp-out-dt').textContent = dt_TL_fs.toFixed(2) + ' fs';
+      el<HTMLElement>('tbp-out-dnu').textContent = dnu_THz.toFixed(2) + ' THz';
+      const cycles = dt_TL_fs / (lam0 / c_nm_fs);
+      el<HTMLElement>('tbp-out-cycles').textContent = cycles.toFixed(1);
+      el<HTMLElement>('tbp-out-ratio').textContent = `${tbp.toFixed(4)} (transform-limited)`;
+      drawTBPCharts(lam0, dlam, dt_TL_fs, dnu_THz, shape);
+    } else {
+      const dt = parseFloat(tbpDt.value);
+      if (!dt || dt <= 0) return;
+      // Minimum Δν for this dt
+      const dnu_min = tbp / (dt * 1e-3);  // dnu in THz: TBP / (dt_fs × 1e-3)
+      const dlam = dnu_min * 1e-3 * lam0 * lam0 / c_nm_fs;
+      tbpDlam.value = dlam.toFixed(2);
+      el<HTMLElement>('tbp-out-dt').textContent = dt.toFixed(2) + ' fs (input)';
+      el<HTMLElement>('tbp-out-dnu').textContent = dnu_min.toFixed(2) + ' THz (minimum)';
+      const cycles = dt / (lam0 / c_nm_fs);
+      el<HTMLElement>('tbp-out-cycles').textContent = cycles.toFixed(1);
+      const actualTBP = dt * 1e-3 * dnu_min;
+      el<HTMLElement>('tbp-out-ratio').textContent = `${actualTBP.toFixed(4)} / ${tbp.toFixed(4)} = 1.00`;
+      drawTBPCharts(lam0, dlam, dt, dnu_min, shape);
+    }
+  }
+
+  tbpDlam.addEventListener('input', () => { tbpLastEdited = 'dlam'; calcTBP(); });
+  tbpDt.addEventListener('input', () => { tbpLastEdited = 'dt'; calcTBP(); });
+  tbpLam.addEventListener('input', calcTBP);
+  setupShapeButtons('tbp-shape', calcTBP);
+
+  /* ================================================================ */
+  /*  Calculator 2: Peak Power                                         */
+  /* ================================================================ */
+  function calcPeak() {
+    const shape = getActiveShape('peak-shape');
+    const k = SHAPE_K[shape];
+
+    const pavg_raw = parseFloat(el<HTMLInputElement>('peak-pavg').value);
+    const pavg_mul = parseFloat(el<HTMLSelectElement>('peak-pavg-u').value);
+    const frep_raw = parseFloat(el<HTMLInputElement>('peak-frep').value);
+    const frep_mul = parseFloat(el<HTMLSelectElement>('peak-frep-u').value);
+    const dt_raw = parseFloat(el<HTMLInputElement>('peak-dt').value);
+    const dt_mul = parseFloat(el<HTMLSelectElement>('peak-dt-u').value);
+
+    if (!pavg_raw || !frep_raw || !dt_raw) return;
+
+    const P_avg = pavg_raw * pavg_mul;    // W
+    const f_rep = frep_raw * frep_mul;    // Hz
+    const dt = dt_raw * dt_mul;           // s
+
+    const E = P_avg / f_rep;              // J
+    const P_peak = k * E / dt;            // W
+    const duty = dt * f_rep;
+
+    el<HTMLElement>('peak-out-energy').textContent = autoScale(E, energyUnits);
+    el<HTMLElement>('peak-out-ppeak').textContent = autoScale(P_peak, powerUnits);
+    el<HTMLElement>('peak-out-duty').textContent = duty.toExponential(2);
+    el<HTMLElement>('peak-out-ratio').textContent = (P_peak / P_avg).toExponential(3) + '\u00d7';
+    drawPeakChart(P_avg, P_peak, f_rep, dt, shape);
+  }
+
+  ['peak-pavg', 'peak-frep', 'peak-dt'].forEach(id => el<HTMLInputElement>(id).addEventListener('input', calcPeak));
+  ['peak-pavg-u', 'peak-frep-u', 'peak-dt-u'].forEach(id => el<HTMLSelectElement>(id).addEventListener('change', calcPeak));
+  setupShapeButtons('peak-shape', calcPeak);
+
+  /* ================================================================ */
+  /*  Calculator 3: Dispersion (GDD)                                   */
+  /* ================================================================ */
+  const gddMat = el<HTMLSelectElement>('gdd-mat');
+  const gddWl = el<HTMLSelectElement>('gdd-wl');
+  const gddGvd = el<HTMLInputElement>('gdd-gvd');
+
+  function updateGVD() {
+    const mat = gddMat.value;
+    if (mat === 'custom') {
+      gddGvd.readOnly = false;
+      gddGvd.style.opacity = '1';
+    } else {
+      gddGvd.readOnly = true;
+      gddGvd.style.opacity = '0.7';
+      const wl = gddWl.value;
+      const val = GVD_TABLE[mat]?.[wl];
+      gddGvd.value = val != null ? String(val) : '—';
+    }
+    calcGDD();
+  }
+
+  function calcGDD() {
+    const dt_in = parseFloat(el<HTMLInputElement>('gdd-dt').value);
+    const gvd = parseFloat(gddGvd.value);
+    const L = parseFloat(el<HTMLInputElement>('gdd-L').value);
+    const passes = parseInt(el<HTMLInputElement>('gdd-passes').value) || 1;
+
+    if (!dt_in || isNaN(gvd) || !L) return;
+
+    const GDD = gvd * L * passes;  // fs²
+    const ratio = 4 * ln2 * GDD / (dt_in * dt_in);
+    const dt_out = dt_in * Math.sqrt(1 + ratio * ratio);
+    const factor = dt_out / dt_in;
+
+    el<HTMLElement>('gdd-out-gdd').textContent = GDD.toFixed(1) + ' fs\u00b2';
+    el<HTMLElement>('gdd-out-dt').textContent = dt_out.toFixed(2) + ' fs';
+    el<HTMLElement>('gdd-out-factor').textContent = factor.toFixed(3) + '\u00d7';
+
+    drawGDDChart(dt_in, gvd, passes);
+  }
+
+  gddMat.addEventListener('change', updateGVD);
+  gddWl.addEventListener('change', updateGVD);
+  gddGvd.addEventListener('input', calcGDD);
+  el<HTMLInputElement>('gdd-dt').addEventListener('input', calcGDD);
+  el<HTMLInputElement>('gdd-L').addEventListener('input', calcGDD);
+  el<HTMLInputElement>('gdd-passes').addEventListener('input', calcGDD);
+
+  /* ---- GDD chart ---- */
+  function drawGDDChart(dt_in: number, gvd: number, passes: number) {
+    const canvas = el<HTMLCanvasElement>('gdd-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.7, Math.min(1, W / 500));
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 50 * fs, mr = 16 * fs, mt = 12 * fs, mb = 36 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    const L_input = parseFloat(el<HTMLInputElement>('gdd-L').value) || 10;
+    const L_max = Math.max(L_input * 2, 1);
+    const nPts = 200;
+
+    // Compute curve
+    const xs = new Float64Array(nPts);
+    const ys = new Float64Array(nPts);
+    let yMax = dt_in;
+    for (let i = 0; i < nPts; i++) {
+      const L = (i / (nPts - 1)) * L_max;
+      const GDD = gvd * L * passes;
+      const r = 4 * ln2 * GDD / (dt_in * dt_in);
+      xs[i] = L;
+      ys[i] = dt_in * Math.sqrt(1 + r * r);
+      if (ys[i] > yMax) yMax = ys[i];
+    }
+    yMax *= 1.15;
+
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    // Grid
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = mt + (i / 4) * ph;
+      ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke();
+    }
+
+    // Curve
+    ctx.beginPath();
+    ctx.strokeStyle = ct.primary;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < nPts; i++) {
+      const x = ml + (xs[i] / L_max) * pw;
+      const y = mt + ph - (ys[i] / yMax) * ph;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Operating point
+    const opX = ml + (L_input / L_max) * pw;
+    const GDD_op = gvd * L_input * passes;
+    const r_op = 4 * ln2 * GDD_op / (dt_in * dt_in);
+    const dt_op = dt_in * Math.sqrt(1 + r_op * r_op);
+    const opY = mt + ph - (dt_op / yMax) * ph;
+    ctx.beginPath();
+    ctx.arc(opX, opY, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = ct.primary;
+    ctx.fill();
+
+    // Dashed vertical from operating point
+    ctx.save();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = ct.textMuted;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(opX, opY); ctx.lineTo(opX, mt + ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(opX, opY); ctx.lineTo(ml, opY); ctx.stroke();
+    ctx.restore();
+
+    // Axis labels
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = `${11 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+
+    // x-axis
+    for (let i = 0; i <= 4; i++) {
+      const v = (i / 4) * L_max;
+      ctx.fillText(v.toFixed(1), ml + (i / 4) * pw, mt + ph + 14 * fs);
+    }
+    ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('Thickness (mm)', ml + pw / 2, mt + ph + 30 * fs);
+
+    // y-axis
+    ctx.textAlign = 'right';
+    ctx.font = `${11 * fs}px ${font}`;
+    for (let i = 0; i <= 4; i++) {
+      const v = yMax * (1 - i / 4);
+      ctx.fillText(v.toFixed(0), ml - 6 * fs, mt + (i / 4) * ph + 4 * fs);
+    }
+    ctx.save();
+    ctx.translate(12 * fs, mt + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('\u0394t (fs)', 0, 0);
+    ctx.restore();
+  }
+
+  function redrawAll() { calcTBP(); calcPeak(); calcGDD(); calcBeam(); calcFocus(); }
+  onThemeChange(redrawAll);
+  window.addEventListener('resize', redrawAll);
+
+  /* ================================================================ */
+  /*  Chart: TBP — dual temporal + spectral profiles                   */
+  /* ================================================================ */
+  const PULSE_FN: Record<string, (t: number) => number> = {
+    gaussian:   (t) => Math.exp(-4 * ln2 * t * t),
+    sech2:      (t) => 1 / Math.pow(Math.cosh(1.7627 * t), 2),
+    lorentzian: (t) => 1 / (1 + 4 * t * t),
+  };
+
+  function drawProfileChart(
+    canvasId: string, label: string, xLabel: string, hw: number, unit: string,
+    shape: string, color: string
+  ) {
+    const canvas = el<HTMLCanvasElement>(canvasId);
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 300));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 10 * fs, mr = 10 * fs, mt = 20 * fs, mb = 32 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    const fn = PULSE_FN[shape] || PULSE_FN.gaussian;
+    const xRange = 3; // in units of FWHM
+
+    // Filled profile
+    ctx.beginPath();
+    ctx.moveTo(ml, mt + ph);
+    const nPts = 150;
+    for (let i = 0; i <= nPts; i++) {
+      const t = -xRange + (2 * xRange * i) / nPts;
+      const y = fn(t);
+      const px = ml + (i / nPts) * pw;
+      const py = mt + ph - y * ph;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(ml + pw, mt + ph);
+    ctx.closePath();
+    ctx.fillStyle = color + '20';
+    ctx.fill();
+
+    // Curve outline
+    ctx.beginPath();
+    for (let i = 0; i <= nPts; i++) {
+      const t = -xRange + (2 * xRange * i) / nPts;
+      const y = fn(t);
+      const px = ml + (i / nPts) * pw;
+      const py = mt + ph - y * ph;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // FWHM arrow at 0.5 height
+    const halfY = mt + ph - 0.5 * ph;
+    const leftX = ml + ((xRange - 0.5) / (2 * xRange)) * pw;
+    const rightX = ml + ((xRange + 0.5) / (2 * xRange)) * pw;
+    ctx.strokeStyle = ct.textSoft;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(ml, halfY); ctx.lineTo(ml + pw, halfY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow heads
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(leftX, halfY); ctx.lineTo(leftX + 5, halfY - 3); ctx.lineTo(leftX + 5, halfY + 3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(rightX, halfY); ctx.lineTo(rightX - 5, halfY - 3); ctx.lineTo(rightX - 5, halfY + 3); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(leftX, halfY); ctx.lineTo(rightX, halfY); ctx.stroke();
+
+    // FWHM label
+    ctx.fillStyle = color;
+    ctx.font = `bold ${11 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${hw.toFixed(1)} ${unit}`, (leftX + rightX) / 2, halfY - 6 * fs);
+
+    // Title
+    ctx.fillStyle = ct.text;
+    ctx.font = `600 ${12 * fs}px ${font}`;
+    ctx.textAlign = 'left';
+    ctx.fillText(label, ml + 4, mt - 6 * fs);
+
+    // X-axis label
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(xLabel, ml + pw / 2, mt + ph + 22 * fs);
+
+    // Baseline
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(ml, mt + ph); ctx.lineTo(ml + pw, mt + ph); ctx.stroke();
+  }
+
+  function drawTBPCharts(lam0: number, dlam: number, dt_fs: number, dnu_THz: number, shape: string) {
+    const ct = chartTheme();
+    drawProfileChart('tbp-chart-time', 'Temporal', 'Time (fs)', dt_fs, 'fs', shape, ct.primary);
+    drawProfileChart('tbp-chart-spec', 'Spectral', `Wavelength around ${lam0.toFixed(0)} nm`, dlam, 'nm', shape, '#EC4899');
+  }
+
+  /* ================================================================ */
+  /*  Chart: Peak Power — pulse train diagram                          */
+  /* ================================================================ */
+  function drawPeakChart(P_avg: number, P_peak: number, f_rep: number, dt_s: number, shape: string) {
+    const canvas = el<HTMLCanvasElement>('peak-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 60 * fs, mr = 16 * fs, mt = 20 * fs, mb = 32 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // Show 4 pulses
+    const T_rep = 1 / f_rep;
+    const nPulses = 4;
+    const tTotal = T_rep * nPulses;
+    const pulseWidthPx = Math.max(2, (dt_s / tTotal) * pw * 6); // exaggerate for visibility
+
+    const fn = PULSE_FN[shape] || PULSE_FN.gaussian;
+
+    // Baseline
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(ml, mt + ph); ctx.lineTo(ml + pw, mt + ph); ctx.stroke();
+
+    // P_avg dashed line
+    const avgY = mt + ph - (P_avg / P_peak) * ph;
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = '#EC4899';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(ml, avgY); ctx.lineTo(ml + pw, avgY); ctx.stroke();
+    ctx.restore();
+
+    // P_avg label
+    ctx.fillStyle = '#EC4899';
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'right';
+    ctx.fillText('P\u2090\u1D65\u1D4D', ml - 4 * fs, avgY + 3 * fs);
+
+    // Draw pulses
+    for (let p = 0; p < nPulses; p++) {
+      const centerX = ml + ((p + 0.5) / nPulses) * pw;
+      const halfW = pulseWidthPx * 3;
+
+      // Filled pulse
+      ctx.beginPath();
+      ctx.moveTo(centerX - halfW, mt + ph);
+      const steps = 60;
+      for (let i = 0; i <= steps; i++) {
+        const frac = -1 + (2 * i) / steps;
+        const t = frac * 3;
+        const y = fn(t);
+        const px = centerX + frac * halfW;
+        const py = mt + ph - y * ph;
+        ctx.lineTo(px, py);
+      }
+      ctx.lineTo(centerX + halfW, mt + ph);
+      ctx.closePath();
+      ctx.fillStyle = ct.primary + '25';
+      ctx.fill();
+
+      // Outline
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const frac = -1 + (2 * i) / steps;
+        const t = frac * 3;
+        const y = fn(t);
+        const px = centerX + frac * halfW;
+        const py = mt + ph - y * ph;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = ct.primary;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // P_peak label
+    ctx.fillStyle = ct.primary;
+    ctx.font = `bold ${10 * fs}px ${font}`;
+    ctx.textAlign = 'right';
+    ctx.fillText('P\u209A\u2091\u2090\u2096', ml - 4 * fs, mt + 10 * fs);
+
+    // Rep rate arrow between pulse 1 and 2
+    const c1 = ml + (0.5 / nPulses) * pw;
+    const c2 = ml + (1.5 / nPulses) * pw;
+    const arrowY = mt + ph + 14 * fs;
+    ctx.strokeStyle = ct.textSoft;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(c1, arrowY); ctx.lineTo(c2, arrowY); ctx.stroke();
+    // Arrow heads
+    ctx.fillStyle = ct.textSoft;
+    ctx.beginPath(); ctx.moveTo(c1, arrowY); ctx.lineTo(c1 + 5, arrowY - 3); ctx.lineTo(c1 + 5, arrowY + 3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(c2, arrowY); ctx.lineTo(c2 - 5, arrowY - 3); ctx.lineTo(c2 - 5, arrowY + 3); ctx.fill();
+
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    const repLabel = f_rep >= 1e9 ? `${(f_rep/1e9).toPrecision(3)} GHz`
+                   : f_rep >= 1e6 ? `${(f_rep/1e6).toPrecision(3)} MHz`
+                   : f_rep >= 1e3 ? `${(f_rep/1e3).toPrecision(3)} kHz`
+                   : `${f_rep.toPrecision(3)} Hz`;
+    ctx.fillText(`1/f\u1D63\u2091\u209A = ${repLabel}`, (c1 + c2) / 2, arrowY + 12 * fs);
+
+    // Y-axis: P_peak and 0
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'right';
+    ctx.fillText(autoScale(P_peak, powerUnits), ml - 4 * fs, mt + 3 * fs);
+    ctx.fillText('0', ml - 4 * fs, mt + ph + 3 * fs);
+  }
+
+  /* ================================================================ */
+  /*  Calculator 4: Gaussian Beam                                      */
+  /* ================================================================ */
+  function calcBeam() {
+    const lam_nm = parseFloat(el<HTMLInputElement>('beam-lam').value);
+    const w0_um = parseFloat(el<HTMLInputElement>('beam-w0').value);
+    const M2 = parseFloat(el<HTMLInputElement>('beam-M2').value) || 1;
+    const z_mm = parseFloat(el<HTMLInputElement>('beam-z').value);
+
+    if (!lam_nm || !w0_um || !z_mm) return;
+
+    const lam_um = lam_nm / 1000;
+    const zR_um = Math.PI * w0_um * w0_um / (M2 * lam_um);
+    const zR_mm = zR_um / 1000;
+    const theta_rad = M2 * lam_um / (Math.PI * w0_um);  // half-angle
+    const theta_mrad = theta_rad * 1000;
+    const wz_um = w0_um * Math.sqrt(1 + (z_mm / zR_mm) * (z_mm / zR_mm));
+
+    // Format zR
+    const zrStr = zR_mm >= 1 ? zR_mm.toFixed(2) + ' mm' : (zR_um).toFixed(1) + ' \u00b5m';
+    el<HTMLElement>('beam-out-zr').textContent = zrStr;
+    el<HTMLElement>('beam-out-div').textContent = theta_mrad < 1 ? theta_mrad.toFixed(3) + ' mrad' : theta_mrad.toFixed(2) + ' mrad';
+    const confStr = zR_mm * 2 >= 1 ? (zR_mm * 2).toFixed(2) + ' mm' : (zR_um * 2).toFixed(1) + ' \u00b5m';
+    el<HTMLElement>('beam-out-conf').textContent = confStr;
+    el<HTMLElement>('beam-out-wz').textContent = wz_um >= 1000 ? (wz_um / 1000).toFixed(3) + ' mm' : wz_um.toFixed(2) + ' \u00b5m';
+
+    drawBeamChart(w0_um, zR_mm, z_mm, M2);
+  }
+
+  let beamChartState = { ml: 0, pw: 0, mt: 0, ph: 0, zMax: 1, fs: 1 };
+
+  function drawBeamChart(w0_um: number, zR_mm: number, z_eval_mm: number, M2: number) {
+    const canvas = el<HTMLCanvasElement>('beam-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 50 * fs, mr = 16 * fs, mt = 12 * fs, mb = 32 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    const zMax = Math.max(z_eval_mm * 1.5, zR_mm * 4);
+    beamChartState = { ml, pw, mt, ph, zMax, fs };
+    const nPts = 200;
+
+    // Compute w(z) for positive z and mirror
+    let wMax = w0_um;
+    const ws = new Float64Array(nPts);
+    for (let i = 0; i < nPts; i++) {
+      const z = (i / (nPts - 1)) * zMax;
+      const w = w0_um * Math.sqrt(1 + (z / zR_mm / 1000 * 1000) * (z / zR_mm) * 1);
+      // recalculate properly: z in mm, zR in mm
+      const ratio = z / zR_mm;
+      ws[i] = w0_um * Math.sqrt(1 + ratio * ratio);
+      if (ws[i] > wMax) wMax = ws[i];
+    }
+    wMax *= 1.15;
+
+    // Draw symmetric beam envelope (top and bottom)
+    const toX = (z: number) => ml + (z / zMax) * pw;
+    const toY = (w: number) => mt + ph / 2 - (w / wMax) * (ph / 2);
+    const toYn = (w: number) => mt + ph / 2 + (w / wMax) * (ph / 2);
+
+    // Filled beam
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const x = toX((i / (nPts - 1)) * zMax);
+      const y = toY(ws[i]);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    for (let i = nPts - 1; i >= 0; i--) {
+      const x = toX((i / (nPts - 1)) * zMax);
+      const y = toYn(ws[i]);
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = ct.primary + '18';
+    ctx.fill();
+
+    // Upper and lower envelope
+    ctx.strokeStyle = ct.primary;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const x = toX((i / (nPts - 1)) * zMax);
+      i === 0 ? ctx.moveTo(x, toY(ws[i])) : ctx.lineTo(x, toY(ws[i]));
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const x = toX((i / (nPts - 1)) * zMax);
+      i === 0 ? ctx.moveTo(x, toYn(ws[i])) : ctx.lineTo(x, toYn(ws[i]));
+    }
+    ctx.stroke();
+
+    // Axis line (beam center)
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(ml, mt + ph / 2); ctx.lineTo(ml + pw, mt + ph / 2); ctx.stroke();
+
+    // z_R marker
+    const zrX = toX(zR_mm);
+    if (zrX < ml + pw) {
+      ctx.save();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = '#EC4899';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(zrX, mt); ctx.lineTo(zrX, mt + ph); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#EC4899';
+      ctx.font = `${10 * fs}px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('z\u1D63', zrX, mt + ph + 14 * fs);
+    }
+
+    // Evaluation point
+    const evalX = toX(z_eval_mm);
+    if (evalX <= ml + pw) {
+      const ratio = z_eval_mm / zR_mm;
+      const wEval = w0_um * Math.sqrt(1 + ratio * ratio);
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = ct.textMuted;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(evalX, mt); ctx.lineTo(evalX, mt + ph); ctx.stroke();
+      ctx.restore();
+      // w(z) arrow
+      ctx.fillStyle = ct.primary;
+      ctx.font = `bold ${10 * fs}px ${font}`;
+      ctx.textAlign = 'left';
+      ctx.fillText(`w = ${wEval >= 1000 ? (wEval/1000).toFixed(2) + ' mm' : wEval.toFixed(1) + ' \u00b5m'}`, evalX + 4 * fs, toY(wEval) - 4 * fs);
+    }
+
+    // w₀ label at z=0
+    ctx.fillStyle = ct.primary;
+    ctx.font = `bold ${10 * fs}px ${font}`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`w\u2080 = ${w0_um.toFixed(1)} \u00b5m`, ml - 4 * fs, mt + ph / 2 - 4 * fs);
+
+    // X-axis labels
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = `${11 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= 4; i++) {
+      const v = (i / 4) * zMax;
+      ctx.fillText(v.toFixed(1), ml + (i / 4) * pw, mt + ph + 14 * fs);
+    }
+    ctx.font = `${12 * fs}px ${font}`;
+    ctx.fillText('z (mm)', ml + pw / 2, mt + ph + 28 * fs);
+  }
+
+  ['beam-lam', 'beam-w0', 'beam-M2', 'beam-z'].forEach(id =>
+    el<HTMLInputElement>(id).addEventListener('input', calcBeam)
+  );
+
+  // Click on beam chart to set evaluation distance
+  el<HTMLCanvasElement>('beam-chart').style.cursor = 'crosshair';
+  el<HTMLCanvasElement>('beam-chart').addEventListener('click', (e) => {
+    const rect = el<HTMLCanvasElement>('beam-chart').getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const { ml, pw, zMax } = beamChartState;
+    const frac = (x - ml) / pw;
+    if (frac < 0 || frac > 1) return;
+    const z_mm = frac * zMax;
+    el<HTMLInputElement>('beam-z').value = z_mm.toFixed(3);
+    calcBeam();
+  });
+
+  /* ================================================================ */
+  /*  Calculator 5: Focus & Fluence                                    */
+  /* ================================================================ */
+  function calcFocus() {
+    const lam_nm = parseFloat(el<HTMLInputElement>('foc-lam').value);
+    const d_mm = parseFloat(el<HTMLInputElement>('foc-d').value);
+    const M2 = parseFloat(el<HTMLInputElement>('foc-M2').value) || 1;
+    const f_mm = parseFloat(el<HTMLInputElement>('foc-f').value);
+    const E_raw = parseFloat(el<HTMLInputElement>('foc-energy').value);
+    const E_mul = parseFloat(el<HTMLSelectElement>('foc-energy-u').value);
+    const dt_fs = parseFloat(el<HTMLInputElement>('foc-dt').value);
+
+    if (!lam_nm || !d_mm || !f_mm || !E_raw || !dt_fs) return;
+
+    const lam_m = lam_nm * 1e-9;
+    const w_in_m = (d_mm / 2) * 1e-3;         // input beam radius
+    const f_m = f_mm * 1e-3;
+    const E_J = E_raw * E_mul;
+    const dt_s = dt_fs * 1e-15;
+
+    // Focused spot: w0 = M² · λ · f / (π · w_in)
+    const w0_m = M2 * lam_m * f_m / (Math.PI * w_in_m);
+    const w0_um = w0_m * 1e6;
+    const zR_m = Math.PI * w0_m * w0_m / (M2 * lam_m);
+    const zR_um = zR_m * 1e6;
+
+    // Peak power (assume Gaussian)
+    const P_peak = 0.9394 * E_J / dt_s;
+
+    // Intensity: I = P_peak / (π · w0²)
+    const area_m2 = Math.PI * w0_m * w0_m;
+    const area_cm2 = area_m2 * 1e4;
+    const I_W_cm2 = P_peak / area_cm2;
+
+    // Fluence: F = E / (π · w0²)
+    const F_J_cm2 = E_J / area_cm2;
+
+    // Display
+    el<HTMLElement>('foc-out-w0').textContent = w0_um >= 1 ? w0_um.toFixed(2) + ' \u00b5m' : (w0_um * 1000).toFixed(1) + ' nm';
+    el<HTMLElement>('foc-out-2w0').textContent = (w0_um * 2) >= 1 ? (w0_um * 2).toFixed(2) + ' \u00b5m' : (w0_um * 2000).toFixed(1) + ' nm';
+
+    // Intensity formatting
+    if (I_W_cm2 >= 1e15) el<HTMLElement>('foc-out-I').textContent = (I_W_cm2 / 1e15).toPrecision(3) + ' PW/cm\u00b2';
+    else if (I_W_cm2 >= 1e12) el<HTMLElement>('foc-out-I').textContent = (I_W_cm2 / 1e12).toPrecision(3) + ' TW/cm\u00b2';
+    else if (I_W_cm2 >= 1e9) el<HTMLElement>('foc-out-I').textContent = (I_W_cm2 / 1e9).toPrecision(3) + ' GW/cm\u00b2';
+    else if (I_W_cm2 >= 1e6) el<HTMLElement>('foc-out-I').textContent = (I_W_cm2 / 1e6).toPrecision(3) + ' MW/cm\u00b2';
+    else if (I_W_cm2 >= 1e3) el<HTMLElement>('foc-out-I').textContent = (I_W_cm2 / 1e3).toPrecision(3) + ' kW/cm\u00b2';
+    else el<HTMLElement>('foc-out-I').textContent = I_W_cm2.toPrecision(3) + ' W/cm\u00b2';
+
+    // Fluence formatting
+    if (F_J_cm2 >= 1) el<HTMLElement>('foc-out-F').textContent = F_J_cm2.toPrecision(3) + ' J/cm\u00b2';
+    else if (F_J_cm2 >= 1e-3) el<HTMLElement>('foc-out-F').textContent = (F_J_cm2 * 1e3).toPrecision(3) + ' mJ/cm\u00b2';
+    else el<HTMLElement>('foc-out-F').textContent = (F_J_cm2 * 1e6).toPrecision(3) + ' \u00b5J/cm\u00b2';
+
+    const zrStr = zR_um >= 1000 ? (zR_um / 1000).toFixed(2) + ' mm' : zR_um.toFixed(1) + ' \u00b5m';
+    el<HTMLElement>('foc-out-zr').textContent = zrStr;
+    el<HTMLElement>('foc-out-dof').textContent = zR_um * 2 >= 1000 ? (zR_um * 2 / 1000).toFixed(2) + ' mm' : (zR_um * 2).toFixed(1) + ' \u00b5m';
+
+    drawFocusChart(w0_um, zR_um, I_W_cm2);
+  }
+
+  function drawFocusChart(w0_um: number, zR_um: number, I_peak: number) {
+    const canvas = el<HTMLCanvasElement>('foc-chart');
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.65, Math.min(1, W / 500));
+    const font = getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif';
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const ml = 16 * fs, mr = 16 * fs, mt = 12 * fs, mb = 32 * fs;
+    const pw = W - ml - mr, ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // Draw symmetric focused beam envelope: z from -3zR to +3zR
+    const zRange = zR_um * 3;
+    const nPts = 200;
+    const wMax = w0_um * Math.sqrt(1 + 9) * 1.1;  // w at 3*zR
+
+    const toX = (z: number) => ml + ((z + zRange) / (2 * zRange)) * pw;
+    const toY = (w: number) => mt + ph / 2 - (w / wMax) * (ph / 2);
+    const toYn = (w: number) => mt + ph / 2 + (w / wMax) * (ph / 2);
+
+    // Intensity color gradient fill
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const z = -zRange + (2 * zRange * i) / (nPts - 1);
+      const ratio = z / zR_um;
+      const w = w0_um * Math.sqrt(1 + ratio * ratio);
+      const x = toX(z);
+      i === 0 ? ctx.moveTo(x, toY(w)) : ctx.lineTo(x, toY(w));
+    }
+    for (let i = nPts - 1; i >= 0; i--) {
+      const z = -zRange + (2 * zRange * i) / (nPts - 1);
+      const ratio = z / zR_um;
+      const w = w0_um * Math.sqrt(1 + ratio * ratio);
+      ctx.lineTo(toX(z), toYn(w));
+    }
+    ctx.closePath();
+
+    // Gradient: bright at center, fading at edges
+    const grad = ctx.createRadialGradient(
+      toX(0), mt + ph / 2, 0,
+      toX(0), mt + ph / 2, pw / 2
+    );
+    grad.addColorStop(0, ct.primary + '40');
+    grad.addColorStop(1, ct.primary + '08');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Envelope lines
+    ctx.strokeStyle = ct.primary;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const z = -zRange + (2 * zRange * i) / (nPts - 1);
+      const w = w0_um * Math.sqrt(1 + (z / zR_um) * (z / zR_um));
+      const x = toX(z);
+      i === 0 ? ctx.moveTo(x, toY(w)) : ctx.lineTo(x, toY(w));
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const z = -zRange + (2 * zRange * i) / (nPts - 1);
+      const w = w0_um * Math.sqrt(1 + (z / zR_um) * (z / zR_um));
+      ctx.lineTo(toX(z), toYn(w));
+    }
+    ctx.stroke();
+
+    // Center axis
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(ml, mt + ph / 2); ctx.lineTo(ml + pw, mt + ph / 2); ctx.stroke();
+
+    // z_R markers (both sides)
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = '#EC4899';
+    ctx.lineWidth = 1.5;
+    const zrXp = toX(zR_um), zrXn = toX(-zR_um);
+    ctx.beginPath(); ctx.moveTo(zrXp, mt); ctx.lineTo(zrXp, mt + ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(zrXn, mt); ctx.lineTo(zrXn, mt + ph); ctx.stroke();
+    ctx.restore();
+
+    // z_R labels
+    ctx.fillStyle = '#EC4899';
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('+z\u1D63', zrXp, mt + ph + 14 * fs);
+    ctx.fillText('\u2212z\u1D63', zrXn, mt + ph + 14 * fs);
+
+    // w₀ and 2w₀ labels at focus
+    const focX = toX(0);
+    ctx.fillStyle = ct.primary;
+    ctx.font = `bold ${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    const w0Label = w0_um >= 1 ? `w\u2080 = ${w0_um.toFixed(1)} \u00b5m` : `w\u2080 = ${(w0_um * 1000).toFixed(0)} nm`;
+    ctx.fillText(w0Label, focX, toY(w0_um) - 6 * fs);
+
+    // DOF arrow
+    ctx.strokeStyle = ct.textSoft;
+    ctx.lineWidth = 1;
+    const dofY = mt + ph + 22 * fs;
+    ctx.beginPath(); ctx.moveTo(zrXn, dofY); ctx.lineTo(zrXp, dofY); ctx.stroke();
+    ctx.fillStyle = ct.textSoft;
+    ctx.beginPath(); ctx.moveTo(zrXn, dofY); ctx.lineTo(zrXn + 5, dofY - 3); ctx.lineTo(zrXn + 5, dofY + 3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(zrXp, dofY); ctx.lineTo(zrXp - 5, dofY - 3); ctx.lineTo(zrXp - 5, dofY + 3); ctx.fill();
+    ctx.font = `${10 * fs}px ${font}`;
+    ctx.textAlign = 'center';
+    const dofLabel = zR_um * 2 >= 1000 ? `DOF = ${(zR_um * 2 / 1000).toFixed(1)} mm` : `DOF = ${(zR_um * 2).toFixed(0)} \u00b5m`;
+    ctx.fillText(dofLabel, focX, dofY - 6 * fs);
+  }
+
+  ['foc-lam', 'foc-d', 'foc-M2', 'foc-f', 'foc-energy', 'foc-dt'].forEach(id =>
+    el<HTMLInputElement>(id).addEventListener('input', calcFocus)
+  );
+  ['foc-energy-u'].forEach(id =>
+    el<HTMLSelectElement>(id).addEventListener('change', calcFocus)
+  );
+
+  /* ================================================================ */
+  /*  Init                                                             */
+  /* ================================================================ */
+  tbpDlam.value = '10';
+  calcTBP();
+  calcPeak();
+  updateGVD();
+</script>

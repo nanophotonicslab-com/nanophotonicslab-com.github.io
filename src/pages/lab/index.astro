@@ -59,6 +59,14 @@ const widgets = [
     status: 'Live',
     url: `${base}lab/bpm/`,
   },
+  {
+    title: 'Laser Pulse Calculator',
+    description: 'Pulse duration \u2194 bandwidth, peak power from average power, and GDD pulse broadening through dispersive media. For ultrafast laser labs.',
+    color: '#EC4899',
+    icon: 'laser',
+    status: 'Live',
+    url: `${base}lab/laser/`,
+  },
 ];
 ---
 
@@ -124,6 +132,13 @@ const widgets = [
                 {widget.icon === 'wave' && (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M2 12c2-4 4 4 6 0s4 4 6 0 4 4 6 0 4 4 6 0"/>
+                  </svg>
+                )}
+                {widget.icon === 'laser' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12h8"/><path d="M14 12h8"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="12" r="5" stroke-dasharray="2 2"/>
                   </svg>
                 )}
               </div>
