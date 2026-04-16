@@ -76,6 +76,14 @@ const widgets = [
     url: `${base}lab/bem-solver/`,
   },
   {
+    title: 'RCWA — 1D Grating',
+    description: 'Rigorous Coupled Wave Analysis (Fourier modal method) for 1D periodic gratings. Computes R/T spectra for arbitrary materials. Runs in-browser via Pyodide + inkstone.',
+    color: '#0EA5E9',
+    icon: 'grating',
+    status: 'Live',
+    url: `${base}lab/rcwa/`,
+  },
+  {
     title: 'Methods Assistant',
     description: 'Given a computational photonics problem, find the right numerical method. Semantic search over course notes, with optional Claude AI synthesis.',
     color: '#64748B',
@@ -168,6 +176,11 @@ const widgets = [
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     <path d="M8 9h8"/><path d="M8 13h4"/>
+                  </svg>
+                )}
+                {widget.icon === 'grating' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4v16"/><path d="M8 4v16"/><path d="M12 4v16"/><path d="M16 4v16"/><path d="M20 4v16"/>
                   </svg>
                 )}
               </div>

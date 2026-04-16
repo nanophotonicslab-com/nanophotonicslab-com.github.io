@@ -1,0 +1,520 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="RCWA — 1D Grating" description="Rigorous Coupled Wave Analysis for 1D periodic gratings. Compute reflection and transmission spectra via Fourier modal method.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>1D Grating <span class="gradient-text">RCWA</span></h1>
+      <p class="widget-hero__subtitle">
+        Rigorous Coupled Wave Analysis (Fourier modal method) for 1D binary
+        gratings. Compute reflection R(λ) and transmission T(λ). Runs in-browser
+        via Pyodide + <a href="https://github.com/alexysong/inkstone" target="_blank" rel="noopener">inkstone</a>.
+        <br/><strong>First load downloads ~35 MB (Pyodide + numpy + scipy + inkstone) — cached after.</strong>
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Grating</h3>
+          <div class="param-group">
+            <div class="fields">
+              <div class="field">
+                <label for="p-period">&Lambda; period [nm]</label>
+                <input type="text" class="field-input" id="p-period" inputmode="decimal" value="700">
+              </div>
+              <div class="field">
+                <label for="p-thickness">d thickness [nm]</label>
+                <input type="text" class="field-input" id="p-thickness" inputmode="decimal" value="300">
+              </div>
+              <div class="field">
+                <label for="p-width">Ridge width [nm]</label>
+                <input type="text" class="field-input" id="p-width" inputmode="decimal" value="350">
+              </div>
+              <div class="field">
+                <label for="p-numg">Harmonics</label>
+                <input type="text" class="field-input" id="p-numg" inputmode="numeric" value="25">
+              </div>
+            </div>
+          </div>
+
+          <h3>Materials &epsilon; = n&sup2;</h3>
+          <div class="param-group">
+            <div class="eps-fields">
+              <div class="eps-field">
+                <span class="eps-label">Top</span>
+                <input type="text" class="field-input" id="p-eps-top-re" inputmode="decimal" value="1.0" title="Re(ε)">
+                <span class="plus">+ i</span>
+                <input type="text" class="field-input" id="p-eps-top-im" inputmode="decimal" value="0.0" title="Im(ε)">
+              </div>
+              <div class="eps-field">
+                <span class="eps-label">Ridge</span>
+                <input type="text" class="field-input" id="p-eps-ridge-re" inputmode="decimal" value="5.76">
+                <span class="plus">+ i</span>
+                <input type="text" class="field-input" id="p-eps-ridge-im" inputmode="decimal" value="0.0">
+              </div>
+              <div class="eps-field">
+                <span class="eps-label">Groove</span>
+                <input type="text" class="field-input" id="p-eps-groove-re" inputmode="decimal" value="1.0">
+                <span class="plus">+ i</span>
+                <input type="text" class="field-input" id="p-eps-groove-im" inputmode="decimal" value="0.0">
+              </div>
+              <div class="eps-field">
+                <span class="eps-label">Substrate</span>
+                <input type="text" class="field-input" id="p-eps-sub-re" inputmode="decimal" value="2.25">
+                <span class="plus">+ i</span>
+                <input type="text" class="field-input" id="p-eps-sub-im" inputmode="decimal" value="0.0">
+              </div>
+            </div>
+            <div class="preset-row">
+              <button class="preset-btn" data-preset="dielectric">Si grating</button>
+              <button class="preset-btn" data-preset="metal">Au grating</button>
+            </div>
+          </div>
+
+          <h3>Incidence</h3>
+          <div class="param-group">
+            <div class="fields">
+              <div class="field">
+                <label for="p-theta">&theta; [deg]</label>
+                <input type="text" class="field-input" id="p-theta" inputmode="decimal" value="0">
+              </div>
+              <div class="field">
+                <label for="p-pol">Polarization</label>
+                <select class="field-input" id="p-pol">
+                  <option value="s" selected>s (TE)</option>
+                  <option value="p">p (TM)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <h3>Wavelength sweep</h3>
+          <div class="param-group">
+            <div class="fields">
+              <div class="field">
+                <label for="p-lmin">&lambda;<sub>min</sub> [nm]</label>
+                <input type="text" class="field-input" id="p-lmin" inputmode="decimal" value="400">
+              </div>
+              <div class="field">
+                <label for="p-lmax">&lambda;<sub>max</sub> [nm]</label>
+                <input type="text" class="field-input" id="p-lmax" inputmode="decimal" value="1200">
+              </div>
+              <div class="field">
+                <label for="p-npts">Points</label>
+                <input type="text" class="field-input" id="p-npts" inputmode="numeric" value="60">
+              </div>
+            </div>
+          </div>
+
+          <button class="run-btn" id="run-btn" disabled data-umami-event="rcwa-run">Loading solver…</button>
+
+          <p class="theory-note">
+            <strong>RCWA (Fourier modal method).</strong>
+            Expands fields in plane-wave harmonics of the grating period and
+            solves the eigenvalue problem in each layer. Diffraction orders
+            couple through the Fourier decomposition of &epsilon;(x).
+          </p>
+        </div>
+
+        <!-- ===== Chart ===== -->
+        <div class="chart-panel card">
+          <div class="chart-header">
+            <span class="chart-title">Reflection / Transmission spectrum</span>
+            <span class="chart-header__right">
+              <button id="share-btn" class="share-btn" title="Copy shareable link" data-umami-event="share" data-umami-event-page="rcwa">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
+              <span class="chart-status" id="status">Initializing…</span>
+            </span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="rt-canvas" aria-label="Reflection and transmission spectrum"></canvas>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .widget-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+  .widget-hero__subtitle { font-size: 1.1rem; max-width: 640px; color: var(--text-soft); }
+  .widget-hero__subtitle a { color: var(--primary); text-decoration: underline; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link {
+    display: inline-block; margin-bottom: var(--space-md);
+    font-size: 0.875rem; color: var(--text-muted); text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout {
+    display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start;
+  }
+  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+
+  .controls { position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px); }
+  .controls h3 {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); margin: var(--space-md) 0 0.5rem;
+    padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
+  }
+  .controls h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
+  .param-group { margin-bottom: 0.5rem; }
+  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .field { display: flex; align-items: center; gap: 0.5rem; }
+  .field label { flex: 0 0 auto; min-width: 100px; font-size: 0.8rem; color: var(--text-soft); }
+  .field-input {
+    flex: 1; min-width: 0; padding: 0.35rem 0.55rem;
+    font-size: 0.85rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: var(--font);
+  }
+  .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+  select.field-input { cursor: pointer; }
+
+  .eps-fields { display: flex; flex-direction: column; gap: 0.4rem; }
+  .eps-field {
+    display: grid;
+    grid-template-columns: 72px 1fr auto 1fr;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .eps-label { font-size: 0.8rem; color: var(--text-soft); }
+  .eps-field .field-input { min-width: 0; }
+  .plus { font-size: 0.75rem; color: var(--text-muted); }
+
+  .preset-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .preset-btn {
+    padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 500;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .run-btn {
+    display: block; width: 100%; padding: 0.6rem; margin-top: var(--space-md);
+    font-size: 0.9rem; font-weight: 600; border: none; border-radius: var(--radius-sm);
+    background: var(--primary); color: #fff; cursor: pointer; transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--primary-dark); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .theory-note { margin-top: var(--space-md); font-size: 0.78rem; line-height: 1.5; color: var(--text-muted); }
+
+  .chart-panel { display: flex; flex-direction: column; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm); }
+  .chart-title { font-weight: 600; font-size: 0.95rem; }
+  .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
+  .chart-status { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.7rem; font-size: 0.78rem; font-weight: 500;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+
+  .progress-bar {
+    width: 100%; height: 3px; background: var(--bg-muted); border-radius: 2px;
+    margin-top: var(--space-sm); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%; background: var(--spectrum); transition: width 0.2s ease;
+  }
+</style>
+
+<script>
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+
+  interface SolveResult {
+    wavelengths: number[];
+    R: number[];
+    T: number[];
+  }
+
+  const canvas = document.getElementById('rt-canvas') as HTMLCanvasElement;
+  const statusEl = document.getElementById('status')!;
+  const runBtn = document.getElementById('run-btn') as HTMLButtonElement;
+  const progressFill = document.getElementById('progress-fill')!;
+
+  let lastResult: SolveResult | null = null;
+  let workerReady = false;
+
+  const getNum = (id: string, def: number): number => {
+    const v = parseFloat((document.getElementById(id) as HTMLInputElement).value);
+    return isFinite(v) ? v : def;
+  };
+  const getInt = (id: string, def: number): number => {
+    const v = parseInt((document.getElementById(id) as HTMLInputElement).value);
+    return isFinite(v) ? v : def;
+  };
+
+  function readParams() {
+    const lmin = getNum('p-lmin', 400);
+    const lmax = getNum('p-lmax', 1200);
+    const npts = Math.max(2, getInt('p-npts', 60));
+    const wavelengths: number[] = [];
+    for (let i = 0; i < npts; i++) wavelengths.push(lmin + (lmax - lmin) * i / (npts - 1));
+    return {
+      period: getNum('p-period', 700),
+      thickness: getNum('p-thickness', 300),
+      ridgeWidth: getNum('p-width', 350),
+      epsTop: [getNum('p-eps-top-re', 1), getNum('p-eps-top-im', 0)] as [number, number],
+      epsRidge: [getNum('p-eps-ridge-re', 5.76), getNum('p-eps-ridge-im', 0)] as [number, number],
+      epsGroove: [getNum('p-eps-groove-re', 1), getNum('p-eps-groove-im', 0)] as [number, number],
+      epsSub: [getNum('p-eps-sub-re', 2.25), getNum('p-eps-sub-im', 0)] as [number, number],
+      theta: getNum('p-theta', 0),
+      polarization: (document.getElementById('p-pol') as HTMLSelectElement).value as 's' | 'p',
+      numG: Math.max(3, getInt('p-numg', 25)),
+      wavelengths,
+    };
+  }
+
+  // ---- Presets ----
+  const PRESETS: Record<string, Record<string, string>> = {
+    dielectric: {
+      'p-period': '700', 'p-thickness': '300', 'p-width': '350',
+      'p-eps-top-re': '1.0', 'p-eps-top-im': '0',
+      'p-eps-ridge-re': '12.25', 'p-eps-ridge-im': '0',  // Si ~ 3.5
+      'p-eps-groove-re': '1.0', 'p-eps-groove-im': '0',
+      'p-eps-sub-re': '2.25', 'p-eps-sub-im': '0',
+    },
+    metal: {
+      'p-period': '500', 'p-thickness': '100', 'p-width': '250',
+      'p-eps-top-re': '1.0', 'p-eps-top-im': '0',
+      'p-eps-ridge-re': '-10', 'p-eps-ridge-im': '1.2',  // Au ~ 600nm
+      'p-eps-groove-re': '1.0', 'p-eps-groove-im': '0',
+      'p-eps-sub-re': '2.25', 'p-eps-sub-im': '0',
+    },
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const preset = PRESETS[btn.dataset.preset!];
+      if (!preset) return;
+      for (const [id, v] of Object.entries(preset)) {
+        (document.getElementById(id) as HTMLInputElement).value = v;
+      }
+    });
+  });
+
+  // ---- Chart drawing ----
+  function drawChart() {
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.7, Math.min(1, W / 600));
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    if (!lastResult || lastResult.wavelengths.length === 0) {
+      ctx.fillStyle = ct.textMuted;
+      ctx.textAlign = 'center';
+      ctx.font = `${13 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+      ctx.fillText('Configure grating parameters and click Solve', W / 2, H / 2);
+      return;
+    }
+
+    const ml = 55 * fs, mr = 18 * fs, mt = 14 * fs, mb = 38 * fs;
+    const pw = W - ml - mr;
+    const ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    const lams = lastResult.wavelengths;
+    const lmin = Math.min(...lams), lmax = Math.max(...lams);
+    const yMin = 0, yMax = 1;
+
+    // Grid
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = mt + (i / 5) * ph;
+      ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke();
+    }
+
+    // Axes labels (y)
+    ctx.fillStyle = ct.textSoft;
+    ctx.textAlign = 'right';
+    ctx.font = `${11 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    for (let i = 0; i <= 5; i++) {
+      const y = mt + (i / 5) * ph;
+      const val = yMax - (i / 5) * (yMax - yMin);
+      ctx.fillText(val.toFixed(1), ml - 6 * fs, y + 4 * fs);
+    }
+    // y label
+    ctx.save();
+    ctx.translate(14 * fs, mt + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('R, T', 0, 0);
+    ctx.restore();
+
+    // x axis labels
+    ctx.textAlign = 'center';
+    const xTicks = 5;
+    for (let i = 0; i <= xTicks; i++) {
+      const frac = i / xTicks;
+      const xPos = ml + frac * pw;
+      const val = lmin + frac * (lmax - lmin);
+      ctx.fillText(val.toFixed(0), xPos, mt + ph + 14 * fs);
+    }
+    ctx.font = `${12 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.fillText('Wavelength (nm)', ml + pw / 2, mt + ph + 30 * fs);
+
+    // Plot R (blue) and T (amber) and R+T (dashed gray)
+    const xOf = (l: number) => ml + ((l - lmin) / (lmax - lmin)) * pw;
+    const yOf = (v: number) => mt + (1 - (v - yMin) / (yMax - yMin)) * ph;
+
+    const drawLine = (vals: number[], color: string, dash: number[] = []) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      for (let i = 0; i < lams.length; i++) {
+        const x = xOf(lams[i]), y = yOf(vals[i]);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    const sum = lastResult.R.map((r, i) => r + lastResult!.T[i]);
+    drawLine(sum, ct.textMuted, [3, 3]);
+    drawLine(lastResult.R, '#3B82F6');
+    drawLine(lastResult.T, '#F59E0B');
+
+    // Legend
+    const legendY = mt + 8 * fs;
+    const legendX = ml + 14 * fs;
+    ctx.font = `${11 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.textAlign = 'left';
+    const lh = 16 * fs;
+
+    ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(legendX, legendY); ctx.lineTo(legendX + 20 * fs, legendY); ctx.stroke();
+    ctx.fillStyle = ct.text;
+    ctx.fillText('R (reflection)', legendX + 26 * fs, legendY + 3 * fs);
+
+    ctx.strokeStyle = '#F59E0B';
+    ctx.beginPath(); ctx.moveTo(legendX, legendY + lh); ctx.lineTo(legendX + 20 * fs, legendY + lh); ctx.stroke();
+    ctx.fillText('T (transmission)', legendX + 26 * fs, legendY + lh + 3 * fs);
+
+    ctx.strokeStyle = ct.textMuted;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(legendX, legendY + 2 * lh); ctx.lineTo(legendX + 20 * fs, legendY + 2 * lh); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText('R + T', legendX + 26 * fs, legendY + 2 * lh + 3 * fs);
+  }
+
+  // ---- Worker ----
+  const worker = new Worker(new URL('../../scripts/rcwa/pyodide-worker.ts', import.meta.url), { type: 'classic' });
+
+  worker.onmessage = (e) => {
+    const msg = e.data;
+    switch (msg.type) {
+      case 'init-progress':
+        statusEl.textContent = msg.stage;
+        progressFill.style.width = `${msg.pct * 100}%`;
+        break;
+      case 'init-done':
+        statusEl.textContent = 'Ready';
+        progressFill.style.width = '0%';
+        runBtn.disabled = false;
+        runBtn.textContent = 'Solve';
+        workerReady = true;
+        break;
+      case 'init-error':
+        statusEl.textContent = `Init error: ${msg.error}`;
+        runBtn.textContent = 'Init failed';
+        break;
+      case 'solve-progress': {
+        const pct = msg.index / msg.total;
+        progressFill.style.width = `${pct * 100}%`;
+        statusEl.textContent = `λ = ${msg.wavelength.toFixed(0)} nm (${msg.index}/${msg.total})`;
+        break;
+      }
+      case 'solve-result':
+        lastResult = { wavelengths: msg.wavelengths, R: msg.R, T: msg.T };
+        progressFill.style.width = '100%';
+        statusEl.textContent = `${msg.wavelengths.length} points computed`;
+        runBtn.disabled = false;
+        runBtn.textContent = 'Solve';
+        drawChart();
+        setTimeout(() => { progressFill.style.width = '0%'; }, 800);
+        break;
+      case 'solve-error':
+        statusEl.textContent = `Error: ${msg.error}`;
+        runBtn.disabled = false;
+        runBtn.textContent = 'Solve';
+        break;
+    }
+  };
+
+  runBtn.addEventListener('click', () => {
+    if (!workerReady) return;
+    const params = readParams();
+    runBtn.disabled = true;
+    runBtn.textContent = 'Solving…';
+    progressFill.style.width = '0%';
+    worker.postMessage({ type: 'solve', params });
+  });
+
+  // Share button
+  const shareBtn = document.getElementById('share-btn')!;
+  function serializeState(): string {
+    const ids = ['p-period','p-thickness','p-width','p-numg','p-theta','p-pol','p-lmin','p-lmax','p-npts',
+      'p-eps-top-re','p-eps-top-im','p-eps-ridge-re','p-eps-ridge-im',
+      'p-eps-groove-re','p-eps-groove-im','p-eps-sub-re','p-eps-sub-im'];
+    const p = new URLSearchParams();
+    for (const id of ids) {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el && el.value) p.set(id, el.value);
+    }
+    return p.toString();
+  }
+  function restoreState(): void {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const p = new URLSearchParams(hash);
+    for (const [id, v] of p.entries()) {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.value = v;
+    }
+  }
+  shareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + serializeState();
+    navigator.clipboard.writeText(url).then(() => {
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+      }, 1500);
+    });
+  });
+
+  // Init
+  restoreState();
+  drawChart();
+  new ResizeObserver(drawChart).observe(canvas);
+  onThemeChange(drawChart);
+  worker.postMessage({ type: 'init' });
+</script>
