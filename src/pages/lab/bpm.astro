@@ -1,0 +1,520 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Beam Propagation Method" description="Simulate light propagation in waveguides using the Crank-Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap with preset demo tasks.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Beam Propagation <span class="gradient-text">Method</span></h1>
+      <p class="widget-hero__subtitle">
+        Paraxial wave equation solved with the Crank&ndash;Nicolson scheme.
+        Launch a Gaussian beam into a step-index waveguide and watch the
+        intensity evolve along the propagation axis.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3>Parameters</h3>
+
+          <!-- Preset tasks -->
+          <div class="param">
+            <div class="param-header"><label>Presets</label></div>
+            <div class="preset-row" id="presets">
+              <button class="preset-btn active" data-task="1">Single-mode</button>
+              <button class="preset-btn" data-task="2">Mode beating</button>
+              <button class="preset-btn" data-task="3">Multimode</button>
+            </div>
+          </div>
+
+          <!-- Propagation -->
+          <div class="param-group">
+            <span class="param-group__title">Propagation</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-z">z [&mu;m]</label>
+                <input type="text" class="field-input" id="p-z" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-dz">dz</label>
+                <input type="text" class="field-input" id="p-dz" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-delta">&delta; (subsample)</label>
+                <input type="text" class="field-input" id="p-delta" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+
+          <!-- Beam -->
+          <div class="param-group">
+            <span class="param-group__title">Beam</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-lambda">&lambda; [&mu;m]</label>
+                <input type="text" class="field-input" id="p-lambda" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-w">w (waist) [&mu;m]</label>
+                <input type="text" class="field-input" id="p-w" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-nd">n<sub>d</sub> (char. index)</label>
+                <input type="text" class="field-input" id="p-nd" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid -->
+          <div class="param-group">
+            <span class="param-group__title">Grid</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-Nx">N<sub>x</sub> (intervals)</label>
+                <input type="text" class="field-input" id="p-Nx" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-xa">x<sub>a</sub> (window) [&mu;m]</label>
+                <input type="text" class="field-input" id="p-xa" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+
+          <!-- Waveguide -->
+          <div class="param-group">
+            <span class="param-group__title">Waveguide</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-xb">x<sub>b</sub> (width) [&mu;m]</label>
+                <input type="text" class="field-input" id="p-xb" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-nclad">n<sub>clad</sub></label>
+                <input type="text" class="field-input" id="p-nclad" inputmode="decimal">
+              </div>
+              <div class="field">
+                <label for="p-ncore">n<sub>core</sub></label>
+                <input type="text" class="field-input" id="p-ncore" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+
+          <button class="run-btn" id="run-btn">Run simulation</button>
+
+          <p class="theory-note">
+            <strong>Crank&ndash;Nicolson BPM.</strong>
+            Solves the paraxial Helmholtz equation
+            &part;<sub>z</sub>u&nbsp;=&nbsp;(i/2k<sub>m</sub>)&thinsp;(&part;<sup>2</sup><sub>x</sub>u&nbsp;+&nbsp;(k&sup2;&minus;k<sub>m</sub>&sup2;)&thinsp;u)
+            with a second-order implicit scheme that is unconditionally stable.
+          </p>
+        </div>
+
+        <!-- ===== Heatmap ===== -->
+        <div class="chart-panel card">
+          <div class="chart-header">
+            <span class="chart-title">Intensity |v(x,z)|&sup2;</span>
+            <span class="chart-status" id="status"></span>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <canvas id="bpm-canvas" aria-label="BPM intensity heatmap"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* ---- Layout ---- */
+  .widget-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+  .widget-hero__subtitle {
+    font-size: 1.1rem;
+    max-width: 640px;
+    color: var(--text-soft);
+  }
+  .gradient-text {
+    background: var(--spectrum);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .back-link {
+    display: inline-block;
+    margin-bottom: var(--space-md);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .widget-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Controls ---- */
+  .controls { position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px); }
+  .controls h3 { margin-bottom: var(--space-md); }
+
+  .param { margin-bottom: var(--space-md); }
+  .param-header { margin-bottom: 0.4rem; }
+  .param-header label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .param-group {
+    margin-bottom: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-muted);
+  }
+  .param-group__title {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .field { display: flex; align-items: center; gap: 0.5rem; }
+  .field label {
+    flex: 0 0 auto;
+    min-width: 110px;
+    font-size: 0.8rem;
+    color: var(--text-soft);
+  }
+  .field-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  }
+
+  .preset-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .preset-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .run-btn {
+    display: block;
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: var(--space-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--primary-dark); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .theory-note {
+    margin-top: var(--space-md);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  /* ---- Chart ---- */
+  .chart-panel { display: flex; flex-direction: column; }
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+  }
+  .chart-title { font-weight: 600; font-size: 0.95rem; }
+  .chart-status { font-size: 0.8rem; color: var(--text-muted); }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas {
+    width: 100%;
+    aspect-ratio: 5 / 3;
+    display: block;
+    border-radius: var(--radius-sm);
+  }
+</style>
+
+<script>
+  import { beampropCN, type BpmParams } from '../../lib/bpm';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+
+  /* ---- Presets (from Matlab Tasks) ---- */
+  const TASKS: Record<string, BpmParams> = {
+    '1': { z: 100, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 4, xa: 50, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
+    '2': { z: 300, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 4, xa: 50, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
+    '3': { z: 500, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 2, xa: 50, xb: 8, nCladding: 1.45, nCore: 1.46, delta: 200 },
+  };
+
+  /* ---- DOM refs ---- */
+  const ids = ['p-z','p-dz','p-delta','p-lambda','p-w','p-nd','p-Nx','p-xa','p-xb','p-nclad','p-ncore'] as const;
+  const inputs = Object.fromEntries(ids.map(id => [id, document.getElementById(id) as HTMLInputElement]));
+  const canvas = document.getElementById('bpm-canvas') as HTMLCanvasElement;
+  const statusEl = document.getElementById('status')!;
+  const runBtn = document.getElementById('run-btn') as HTMLButtonElement;
+
+  /* ---- Read / write params ---- */
+  function readParams(): BpmParams {
+    return {
+      z:         parseFloat(inputs['p-z'].value)     || 100,
+      dz:        parseFloat(inputs['p-dz'].value)    || 0.005,
+      delta:     parseInt(inputs['p-delta'].value)    || 200,
+      lambda:    parseFloat(inputs['p-lambda'].value) || 1,
+      w:         parseFloat(inputs['p-w'].value)      || 4,
+      nd:        parseFloat(inputs['p-nd'].value)     || 1.455,
+      Nx:        parseInt(inputs['p-Nx'].value)       || 200,
+      xa:        parseFloat(inputs['p-xa'].value)     || 50,
+      xb:        parseFloat(inputs['p-xb'].value)     || 2,
+      nCladding: parseFloat(inputs['p-nclad'].value)  || 1.45,
+      nCore:     parseFloat(inputs['p-ncore'].value)  || 1.46,
+    };
+  }
+
+  function writeParams(p: BpmParams) {
+    inputs['p-z'].value     = String(p.z);
+    inputs['p-dz'].value    = String(p.dz);
+    inputs['p-delta'].value = String(p.delta);
+    inputs['p-lambda'].value= String(p.lambda);
+    inputs['p-w'].value     = String(p.w);
+    inputs['p-nd'].value    = String(p.nd);
+    inputs['p-Nx'].value    = String(p.Nx);
+    inputs['p-xa'].value    = String(p.xa);
+    inputs['p-xb'].value    = String(p.xb);
+    inputs['p-nclad'].value = String(p.nCladding);
+    inputs['p-ncore'].value = String(p.nCore);
+  }
+
+  /* ---- Presets ---- */
+  document.getElementById('presets')!.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const task = btn.dataset.task!;
+    writeParams(TASKS[task]);
+    runSimulation();
+  });
+
+  /* ---- Inferno colormap ---- */
+  const INFERNO: [number,number,number][] = [
+    [0,0,4],[40,11,84],[101,21,110],[159,42,99],
+    [212,72,66],[245,125,21],[250,193,39],[252,255,164],
+  ];
+  function inferno(t: number): [number,number,number] {
+    t = Math.max(0, Math.min(1, t));
+    const s = t * (INFERNO.length - 1);
+    const i = Math.floor(s), f = s - i;
+    const a = INFERNO[i], b = INFERNO[Math.min(i + 1, INFERNO.length - 1)];
+    return [a[0]+f*(b[0]-a[0]), a[1]+f*(b[1]-a[1]), a[2]+f*(b[2]-a[2])];
+  }
+
+  /* ---- Draw heatmap ---- */
+  function drawHeatmap() {
+    if (!lastResult) return;
+    const res = lastResult;
+    const ct = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const fs = Math.max(0.7, Math.min(1, W / 600));
+
+    // Clear
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Margins
+    const ml = 52 * fs, mr = 60 * fs, mt = 14 * fs, mb = 38 * fs;
+    const pw = W - ml - mr;
+    const ph = H - mt - mb;
+    if (pw < 10 || ph < 10) return;
+
+    // Render field pixels
+    const imgW = Math.round(pw * dpr);
+    const imgH = Math.round(ph * dpr);
+    const imgData = ctx.createImageData(imgW, imgH);
+    const invMax = res.maxVal > 0 ? 1 / res.maxVal : 1;
+
+    for (let py = 0; py < imgH; py++) {
+      // y-axis: top = xMax, bottom = xMin (like imagesc with 'Normal' Ydir)
+      const iy = Math.round((1 - py / (imgH - 1)) * (res.Nx - 1));
+      for (let px = 0; px < imgW; px++) {
+        const iz = Math.round(px * (res.Nz - 1) / (imgW - 1));
+        const val = res.field[iz * res.Nx + iy];
+        const t = val * invMax;
+        const [r, g, b] = inferno(t);
+        const off = (py * imgW + px) * 4;
+        imgData.data[off]     = r;
+        imgData.data[off + 1] = g;
+        imgData.data[off + 2] = b;
+        imgData.data[off + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, ml * dpr, mt * dpr);
+
+    // Waveguide boundaries (dashed white lines)
+    ctx.save();
+    ctx.setLineDash([4 * fs, 3 * fs]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1;
+    const xRange = res.xMax - res.xMin;
+    const halfXb = res.xb / 2;
+    const yTop = mt + ph * (1 - (halfXb - res.xMin) / xRange);
+    const yBot = mt + ph * (1 - (-halfXb - res.xMin) / xRange);
+    ctx.beginPath(); ctx.moveTo(ml, yTop); ctx.lineTo(ml + pw, yTop); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ml, yBot); ctx.lineTo(ml + pw, yBot); ctx.stroke();
+    ctx.restore();
+
+    // Axes
+    ctx.font = `${11 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.fillStyle = ct.textSoft;
+    ctx.textAlign = 'center';
+
+    // z-axis ticks
+    const nzTicks = 5;
+    for (let i = 0; i <= nzTicks; i++) {
+      const frac = i / nzTicks;
+      const xPos = ml + frac * pw;
+      const zVal = frac * res.zMax;
+      ctx.fillText(zVal.toFixed(0), xPos, mt + ph + 14 * fs);
+      ctx.fillStyle = ct.grid;
+      ctx.fillRect(xPos, mt, 1, ph);
+      ctx.fillStyle = ct.textSoft;
+    }
+    // z label
+    ctx.font = `${12 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.fillText('z [\u00b5m]', ml + pw / 2, mt + ph + 30 * fs);
+
+    // x-axis ticks
+    ctx.textAlign = 'right';
+    ctx.font = `${11 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    const nxTicks = 5;
+    for (let i = 0; i <= nxTicks; i++) {
+      const frac = i / nxTicks;
+      const yPos = mt + frac * ph;
+      const xVal = res.xMax - frac * xRange;
+      ctx.fillStyle = ct.textSoft;
+      ctx.fillText(xVal.toFixed(0), ml - 6 * fs, yPos + 4 * fs);
+    }
+    // x label
+    ctx.save();
+    ctx.translate(12 * fs, mt + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.font = `${12 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.fillStyle = ct.textSoft;
+    ctx.fillText('x [\u00b5m]', 0, 0);
+    ctx.restore();
+
+    // Colorbar
+    const cbW = 10 * fs, cbGap = 8 * fs;
+    const cbX = ml + pw + cbGap;
+    const cbH = ph * 0.8;
+    const cbY = mt + (ph - cbH) / 2;
+    for (let i = 0; i < cbH; i++) {
+      const t = 1 - i / cbH;
+      const [r, g, b] = inferno(t);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(cbX, cbY + i, cbW, 1);
+    }
+    ctx.strokeStyle = ct.textMuted;
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(cbX, cbY, cbW, cbH);
+
+    // Colorbar labels
+    ctx.fillStyle = ct.textSoft;
+    ctx.textAlign = 'left';
+    ctx.font = `${10 * fs}px ${getComputedStyle(document.documentElement).getPropertyValue('--font').trim() || 'Inter, sans-serif'}`;
+    ctx.fillText(res.maxVal.toFixed(2), cbX + cbW + 3 * fs, cbY + 4 * fs);
+    ctx.fillText('0', cbX + cbW + 3 * fs, cbY + cbH + 1 * fs);
+  }
+
+  /* ---- Simulation runner ---- */
+  let lastResult: ReturnType<typeof beampropCN> | null = null;
+
+  function runSimulation() {
+    const p = readParams();
+    const totalSteps = Math.round(p.z / p.dz);
+
+    // Validate
+    if (p.Nx < 10 || p.Nx > 2048) { statusEl.textContent = 'Nx must be 10\u20132048'; return; }
+    if (totalSteps > 2_000_000) { statusEl.textContent = 'Too many steps (reduce z or increase dz)'; return; }
+    if (totalSteps < 1) { statusEl.textContent = 'z/dz must yield at least 1 step'; return; }
+
+    statusEl.textContent = `Computing ${totalSteps.toLocaleString()} steps\u2026`;
+    runBtn.disabled = true;
+
+    // Defer to next frame to let status update render
+    requestAnimationFrame(() => {
+      const t0 = performance.now();
+      lastResult = beampropCN(p);
+      const dt = performance.now() - t0;
+      statusEl.textContent = `${lastResult.Nz} \u00d7 ${lastResult.Nx} px \u2014 ${dt < 1000 ? dt.toFixed(0) + ' ms' : (dt/1000).toFixed(1) + ' s'}`;
+      runBtn.disabled = false;
+      drawHeatmap();
+    });
+  }
+
+  /* ---- Run button ---- */
+  runBtn.addEventListener('click', () => {
+    document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
+    runSimulation();
+  });
+
+  /* ---- Theme change ---- */
+  onThemeChange(drawHeatmap);
+  window.addEventListener('resize', drawHeatmap);
+
+  /* ---- Init with Task 1 ---- */
+  writeParams(TASKS['1']);
+  runSimulation();
+</script>
