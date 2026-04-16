@@ -105,6 +105,25 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <!-- Coupler params (only visible for preset 4) -->
+          <div class="param-group" id="group-coupler" style="display:none">
+            <span class="param-group__title">Coupler</span>
+            <div class="fields">
+              <div class="field">
+                <label for="p-gap">Gap [&mu;m]</label>
+                <input type="text" class="field-input" id="p-gap" inputmode="decimal" value="2">
+              </div>
+              <div class="field">
+                <label for="p-ncore2">n<sub>core,2</sub></label>
+                <input type="text" class="field-input" id="p-ncore2" inputmode="decimal" value="1.46" title="Second waveguide core index (leave equal to n_core for symmetric coupler)">
+              </div>
+              <div class="field">
+                <label for="p-xb2">x<sub>b,2</sub> [&mu;m]</label>
+                <input type="text" class="field-input" id="p-xb2" inputmode="decimal" value="2" title="Second waveguide width (equal to x_b for symmetric coupler)">
+              </div>
+            </div>
+          </div>
+
           <!-- Boundary conditions -->
           <div class="param-group">
             <span class="param-group__title">Boundary conditions</span>
@@ -346,7 +365,6 @@ import Layout from '../../layouts/Layout.astro';
     '3': { z: 500, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 2, xa: 50, xb: 8, nCladding: 1.45, nCore: 1.46, delta: 200 },
     '4': { z: 1500, dz: 0.01, nd: 1.455, lambda: 1, Nx: 300, w: 2, xa: 30, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
   };
-  const COUPLER_GAP = 2; // edge-to-edge gap between waveguides [um]
 
   /* ---- DOM refs ---- */
   const ids = ['p-z','p-dz','p-delta','p-lambda','p-w','p-nd','p-Nx','p-xa','p-xb','p-nclad','p-ncore'] as const;
@@ -393,27 +411,34 @@ import Layout from '../../layouts/Layout.astro';
     inputs['p-ncore'].value = String(p.nCore);
   }
 
-  /** Build dual-waveguide coupler profile and augment params. */
+  /** Build dual-waveguide coupler profile from UI params. */
   function applyCouplerProfile(p: BpmParams): BpmParams {
     const { xa, xb, Nx, nCladding, nCore } = p;
-    const gap = COUPLER_GAP;
-    const center1 = -(gap + xb) / 2;  // left waveguide center
-    const center2 =  (gap + xb) / 2;  // right waveguide center
+    const gap = parseFloat((document.getElementById('p-gap') as HTMLInputElement).value) || 2;
+    const nCore2 = parseFloat((document.getElementById('p-ncore2') as HTMLInputElement).value) || nCore;
+    const xb2 = parseFloat((document.getElementById('p-xb2') as HTMLInputElement).value) || xb;
+    // Place each waveguide so their inner edges sit ±gap/2 from the origin.
+    const center1 = -(gap / 2 + xb / 2);   // left waveguide, width xb, core nCore
+    const center2 =  (gap / 2 + xb2 / 2);  // right waveguide, width xb2, core nCore2
     const nProfile = new Float64Array(Nx);
-    const boundaries: number[] = [];
     for (let i = 0; i < Nx; i++) {
       const x = -xa / 2 + (xa * i) / (Nx - 1);
-      const inWg1 = x >= center1 - xb / 2 && x <= center1 + xb / 2;
-      const inWg2 = x >= center2 - xb / 2 && x <= center2 + xb / 2;
-      nProfile[i] = (inWg1 || inWg2) ? nCore : nCladding;
+      if (x >= center1 - xb / 2 && x <= center1 + xb / 2)        nProfile[i] = nCore;
+      else if (x >= center2 - xb2 / 2 && x <= center2 + xb2 / 2) nProfile[i] = nCore2;
+      else                                                        nProfile[i] = nCladding;
     }
-    boundaries.push(center1 - xb / 2, center1 + xb / 2, center2 - xb / 2, center2 + xb / 2);
+    const boundaries = [center1 - xb / 2, center1 + xb / 2, center2 - xb2 / 2, center2 + xb2 / 2];
     return { ...p, nProfile, beamOffset: center1, boundaries };
   }
 
   function isCouplerActive(): boolean {
     const active = document.querySelector('#presets .preset-btn.active') as HTMLButtonElement | null;
     return active?.dataset.task === '4';
+  }
+
+  function updateCouplerVisibility() {
+    const group = document.getElementById('group-coupler') as HTMLElement;
+    group.style.display = isCouplerActive() ? '' : 'none';
   }
 
   /* ---- Presets ---- */
@@ -424,7 +449,15 @@ import Layout from '../../layouts/Layout.astro';
     btn.classList.add('active');
     const task = btn.dataset.task!;
     writeParams(TASKS[task]);
+    updateCouplerVisibility();
     runSimulation();
+  });
+
+  // Re-run when any coupler param changes
+  ['p-gap', 'p-ncore2', 'p-xb2'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      if (isCouplerActive()) runSimulation();
+    });
   });
 
   /* ---- Inferno colormap ---- */
@@ -593,7 +626,6 @@ import Layout from '../../layouts/Layout.astro';
 
   /* ---- Run button ---- */
   runBtn.addEventListener('click', () => {
-    document.querySelectorAll('#presets .preset-btn').forEach(b => b.classList.remove('active'));
     runSimulation();
   });
 
@@ -672,6 +704,11 @@ import Layout from '../../layouts/Layout.astro';
     p.set('bc', bcSelect.value);
     p.set('bcw', bcWidthInput.value);
     p.set('bca', bcStrengthInput.value);
+    if (isCouplerActive()) {
+      p.set('gap', (document.getElementById('p-gap') as HTMLInputElement).value);
+      p.set('nc2', (document.getElementById('p-ncore2') as HTMLInputElement).value);
+      p.set('xb2', (document.getElementById('p-xb2') as HTMLInputElement).value);
+    }
     return p.toString();
   }
 
@@ -706,7 +743,11 @@ import Layout from '../../layouts/Layout.astro';
     if (p.has('bc')) bcSelect.value = p.get('bc')!;
     if (p.has('bcw')) bcWidthInput.value = p.get('bcw')!;
     if (p.has('bca')) bcStrengthInput.value = p.get('bca')!;
+    if (p.has('gap')) (document.getElementById('p-gap') as HTMLInputElement).value = p.get('gap')!;
+    if (p.has('nc2')) (document.getElementById('p-ncore2') as HTMLInputElement).value = p.get('nc2')!;
+    if (p.has('xb2')) (document.getElementById('p-xb2') as HTMLInputElement).value = p.get('xb2')!;
     updateBcVisibility();
+    updateCouplerVisibility();
     return true;
   }
 
@@ -732,5 +773,6 @@ import Layout from '../../layouts/Layout.astro';
   if (!restoreState()) {
     writeParams(TASKS['1']);
   }
+  updateCouplerVisibility();
   runSimulation();
 </script>
