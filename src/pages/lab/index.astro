@@ -67,6 +67,22 @@ const widgets = [
     status: 'Live',
     url: `${base}lab/laser/`,
   },
+  {
+    title: 'BEM Solver',
+    description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.',
+    color: '#F97316',
+    icon: 'cube',
+    status: 'Live',
+    url: `${base}lab/bem-solver/`,
+  },
+  {
+    title: 'Methods Assistant',
+    description: 'Given a computational photonics problem, find the right numerical method. Semantic retrieval over lecture notes and textbooks \u2014 not an LLM, just fast lookup.',
+    color: '#64748B',
+    icon: 'chat',
+    status: 'Live',
+    url: `${base}lab/assistant/`,
+  },
 ];
 ---
 
@@ -139,6 +155,19 @@ const widgets = [
                     <path d="M2 12h8"/><path d="M14 12h8"/>
                     <circle cx="12" cy="12" r="2"/>
                     <circle cx="12" cy="12" r="5" stroke-dasharray="2 2"/>
+                  </svg>
+                )}
+                {widget.icon === 'cube' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                )}
+                {widget.icon === 'chat' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 9h8"/><path d="M8 13h4"/>
                   </svg>
                 )}
               </div>
