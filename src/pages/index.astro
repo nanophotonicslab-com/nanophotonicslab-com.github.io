@@ -1,12 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
 const base = import.meta.env.BASE_URL;
-
-const news = [
-  { date: '2026-03-28', title: 'New paper published in Nature Photonics', summary: 'Our latest work on plasmonic nanostructures has been accepted.' },
-  { date: '2026-03-15', title: 'Welcome new PhD students!', summary: 'Three new doctoral students join the lab this semester.' },
-  { date: '2026-02-20', title: 'Talk at CLEO 2026', summary: 'Invited talk on nanophotonic simulation methods at CLEO Europe.' },
-];
 ---
 
 <Layout title="Home">
@@ -29,57 +23,7 @@ const news = [
         and knowledge to control photons at their smallest scale.
       </p>
       <div class="hero__actions">
-        <a href={`${base}research/`} class="btn btn--primary">Our research</a>
-        <a href={`${base}lab/`} class="btn btn--outline">Try our simulators</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- News -->
-  <section class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2>Latest news</h2>
-        <p>What's happening in the lab.</p>
-      </div>
-      <div class="grid grid--3">
-        {news.map(item => (
-          <article class="card news-card">
-            <time class="tag" datetime={item.date}>
-              {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </time>
-            <h3>{item.title}</h3>
-            <p>{item.summary}</p>
-          </article>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact -->
-  <section class="section contact-section">
-    <div class="container">
-      <div class="contact-grid">
-        <div class="contact-info">
-          <h2>Get in touch</h2>
-          <p>Interested in our work? Looking to collaborate or join the lab?</p>
-          <div class="contact-details">
-            <div class="contact-item">
-              <strong>Email</strong>
-              <a href="mailto:email@nanophotonicslab.com">email@nanophotonicslab.com</a>
-            </div>
-            <div class="contact-item">
-              <strong>Location</strong>
-              <span>University Name, Building, Office</span>
-            </div>
-            <div class="contact-item">
-              <strong>Social</strong>
-              <div class="contact-socials">
-                <!-- TODO: add real URLs -->
-              </div>
-            </div>
-          </div>
-        </div>
+        <a href={`${base}lab/`} class="btn btn--primary">Try our simulators</a>
       </div>
     </div>
   </section>
@@ -183,68 +127,6 @@ const news = [
     display: flex;
     gap: var(--space-md);
     flex-wrap: wrap;
-  }
-
-  /* News cards */
-  .news-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-  }
-
-  .news-card h3 {
-    font-size: 1.125rem;
-  }
-
-  .news-card p {
-    font-size: 0.9375rem;
-  }
-
-  /* Contact */
-  .contact-section {
-    background: var(--bg-soft);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    padding: var(--space-3xl) 0;
-  }
-
-  .contact-info h2 {
-    margin-bottom: var(--space-sm);
-  }
-
-  .contact-info > p {
-    font-size: 1.125rem;
-    margin-bottom: var(--space-xl);
-  }
-
-  .contact-details {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-  }
-
-  .contact-item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
-
-  .contact-item strong {
-    font-size: 0.8125rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-
-  .contact-item span,
-  .contact-item a {
-    font-size: 1rem;
-    color: var(--text);
-  }
-
-  .contact-socials {
-    display: flex;
-    gap: var(--space-sm);
-    margin-top: var(--space-xs);
   }
 
   @media (max-width: 768px) {
