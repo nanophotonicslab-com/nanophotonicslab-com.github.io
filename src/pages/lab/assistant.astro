@@ -16,19 +16,15 @@ import Layout from '../../layouts/Layout.astro';
 
   <section class="section">
     <div class="container">
-      <div class="warning-banner">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-          <path d="M12 9v4"/><path d="M12 17h.01"/>
+      <div class="info-banner" id="info-banner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
         </svg>
         <div>
-          <strong>Heavy warning: experimental, and honestly a bit dumb.</strong>
-          This assistant does <em>not</em> reason and does <em>not</em> use an LLM.
-          It runs semantic search with <code>all-MiniLM-L6-v2</code> over a small
-          internal corpus of course notes, and returns the most similar passages verbatim.
-          No synthesis, no memory between turns, no guarantee the retrieved passage actually
-          answers your question. Treat every answer as a hint, not a statement. More
-          material will be added as it is curated.
+          <span id="banner-retrieval"><strong>Retrieval mode.</strong> Returning verbatim passages from course notes.
+          Add your <button class="banner-link" id="banner-add-key">Anthropic API key</button> to enable AI-powered answers with Claude.</span>
+          <span id="banner-ai" style="display:none"><strong>AI mode.</strong> Claude synthesizes answers from retrieved course-note passages.
+          Answers may contain inaccuracies &mdash; always verify against the source passages shown below.</span>
         </div>
       </div>
 
@@ -45,7 +41,12 @@ import Layout from '../../layouts/Layout.astro';
             <h3 class="chat-title">Methods Assistant</h3>
             <span class="chat-subtitle">Nanophotonics solver recommendations</span>
           </div>
-          <span class="chat-badge" title="Semantic retrieval over course script — no LLM, no hallucination">Retrieval</span>
+          <span class="chat-badge" id="mode-badge" title="Semantic retrieval over course script">Retrieval</span>
+          <button id="key-btn" class="chat-clear" title="API key settings" aria-label="API key settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+          </button>
           <button id="clear-btn" class="chat-clear" title="Clear conversation" aria-label="Clear">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6 18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -60,25 +61,25 @@ import Layout from '../../layouts/Layout.astro';
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
             </div>
-            <h4>Ask the notes</h4>
+            <h4>Ask about methods</h4>
             <p>
-              Semantic search over an internal corpus of computational-photonics course notes.
-              Ask a physics or numerical-method question and I return the most relevant
-              passages with their section and page.
+              Ask a physics or numerical-method question. I search a corpus of
+              computational-photonics course notes and return relevant passages.
+              With an API key, Claude synthesizes an answer from the retrieved context.
               <br/><strong>First query downloads the embedding model (~20&nbsp;MB, cached).</strong>
             </p>
             <div class="examples">
-              <button class="example" data-prompt="How does the Yee grid work for FDTD in 3D?">
-                Yee grid for FDTD in 3D
+              <button class="example" data-prompt="I need to simulate a gold nanoparticle on a glass substrate. Which method should I use?">
+                Au nanoparticle on substrate
               </button>
               <button class="example" data-prompt="What is the Crank-Nicolson method used for in BPM?">
                 Crank&ndash;Nicolson in BPM
               </button>
+              <button class="example" data-prompt="Compare FDTD and FEM for simulating photonic crystal cavities">
+                FDTD vs FEM for PhC cavities
+              </button>
               <button class="example" data-prompt="How to implement perfectly matched layer boundaries?">
                 PML boundary conditions
-              </button>
-              <button class="example" data-prompt="Weak formulation for the finite element method in photonics">
-                FEM weak formulation
               </button>
             </div>
           </div>
@@ -94,12 +95,25 @@ import Layout from '../../layouts/Layout.astro';
         </form>
       </div>
 
+      <!-- API key modal -->
+      <dialog id="key-dialog" class="key-dialog">
+        <h3>Anthropic API Key</h3>
+        <p>Enter your key to enable AI-powered answers. It is stored only in your browser's localStorage and sent directly to <code>api.anthropic.com</code>.</p>
+        <div class="key-field">
+          <input type="password" id="key-input" class="field-input" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        </div>
+        <div class="key-actions">
+          <button id="key-remove" class="btn-outline">Remove key</button>
+          <button id="key-save" class="btn-primary">Save</button>
+        </div>
+      </dialog>
+
       <p class="chat-disclaimer">
         <strong>How it works:</strong> your query is embedded in the browser with
         <code>all-MiniLM-L6-v2</code> (via <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>)
-        and matched by cosine similarity against a few hundred pre-computed chunks of internal
-        course notes. No LLM, no server, no hallucination &mdash; every passage you see is a
-        literal excerpt. More material will be added as it is curated.
+        and matched against pre-computed chunks of course notes.
+        With an API key, <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener">Claude Haiku</a>
+        synthesizes an answer from the retrieved passages. Without a key, passages are shown verbatim.
       </p>
     </div>
   </section>
@@ -114,31 +128,64 @@ import Layout from '../../layouts/Layout.astro';
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
 
-  /* Warning banner */
-  .warning-banner {
+  /* Info banner */
+  .info-banner {
     max-width: 760px;
     margin: 0 auto var(--space-md);
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     display: flex;
     gap: var(--space-sm);
-    align-items: flex-start;
-    border: 1px solid #F59E0B;
+    align-items: center;
+    border: 1px solid var(--bg-muted);
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
-    color: #78350F;
+    background: var(--bg-soft);
+    color: var(--text-soft);
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
-  .warning-banner svg { color: #D97706; flex-shrink: 0; margin-top: 1px; }
-  .warning-banner div { font-size: 0.8125rem; line-height: 1.6; }
-  .warning-banner strong { color: #78350F; display: inline; }
-  .warning-banner em { color: #92400E; font-style: italic; }
-  .warning-banner code {
-    font-family: 'SF Mono', Menlo, Consolas, monospace;
-    font-size: 0.85em;
-    background: rgba(217,119,6,0.15);
-    color: #92400E;
-    padding: 0.05rem 0.3rem;
-    border-radius: 3px;
+  .info-banner svg { color: #8B5CF6; flex-shrink: 0; }
+  .info-banner strong { color: var(--text); }
+  .banner-link {
+    background: none; border: none; color: #8B5CF6; font-weight: 600;
+    cursor: pointer; text-decoration: underline; font-size: inherit; font-family: inherit;
+    padding: 0;
   }
+  .banner-link:hover { color: #6D28D9; }
+
+  /* API key dialog */
+  .key-dialog {
+    max-width: 440px; width: 90%;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text);
+    padding: var(--space-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .key-dialog::backdrop { background: rgba(0,0,0,0.5); }
+  .key-dialog h3 { margin: 0 0 var(--space-sm); font-size: 1rem; }
+  .key-dialog p { margin: 0 0 var(--space-md); font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .key-dialog code { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 0.85em; background: rgba(139,92,246,0.1); color: #6D28D9; padding: 0.05rem 0.3rem; border-radius: 3px; }
+  .key-field { margin-bottom: var(--space-md); }
+  .key-field .field-input {
+    width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: 'SF Mono', Menlo, Consolas, monospace;
+  }
+  .key-field .field-input:focus { outline: none; border-color: #8B5CF6; box-shadow: 0 0 0 2px rgba(139,92,246,0.15); }
+  .key-actions { display: flex; justify-content: flex-end; gap: var(--space-sm); }
+  .btn-outline {
+    padding: 0.4rem 0.9rem; font-size: 0.8125rem; font-weight: 500;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .btn-outline:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-primary {
+    padding: 0.4rem 0.9rem; font-size: 0.8125rem; font-weight: 600;
+    border: none; border-radius: var(--radius-sm);
+    background: #8B5CF6; color: white; cursor: pointer;
+  }
+  .btn-primary:hover { background: #7C3AED; }
 
   /* Chat card */
   .chat-card {
@@ -353,6 +400,13 @@ import Layout from '../../layouts/Layout.astro';
   .passage-text .katex { font-size: 1em; }
   .passage-text .katex-display { margin: 0.4rem 0; }
 
+  .source-toggle { margin-top: 0.75rem; }
+  .source-toggle summary {
+    font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; user-select: none;
+  }
+  .source-toggle summary:hover { color: #8B5CF6; }
+
   /* Input form */
   .chat-input-form {
     display: flex;
@@ -556,6 +610,88 @@ import Layout from '../../layouts/Layout.astro';
     return paras.map(p => `<p>${escapeHtml(p).replace(/\n/g, ' ')}</p>`).join('');
   }
 
+  // ===== API key management =====
+
+  const KEY_STORAGE = 'anthropic-api-key';
+  function getApiKey(): string | null { return localStorage.getItem(KEY_STORAGE); }
+  function setApiKey(k: string) { localStorage.setItem(KEY_STORAGE, k); updateMode(); }
+  function removeApiKey() { localStorage.removeItem(KEY_STORAGE); updateMode(); }
+
+  function updateMode() {
+    const hasKey = !!getApiKey();
+    document.getElementById('banner-retrieval')!.style.display = hasKey ? 'none' : '';
+    document.getElementById('banner-ai')!.style.display = hasKey ? '' : 'none';
+    const badge = document.getElementById('mode-badge')!;
+    badge.textContent = hasKey ? 'AI' : 'Retrieval';
+    badge.title = hasKey ? 'Claude Haiku synthesizes answers from retrieved passages' : 'Semantic retrieval over course script';
+  }
+
+  // ===== Claude API =====
+
+  const SYSTEM_PROMPT = `You are a nanophotonics methods assistant embedded in NanophotonicsLab.com.
+You help researchers pick the right numerical method (Mie, BEM, FDTD, DGTD, RCWA, BPM, FEM, T-matrix, etc.) for their problem.
+
+You will receive RETRIEVED PASSAGES from a computational photonics course textbook. Use them as your primary knowledge source.
+- Answer the user's question by synthesizing information from the passages.
+- Cite which passage(s) you draw from (e.g. "According to Section 3.2...").
+- If the passages don't contain enough information, say so honestly.
+- Use LaTeX math notation with $...$ for inline and $$...$$ for display equations.
+- Be concise and direct. Researchers don't need hand-holding.
+- When relevant, mention which tools are available in the Lab (Mie scattering, BPM, BEM solver, Laser calculator, etc.).`;
+
+  async function callClaude(query: string, hits: Hit[]): Promise<string> {
+    const key = getApiKey();
+    if (!key) throw new Error('No API key');
+
+    const context = hits.map((h, i) => {
+      const c = h.chunk;
+      const cite = c.section_title || (c.page_start != null ? `pp. ${c.page_start}–${c.page_end}` : `chunk #${c.id}`);
+      return `[Passage ${i + 1}: ${cite}]\n${c.text}`;
+    }).join('\n\n---\n\n');
+
+    const userMsg = `RETRIEVED PASSAGES:\n${context}\n\n---\n\nUSER QUESTION: ${query}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMsg }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401) throw new Error('Invalid API key. Check your key in settings.');
+      throw new Error((err as any).error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.content?.[0]?.text || 'No response generated.';
+  }
+
+  function markdownToHtml(text: string): string {
+    // Minimal markdown: paragraphs, bold, inline code, preserve math
+    return text
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => {
+        let html = escapeHtml(p).replace(/\n/g, ' ');
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return `<p>${html}</p>`;
+      })
+      .join('');
+  }
+
   // ===== Chat logic =====
 
   interface Message { role: 'user' | 'assistant'; html: string; }
@@ -650,9 +786,26 @@ import Layout from '../../layouts/Layout.astro';
     try {
       await ensureReady((msg) => typing.setStatus(msg));
       typing.setStatus('Searching corpus…');
-      const hits = await retrieve(trimmed, 3);
-      removeTyping();
-      addMessage('assistant', renderHits(hits));
+      const hits = await retrieve(trimmed, 5);
+
+      if (getApiKey()) {
+        typing.setStatus('Asking Claude…');
+        try {
+          const answer = await callClaude(trimmed, hits);
+          removeTyping();
+          const answerHtml = markdownToHtml(answer);
+          const passagesHtml = renderHits(hits);
+          addMessage('assistant', answerHtml + '<details class="source-toggle"><summary>Source passages</summary>' + passagesHtml + '</details>');
+        } catch (err) {
+          removeTyping();
+          // Show error + fall back to raw passages
+          const passagesHtml = renderHits(hits);
+          addMessage('assistant', `<p><strong>Claude error:</strong> <code>${escapeHtml((err as Error).message)}</code></p>${passagesHtml}`);
+        }
+      } else {
+        removeTyping();
+        addMessage('assistant', renderHits(hits));
+      }
     } catch (err) {
       removeTyping();
       addMessage('assistant', `<p>Something went wrong loading the corpus or the embedding model: <code>${escapeHtml((err as Error).message)}</code>. Check your network connection — the model is fetched from the Hugging Face CDN on first use.</p>`);
@@ -693,6 +846,38 @@ import Layout from '../../layouts/Layout.astro';
     input.focus();
   });
 
+  // API key dialog
+  const keyDialog = document.getElementById('key-dialog') as HTMLDialogElement;
+  const keyInput = document.getElementById('key-input') as HTMLInputElement;
+  const keyBtn = document.getElementById('key-btn')!;
+  const bannerAddKey = document.getElementById('banner-add-key');
+
+  function openKeyDialog() {
+    keyInput.value = getApiKey() || '';
+    keyDialog.showModal();
+  }
+
+  keyBtn.addEventListener('click', openKeyDialog);
+  bannerAddKey?.addEventListener('click', openKeyDialog);
+
+  document.getElementById('key-save')!.addEventListener('click', () => {
+    const val = keyInput.value.trim();
+    if (val) setApiKey(val);
+    keyDialog.close();
+  });
+
+  document.getElementById('key-remove')!.addEventListener('click', () => {
+    removeApiKey();
+    keyInput.value = '';
+    keyDialog.close();
+  });
+
+  keyDialog.addEventListener('click', (e) => {
+    if (e.target === keyDialog) keyDialog.close();
+  });
+
+  // Init mode
+  updateMode();
   input.focus();
 
 </script>
