@@ -2426,12 +2426,13 @@ import Layout from '../../layouts/Layout.astro';
     const rowH = layers.length > 3 ? 18 : 22;
     const H = Math.max(circR * 2 + 36, layers.length * rowH + 50);
     const cy = H / 2;
+    const ct = chartTheme();
     let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
     // Background
-    s += `<rect width="${W}" height="${H}" fill="#F8FAFC" rx="6"/>`;
+    s += `<rect width="${W}" height="${H}" fill="${ct.grid}" rx="6"/>`;
     // Host label
-    s += `<text x="${cx}" y="11" text-anchor="middle" fill="#9CA3AF" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
-    s += `<text x="${cx}" y="${H-4}" text-anchor="middle" fill="#9CA3AF" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
+    s += `<text x="${cx}" y="11" text-anchor="middle" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
+    s += `<text x="${cx}" y="${H-4}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
     // Concentric circles (outer to inner)
     for (let i = layers.length - 1; i >= 0; i--) {
       const r = Math.max(5, (layers[i].r / maxR) * circR);
@@ -2444,21 +2445,21 @@ import Layout from '../../layouts/Layout.astro';
       const ly = labStartY + i * rowH;
       const edgeX = cx + r;
       // Leader line
-      s += `<line x1="${edgeX}" y1="${cy}" x2="${labelX - 2}" y2="${ly}" stroke="#D1D5DB" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+      s += `<line x1="${edgeX}" y1="${cy}" x2="${labelX - 2}" y2="${ly}" stroke="${ct.textMuted}" stroke-width="0.6" stroke-dasharray="2,2"/>`;
       s += `<circle cx="${edgeX}" cy="${cy}" r="1.5" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>`;
       // Layer name + material
       const matLabel = layers[i].mat === 'custom' ? `\u03B5=${layers[i].eps}` : (MAT_NAMES[layers[i].mat] || layers[i].mat);
       const refParts = layers[i].ref ? layers[i].ref.split(':')[0].split(' ').slice(0, 2).join(' ') : '';
       const detail = refParts ? `${matLabel} (${refParts})` : matLabel;
-      s += `<text x="${labelX}" y="${ly - 1}" fill="#374151" font-size="8.5" font-weight="600" font-family="Inter,system-ui">${layers[i].name}</text>`;
-      s += `<text x="${labelX}" y="${ly + 9}" fill="#6B7280" font-size="7.5" font-family="Inter,system-ui">${detail} \u00B7 R=${layers[i].r} nm</text>`;
+      s += `<text x="${labelX}" y="${ly - 1}" fill="${ct.text}" font-size="8.5" font-weight="600" font-family="Inter,system-ui">${layers[i].name}</text>`;
+      s += `<text x="${labelX}" y="${ly + 9}" fill="${ct.textSoft}" font-size="7.5" font-family="Inter,system-ui">${detail} \u00B7 R=${layers[i].r} nm</text>`;
     }
     // Radius dimension arrow (bottom)
     const arrowY = cy + circR + 10;
-    s += `<line x1="${cx}" y1="${arrowY}" x2="${cx + circR}" y2="${arrowY}" stroke="#9CA3AF" stroke-width="0.7" marker-end="url(#arr)"/>`;
-    s += `<line x1="${cx}" y1="${arrowY-3}" x2="${cx}" y2="${arrowY+3}" stroke="#9CA3AF" stroke-width="0.7"/>`;
-    s += `<defs><marker id="arr" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="none" stroke="#9CA3AF" stroke-width="0.7"/></marker></defs>`;
-    s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="#9CA3AF" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
+    s += `<line x1="${cx}" y1="${arrowY}" x2="${cx + circR}" y2="${arrowY}" stroke="${ct.textMuted}" stroke-width="0.7" marker-end="url(#arr)"/>`;
+    s += `<line x1="${cx}" y1="${arrowY-3}" x2="${cx}" y2="${arrowY+3}" stroke="${ct.textMuted}" stroke-width="0.7"/>`;
+    s += `<defs><marker id="arr" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="none" stroke="${ct.textMuted}" stroke-width="0.7"/></marker></defs>`;
+    s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
     s += '</svg>';
     el.innerHTML = s;
   }

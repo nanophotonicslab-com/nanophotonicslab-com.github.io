@@ -5,6 +5,7 @@ import type { AppState } from './state';
 import { PyodideBridge, type SolveParams } from './pyodide-bridge';
 import { BEMViewport } from './viewport';
 import { drawColorbar } from './colormap';
+import { chartTheme } from '../../lib/chart-theme';
 
 export async function initBEMSolver() {
   const state = new StateManager(DEFAULT_STATE);
@@ -320,8 +321,14 @@ export async function initBEMSolver() {
     const toX = (v: number) => pad.left + (v - xMin) / (xMax - xMin) * (w - pad.left - pad.right);
     const toY = (v: number) => h - pad.bottom - (v - yMin) / (yMax - yMin) * (h - pad.top - pad.bottom);
 
+    const ct = chartTheme();
+
+    // Background
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+
     // Axes
-    ctx.strokeStyle = '#9ca3af';
+    ctx.strokeStyle = ct.textMuted;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(pad.left, pad.top);
@@ -330,7 +337,7 @@ export async function initBEMSolver() {
     ctx.stroke();
 
     // Axis labels
-    ctx.fillStyle = '#1e1b4b';
+    ctx.fillStyle = ct.text;
     ctx.font = '12px Inter, system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Wavelength (nm)', w / 2, h - 5);
@@ -341,6 +348,7 @@ export async function initBEMSolver() {
     ctx.restore();
 
     // Tick labels
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '10px Inter, system-ui';
     ctx.textAlign = 'center';
     for (let l = Math.ceil(xMin / 100) * 100; l <= xMax; l += 100) {
@@ -390,7 +398,7 @@ export async function initBEMSolver() {
     for (const ds of datasets) {
       ctx.fillStyle = ds.color;
       ctx.fillRect(lx, pad.top + 2, 12, 3);
-      ctx.fillStyle = '#1e1b4b';
+      ctx.fillStyle = ct.text;
       ctx.textAlign = 'left';
       ctx.fillText(ds.label, lx + 16, pad.top + 8);
       lx += 70;

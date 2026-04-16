@@ -1,4 +1,5 @@
 /** Viridis colormap and colorbar rendering. */
+import { chartTheme } from '../../lib/chart-theme';
 
 // Viridis LUT (256 entries, sampled from matplotlib)
 const VIRIDIS_DATA: [number, number, number][] = [
@@ -61,12 +62,14 @@ export function drawColorbar(
     ctx.fillRect(barX, barTop + y, barW, 1);
   }
 
+  const ct = chartTheme();
+
   // Border
-  ctx.strokeStyle = '#64648b';
+  ctx.strokeStyle = ct.textSoft;
   ctx.strokeRect(barX, barTop, barW, barH);
 
   // Labels
-  ctx.fillStyle = '#1e1b4b';
+  ctx.fillStyle = ct.text;
   ctx.font = '11px Inter, system-ui';
   ctx.textAlign = 'left';
   ctx.fillText(max.toFixed(1), barX + barW + 5, barTop + 5);

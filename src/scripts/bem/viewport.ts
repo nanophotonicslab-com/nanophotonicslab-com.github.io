@@ -29,7 +29,7 @@ export class BEMViewport {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setClearColor(0xf8f7ff);  // --bg-soft
+    this.updateClearColor();
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
@@ -58,7 +58,16 @@ export class BEMViewport {
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(container);
 
+    // Listen for theme changes
+    window.addEventListener('themechange', () => this.updateClearColor());
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.updateClearColor());
+
     this.animate();
+  }
+
+  private updateClearColor(): void {
+    const bgSoft = getComputedStyle(document.documentElement).getPropertyValue('--bg-soft').trim() || '#F8F7FF';
+    this.renderer.setClearColor(bgSoft);
   }
 
   setMesh(vertices: Float64Array, faces: Int32Array, nFaces: number, nVerts: number): void {
