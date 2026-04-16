@@ -307,6 +307,7 @@ import Layout from '../../layouts/Layout.astro';
 <script>
   import { getDispersion, eelsParallel, eelsPerpendicular, HC_EV_NM } from '../../lib/cylinder.ts';
   import type { C } from '../../lib/cylinder.ts';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   type ViewMode = 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
 
@@ -507,11 +508,12 @@ import Layout from '../../layouts/Layout.astro';
 
   function drawAxesFrame(ax: Axes, xTicks: number, yTicks: number, xFmt: (v: number) => string, yFmt: (v: number) => string) {
     const { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xLabel, yLabel } = ax;
+    const ct = chartTheme();
 
-    ctx.fillStyle = '#FAFAFF';
+    ctx.fillStyle = ct.bg;
     ctx.fillRect(m.left, m.top, pw, ph);
 
-    ctx.strokeStyle = '#EEEDF5';
+    ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
     for (let i = 0; i <= xTicks; i++) {
       const x = m.left + pw * i / xTicks;
@@ -522,7 +524,7 @@ import Layout from '../../layouts/Layout.astro';
       ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
     }
 
-    ctx.strokeStyle = '#1E1B4B';
+    ctx.strokeStyle = ct.text;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(m.left, m.top);
@@ -530,7 +532,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.lineTo(m.left + pw, m.top + ph);
     ctx.stroke();
 
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '10px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -538,13 +540,13 @@ import Layout from '../../layouts/Layout.astro';
       const v = xMin + (xMax - xMin) * i / xTicks;
       ctx.fillText(xFmt(v), m.left + pw * i / xTicks, m.top + ph + 4);
     }
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.fillText(xLabel, m.left + pw / 2, h - 16);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '10px Inter, system-ui, sans-serif';
     for (let i = 0; i <= yTicks; i++) {
       const v = yMax - (yMax - yMin) * i / yTicks;
@@ -554,7 +556,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.translate(14, m.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
@@ -909,6 +911,8 @@ import Layout from '../../layouts/Layout.astro';
   updateBNote();
 
   new ResizeObserver(drawChart).observe($('chart-wrap'));
+
+  onThemeChange(() => drawChart());
 
   // Initial
   recompute();

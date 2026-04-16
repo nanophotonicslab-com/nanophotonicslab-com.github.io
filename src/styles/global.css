@@ -1,13 +1,12 @@
 /* ===== Design System: Nanophotonics Lab ===== */
 /* Concept: Light dispersing on a bright surface — vibrant spectral colors */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 :root {
   /* Background */
   --bg: #FFFFFF;
   --bg-soft: #F8F7FF;
   --bg-muted: #F1F0FB;
+  --bg-glass: rgba(255, 255, 255, 0.92);
 
   /* Text */
   --text: #1E1B4B;
@@ -64,6 +63,24 @@
   --shadow-md: 0 4px 16px rgba(99, 102, 241, 0.1);
   --shadow-lg: 0 8px 32px rgba(99, 102, 241, 0.12);
   --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2);
+}
+
+/* ===== Dark mode ===== */
+[data-theme="dark"] {
+  --bg: #0F0E1A;
+  --bg-soft: #1A1930;
+  --bg-muted: #2A2945;
+  --bg-glass: rgba(15, 14, 26, 0.92);
+  --text: #E8E6F0;
+  --text-soft: #9896B0;
+  --text-muted: #6B697E;
+  --primary: #818CF8;
+  --primary-dark: #6366F1;
+  --primary-light: #4F46E5;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 24px rgba(129, 140, 248, 0.3);
 }
 
 /* ===== Reset ===== */

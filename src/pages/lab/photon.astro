@@ -200,6 +200,8 @@ import Layout from '../../layouts/Layout.astro';
 
 <!-- ===== Script ===== -->
 <script>
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+
   // ===== Physical constants (CODATA 2018) =====
   const C  = 299792458.0;            // m/s
   const H  = 6.62607015e-34;         // J·s
@@ -391,6 +393,7 @@ import Layout from '../../layouts/Layout.astro';
   const logLMax = Math.log10(CHART.lamMax);
 
   function drawChart() {
+    const ct = chartTheme();
     const canvas = document.getElementById('photon-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
@@ -413,7 +416,7 @@ import Layout from '../../layouts/Layout.astro';
     const barY1 = barY0 + barHeight;
 
     // Background
-    ctx.fillStyle = '#FAFAFF';
+    ctx.fillStyle = ct.bg;
     ctx.fillRect(m.left, m.top, pw, ph);
 
     // ===== Spectrum bar =====
@@ -449,7 +452,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.restore();
 
     // Bar border
-    ctx.strokeStyle = '#1E1B4B';
+    ctx.strokeStyle = ct.text;
     ctx.lineWidth = 1;
     ctx.strokeRect(m.left + 0.5, barY0 + 0.5, pw - 1, barHeight - 1);
 
@@ -474,7 +477,7 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     // ===== Top axis: wavelength =====
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
@@ -490,13 +493,13 @@ import Layout from '../../layouts/Layout.astro';
     for (const t of lamTicks) {
       const x = nmToX(t.nm);
       ctx.fillText(t.lbl, x, barY0 - 4);
-      ctx.strokeStyle = '#1E1B4B';
+      ctx.strokeStyle = ct.text;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, barY0); ctx.lineTo(x, barY0 - 3); ctx.stroke();
     }
 
     // ===== Bottom axis: energy =====
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.textBaseline = 'top';
     const evTicks = [
       { eV: 12.4,  nm: HC_EV_NM / 12.4,  lbl: '12.4 eV' },
@@ -511,13 +514,13 @@ import Layout from '../../layouts/Layout.astro';
       if (t.nm < CHART.lamMin || t.nm > CHART.lamMax) continue;
       const x = nmToX(t.nm);
       ctx.fillText(t.lbl, x, barY1 + 4);
-      ctx.strokeStyle = '#1E1B4B';
+      ctx.strokeStyle = ct.text;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, barY1); ctx.lineTo(x, barY1 + 3); ctx.stroke();
     }
 
     // Axis titles
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '600 10px Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
@@ -538,14 +541,14 @@ import Layout from '../../layouts/Layout.astro';
       ctx.setLineDash([]);
 
       // Marker dot at top of bar
-      ctx.fillStyle = '#FFFFFF';
-      ctx.strokeStyle = '#1E1B4B';
+      ctx.fillStyle = ct.bg;
+      ctx.strokeStyle = ct.text;
       ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(x, barY0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
       // Label (vertical)
       ctx.save();
-      ctx.fillStyle = '#64648B';
+      ctx.fillStyle = ct.textSoft;
       ctx.font = '9px Inter, system-ui, sans-serif';
       ctx.translate(x + 3, laserY + 14);
       ctx.rotate(-Math.PI / 2);
@@ -577,13 +580,13 @@ import Layout from '../../layouts/Layout.astro';
 
         // Marker
         ctx.fillStyle = '#F43F5E';
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeStyle = ct.bg;
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
         // Value label
         const E_eV = HC_EV_NM / nm;
-        ctx.fillStyle = '#1E1B4B';
+        ctx.fillStyle = ct.text;
         ctx.font = '600 10px Inter, system-ui, sans-serif';
         ctx.textBaseline = 'alphabetic';
         const lamLabel = nm >= 1000 ? `${fmt(nm / 1000)} µm` : `${fmt(nm)} nm`;
@@ -597,6 +600,8 @@ import Layout from '../../layouts/Layout.astro';
 
   // Resize handling
   new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
+
+  onThemeChange(drawChart);
 
   // Initial draw
   drawChart();

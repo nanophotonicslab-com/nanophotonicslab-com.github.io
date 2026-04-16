@@ -419,6 +419,7 @@ import Layout from '../../layouts/Layout.astro';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
   import { interpolateNK } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   // === File-based optical constants ===
 
@@ -1290,12 +1291,13 @@ import Layout from '../../layouts/Layout.astro';
   function hexToRgba(hex: string, a: number): string { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r},${g},${b},${a})`; }
 
   function drawChart(canvas: HTMLCanvasElement, xArr: Float64Array, series: PlotSeries[], xLabel: string, yLabel: string, opts: ChartOpts = {}): ChartXforms {
+    const ct = chartTheme();
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
     const ctx = canvas.getContext('2d')!; ctx.scale(dpr, dpr);
     const W = rect.width, H = rect.height, pw = W - PAD.left - PAD.right, ph = H - PAD.top - PAD.bottom;
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = ct.bg; ctx.fillRect(0, 0, W, H);
     let dxMin = xArr[0], dxMax = xArr[0], dyMin = Infinity, dyMax = 0;
     for (let i = 0; i < xArr.length; i++) { if (xArr[i] < dxMin) dxMin = xArr[i]; if (xArr[i] > dxMax) dxMax = xArr[i]; }
     for (const s of series) for (let i = 0; i < s.y.length; i++) { if (s.y[i] > dyMax) dyMax = s.y[i]; if (s.y[i] > 0 && s.y[i] < dyMin) dyMin = s.y[i]; }
@@ -1320,15 +1322,15 @@ import Layout from '../../layouts/Layout.astro';
       yTickLabeler = () => true;
     }
     const xTicks: number[] = []; for (let v = xs.min; v <= xs.max + xs.step * 0.1; v += xs.step) xTicks.push(v);
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = hexToRgba(ct.grid, 0.5); ctx.lineWidth = 1;
     for (const v of yTicks) { const y = Math.round(ty(v)) + 0.5; if (y < PAD.top || y > PAD.top + ph) continue; ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + pw, y); ctx.stroke(); }
     for (const v of xTicks) { const x = Math.round(tx(v)) + 0.5; ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + ph); ctx.stroke(); }
-    ctx.strokeStyle = '#D1D5DB'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + ph); ctx.lineTo(PAD.left + pw, PAD.top + ph); ctx.stroke();
+    ctx.strokeStyle = ct.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + ph); ctx.lineTo(PAD.left + pw, PAD.top + ph); ctx.stroke();
     const fs = opts.fontScale || 1;
-    ctx.fillStyle = '#6B7280'; ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = ct.textSoft; ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const v of xTicks) ctx.fillText(fmtTick(v), tx(v), PAD.top + ph + 6 * fs);
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const v of yTicks) { const y = ty(v); if (y < PAD.top - 5 || y > PAD.top + ph + 5) continue; if (yTickLabeler(v)) ctx.fillText(fmtTick(v), PAD.left - 8 * fs, y); }
-    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
+    ctx.fillStyle = ct.text; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
     ctx.save(); ctx.translate(14 * fs, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
     if (series.length === 1) {
@@ -1349,12 +1351,12 @@ import Layout from '../../layouts/Layout.astro';
       const legendW = lineW + gap + Math.max(...labelWidths) + 16;
       const legendH = series.length * itemH + 8;
       const lx = PAD.left + pw - legendW - 8, ly = PAD.top + 8;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+      ctx.fillStyle = hexToRgba(ct.bg, 0.85); ctx.strokeStyle = hexToRgba(ct.text, 0.1); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.roundRect(lx, ly, legendW, legendH, 4); ctx.fill(); ctx.stroke();
       for (let si = 0; si < series.length; si++) {
         const iy = ly + 4 + (si + 0.5) * itemH;
         ctx.strokeStyle = series[si].color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx + 8, iy); ctx.lineTo(lx + 8 + lineW, iy); ctx.stroke();
-        ctx.fillStyle = '#374151'; ctx.fillText(series[si].label, lx + 8 + lineW + gap, iy);
+        ctx.fillStyle = ct.text; ctx.fillText(series[si].label, lx + 8 + lineW + gap, iy);
       }
     }
     return { tx, ty, invTx, invTy, pL: PAD.left, pT: PAD.top, pW: pw, pH: ph };
@@ -1363,12 +1365,13 @@ import Layout from '../../layouts/Layout.astro';
   // === Polar Chart Renderer ===
 
   function drawPolarChart(canvas: HTMLCanvasElement, pattern: AngularPattern, polMode: string, lambdaNm: number, opts: { fontScale?: number } = {}): void {
+    const ct = chartTheme();
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
     const ctx = canvas.getContext('2d')!; ctx.scale(dpr, dpr);
     const W = rect.width, H = rect.height;
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = ct.bg; ctx.fillRect(0, 0, W, H);
     const fs = opts.fontScale || 1;
 
     // Choose intensity data
@@ -1390,8 +1393,8 @@ import Layout from '../../layouts/Layout.astro';
     const r = (logI: number) => Math.max(0, ((logI - lf) / (lc - lf)) * plotR);
 
     // Concentric grid circles
-    ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
-    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#9CA3AF'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = hexToRgba(ct.textMuted, 0.35); ctx.lineWidth = 1;
+    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textMuted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     for (let p = lf; p <= lc; p++) {
       const rr = r(p); if (rr <= 0) continue;
       ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 2 * Math.PI); ctx.stroke();
@@ -1399,8 +1402,8 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     // Radial gridlines + angle labels
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-    ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#6B7280'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = hexToRgba(ct.textMuted, 0.3);
+    ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textSoft; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let deg = 0; deg < 360; deg += 30) {
       const a = deg * Math.PI / 180;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + plotR * Math.sin(a), cy - plotR * Math.cos(a)); ctx.stroke();
@@ -1430,9 +1433,9 @@ import Layout from '../../layouts/Layout.astro';
     ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
 
     // Labels
-    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = ct.text; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(`\u03BB = ${lambdaNm.toFixed(1)} nm`, 8, 8);
-    ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#9CA3AF';
+    ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textMuted;
     ctx.fillText('0\u00B0 = forward', 8, 26 * fs);
   }
 
@@ -1586,6 +1589,7 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   function drawHeatmap(canvas: HTMLCanvasElement, nf: NearFieldResult, radiusNm: number, lambdaNm: number, opts: { fontScale?: number } = {}): void {
+    const ct = chartTheme();
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
@@ -1625,16 +1629,16 @@ import Layout from '../../layouts/Layout.astro';
       const t = 1 - i / cbH; const [cr2, cg, cb] = inferno(t);
       ctx.fillStyle = `rgb(${cr2},${cg},${cb})`; ctx.fillRect(cbX, cbY + i, cbW, 1);
     }
-    ctx.strokeStyle = '#D1D5DB'; ctx.lineWidth = 1; ctx.strokeRect(cbX, cbY, cbW, cbH);
-    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = ct.grid; ctx.lineWidth = 1; ctx.strokeRect(cbX, cbY, cbW, cbH);
+    ctx.fillStyle = ct.text; ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(`${nf.maxVal.toFixed(1)}`, cbX + cbW + 4, cbY);
     ctx.fillText(`${nf.minVal.toFixed(2)}`, cbX + cbW + 4, cbY + cbH);
     ctx.fillText('|E|²/|E₀|²', cbX + cbW + 4, cbY + cbH / 2);
     // Labels
-    ctx.fillStyle = '#374151'; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = ct.text; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(`\u03BB = ${lambdaNm.toFixed(1)} nm`, 8, 4);
     // Axis labels
-    ctx.fillStyle = '#6B7280'; ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = ct.textSoft; ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText('x (nm)', ccx, oy + plotSide + 4 * fs);
     ctx.save(); ctx.translate(ox - 14 * fs, ccy); ctx.rotate(-Math.PI / 2); ctx.fillText('z (nm)', 0, 0); ctx.restore();
@@ -2578,5 +2582,6 @@ import Layout from '../../layouts/Layout.astro';
 
   restoreState();
   new ResizeObserver(() => render()).observe(canvas);
+  onThemeChange(() => render());
   recompute(); render(); updateConfigCheck();
 </script>

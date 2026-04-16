@@ -369,6 +369,7 @@ import Layout from '../../layouts/Layout.astro';
   import { MATERIALS } from '../../data/optical-constants';
   import { mieAt, interpolateNK } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   // ===== State =====
 
@@ -504,6 +505,7 @@ import Layout from '../../layouts/Layout.astro';
 
   function drawChart() {
     if (!spectrum) return;
+    const ct = chartTheme();
     const canvas = document.getElementById('mie-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
@@ -527,10 +529,10 @@ import Layout from '../../layouts/Layout.astro';
     const xTo = (lam: number) => m.left + pw * (lam - LAM_MIN) / (LAM_MAX - LAM_MIN);
     const yTo = (v: number) => m.top + ph * (1 - v / yMax);
 
-    ctx.fillStyle = '#FAFAFF';
+    ctx.fillStyle = ct.bg;
     ctx.fillRect(m.left, m.top, pw, ph);
 
-    ctx.strokeStyle = '#EEEDF5';
+    ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
     for (let lam = 400; lam <= LAM_MAX; lam += 200) {
       const x = xTo(lam);
@@ -542,7 +544,7 @@ import Layout from '../../layouts/Layout.astro';
       ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
     }
 
-    ctx.strokeStyle = '#1E1B4B';
+    ctx.strokeStyle = ct.text;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(m.left, m.top);
@@ -551,20 +553,20 @@ import Layout from '../../layouts/Layout.astro';
     ctx.stroke();
 
     // axis labels
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '10px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (let lam = 400; lam <= LAM_MAX; lam += 200) {
       ctx.fillText(String(lam), xTo(lam), m.top + ph + 4);
     }
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.fillText('λ (nm)', m.left + pw / 2, h - 14);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '10px Inter, system-ui, sans-serif';
     for (let i = 0; i <= yTicks; i++) {
       const v = yMax * (1 - i / yTicks);
@@ -575,7 +577,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.translate(12, m.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.fillText('σ (nm²)', 0, 0);
     ctx.restore();
@@ -630,6 +632,7 @@ import Layout from '../../layouts/Layout.astro';
   // ===== Profile T(r) mini chart =====
 
   function drawProfile(dTSurface: number) {
+    const ct = chartTheme();
     const canvas = document.getElementById('profile-chart') as HTMLCanvasElement;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
@@ -638,7 +641,7 @@ import Layout from '../../layouts/Layout.astro';
     canvas.width = w * dpr; canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
 
-    ctx.fillStyle = '#FAFAFF';
+    ctx.fillStyle = ct.bg;
     ctx.fillRect(0, 0, w, h);
 
     const mL = 8, mR = 34, mT = 10, mB = 22;
@@ -651,14 +654,14 @@ import Layout from '../../layouts/Layout.astro';
     const yTo = (t: number) => mT + ph * (1 - t);  // t is normalized ΔT (0..1)
 
     // Axes frame
-    ctx.strokeStyle = '#CBD5E1';
+    ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(mL, mT); ctx.lineTo(mL, mT + ph); ctx.lineTo(mL + pw, mT + ph);
     ctx.stroke();
 
     if (!isFinite(dTSurface) || dTSurface <= 0) {
-      ctx.strokeStyle = '#D1D5DB';
+      ctx.strokeStyle = ct.grid;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(mL, yTo(0)); ctx.lineTo(mL + pw, yTo(0)); ctx.stroke();
       return;
@@ -666,8 +669,8 @@ import Layout from '../../layouts/Layout.astro';
 
     // ===== Reference lines at ΔT/e and ΔT/e² =====
     const refs = [
-      { y: 1 / Math.E,       label: '1/e',  color: '#9CA3AF' },
-      { y: 1 / (Math.E ** 2), label: '1/e²', color: '#D1D5DB' },
+      { y: 1 / Math.E,       label: '1/e',  color: ct.textMuted },
+      { y: 1 / (Math.E ** 2), label: '1/e²', color: ct.grid },
     ];
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
@@ -678,7 +681,7 @@ import Layout from '../../layouts/Layout.astro';
       ctx.setLineDash([2, 3]);
       ctx.beginPath(); ctx.moveTo(mL, yy); ctx.lineTo(mL + pw, yy); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#64648B';
+      ctx.fillStyle = ct.textSoft;
       ctx.fillText(r.label, mL + pw + 3, yy);
     }
 
@@ -704,13 +707,13 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     // ===== X-axis ticks at r/R = 1, 2, 5, 10 =====
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (const rr of [1, 2, 5, 10]) {
       const xx = xTo(rr);
-      ctx.strokeStyle = '#CBD5E1';
+      ctx.strokeStyle = ct.grid;
       ctx.beginPath(); ctx.moveTo(xx, mT + ph); ctx.lineTo(xx, mT + ph + 2); ctx.stroke();
       ctx.fillText(String(rr), xx, mT + ph + 4);
     }
@@ -781,6 +784,8 @@ import Layout from '../../layouts/Layout.astro';
   updateOutputs();
 
   new ResizeObserver(() => { drawChart(); /* profile redraws with outputs */ }).observe($('chart-wrap'));
+
+  onThemeChange(() => updateOutputs());
 </script>
 </content>
 </invoke>

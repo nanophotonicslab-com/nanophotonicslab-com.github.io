@@ -194,6 +194,8 @@ import Layout from '../../layouts/Layout.astro';
 
 <!-- ===== Script ===== -->
 <script>
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+
   // ===== Physical constants (CODATA 2018) =====
   const AU_EV = 27.2113834;
   const C_AU  = 137.03599971;
@@ -383,6 +385,7 @@ import Layout from '../../layouts/Layout.astro';
   const logLMax = Math.log10(CHART.lMax);
 
   function drawChart() {
+    const ct = chartTheme();
     const canvas = document.getElementById('electron-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
@@ -400,11 +403,11 @@ import Layout from '../../layouts/Layout.astro';
     const lToY = (pm: number)  => m.top  + ph * (1 - (Math.log10(pm) - logLMin) / (logLMax - logLMin));
 
     // Background
-    ctx.fillStyle = '#FAFAFF';
+    ctx.fillStyle = ct.bg;
     ctx.fillRect(m.left, m.top, pw, ph);
 
     // Grid
-    ctx.strokeStyle = '#EEEDF5';
+    ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
     for (let e = -2; e <= 4; e++) {
       const x = kToX(10 ** e);
@@ -416,7 +419,7 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     // Axes
-    ctx.strokeStyle = '#1E1B4B';
+    ctx.strokeStyle = ct.text;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(m.left, m.top);
@@ -425,20 +428,20 @@ import Layout from '../../layouts/Layout.astro';
     ctx.stroke();
 
     // X labels
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const xLabels: Record<number, string> = { '-2': '0.01', '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k', '4': '10k' };
     for (let e = -2; e <= 4; e++) ctx.fillText(xLabels[e], kToX(10 ** e), m.top + ph + 6);
     ctx.font = '12px Inter, system-ui, sans-serif';
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.fillText('K (keV)', m.left + pw / 2, h - 8);
 
     // Y labels
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#64648B';
+    ctx.fillStyle = ct.textSoft;
     ctx.font = '11px Inter, system-ui, sans-serif';
     const yLabels: Record<number, string> = { '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k' };
     for (let e = -1; e <= 3; e++) ctx.fillText(yLabels[e], m.left - 8, lToY(10 ** e));
@@ -446,7 +449,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.translate(12, m.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#1E1B4B';
+    ctx.fillStyle = ct.text;
     ctx.font = '12px Inter, system-ui, sans-serif';
     ctx.fillText('\u03BBe (pm)', 0, 0);
     ctx.restore();
@@ -521,12 +524,12 @@ import Layout from '../../layouts/Layout.astro';
 
         // Dot
         ctx.fillStyle = '#F43F5E';
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeStyle = ct.bg;
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
         // Value label
-        ctx.fillStyle = '#1E1B4B';
+        ctx.fillStyle = ct.text;
         ctx.font = '600 10px Inter, system-ui, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(`${fmt(keV)} keV, ${fmt(lam)} pm`, x + 10, y - 8);
@@ -536,6 +539,8 @@ import Layout from '../../layouts/Layout.astro';
 
   // Resize handling
   new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
+
+  onThemeChange(drawChart);
 
   // Initial draw
   drawChart();

@@ -37,15 +37,25 @@ function isActive(href: string): boolean {
       <span></span>
     </button>
 
-    <ul class="navbar__links">
-      {links.map(link => (
-        <li>
-          <a href={link.href} class:list={['navbar__link', { active: isActive(link.href) }]}>
-            {link.label}
-          </a>
-        </li>
-      ))}
-    </ul>
+    <div class="navbar__right">
+      <ul class="navbar__links">
+        {links.map(link => (
+          <li>
+            <a href={link.href} class:list={['navbar__link', { active: isActive(link.href) }]}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <button class="navbar__theme" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
   </div>
   <div class="spectrum-line spectrum-line--animated"></div>
 </nav>
@@ -55,7 +65,7 @@ function isActive(href: string): boolean {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--bg-glass);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -79,6 +89,12 @@ function isActive(href: string): boolean {
     font-weight: 700;
     font-size: 1.125rem;
     letter-spacing: -0.02em;
+  }
+
+  .navbar__right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .navbar__links {
@@ -106,6 +122,27 @@ function isActive(href: string): boolean {
     color: var(--primary);
     background: var(--bg-muted);
   }
+
+  .navbar__theme {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+  }
+  .navbar__theme:hover {
+    color: var(--primary);
+    background: var(--bg-muted);
+  }
+  .navbar__theme .icon-moon { display: none; }
+  :global([data-theme="dark"]) .navbar__theme .icon-sun { display: none; }
+  :global([data-theme="dark"]) .navbar__theme .icon-moon { display: block; }
 
   .navbar__toggle {
     display: none;
@@ -157,5 +194,15 @@ function isActive(href: string): boolean {
     const expanded = toggle.getAttribute('aria-expanded') === 'true';
     toggle.setAttribute('aria-expanded', String(!expanded));
     links?.classList.toggle('open');
+  });
+
+  // Theme toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  themeBtn?.addEventListener('click', () => {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+    window.dispatchEvent(new CustomEvent('themechange', { detail: next }));
   });
 </script>
