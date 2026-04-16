@@ -11,7 +11,36 @@ interface Props {
 
 const { title, description = 'Nanophotonics research lab — exploring light-matter interactions at the nanoscale.' } = Astro.props;
 const siteTitle = `${title} | NanophotonicsLab`;
-const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://nanophotonicslab.com');
+const siteOrigin = Astro.site?.href ?? 'https://nanophotonicslab.com';
+const canonicalURL = new URL(Astro.url.pathname, siteOrigin);
+const path = Astro.url.pathname;
+
+// JSON-LD: Organization on homepage, WebApplication on /lab/* tool pages
+const isHome = path === '/' || path === '';
+const isLabTool = path.startsWith('/lab/') && path !== '/lab/' && path !== '/lab';
+
+const jsonLd = isHome
+  ? JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'ResearchOrganization',
+      name: 'Nanophotonics Lab',
+      url: siteOrigin,
+      description: 'Open nanophotonic simulation tools for researchers — Mie scattering, BEM solver, laser calculators, and more.',
+      sameAs: ['https://github.com/nanophotonicslab-com'],
+    })
+  : isLabTool
+    ? JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: title,
+        url: canonicalURL.href,
+        description,
+        applicationCategory: 'ScienceApplication',
+        operatingSystem: 'Any',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        creator: { '@type': 'Organization', name: 'Nanophotonics Lab', url: siteOrigin },
+      })
+    : null;
 ---
 
 <!doctype html>
@@ -37,6 +66,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://nanophot
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL('/og-image.png', Astro.site ?? 'https://nanophotonicslab.com').href} />
     <title>{siteTitle}</title>
+    {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
     <script is:inline>
       (function() {
         const stored = localStorage.getItem('theme');
