@@ -7,18 +7,18 @@ const year = new Date().getFullYear();
   <div class="footer__inner container">
     <div class="footer__grid">
       <div class="footer__about">
-        <h4>NanophotonicsLab</h4>
+        <p class="footer__heading">NanophotonicsLab</p>
         <p>Exploring light-matter interactions at the nanoscale.</p>
       </div>
       <div class="footer__nav">
-        <h4>Navigate</h4>
+        <p class="footer__heading">Navigate</p>
         <ul>
           <li><a href={`${import.meta.env.BASE_URL}`}>Home</a></li>
           <li><a href={`${import.meta.env.BASE_URL}lab/`}>Lab</a></li>
         </ul>
       </div>
       <div class="footer__contact">
-        <h4>Contact</h4>
+        <p class="footer__heading">Contact</p>
         <p>info@nanophotonicslab.com</p>
       </div>
     </div>
@@ -45,8 +45,9 @@ const year = new Date().getFullYear();
     margin-bottom: var(--space-xl);
   }
 
-  .footer h4 {
+  .footer__heading {
     font-size: 1rem;
+    font-weight: 600;
     margin-bottom: var(--space-md);
     color: var(--text);
   }

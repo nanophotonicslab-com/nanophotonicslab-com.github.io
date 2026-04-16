@@ -1,0 +1,14 @@
+{
+  "name": "NanophotonicsLab",
+  "short_name": "NanoLab",
+  "description": "Open nanophotonics research tools — Mie scattering, BEM solver, laser calculators, and more.",
+  "start_url": "/lab/",
+  "display": "standalone",
+  "background_color": "#0F0E1A",
+  "theme_color": "#6366F1",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
