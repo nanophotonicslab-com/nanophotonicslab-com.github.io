@@ -130,8 +130,11 @@ import Layout from '../../layouts/Layout.astro';
               <button class="view-tab" data-view="disp-bV" role="radio" aria-checked="false">
                 b&ndash;V
               </button>
-              <button class="view-tab" data-view="eels" role="radio" aria-checked="false">
+              <button class="view-tab" data-view="eels-par" role="radio" aria-checked="false">
                 EELS ∥
+              </button>
+              <button class="view-tab" data-view="eels-perp" role="radio" aria-checked="false">
+                EELS ⊥
               </button>
             </div>
             <span id="compute-status" class="compute-status"></span>
@@ -302,10 +305,10 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
-  import { getDispersion, eelsParallel, HC_EV_NM } from '../../lib/cylinder.ts';
+  import { getDispersion, eelsParallel, eelsPerpendicular, HC_EV_NM } from '../../lib/cylinder.ts';
   import type { C } from '../../lib/cylinder.ts';
 
-  type ViewMode = 'disp-wq' | 'disp-bV' | 'eels';
+  type ViewMode = 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
 
   // ===== State =====
 
@@ -344,14 +347,16 @@ import Layout from '../../layouts/Layout.astro';
 
   function recompute() {
     const t0 = performance.now();
-    if (state.view === 'eels') {
-      recomputeEELS();
+    if (state.view === 'eels-par') {
+      recomputeEELSPar();
+    } else if (state.view === 'eels-perp') {
+      recomputeEELSPerp();
     } else {
       recomputeDispersion();
     }
     const dt = performance.now() - t0;
     const statusEl = document.getElementById('compute-status')!;
-    if (state.view === 'eels') {
+    if (state.view === 'eels-par' || state.view === 'eels-perp') {
       statusEl.textContent = `${eelsCurve?.w.length ?? 0} pts · ${dt.toFixed(0)} ms`;
     } else {
       const totalPts = branches.reduce((s, b) => s + b.points.length, 0);
@@ -400,7 +405,7 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  function recomputeEELS() {
+  function recomputeEELSPar() {
     const eps_h: C = [state.eps_h, 0];
     const eps1: C = [state.eps1_re, state.eps1_im];
     const Nw = 240;
@@ -421,6 +426,40 @@ import Layout from '../../layouts/Layout.astro';
     // Report |EELS| for display so users see a positive loss spectrum.
     const y = yRaw.map(v => Math.abs(v));
     eelsCurve = { w, y };
+  }
+
+  function recomputeEELSPerp() {
+    if (state.b_nm <= state.a_nm) {
+      eelsCurve = { w: [], y: [] };
+      return;
+    }
+    const eps_h: C = [state.eps_h, 0];
+    const eps1: C = [state.eps1_re, state.eps1_im];
+    const Nw = 140;  // perpendicular is more expensive due to qz integration
+    const w: number[] = [];
+    for (let i = 0; i < Nw; i++) {
+      w.push(Math.max(0.05, state.w_min) + (state.w_max - Math.max(0.05, state.w_min)) * i / (Nw - 1));
+    }
+    // qz grid: finer near zero (most contribution), spans the evanescent regime
+    const Nq = 60;
+    const qzMax = 1.5;  // nm⁻¹ — well past the effective cutoff for typical radii
+    const qz_nm: number[] = [];
+    for (let i = 0; i < Nq; i++) {
+      const t = i / (Nq - 1);
+      // Geometric-ish density: denser near zero
+      qz_nm.push(1e-4 + qzMax * t * t);
+    }
+    const y = eelsPerpendicular({
+      a_nm: state.a_nm,
+      b_nm: state.b_nm,
+      eps_h,
+      eps1_of_w: () => eps1,
+      w_eV: w,
+      vFrac: state.vFrac,
+      maxOrder: state.maxOrderEels,
+      qz_nm,
+    });
+    eelsCurve = { w, y: y.map(v => Math.abs(v)) };
   }
 
   function scheduleRecompute() {
@@ -524,7 +563,7 @@ import Layout from '../../layouts/Layout.astro';
   function drawChart() {
     if (state.view === 'disp-wq') drawDispersionWQ();
     else if (state.view === 'disp-bV') drawDispersionBV();
-    else drawEELS();
+    else drawEELS();  // both par and perp share the same 1D renderer
   }
 
   function drawDispersionWQ() {
@@ -633,13 +672,24 @@ import Layout from '../../layouts/Layout.astro';
 
   function drawEELS() {
     const { ctx, w, h } = setupCanvas();
-    if (!eelsCurve) return;
+    if (!eelsCurve || eelsCurve.w.length === 0) {
+      // Empty state — typically for perpendicular with b ≤ a
+      const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, 1,
+                           'ω (eV)', '|dΓ/dω|  (arb.)');
+      drawAxesFrame(ax, 6, 5, v => v.toFixed(1), () => '');
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '12px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Perpendicular trajectory requires b > a', ax.m.left + ax.pw / 2, ax.m.top + ax.ph / 2);
+      return;
+    }
     const y = eelsCurve.y;
     let yMax = 0;
     for (const v of y) if (v > yMax) yMax = v;
     if (yMax <= 0) yMax = 1;
     const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, yMax * 1.08,
-                         'ω (eV)', '|dΓ/dω|  (arb.)');
+                         'ω (eV)', '|Γ(ω)|  (arb.)');
     drawAxesFrame(ax, 6, 5, v => v.toFixed(1), v => v.toExponential(1));
 
     ctx.save();
@@ -647,8 +697,9 @@ import Layout from '../../layouts/Layout.astro';
     ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
     ctx.clip();
 
-    const inside = state.b_nm <= state.a_nm;
-    const color = inside ? '#F59E0B' : '#6366F1';
+    const par = state.view === 'eels-par';
+    const inside = par && state.b_nm <= state.a_nm;
+    const color = par ? (inside ? '#F59E0B' : '#6366F1') : '#10B981';
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.fillStyle = color + '18';
@@ -692,11 +743,18 @@ import Layout from '../../layouts/Layout.astro';
   function drawLegend() {
     const el = document.getElementById('chart-legend')!;
     el.innerHTML = '';
-    if (state.view === 'eels') {
+    if (state.view === 'eels-par') {
       const inside = state.b_nm <= state.a_nm;
       const item = document.createElement('span');
       item.className = 'legend-item';
       item.innerHTML = `<span class="legend-swatch" style="background:${inside ? '#F59E0B' : '#6366F1'}"></span> parallel trajectory · ${inside ? 'inside (b < a)' : 'outside (b > a)'} · v/c = ${state.vFrac.toFixed(2)}`;
+      el.appendChild(item);
+      return;
+    }
+    if (state.view === 'eels-perp') {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-swatch" style="background:#10B981"></span> perpendicular trajectory · b = ${state.b_nm.toFixed(1)} nm · v/c = ${state.vFrac.toFixed(2)} · Γ(ω) = 2 ∫₀^∞ (dΓ/dq_z) dq_z`;
       el.appendChild(item);
       return;
     }
@@ -776,7 +834,7 @@ import Layout from '../../layouts/Layout.astro';
       b.classList.toggle('active', active);
       b.setAttribute('aria-checked', String(active));
     });
-    if (v === 'eels') {
+    if (v === 'eels-par' || v === 'eels-perp') {
       $('eels-section').setAttribute('open', '');
     }
     recompute();

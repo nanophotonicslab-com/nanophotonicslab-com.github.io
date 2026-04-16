@@ -16,6 +16,7 @@ import {
   getRTCoefs,
   getDispersion,
   eelsParallel,
+  eelsPerpendicular,
   HC_EV_NM,
 } from '../src/lib/cylinder.ts';
 import type { C } from '../src/lib/cylinder.ts';
@@ -136,6 +137,27 @@ console.log('\n== EELS parallel (outside b=25, inside b=5), v=0.3c, Max=3 ==');
   }
   for (let i = 0; i < wList.length; i++) {
     testReal(`inside ω=${wList[i]} eV`, tsInside[i], scipyInside[i], 1e-6);
+  }
+}
+
+console.log('\n== EELS perpendicular: Ag Drude (ωp=9.17, γ=0.021), a=15, b=20, v=0.2c, Max=10 ==');
+{
+  const wp = 9.17, gamma = 0.021, eps_b = 1.0;
+  const eps1_ag = (w: number): C => {
+    // ε = 1 − ωp²/(ω(ω+iγ))
+    const denom: C = [w * w, w * gamma];
+    const den2 = denom[0] * denom[0] + denom[1] * denom[1];
+    const inv: C = [denom[0] / den2, -denom[1] / den2];
+    const wp2 = wp * wp;
+    return [eps_b - wp2 * inv[0], -wp2 * inv[1]];
+  };
+  const wList = [2.0, 3.5, 4.0, 4.5, 6.0, 10.0];
+  const scipyPerp = [5.08058809e-06, 7.95620314e-06, 8.36043116e-06, 2.18310885e-05, 2.16667056e-04, 7.97349695e-08];
+  const qz_nm: number[] = [];
+  for (let i = 0; i < 80; i++) qz_nm.push(1e-4 + (1.0 - 1e-4) * i / 79);
+  const ts = eelsPerpendicular({ a_nm: 15, b_nm: 20, eps_h: [1, 0], eps1_of_w: eps1_ag, w_eV: wList, vFrac: 0.2, maxOrder: 10, qz_nm });
+  for (let i = 0; i < wList.length; i++) {
+    testReal(`⊥ ω=${wList[i]} eV`, ts[i], scipyPerp[i], 1e-5);
   }
 }
 

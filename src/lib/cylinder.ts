@@ -640,3 +640,113 @@ export function eelsParallel(opts: EELSParOpts): number[] {
   return out;
 }
 
+// ============================================================================
+// Electron energy-loss spectroscopy — perpendicular trajectory
+// ============================================================================
+
+export interface EELSPerpOpts {
+  a_nm: number;                                 // cylinder radius (nm)
+  b_nm: number;                                 // perpendicular distance (impact parameter) from axis
+  eps_h: C;                                     // host dielectric
+  eps1_of_w: (w_eV: number) => C;               // cylinder dielectric
+  w_eV: number[];                               // energies to sample
+  vFrac: number;                                // v/c in (0, 1)
+  maxOrder: number;                             // use |m| ≤ maxOrder
+  /** qz grid in nm⁻¹ used for numerical integration; must start at 0 or near 0 and be sorted ascending. */
+  qz_nm: number[];
+}
+
+/**
+ * EELS probability for a relativistic electron moving perpendicular to the
+ * cylinder axis at impact parameter `b_nm > a_nm` (outside the cylinder).
+ *
+ * Ported from Álvaro's `EELS_perp_cylinder.m`. Computes the 2D spectrum
+ * dΓ/(dω dq_z) and integrates it over q_z via the trapezoidal rule
+ * (with the factor of 2 for the symmetric half-axis) to return Γ(ω) in
+ * nm/eV. The electron is assumed to travel in vacuum, so the Lorentz
+ * factor uses the bare v/c and not the host dielectric.
+ */
+export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
+  const { a_nm, b_nm, eps_h, eps1_of_w, w_eV, vFrac, maxOrder, qz_nm } = opts;
+
+  const a_au = a_nm * NM_AU;
+  const b_au = b_nm * NM_AU;
+  const v = vFrac * C_AU;
+  const g = 1 / Math.sqrt(1 - vFrac * vFrac); // vacuum Lorentz factor
+  const q_scan = qz_nm.map(q => q / NM_AU);   // qz grid in a.u.
+
+  const out: number[] = [];
+  const scale = 1 / AU_EV / NM_AU;
+
+  for (const we of w_eV) {
+    const eps1 = eps1_of_w(we);
+    const W = we / AU_EV;
+    const q = W / v;
+    const k = W / C_AU;
+
+    // Compute the differential spectrum at each qz, then trapezoidal-integrate.
+    const diff = new Array<number>(q_scan.length);
+    for (let iq = 0; iq < q_scan.length; iq++) {
+      const qz = q_scan[iq];
+      const D = Math.sqrt((q / g) * (q / g) + qz * qz);
+      const Q = Cx.sqrt([k * k - qz * qz, 0]);
+
+      let sumTT: C = [0, 0];
+      for (let mm = -maxOrder; mm <= maxOrder; mm++) {
+        const coefs = getRTCoefs(qz * a_au, k * a_au, eps1, eps_h, mm, 'outside');
+
+        // Precompute scalars involved in TT (kept as complex to be safe).
+        // A = (−D k t_ss + q qz t_sp) · (−D)
+        const a1 = Cx.add(Cx.scale(coefs.t_ss, -D * k), Cx.scale(coefs.t_sp, q * qz));
+        const A = Cx.scale(a1, -D);
+        // B = (qz/k) · (−D k t_ps + q qz t_pp) · q
+        const b1 = Cx.add(Cx.scale(coefs.t_ps, -D * k), Cx.scale(coefs.t_pp, q * qz));
+        const B = Cx.scale(b1, (qz / k) * q);
+
+        // phi_e = (q + D) / Q, potentially complex
+        const phi_e = Cx.div([q + D, 0], Q);
+
+        // phi_e^(2m): use cpow via repeated squaring.
+        const p2 = cpowInt(phi_e, 2 * mm);
+        const term = Cx.add(A, B);
+        sumTT = Cx.add(sumTT, Cx.mul(term, p2));
+      }
+
+      // EELS(iw, iq) = -2/π/w/c · Re( exp(-2 D |b|) / (D² Q²) · sum_TT )
+      const pref = -2 / (Math.PI * W * C_AU);
+      const D2 = D * D;
+      const Q2 = Cx.mul(Q, Q);
+      const denom = Cx.scale(Q2, D2);
+      const expTerm = Math.exp(-2 * D * Math.abs(b_au));
+      const core = Cx.div(Cx.scale(sumTT, expTerm), denom);
+      const dgamma = pref * core[0];
+      diff[iq] = dgamma;
+    }
+
+    // Trapezoidal integration over qz (×2 for symmetry about qz=0).
+    let integral = 0;
+    for (let i = 1; i < q_scan.length; i++) {
+      integral += 0.5 * (diff[i] + diff[i - 1]) * (q_scan[i] - q_scan[i - 1]);
+    }
+    integral *= 2;
+
+    out.push(integral * scale);
+  }
+  return out;
+}
+
+/** Integer power of a complex number via repeated squaring. */
+function cpowInt(z: C, n: number): C {
+  if (n === 0) return [1, 0];
+  let base = n < 0 ? Cx.div([1, 0], z) : z;
+  let result: C = [1, 0];
+  let e = Math.abs(n);
+  while (e > 0) {
+    if (e & 1) result = Cx.mul(result, base);
+    base = Cx.mul(base, base);
+    e >>= 1;
+  }
+  return result;
+}
+
+

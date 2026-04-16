@@ -153,6 +153,42 @@ def eels_parallel(a_nm, b_nm, eps_h, eps1, w_eV_list, v_frac, max_order):
     return out
 
 
+def eels_perp_cylinder(a_nm, b_nm, eps_h, eps1_of_w, w_eV_list, v_frac, max_order, qz_list):
+    AU_NM = 0.05291772083
+    AU_EV = 27.2113834
+    C_AU = 137.03599971
+    NM_AU = 1 / AU_NM
+    a = a_nm * NM_AU
+    b = b_nm * NM_AU
+    v = v_frac * C_AU
+    g = 1 / np.sqrt(1 - v_frac**2)
+    q_scan = np.asarray(qz_list) / NM_AU
+    out = []
+    for we in w_eV_list:
+        eps1 = eps1_of_w(we)
+        W = we / AU_EV
+        q = W / v
+        k = W / C_AU
+        diffs = np.zeros(len(q_scan))
+        for iq, qz in enumerate(q_scan):
+            D = np.sqrt((q / g) ** 2 + qz ** 2)
+            Q = np.sqrt(k * k - qz * qz + 0j)
+            sumTT = 0 + 0j
+            for m in range(-max_order, max_order + 1):
+                coefs = give_RT(qz * a, k * a, eps1, eps_h, m, "outside")
+                A = (-D * k * coefs["t_ss"] + q * qz * coefs["t_sp"]) * (-D)
+                B = (qz / k) * (-D * k * coefs["t_ps"] + q * qz * coefs["t_pp"]) * q
+                phi_e = (q + D) / Q
+                p2 = phi_e ** (2 * m)
+                sumTT += (A + B) * p2
+            core = np.exp(-2 * D * abs(b)) / (D * D * Q * Q) * sumTT
+            dgamma = -2 / np.pi / W / C_AU * core.real
+            diffs[iq] = dgamma
+        integral = 2 * np.trapezoid(diffs, q_scan)
+        out.append(integral / AU_EV / NM_AU)
+    return out
+
+
 def main() -> None:
     print("== Bessel scalar tests ==")
     for m in [0, 1, 2, 3]:
@@ -207,6 +243,16 @@ def main() -> None:
     eels = eels_parallel(15, 5, 1 + 0j, 10 + 0.1j, w_list, 0.3, 3)
     for w, v in zip(w_list, eels):
         print(f"  ω = {w:6.2f} eV → EELS = {v:.8e}")
+
+    print("\n== EELS perpendicular: silver Drude, a=15 nm, b=20 nm, v=0.2c, Max=10 ==")
+    wp, gamma, eps_b = 9.17, 0.021, 1.0
+    def eps1_ag(w):
+        return eps_b - wp * wp / (w * (w + 1j * gamma))
+    w_list_ag = [2.0, 3.5, 4.0, 4.5, 6.0, 10.0]
+    qz_list = list(np.linspace(1e-4, 1.0, 80))
+    eels_p = eels_perp_cylinder(15, 20, 1 + 0j, eps1_ag, w_list_ag, 0.2, 10, qz_list)
+    for w, v in zip(w_list_ag, eels_p):
+        print(f"  ω = {w:6.2f} eV → Γ = {v:.8e}")
 
 
 if __name__ == "__main__":
