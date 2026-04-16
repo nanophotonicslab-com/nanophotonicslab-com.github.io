@@ -27,7 +27,7 @@ function isActive(href: string): boolean {
   <div class="lab-bar__inner container">
     <span class="lab-bar__label">Quick tools</span>
     {tools.map(t => (
-      <a href={t.href} class:list={['lab-tool', { active: isActive(t.href) }]} title={t.label}>
+      <a href={t.href} class:list={['lab-tool', { active: isActive(t.href) }]} title={t.label} data-umami-event="quick-tool" data-umami-event-tool={t.label}>
         <span class="lab-tool__icon">
           {t.icon === 'home' && (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

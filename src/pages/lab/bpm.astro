@@ -105,7 +105,7 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
-          <button class="run-btn" id="run-btn">Run simulation</button>
+          <button class="run-btn" id="run-btn" data-umami-event="bpm-run">Run simulation</button>
 
           <p class="theory-note">
             <strong>Crank&ndash;Nicolson BPM.</strong>
@@ -120,7 +120,7 @@ import Layout from '../../layouts/Layout.astro';
           <div class="chart-header">
             <span class="chart-title">Intensity |v(x,z)|&sup2;</span>
             <span class="chart-header__right">
-              <button id="share-btn" class="share-btn" title="Copy shareable link to clipboard">
+              <button id="share-btn" class="share-btn" title="Copy shareable link to clipboard" data-umami-event="share" data-umami-event-page="bpm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 Share
               </button>
