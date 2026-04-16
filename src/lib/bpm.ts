@@ -21,6 +21,9 @@ export interface BpmParams {
   nCladding: number; // cladding refractive index
   nCore: number;     // core refractive index
   delta: number;     // sub-sampling: store every delta-th step
+  beamOffset?: number;     // offset beam center from x=0 [um]
+  nProfile?: Float64Array; // custom n(x) profile (overrides single waveguide)
+  boundaries?: number[];   // x-positions for waveguide boundary overlays
 }
 
 export interface BpmResult {
@@ -31,20 +34,22 @@ export interface BpmResult {
   xMax: number;
   zMax: number;
   maxVal: number;
-  xb: number;           // waveguide half-width for overlay
+  xb: number;           // waveguide half-width for overlay (single wg)
+  boundaries?: number[]; // x-positions for waveguide boundary lines
 }
 
 /* ------------------------------------------------------------------ */
 /*  Helper: Gaussian beam                                              */
 /* ------------------------------------------------------------------ */
 
-function makeGauss(xa: number, Nx: number, w: number) {
+function makeGauss(xa: number, Nx: number, w: number, offset = 0) {
   const x = new Float64Array(Nx);
   const re = new Float64Array(Nx);
   const im = new Float64Array(Nx);   // zero-initialised
   for (let i = 0; i < Nx; i++) {
     x[i] = -xa / 2 + (xa * i) / (Nx - 1);
-    re[i] = Math.exp(-(x[i] * x[i]) / (w * w));
+    const dx = x[i] - offset;
+    re[i] = Math.exp(-(dx * dx) / (w * w));
   }
   return { re, im, x };
 }
@@ -126,8 +131,8 @@ function thomasSolve(
 export function beampropCN(p: BpmParams): BpmResult {
   const { z, dz, nd, lambda, Nx, w, xa, xb, nCladding, nCore, delta } = p;
 
-  const { re: vRe, im: vIm, x } = makeGauss(xa, Nx, w);
-  const { n } = makeWaveguide(xa, xb, Nx, nCladding, nCore);
+  const { re: vRe, im: vIm, x } = makeGauss(xa, Nx, w, p.beamOffset ?? 0);
+  const n = p.nProfile ?? makeWaveguide(xa, xb, Nx, nCladding, nCore).n;
 
   const dx = xa / (Nx - 1);
   const k_m = (2 * Math.PI / lambda) * nd;
@@ -245,5 +250,6 @@ export function beampropCN(p: BpmParams): BpmResult {
     zMax: z,
     maxVal,
     xb,
+    boundaries: p.boundaries,
   };
 }

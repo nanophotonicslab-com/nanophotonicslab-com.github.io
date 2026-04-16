@@ -29,6 +29,7 @@ import Layout from '../../layouts/Layout.astro';
               <button class="preset-btn active" data-task="1">Single-mode</button>
               <button class="preset-btn" data-task="2">Mode beating</button>
               <button class="preset-btn" data-task="3">Multimode</button>
+              <button class="preset-btn" data-task="4">Coupler</button>
             </div>
           </div>
 
@@ -312,7 +313,9 @@ import Layout from '../../layouts/Layout.astro';
     '1': { z: 100, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 4, xa: 50, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
     '2': { z: 300, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 4, xa: 50, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
     '3': { z: 500, dz: 0.005, nd: 1.455, lambda: 1, Nx: 200, w: 2, xa: 50, xb: 8, nCladding: 1.45, nCore: 1.46, delta: 200 },
+    '4': { z: 1500, dz: 0.01, nd: 1.455, lambda: 1, Nx: 300, w: 2, xa: 30, xb: 2, nCladding: 1.45, nCore: 1.46, delta: 200 },
   };
+  const COUPLER_GAP = 2; // edge-to-edge gap between waveguides [um]
 
   /* ---- DOM refs ---- */
   const ids = ['p-z','p-dz','p-delta','p-lambda','p-w','p-nd','p-Nx','p-xa','p-xb','p-nclad','p-ncore'] as const;
@@ -350,6 +353,29 @@ import Layout from '../../layouts/Layout.astro';
     inputs['p-xb'].value    = String(p.xb);
     inputs['p-nclad'].value = String(p.nCladding);
     inputs['p-ncore'].value = String(p.nCore);
+  }
+
+  /** Build dual-waveguide coupler profile and augment params. */
+  function applyCouplerProfile(p: BpmParams): BpmParams {
+    const { xa, xb, Nx, nCladding, nCore } = p;
+    const gap = COUPLER_GAP;
+    const center1 = -(gap + xb) / 2;  // left waveguide center
+    const center2 =  (gap + xb) / 2;  // right waveguide center
+    const nProfile = new Float64Array(Nx);
+    const boundaries: number[] = [];
+    for (let i = 0; i < Nx; i++) {
+      const x = -xa / 2 + (xa * i) / (Nx - 1);
+      const inWg1 = x >= center1 - xb / 2 && x <= center1 + xb / 2;
+      const inWg2 = x >= center2 - xb / 2 && x <= center2 + xb / 2;
+      nProfile[i] = (inWg1 || inWg2) ? nCore : nCladding;
+    }
+    boundaries.push(center1 - xb / 2, center1 + xb / 2, center2 - xb / 2, center2 + xb / 2);
+    return { ...p, nProfile, beamOffset: center1, boundaries };
+  }
+
+  function isCouplerActive(): boolean {
+    const active = document.querySelector('#presets .preset-btn.active') as HTMLButtonElement | null;
+    return active?.dataset.task === '4';
   }
 
   /* ---- Presets ---- */
@@ -429,11 +455,11 @@ import Layout from '../../layouts/Layout.astro';
     ctx.strokeStyle = 'rgba(255,255,255,0.7)';
     ctx.lineWidth = 1;
     const xRange = res.xMax - res.xMin;
-    const halfXb = res.xb / 2;
-    const yTop = mt + ph * (1 - (halfXb - res.xMin) / xRange);
-    const yBot = mt + ph * (1 - (-halfXb - res.xMin) / xRange);
-    ctx.beginPath(); ctx.moveTo(ml, yTop); ctx.lineTo(ml + pw, yTop); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ml, yBot); ctx.lineTo(ml + pw, yBot); ctx.stroke();
+    const bLines = res.boundaries ?? [-res.xb / 2, res.xb / 2];
+    for (const bx of bLines) {
+      const y = mt + ph * (1 - (bx - res.xMin) / xRange);
+      ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke();
+    }
     ctx.restore();
 
     // Axes
@@ -504,7 +530,8 @@ import Layout from '../../layouts/Layout.astro';
   let lastResult: ReturnType<typeof beampropCN> | null = null;
 
   function runSimulation() {
-    const p = readParams();
+    let p = readParams();
+    if (isCouplerActive()) p = applyCouplerProfile(p);
     const totalSteps = Math.round(p.z / p.dz);
 
     // Validate
