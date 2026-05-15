@@ -119,6 +119,21 @@ export const MATERIALS: Record<string, MaterialEntry> = {
       [1.937, 0.24, 14.08],
     ],
   },
+  cu: {
+    label: "Copper (Cu)",
+    ref: "Johnson & Christy-style fallback from Yu et al. 2017",
+    data: [
+      [0.4, 1.3938, 1.9372],
+      [0.5, 1.0651, 2.1782],
+      [0.6, 0.2131, 3.3084],
+      [0.7, 0.2053, 4.0177],
+      [0.8, 0.2133, 4.7587],
+      [0.9, 0.2202, 5.518],
+      [1, 0.2324, 6.2812],
+      [1.2, 0.2771, 7.7767],
+      [1.5, 0.3458, 9.9055],
+    ],
+  },
   si: {
     label: "Silicon (Si)",
     ref: "Aspnes & Studna 1983",

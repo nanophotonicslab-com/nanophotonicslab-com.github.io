@@ -1,0 +1,2188 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { MATERIALS } from '../../data/optical-constants';
+import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
+
+const materialOptions = PLASMONIC_MATERIAL_IDS
+  .filter(id => MATERIALS[id])
+  .map(id => ({ id, label: MATERIALS[id].label, ref: MATERIALS[id].ref }));
+---
+
+<Layout title="Plasmonic Nanoparticles Lab" description="Analytical spectra for plasmonic nanoparticles using geometry-only modal parameters and tabulated optical constants.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Plasmonic <span class="gradient-text">Nanoparticles</span></h1>
+      <p class="widget-hero__subtitle">
+        Universal analytical modeling for rods, cages, disks, rings, bipyramids,
+        and related shapes. Materials use the same tabulated n,k interpolation as
+        the Mie scattering lab.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="shape-strip card">
+        <div class="shape-strip__header">
+          <span>Geometries</span>
+          <span id="shape-strip-current">Nanorod</span>
+        </div>
+        <div class="shape-gallery shape-gallery--strip" id="shape-gallery" aria-label="Available geometries"></div>
+      </div>
+
+      <div class="widget-layout">
+        <aside class="controls card">
+          <h3>Parameters</h3>
+
+          <div class="param">
+            <div class="param-header"><label for="material-select">Material</label></div>
+            <select id="material-select" class="param-select">
+              {materialOptions.map(material => (
+                <option value={material.id} selected={material.id === 'au'}>{material.label}</option>
+              ))}
+              <option value="drude">Drude model</option>
+              <option value="file">Upload file&hellip;</option>
+              <option value="rii">Search database&hellip;</option>
+            </select>
+            <span class="material-ref" id="material-ref">{MATERIALS.au.ref}</span>
+            <div class="file-upload-row" id="file-upload-group" style="display:none">
+              <input type="file" id="file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="file-name"></span>
+            </div>
+            <div class="rii-search" id="rii-search-group" style="display:none">
+              <input type="text" id="rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+              <div class="rii-results" id="rii-results"></div>
+              <span class="material-ref" id="rii-status"></span>
+            </div>
+          </div>
+
+          <div class="param drude-panel" id="drude-panel" style="display:none">
+            <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+            <div class="drude-grid">
+              <label>
+                <span>&epsilon;<sub>b</sub></span>
+                <input type="number" class="param-number" id="drude-epsb" value="9.5" step="0.1">
+              </label>
+              <label>
+                <span>&omega;<sub>p</sub> (eV)</span>
+                <input type="number" class="param-number" id="drude-wp" value="9.06" step="0.01" min="0.01">
+              </label>
+              <label>
+                <span>&gamma; (eV)</span>
+                <input type="number" class="param-number" id="drude-gamma" value="0.071" step="0.001" min="0">
+              </label>
+            </div>
+          </div>
+
+          <div class="param">
+            <div class="param-header"><label for="shape-select">Shape</label></div>
+            <select id="shape-select" class="param-select">
+              {SHAPE_OPTIONS.map(shape => (
+                <option value={shape.id} selected={shape.id === 'rod'}>{shape.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label for="length-num">Length L (nm)</label>
+              <input type="number" class="param-number" id="length-num" value="50" step="1" min="5" max="250">
+            </div>
+            <input type="range" class="param-slider" id="length-slider" min="10" max="220" step="1" value="50">
+          </div>
+
+          <div class="param" id="aspect-param">
+            <div class="param-header">
+              <label for="aspect-num">Aspect ratio R</label>
+              <input type="number" class="param-number" id="aspect-num" value="4" step="0.1" min="1" max="8">
+            </div>
+            <input type="range" class="param-slider" id="aspect-slider" min="1.2" max="8" step="0.1" value="4">
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label for="host-num">n<sub>host</sub></label>
+              <input type="number" class="param-number" id="host-num" value="1.33" step="0.01" min="1" max="2.5">
+            </div>
+            <input type="range" class="param-slider" id="host-slider" min="1" max="2.1" step="0.01" value="1.33">
+            <div class="param-presets" id="host-presets">
+              <button class="preset-btn" data-val="1.00">Air</button>
+              <button class="preset-btn active" data-val="1.33">Water</button>
+              <button class="preset-btn" data-val="1.46">Oil</button>
+              <button class="preset-btn" data-val="1.50">Glass</button>
+            </div>
+          </div>
+
+          <div class="param-grid">
+            <div class="param">
+              <div class="param-header"><label for="lambda-min">Min &lambda; (nm)</label></div>
+              <input type="text" inputmode="numeric" class="param-number param-number--wide" id="lambda-min" value="550" autocomplete="off">
+            </div>
+            <div class="param">
+              <div class="param-header"><label for="lambda-max">Max &lambda; (nm)</label></div>
+              <input type="text" inputmode="numeric" class="param-number param-number--wide" id="lambda-max" value="1250" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="preset-block">
+            <span class="preset-label">Examples</span>
+            <div class="param-presets" id="case-presets">
+              <button class="preset-btn" data-material="au" data-shape="rod" data-l="50" data-r="4" data-nh="1.33" data-min="550" data-max="1250">Au rod</button>
+              <button class="preset-btn" data-material="ag" data-shape="rod transverse" data-l="50" data-r="4" data-nh="1.33" data-min="320" data-max="440">Ag transverse rod</button>
+              <button class="preset-btn" data-material="au" data-shape="cage" data-l="90" data-r="3.0" data-nh="1.33" data-min="450" data-max="1500">Au cage</button>
+              <button class="preset-btn" data-material="au" data-shape="bipyramid" data-l="200" data-r="5" data-nh="1.33" data-min="500" data-max="1500">Au bipyramid</button>
+              <button class="preset-btn" data-material="ag" data-shape="disk" data-l="100" data-r="3.0" data-nh="1.33" data-min="350" data-max="1200">Ag disk</button>
+            </div>
+          </div>
+
+          <p class="theory-note">
+            Model: retarded dipolar polarizability from geometry-only modal
+            fits. Cross sections are normalized by particle volume in the main
+            spectrum view.
+          </p>
+
+          <div class="geometry-schematic" id="geometry-schematic" aria-label="Selected geometry convention"></div>
+        </aside>
+
+        <main class="lab-main">
+          <div class="tabs" role="tablist" aria-label="Plot views">
+            <button class="tab-btn active" data-tab="spectrum" role="tab" aria-selected="true">Spectrum</button>
+            <button class="tab-btn" data-tab="resonance" role="tab" aria-selected="false">Resonance</button>
+            <button class="tab-btn" data-tab="ldos" role="tab" aria-selected="false">LDOS</button>
+            <button class="tab-btn" data-tab="material" role="tab" aria-selected="false">Material</button>
+          </div>
+
+          <section class="chart-panel card">
+            <div class="chart-header">
+              <div>
+                <span class="chart-title" id="chart-title">Extinction, absorption, scattering</span>
+                <span class="chart-subtitle" id="chart-subtitle">Cross sections per particle volume</span>
+              </div>
+              <div class="chart-legend" id="chart-legend"></div>
+              <div class="resonance-controls" id="resonance-controls" style="display:none" aria-label="Resonance sweep">
+                <button class="seg-btn active" type="button" data-sweep="L">Sweep L</button>
+                <button class="seg-btn" type="button" data-sweep="R">Sweep R</button>
+              </div>
+              <div class="toolbar-actions">
+                <button id="dl-png" class="tool-btn" title="Download plot as PNG" data-umami-event="plasmonic-export" data-umami-event-format="png">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  PNG
+                </button>
+                <button id="dl-csv" class="tool-btn" title="Download current data as CSV" data-umami-event="plasmonic-export" data-umami-event-format="csv">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  CSV
+                </button>
+                <button id="share-btn" class="tool-btn" title="Copy shareable link" data-umami-event="share" data-umami-event-page="plasmonic-nanoparticles">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Share
+                </button>
+              </div>
+            </div>
+            <div class="chart-wrap" id="chart-wrap">
+              <canvas id="plasmon-chart" aria-label="Plasmonic nanoparticle analytical model chart"></canvas>
+            </div>
+            <div class="ldos-probe-note" id="ldos-probe-note" style="display:none"></div>
+            <div class="color-swatches" id="color-swatches">
+              <span class="swatch-label">Apparent color</span>
+              <div class="swatch-item">
+                <div class="swatch-box" id="swatch-sca"></div>
+                <span class="swatch-name">scattered</span>
+              </div>
+              <div class="swatch-item">
+                <div class="swatch-box" id="swatch-trans"></div>
+                <span class="swatch-name">transmitted</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="output-card card">
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Peak wavelength info">i<span class="stat-tooltip" role="tooltip">Wavelength where the extinction spectrum reaches its maximum within the selected range.</span></button>
+              <span class="stat-label">Peak &lambda;</span>
+              <span class="stat-value" id="out-peak-lambda">&mdash;</span>
+              <span class="stat-unit">nm</span>
+            </div>
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Q factor info">i<span class="stat-tooltip" role="tooltip">Quality factor estimated as peak wavelength divided by the full width at half maximum of the extinction peak.</span></button>
+              <span class="stat-label">Q factor</span>
+              <span class="stat-value" id="out-q">&mdash;</span>
+              <span class="stat-unit">FWHM</span>
+            </div>
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Yield info">i<span class="stat-tooltip" role="tooltip">Radiative quantum yield at the peak, computed as the scattering fraction of total extinction.</span></button>
+              <span class="stat-label">Yield Y</span>
+              <span class="stat-value" id="out-yield">&mdash;</span>
+              <span class="stat-unit">at peak</span>
+            </div>
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Extinction per volume info">i<span class="stat-tooltip" role="tooltip">Peak extinction cross section normalized by the analytical particle volume.</span></button>
+              <span class="stat-label">&sigma;<sub>ext</sub> / V</span>
+              <span class="stat-value" id="out-ext">&mdash;</span>
+              <span class="stat-unit">nm<sup>-1</sup></span>
+            </div>
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Albedo info">i<span class="stat-tooltip" role="tooltip">Scattering cross section divided by extinction cross section at the extinction peak.</span></button>
+              <span class="stat-label">Albedo</span>
+              <span class="stat-value" id="out-albedo">&mdash;</span>
+              <span class="stat-unit">&sigma;<sub>sca</sub>/&sigma;<sub>ext</sub></span>
+            </div>
+            <div class="stat">
+              <button class="stat-info" type="button" aria-label="Volume info">i<span class="stat-tooltip" role="tooltip">Particle volume from the selected geometry, length, and aspect-ratio convention.</span></button>
+              <span class="stat-label">Volume</span>
+              <span class="stat-value" id="out-volume">&mdash;</span>
+              <span class="stat-unit">nm<sup>3</sup></span>
+            </div>
+          </section>
+
+          <section class="model-note card">
+            <div class="model-note__header">
+              <span>Model range</span>
+              <span id="mode-summary">Dominant mode</span>
+            </div>
+            <p id="validity-note">
+              Homogeneous local-response particles in a uniform host. The scalar
+              modal model does not provide exact near-field or LDOS maps.
+            </p>
+          </section>
+        </main>
+      </div>
+
+      <div class="references card">
+        <h4>References &amp; data sources</h4>
+        <ul>
+          <li>R. Yu, L. M. Liz-Marzan, and F. J. Garcia de Abajo, <em>Universal analytical modeling of plasmonic nanoparticles</em>, Chemical Society Reviews 46, 6710-6724 (2017).</li>
+          <li>Optical constants reuse the Lab's tabulated n,k interpolation from refractiveindex.info data; Au/Ag: Johnson &amp; Christy (1972), Al: Rakic (1995), Cu: sparse fallback converted from the Yu et al. reference implementation.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 760px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout {
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    position: sticky;
+    top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg));
+  }
+  .controls h3 { font-size: 1rem; }
+
+  .param, .preset-block { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .param-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+  .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+
+  .param-number {
+    width: 5.4rem;
+    padding: 0.25rem 0.45rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+    text-align: right;
+    outline: none;
+    background: var(--bg);
+  }
+  .param-number--wide { width: 100%; text-align: left; }
+  .param-number::-webkit-inner-spin-button,
+  .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .param-number { -moz-appearance: textfield; }
+
+  .param-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--bg-muted);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
+  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
+  .param-slider:disabled, .param-number:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .param-select {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    cursor: pointer;
+  }
+  .material-ref { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+  .file-input { font-size: 0.75rem; font-family: var(--font); color: var(--text-soft); }
+  .file-input::file-selector-button {
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    cursor: pointer;
+    margin-right: 0.4rem;
+    transition: all 0.15s;
+  }
+  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
+  .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .file-error { font-size: 0.6875rem; color: var(--rose); }
+  .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
+  .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
+  .rii-results:empty { display: none; }
+  :global(.rii-result) { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
+  :global(.rii-result:hover) { background: var(--bg-soft); color: var(--primary); }
+  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
+
+  .drude-panel {
+    padding: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  .drude-formula { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+  .drude-grid { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
+  .drude-grid label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: 0.75rem; color: var(--text-soft); }
+  .drude-grid .param-number { width: 5.2rem; }
+
+  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .preset-btn {
+    padding: 0.22rem 0.58rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
+  .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
+
+  .shape-strip {
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .shape-strip__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .shape-strip__header span:last-child {
+    color: var(--primary);
+    font-weight: 650;
+    text-align: right;
+  }
+  .shape-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+    gap: 0.42rem;
+    overflow: visible;
+    padding: 0.1rem;
+  }
+  :global(.shape-card) {
+    min-width: 0;
+    min-height: 62px;
+    padding: 0.32rem 0.24rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    font-family: var(--font);
+    font-size: 0.58rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    text-align: center;
+    transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+  :global(.shape-card span) {
+    max-width: 100%;
+    line-height: 1.05;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  :global(.shape-card svg) { width: 34px; height: 34px; display: block; }
+  :global(.shape-card:hover) { border-color: var(--primary-light); color: var(--primary); }
+  :global(.shape-card.active) {
+    border-color: var(--primary);
+    background: rgba(99,102,241,0.12);
+    color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.18);
+  }
+
+  .geometry-schematic {
+    padding: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  :global(.geometry-schematic__title) {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  :global(.geometry-schematic__title span:last-child) {
+    color: var(--primary);
+    font-weight: 650;
+    text-align: right;
+  }
+  :global(.geometry-schematic svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  :global(.geometry-schematic text) {
+    font-family: var(--font);
+    fill: var(--text-soft);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .lab-main { display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+  .tabs {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 0.2rem;
+    padding: 0.22rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg-soft);
+  }
+  .tab-btn {
+    min-width: 7.2rem;
+    padding: 0.45rem 0.85rem;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-btn.active { color: var(--primary); background: var(--bg); box-shadow: var(--shadow-sm); }
+
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); }
+  .chart-title { display: block; font-size: 0.875rem; font-weight: 700; color: var(--text); }
+  .chart-subtitle { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-muted); }
+  .chart-legend { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+  :global(.legend-item) { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  :global(.legend-swatch) { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+  .resonance-controls {
+    display: inline-flex;
+    gap: 0.2rem;
+    padding: 0.18rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg-soft);
+  }
+  .seg-btn {
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 650;
+    padding: 0.3rem 0.62rem;
+  }
+  .seg-btn.active { background: var(--bg); color: var(--primary); box-shadow: var(--shadow-sm); }
+  .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .toolbar-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.72rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+  .ldos-probe-note {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+  .color-swatches {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-muted);
+    flex-wrap: wrap;
+  }
+  .swatch-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .swatch-item { display: flex; align-items: center; gap: 0.35rem; }
+  .swatch-box {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--bg-muted);
+    background: #222;
+    transition: background 0.25s;
+  }
+  .swatch-name { font-size: 0.75rem; color: var(--text-soft); }
+
+  .output-card {
+    padding: var(--space-md);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+  .stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    padding: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  .stat-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }
+  .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
+  .stat-info {
+    position: absolute;
+    top: 0.42rem;
+    right: 0.42rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1;
+    cursor: help;
+    z-index: 1;
+  }
+  .stat-info:hover,
+  .stat-info:focus-visible {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    outline: none;
+  }
+  .stat-tooltip {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    width: min(220px, 70vw);
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .stat-info:hover .stat-tooltip,
+  .stat-info:focus-visible .stat-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .model-note { padding: var(--space-md); }
+  .model-note__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-bottom: var(--space-xs);
+    margin-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--bg-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .model-note__header span:last-child { color: var(--primary); font-weight: 600; text-align: right; }
+  .model-note p { font-size: 0.8125rem; line-height: 1.55; color: var(--text-muted); margin: 0; }
+  .geometry-definitions {
+    display: grid;
+    gap: 0.22rem;
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--bg-muted);
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: var(--text-soft);
+  }
+  .geometry-definitions strong { color: var(--text); font-weight: 700; }
+
+  .references { margin-top: var(--space-lg); }
+  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+
+  @media (max-width: 980px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .controls { position: static; }
+  }
+
+  @media (max-width: 680px) {
+    .output-card { grid-template-columns: 1fr 1fr; }
+    .tab-btn { min-width: auto; }
+    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+    .shape-gallery { grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); }
+  }
+
+  @media (max-width: 460px) {
+    .output-card, .param-grid { grid-template-columns: 1fr; }
+    .toolbar-actions { width: 100%; }
+    .shape-strip { padding: var(--space-sm); }
+    .shape-strip__header { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
+  }
+</style>
+
+<script>
+  import { MATERIALS } from '../../data/optical-constants';
+  import { loadCatalog, fetchMaterialNK, searchCatalog } from '../../data/refractiveindex';
+  import type { RIIMaterial } from '../../data/refractiveindex';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { spectrumToHex } from '../../lib/colorimetry';
+  import {
+    SHAPE_OPTIONS,
+    availableModeCount,
+    computePlasmonSpectrum,
+    drudeEpsilon,
+    epsilonFromNKData,
+    epsilonFromMaterial,
+    nearestIndex,
+    validityNotes,
+  } from '../../lib/plasmonic-nanoparticles';
+  import type { Complex, PlasmonShapeId, PlasmonSpectrum } from '../../lib/plasmonic-nanoparticles';
+
+  type TabId = 'spectrum' | 'material' | 'resonance' | 'ldos';
+  type ResonanceSweep = 'L' | 'R';
+
+  const colors = {
+    ext: '#10B981',
+    abs: '#EF4444',
+    sca: '#3B82F6',
+    re: '#7C3AED',
+    im: '#F59E0B',
+    peak: '#F43F5E',
+    ldos: '#06B6D4',
+    fe: '#8B5CF6',
+  };
+  const LDOS_PROBE_DISTANCE_NM = 5;
+  const COLOR_LAMBDA_MIN_NM = 380;
+  const COLOR_LAMBDA_MAX_NM = 780;
+
+  const state: {
+    materialId: string;
+    drudeEpsB: number;
+    drudeWpEv: number;
+    drudeGammaEv: number;
+    shape: PlasmonShapeId;
+    lengthNm: number;
+    aspectRatio: number;
+    hostIndex: number;
+    lambdaMinNm: number;
+    lambdaMaxNm: number;
+    modeCount: number;
+    tab: TabId;
+    resonanceSweep: ResonanceSweep;
+  } = {
+    materialId: 'au',
+    drudeEpsB: 9.5,
+    drudeWpEv: 9.06,
+    drudeGammaEv: 0.071,
+    shape: 'rod',
+    lengthNm: 50,
+    aspectRatio: 4,
+    hostIndex: 1.33,
+    lambdaMinNm: 550,
+    lambdaMaxNm: 1250,
+    modeCount: 1,
+    tab: 'spectrum',
+    resonanceSweep: 'L',
+  };
+
+  let result: PlasmonSpectrum | null = null;
+  let uploadedMaterial: number[][] | null = null;
+  let selectedDatabaseMaterial: number[][] | null = null;
+  let selectedDatabaseLabel = '';
+  let catalogPromise: Promise<RIIMaterial[]> | null = null;
+  let lastShapeGalleryShape = '';
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function syncNumberInput(id: string, value: string) {
+    const input = $<HTMLInputElement>(id);
+    if (document.activeElement !== input) input.value = value;
+  }
+
+  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#') && !line.startsWith('%'));
+    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
+
+    let delimiter = /\t/;
+    if (lines[0].split(delimiter).length < 3) delimiter = /,/;
+    if (lines[0].split(delimiter).length < 3) delimiter = /\s+/;
+
+    const first = lines[0].split(delimiter)[0];
+    const start = Number.isNaN(Number.parseFloat(first)) ? 1 : 0;
+    const data: number[][] = [];
+    for (let i = start; i < lines.length; i++) {
+      const parts = lines[i].split(delimiter).map(Number);
+      if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) continue;
+      data.push([parts[0], parts[1], parts.length >= 3 && !Number.isNaN(parts[2]) ? Math.abs(parts[2]) : 0]);
+    }
+    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
+
+    data.sort((a, b) => a[0] - b[0]);
+    const maxLambda = data[data.length - 1][0];
+    let unit = 'um';
+    if (maxLambda > 50) {
+      unit = 'nm';
+      for (const row of data) row[0] /= 1000;
+    }
+    return { data, unit };
+  }
+
+  function currentEpsilon(lambdaNm: number): Complex {
+    if (state.materialId === 'drude') {
+      return drudeEpsilon(lambdaNm, state.drudeEpsB, state.drudeWpEv, state.drudeGammaEv);
+    }
+    if (state.materialId === 'file' && uploadedMaterial) {
+      return epsilonFromNKData(uploadedMaterial, lambdaNm);
+    }
+    if (state.materialId === 'rii' && selectedDatabaseMaterial) {
+      return epsilonFromNKData(selectedDatabaseMaterial, lambdaNm);
+    }
+    if (!MATERIALS[state.materialId]) {
+      return epsilonFromMaterial('au', lambdaNm);
+    }
+    return epsilonFromMaterial(state.materialId, lambdaNm);
+  }
+
+  function fmt(value: number, digits = 3): string {
+    if (!Number.isFinite(value)) return '—';
+    if (value === 0) return '0';
+    const abs = Math.abs(value);
+    if (abs < 1e-3 || abs >= 1e5) return value.toExponential(digits - 1);
+    return Number.parseFloat(value.toPrecision(digits)).toString();
+  }
+
+  function fmtFixed(value: number, digits = 0): string {
+    return Number.isFinite(value) ? value.toFixed(digits) : '—';
+  }
+
+  function shapeOption(shape: PlasmonShapeId) {
+    return SHAPE_OPTIONS.find(option => option.id === shape)!;
+  }
+
+  function applyShapeDefaults(shape: PlasmonShapeId) {
+    const opt = shapeOption(shape);
+    state.shape = shape;
+    if (opt.defaultMaterialId) state.materialId = opt.defaultMaterialId;
+    state.lengthNm = opt.defaultLengthNm;
+    state.aspectRatio = opt.defaultR;
+    state.modeCount = availableModeCount(shape);
+    if (opt.defaultLambdaMinNm) state.lambdaMinNm = opt.defaultLambdaMinNm;
+    if (opt.defaultLambdaMaxNm) state.lambdaMaxNm = opt.defaultLambdaMaxNm;
+  }
+
+  function sanitizeState() {
+    const opt = shapeOption(state.shape);
+    state.lengthNm = clamp(state.lengthNm, 5, 300);
+    state.aspectRatio = clamp(state.aspectRatio, opt.minR, opt.maxR);
+    state.hostIndex = clamp(state.hostIndex, 0.5, 3);
+    state.lambdaMinNm = clamp(state.lambdaMinNm, 250, 2200);
+    state.lambdaMaxNm = clamp(state.lambdaMaxNm, 260, 2400);
+    if (state.lambdaMaxNm <= state.lambdaMinNm + 20) state.lambdaMaxNm = state.lambdaMinNm + 20;
+    state.modeCount = availableModeCount(state.shape);
+    state.drudeEpsB = clamp(state.drudeEpsB, -100, 100);
+    state.drudeWpEv = clamp(state.drudeWpEv, 0.01, 50);
+    state.drudeGammaEv = clamp(state.drudeGammaEv, 0, 10);
+  }
+
+  function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
+  }
+
+  function compute() {
+    sanitizeState();
+    result = computePlasmonSpectrum({
+      shape: state.shape,
+      materialId: state.materialId,
+      epsilonAt: currentEpsilon,
+      lengthNm: state.lengthNm,
+      aspectRatio: state.aspectRatio,
+      hostIndex: state.hostIndex,
+      lambdaMinNm: state.lambdaMinNm,
+      lambdaMaxNm: state.lambdaMaxNm,
+      points: 420,
+      modeCount: state.modeCount,
+    });
+  }
+
+  function updateControls() {
+    const opt = shapeOption(state.shape);
+    const fixedAspect = opt.minR === opt.maxR;
+
+    $('material-select').querySelectorAll('option').forEach(option => {
+      (option as HTMLOptionElement).selected = (option as HTMLOptionElement).value === state.materialId;
+    });
+    $('shape-select').querySelectorAll('option').forEach(option => {
+      (option as HTMLOptionElement).selected = (option as HTMLOptionElement).value === state.shape;
+    });
+
+    const aspectNum = $<HTMLInputElement>('aspect-num');
+    const aspectSlider = $<HTMLInputElement>('aspect-slider');
+    aspectNum.min = String(opt.minR);
+    aspectNum.max = String(opt.maxR);
+    aspectSlider.min = String(opt.minR);
+    aspectSlider.max = String(opt.maxR);
+    syncNumberInput('aspect-num', state.aspectRatio.toFixed(1));
+    aspectSlider.value = String(state.aspectRatio);
+    aspectNum.disabled = fixedAspect;
+    aspectSlider.disabled = fixedAspect;
+    $('aspect-param').classList.toggle('is-disabled', fixedAspect);
+
+    syncNumberInput('length-num', String(state.lengthNm));
+    $<HTMLInputElement>('length-slider').value = String(state.lengthNm);
+    syncNumberInput('host-num', state.hostIndex.toFixed(2));
+    $<HTMLInputElement>('host-slider').value = String(state.hostIndex);
+    syncNumberInput('lambda-min', String(state.lambdaMinNm));
+    syncNumberInput('lambda-max', String(state.lambdaMaxNm));
+    syncNumberInput('drude-epsb', String(state.drudeEpsB));
+    syncNumberInput('drude-wp', String(state.drudeWpEv));
+    syncNumberInput('drude-gamma', String(state.drudeGammaEv));
+
+    if (fixedAspect && state.resonanceSweep === 'R') state.resonanceSweep = 'L';
+
+    $('drude-panel').style.display = state.materialId === 'drude' ? 'flex' : 'none';
+    $('file-upload-group').style.display = state.materialId === 'file' ? 'flex' : 'none';
+    $('rii-search-group').style.display = state.materialId === 'rii' ? 'flex' : 'none';
+    $('material-ref').textContent = materialReferenceText();
+    updateShapeGallery();
+    updateGeometrySchematic();
+    updateResonanceControls();
+    updatePresetActives();
+  }
+
+  function updateResonanceControls() {
+    const controls = $('resonance-controls');
+    const opt = shapeOption(state.shape);
+    const fixedAspect = opt.minR === opt.maxR;
+    controls.style.display = state.tab === 'resonance' ? 'inline-flex' : 'none';
+    controls.querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(btn => {
+      const sweep = btn.dataset.sweep as ResonanceSweep;
+      btn.classList.toggle('active', sweep === state.resonanceSweep);
+      btn.disabled = sweep === 'R' && fixedAspect;
+    });
+  }
+
+  function materialReferenceText(): string {
+    if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
+    if (state.materialId === 'file') return uploadedMaterial ? 'Uploaded n,k data' : 'Upload a wavelength, n, k table';
+    if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search refractiveindex.info database';
+    return MATERIALS[state.materialId]?.ref ?? '';
+  }
+
+  function updatePresetActives() {
+    $('host-presets').querySelectorAll<HTMLButtonElement>('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active', Math.abs(Number(btn.dataset.val) - state.hostIndex) < 0.005);
+    });
+  }
+
+  function updateShapeGallery() {
+    if (lastShapeGalleryShape === state.shape) return;
+    lastShapeGalleryShape = state.shape;
+    const gallery = $('shape-gallery');
+    gallery.innerHTML = SHAPE_OPTIONS.map(option => `
+      <button class="shape-card ${option.id === state.shape ? 'active' : ''}" type="button" data-shape="${option.id}" title="${option.label}">
+        ${shapeIcon(option.id)}
+        <span>${option.label}</span>
+      </button>
+    `).join('');
+  }
+
+  function shapeBody(
+    shape: PlasmonShapeId,
+    stroke = 'currentColor',
+    fill = 'rgba(99,102,241,0.12)',
+    innerFill = 'var(--bg)'
+  ): string {
+    if (shape === 'rod') return `<rect x="12" y="33" width="56" height="14" rx="7" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M18 40h44" stroke="${stroke}" stroke-width="2" opacity=".55"/>`;
+    if (shape === 'rod transverse') return `<rect x="33" y="12" width="14" height="56" rx="7" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M40 18v44" stroke="${stroke}" stroke-width="2" opacity=".55"/>`;
+    if (shape === 'triangle') return `<path d="M20 40 44 10 68 40Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M12 34 36 4 44 10 20 40Z" fill="${fill}" stroke="${stroke}" stroke-width="2" opacity=".55"/><path d="M36 4 68 40M12 34h8" stroke="${stroke}" stroke-width="2" opacity=".45"/>`;
+    if (shape === 'cage') return `<rect x="18" y="4" width="44" height="44" rx="5" fill="${fill}" fill-rule="evenodd" stroke="${stroke}" stroke-width="3"/><rect x="31" y="17" width="18" height="18" rx="2" fill="${innerFill}" stroke="${stroke}" stroke-width="2.5"/><path d="M18 26h13M49 26h13M40 4v13M40 35v13" stroke="${stroke}" stroke-width="1.8" opacity=".45"/>`;
+    if (shape === 'ellipsoid') return `<ellipse cx="40" cy="26" rx="29" ry="14" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M18 26h44" stroke="${stroke}" stroke-width="2" opacity=".45"/>`;
+    if (shape === 'bicone') return `<path d="M10 26 38 10v32Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M70 26 42 10v32Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`;
+    if (shape === 'disk') return `<ellipse cx="40" cy="18" rx="26" ry="8" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M14 18v16c0 4.4 11.6 8 26 8s26-3.6 26-8V18" fill="none" stroke="${stroke}" stroke-width="3"/><ellipse cx="40" cy="34" rx="26" ry="8" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`;
+    if (shape === 'ring') return `<ellipse cx="40" cy="26" rx="28" ry="18" fill="${fill}" stroke="${stroke}" stroke-width="3"/><ellipse cx="40" cy="26" rx="13" ry="8" fill="${innerFill}" stroke="${stroke}" stroke-width="3"/><path d="M53 26h15" stroke="${stroke}" stroke-width="2" opacity=".5"/>`;
+    if (shape === 'bipyramid') return `<path d="M40 6 67 26 40 46 13 26Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M13 26h54M40 6v40" stroke="${stroke}" stroke-width="2" opacity=".45"/>`;
+    if (shape === 'squared rod') return `<path d="M16 14h48v24H16Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M24 20h32v12H24Z" fill="none" stroke="${stroke}" stroke-width="2" opacity=".45"/>`;
+    if (shape === 'cylinder') return `<ellipse cx="18" cy="26" rx="8" ry="16" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M18 10h44M18 42h44" stroke="${stroke}" stroke-width="3"/><ellipse cx="62" cy="26" rx="8" ry="16" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M18 14c5 5 5 19 0 24" stroke="${stroke}" stroke-width="1.8" opacity=".45"/>`;
+    if (shape === 'tetrahedron') return `<path d="M40 8 64 42H16Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M40 8 40 42M40 42 64 42" stroke="${stroke}" stroke-width="2" opacity=".5"/>`;
+    if (shape === 'octahedron') return `<path d="M40 5 64 26 40 47 16 26Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M16 26h48M40 5v42" stroke="${stroke}" stroke-width="2" opacity=".5"/>`;
+    if (shape === 'decahedron') return `<path d="M40 6 64 18 58 44H22L16 18Z" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M16 18h48M40 6v38" stroke="${stroke}" stroke-width="2" opacity=".45"/>`;
+    return `<rect x="10" y="18" width="60" height="16" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="3"/><path d="M14 14c9 8 17 8 26 0s17-8 26 0M14 38c9-8 17-8 26 0s17 8 26 0" fill="none" stroke="${stroke}" stroke-width="2"/>`;
+  }
+
+  function shapeViewBox(shape: PlasmonShapeId): string {
+    return shape === 'rod' || shape === 'rod transverse' ? '0 0 80 80' : '0 0 80 52';
+  }
+
+  function shapeIcon(shape: PlasmonShapeId): string {
+    return `<svg viewBox="${shapeViewBox(shape)}">${shapeBody(shape)}</svg>`;
+  }
+
+  function schematicObject(shape: PlasmonShapeId): string {
+    const viewBox = shapeViewBox(shape);
+    const face = shapeBody(shape, 'var(--primary)', 'url(#metal-face)', 'var(--bg-soft)');
+    const back = shapeBody(shape, 'rgba(79,70,229,0.55)', 'url(#metal-side)', 'var(--bg-soft)');
+    return `
+      <g transform="translate(112 55)" filter="url(#schematic-shadow)">
+        <ellipse cx="52" cy="92" rx="44" ry="7" fill="rgba(79,70,229,0.14)"></ellipse>
+        <svg x="10" y="10" width="82" height="82" viewBox="${viewBox}" opacity="0.86">${back}</svg>
+        <svg x="0" y="0" width="82" height="82" viewBox="${viewBox}">${face}</svg>
+      </g>
+    `;
+  }
+
+  function splitDimensionArrows(shape: PlasmonShapeId): string {
+    if (shape === 'rod transverse') {
+      return `
+        <g color="var(--text-soft)" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round">
+          <line x1="226" y1="43" x2="226" y2="167" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+          <line x1="92" y1="158" x2="216" y2="158" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        </g>
+        <text x="238" y="107">L</text>
+        <text x="150" y="178">W</text>
+      `;
+    }
+    if (shape === 'cage') {
+      return `
+        <g color="var(--text-soft)" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round">
+          <line x1="122" y1="158" x2="196" y2="158" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+          <line x1="144" y1="104" x2="176" y2="104" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        </g>
+        <text x="154" y="178">L</text>
+        <text x="155" y="94">W</text>
+      `;
+    }
+    if (shape === 'ring') {
+      return `
+        <g color="var(--text-soft)" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round">
+          <line x1="124" y1="158" x2="184" y2="158" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+          <line x1="167" y1="104" x2="185" y2="104" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        </g>
+        <text x="150" y="178">L</text>
+        <text x="172" y="94">W</text>
+      `;
+    }
+    if (shape === 'triangle') {
+      return `
+        <g color="var(--text-soft)" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round">
+          <line x1="118" y1="158" x2="198" y2="158" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+          <line x1="204" y1="119" x2="230" y2="93" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        </g>
+        <text x="154" y="178">L</text>
+        <text x="218" y="88">W</text>
+      `;
+    }
+    return `
+      <g color="var(--text-soft)" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round">
+        <line x1="84" y1="158" x2="224" y2="158" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        <line x1="236" y1="62" x2="236" y2="140" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+      </g>
+      <text x="150" y="178">L</text>
+      <text x="246" y="104">W</text>
+    `;
+  }
+
+  function electricOscillationArrow(shape: PlasmonShapeId): string {
+    const label = shape === 'rod transverse' ? 'E along W' : 'E along L';
+    return `
+      <g color="var(--primary)" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round">
+        <line x1="92" y1="28" x2="216" y2="28" marker-start="url(#schematic-arrow)" marker-end="url(#schematic-arrow)"></line>
+        <path d="M98 41 C118 31 136 51 154 41 S190 41 210 41" opacity="0.55"></path>
+      </g>
+      <text x="128" y="20">${label}</text>
+    `;
+  }
+
+  function geometryDefinitions(shape: PlasmonShapeId, widthText: string): { l: string; w: string } {
+    if (shape === 'rod' || shape === 'rod transverse') {
+      return {
+        l: 'end-to-end nanorod length, including the hemispherical caps',
+        w: `rod diameter / short-axis width (${widthText})`,
+      };
+    }
+    if (shape === 'disk') {
+      return {
+        l: 'disk diameter in the plane of the disk',
+        w: `disk thickness (${widthText})`,
+      };
+    }
+    if (shape === 'ring') {
+      return {
+        l: 'outer ring diameter',
+        w: `tube diameter (${widthText})`,
+      };
+    }
+    if (shape === 'cage') {
+      return {
+        l: 'outer side length of the cubic nanocage',
+        w: `interior cavity side length, drawn inside the cage`,
+      };
+    }
+    if (shape === 'triangle') {
+      return {
+        l: 'triangle edge length',
+        w: 'prism thickness set by the fitted fixed-ratio geometry',
+      };
+    }
+    if (shape === 'cylinder') {
+      return {
+        l: 'cylinder length along its symmetry axis',
+        w: `cylinder diameter (${widthText})`,
+      };
+    }
+    if (shape === 'tetrahedron' || shape === 'octahedron' || shape === 'decahedron') {
+      return {
+        l: 'outer vertex-to-vertex size used by the fitted shape table',
+        w: 'transverse size fixed by the polyhedral geometry',
+      };
+    }
+    return {
+      l: 'long-axis or outer characteristic length of the selected shape',
+      w: `transverse width (${widthText})`,
+    };
+  }
+
+  function updateGeometrySchematic() {
+    const opt = shapeOption(state.shape);
+    $('shape-strip-current').textContent = opt.label;
+    const aspectText = opt.minR === opt.maxR ? `R fixed at ${fmt(state.aspectRatio, 2)}` : `R = ${fmt(state.aspectRatio, 2)}`;
+    const widthText = opt.minR === opt.maxR ? 'W = L' : 'W = L / R';
+    const definitions = geometryDefinitions(state.shape, widthText);
+    $('geometry-schematic').innerHTML = `
+      <div class="geometry-schematic__title">
+        <span>${opt.label}</span>
+        <span>L = ${fmtFixed(state.lengthNm, 0)} nm, ${aspectText}</span>
+      </div>
+      <svg viewBox="0 0 300 220" role="img" aria-label="${opt.label} geometry convention">
+        <defs>
+          <marker id="schematic-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 Z" fill="currentColor"></path>
+          </marker>
+          <linearGradient id="metal-face" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#EEF2FF"></stop>
+            <stop offset="52%" stop-color="#A5B4FC"></stop>
+            <stop offset="100%" stop-color="#6366F1"></stop>
+          </linearGradient>
+          <linearGradient id="metal-side" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#C7D2FE"></stop>
+            <stop offset="100%" stop-color="#4F46E5"></stop>
+          </linearGradient>
+          <filter id="schematic-shadow" x="-20%" y="-20%" width="140%" height="150%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#312E81" flood-opacity="0.18"></feDropShadow>
+          </filter>
+        </defs>
+        ${electricOscillationArrow(state.shape)}
+        ${schematicObject(state.shape)}
+        ${splitDimensionArrows(state.shape)}
+      </svg>
+      <div class="geometry-definitions">
+        <span><strong>L</strong> = ${definitions.l}</span>
+        <span><strong>W</strong> = ${definitions.w}</span>
+      </div>
+    `;
+  }
+
+  function updateOutputs() {
+    if (!result) return;
+    const peak = result.peak;
+    const idx = nearestIndex(result.wavelengthNm, peak.lambdaPeakNm);
+    const cext = result.sigmaExtNm2[idx];
+    const csca = result.sigmaScaNm2[idx];
+    const albedo = cext > 0 ? csca / cext : Number.NaN;
+
+    $('out-peak-lambda').textContent = fmtFixed(peak.lambdaPeakNm, 0);
+    $('out-q').textContent = fmt(peak.q, 3);
+    $('out-yield').textContent = fmt(result.quantumYield[idx], 3);
+    $('out-ext').textContent = fmt(peak.peakValue, 3);
+    $('out-albedo').textContent = fmt(albedo, 3);
+    $('out-volume').textContent = fmt(result.volumeNm3, 3);
+
+    const notes = validityNotes({
+      shape: state.shape,
+      materialId: state.materialId,
+      lengthNm: state.lengthNm,
+      aspectRatio: state.aspectRatio,
+      hostIndex: state.hostIndex,
+      lambdaMinNm: state.lambdaMinNm,
+      lambdaMaxNm: state.lambdaMaxNm,
+      modeCount: state.modeCount,
+    });
+    $('validity-note').textContent = notes.length
+      ? notes.join(' ')
+      : 'Homogeneous local-response particles in a uniform host. The scalar modal model does not provide exact near-field or LDOS maps.';
+    $('mode-summary').textContent = result.modes.length === 1
+      ? `1 fitted mode`
+      : `${result.modes.length} fitted modes`;
+  }
+
+  function updateSwatches() {
+    const swatchSca = $('swatch-sca');
+    const swatchTrans = $('swatch-trans');
+    if (!result) {
+      swatchSca.style.background = '#222';
+      swatchTrans.style.background = '#222';
+      return;
+    }
+
+    const colorResult = computePlasmonSpectrum({
+      shape: state.shape,
+      materialId: state.materialId,
+      epsilonAt: currentEpsilon,
+      lengthNm: state.lengthNm,
+      aspectRatio: state.aspectRatio,
+      hostIndex: state.hostIndex,
+      lambdaMinNm: COLOR_LAMBDA_MIN_NM,
+      lambdaMaxNm: COLOR_LAMBDA_MAX_NM,
+      points: COLOR_LAMBDA_MAX_NM - COLOR_LAMBDA_MIN_NM + 1,
+      modeCount: state.modeCount,
+    });
+
+    const n = colorResult.wavelengthNm.length;
+    const scaMax = Math.max(...colorResult.sigmaScaOverV);
+    if (scaMax > 0) {
+      const scattered = new Float64Array(n);
+      for (let i = 0; i < n; i++) scattered[i] = Math.max(0, colorResult.sigmaScaOverV[i] / scaMax);
+      swatchSca.style.background = spectrumToHex(colorResult.wavelengthNm, scattered);
+    } else {
+      swatchSca.style.background = '#222';
+    }
+
+    const extMax = Math.max(...colorResult.sigmaExtOverV);
+    if (extMax > 0) {
+      const transmitted = new Float64Array(n);
+      for (let i = 0; i < n; i++) transmitted[i] = Math.exp(-2 * Math.max(0, colorResult.sigmaExtOverV[i]) / extMax);
+      swatchTrans.style.background = spectrumToHex(colorResult.wavelengthNm, transmitted);
+    } else {
+      swatchTrans.style.background = '#222';
+    }
+  }
+
+  function ldosProbeAxis(): string {
+    if (state.shape === 'rod transverse') return 'W, the transverse short-axis mode direction';
+    return 'L, the dominant dipole / long-axis direction';
+  }
+
+  function ldosProbeSurface(): string {
+    if (state.shape === 'rod transverse') return 'the side surface at the +W pole';
+    if (state.shape === 'disk' || state.shape === 'ring') return 'the outer rim at the +L pole';
+    return 'the +L tip / outer surface';
+  }
+
+  function ldosProbeDescription(): string {
+    return `Probe orientation: ${ldosProbeAxis()}; position: ${LDOS_PROBE_DISTANCE_NM} nm outside ${ldosProbeSurface()}.`;
+  }
+
+  function updateLdosProbeNote() {
+    const note = $('ldos-probe-note');
+    note.style.display = state.tab === 'ldos' ? 'block' : 'none';
+    if (state.tab === 'ldos') {
+      note.textContent = `${ldosProbeDescription()} The plotted LDOS is a scalar modal hotspot estimator, not a full spatial near-field map.`;
+    }
+  }
+
+  function updateChartCopy() {
+    const title = $('chart-title');
+    const subtitle = $('chart-subtitle');
+    const legend = $('chart-legend');
+    if (state.tab === 'spectrum') {
+      title.textContent = 'Extinction, absorption, scattering';
+      subtitle.textContent = 'Cross sections per particle volume';
+      legend.innerHTML = legendHtml([
+        ['Extinction', colors.ext],
+        ['Absorption', colors.abs],
+        ['Scattering', colors.sca],
+      ]);
+    } else {
+      if (state.tab === 'resonance') {
+        title.textContent = 'Resonance sweep';
+        subtitle.textContent = state.resonanceSweep === 'L'
+          ? `Peak wavelength and Q versus L at fixed R = ${fmt(state.aspectRatio, 3)}; search 350-2200 nm`
+          : `Peak wavelength and Q versus R at fixed L = ${fmtFixed(state.lengthNm, 0)} nm; search 350-2200 nm`;
+        legend.innerHTML = legendHtml([
+          ['Resonance λ', colors.ext],
+          ['Q factor', colors.re],
+        ]);
+        updateResonanceControls();
+        updateLdosProbeNote();
+        return;
+      }
+      if (state.tab === 'ldos') {
+        title.textContent = 'LDOS and field enhancement';
+        subtitle.textContent = ldosProbeDescription();
+        legend.innerHTML = legendHtml([
+          ['LDOS / LDOS0', colors.ldos],
+          ['Field enhancement', colors.fe],
+        ]);
+        updateResonanceControls();
+        updateLdosProbeNote();
+        return;
+      }
+      title.textContent = 'Material dielectric function';
+      subtitle.textContent = materialChartSubtitle();
+      legend.innerHTML = legendHtml([
+        ['Re epsilon', colors.re],
+        ['Im epsilon', colors.im],
+      ]);
+    }
+    updateResonanceControls();
+    updateLdosProbeNote();
+  }
+
+  function materialChartSubtitle(): string {
+    if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
+    if (state.materialId === 'file') return uploadedMaterial ? 'Computed from uploaded n,k data' : 'Upload n,k data to replace the fallback preview';
+    if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search database to replace the fallback preview';
+    return 'Computed from tabulated n,k interpolation';
+  }
+
+  function legendHtml(items: [string, string][]): string {
+    return items.map(([label, color]) => `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${label}</span>`).join('');
+  }
+
+  function render() {
+    compute();
+    updateControls();
+    updateOutputs();
+    updateSwatches();
+    updateChartCopy();
+    drawChart();
+  }
+
+  function drawChart() {
+    if (!result) return;
+    if (state.tab === 'spectrum') drawSpectrumChart();
+    else if (state.tab === 'material') drawMaterialChart();
+    else if (state.tab === 'ldos') drawLdosChart();
+    else drawResonanceChart();
+  }
+
+  function canvasSetup() {
+    const canvas = $('plasmon-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(320, canvas.clientWidth);
+    const h = Math.max(240, canvas.clientHeight);
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { canvas, ctx, w, h, theme: chartTheme() };
+  }
+
+  function drawSpectrumChart() {
+    if (!result) return;
+    const { ctx, w, h, theme } = canvasSetup();
+    const m = { top: 18, right: 22, bottom: 42, left: 58 };
+    const xMin = state.lambdaMinNm;
+    const xMax = state.lambdaMaxNm;
+    const series = [
+      { data: result.sigmaExtOverV, color: colors.ext, label: 'Extinction' },
+      { data: result.sigmaAbsOverV, color: colors.abs, label: 'Absorption' },
+      { data: result.sigmaScaOverV, color: colors.sca, label: 'Scattering' },
+    ];
+    let yMin = 0;
+    let yMax = 0;
+    for (const s of series) {
+      for (let i = 0; i < s.data.length; i++) {
+        yMax = Math.max(yMax, s.data[i]);
+        yMin = Math.min(yMin, s.data[i]);
+      }
+    }
+    if (yMax <= yMin) yMax = yMin + 1;
+    yMax *= 1.08;
+
+    const plot = drawAxes(ctx, w, h, m, xMin, xMax, yMin, yMax, 'Wavelength λ (nm)', 'sigma / V (nm^-1)', theme);
+    for (const s of series) drawLine(ctx, result.wavelengthNm, s.data, plot, s.color, 2.2);
+
+    const xPeak = plot.xTo(result.peak.lambdaPeakNm);
+    if (xPeak >= m.left && xPeak <= w - m.right) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = colors.peak;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(xPeak, m.top);
+      ctx.lineTo(xPeak, h - m.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors.peak;
+      ctx.font = '600 10px Inter, system-ui, sans-serif';
+      ctx.textAlign = xPeak > w - m.right - 72 ? 'right' : 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${fmtFixed(result.peak.lambdaPeakNm, 0)} nm`, xPeak + (xPeak > w - m.right - 72 ? -5 : 5), m.top + 3);
+    }
+  }
+
+  function drawMaterialChart() {
+    const { ctx, w, h, theme } = canvasSetup();
+    const count = 280;
+    const lambda = new Float64Array(count);
+    const re = new Float64Array(count);
+    const im = new Float64Array(count);
+    let yMin = Number.POSITIVE_INFINITY;
+    let yMax = Number.NEGATIVE_INFINITY;
+
+    for (let i = 0; i < count; i++) {
+      const l = state.lambdaMinNm + (state.lambdaMaxNm - state.lambdaMinNm) * i / (count - 1);
+      const eps = currentEpsilon(l);
+      lambda[i] = l;
+      re[i] = eps.re;
+      im[i] = eps.im;
+      yMin = Math.min(yMin, eps.re, eps.im);
+      yMax = Math.max(yMax, eps.re, eps.im);
+    }
+
+    if (yMax <= yMin) yMax = yMin + 1;
+    const pad = (yMax - yMin) * 0.08;
+    const plot = drawAxes(ctx, w, h, { top: 18, right: 22, bottom: 42, left: 58 }, state.lambdaMinNm, state.lambdaMaxNm, yMin - pad, yMax + pad, 'Wavelength λ (nm)', 'epsilon', theme);
+    drawLine(ctx, lambda, re, plot, colors.re, 2.2);
+    drawLine(ctx, lambda, im, plot, colors.im, 2.2);
+  }
+
+  function resonanceSweepData() {
+    const opt = shapeOption(state.shape);
+    const sweep = opt.minR === opt.maxR ? 'L' : state.resonanceSweep;
+    const count = 96;
+    const x = new Float64Array(count);
+    const lambdaPeak = new Float64Array(count);
+    const q = new Float64Array(count);
+    const xMin = sweep === 'L' ? 20 : opt.minR;
+    const xMax = sweep === 'L' ? 180 : opt.maxR;
+    const searchMinNm = 350;
+    const searchMaxNm = Math.max(2200, state.lambdaMaxNm);
+
+    for (let i = 0; i < count; i++) {
+      const value = xMin + (xMax - xMin) * i / (count - 1);
+      const lengthNm = sweep === 'L' ? value : state.lengthNm;
+      const aspectRatio = sweep === 'L' ? state.aspectRatio : value;
+      const sweepResult = computePlasmonSpectrum({
+        shape: state.shape,
+        materialId: state.materialId,
+        epsilonAt: currentEpsilon,
+        lengthNm,
+        aspectRatio,
+        hostIndex: state.hostIndex,
+        lambdaMinNm: searchMinNm,
+        lambdaMaxNm: searchMaxNm,
+        points: 900,
+        modeCount: state.modeCount,
+      });
+      const peakIndex = nearestIndex(sweepResult.wavelengthNm, sweepResult.peak.lambdaPeakNm);
+      const interiorPeak = peakIndex > 2 && peakIndex < sweepResult.wavelengthNm.length - 3;
+      x[i] = value;
+      lambdaPeak[i] = interiorPeak ? sweepResult.peak.lambdaPeakNm : Number.NaN;
+      q[i] = interiorPeak ? sweepResult.peak.q : Number.NaN;
+    }
+    return {
+      sweep,
+      x,
+      lambdaPeak,
+      q,
+      xLabel: sweep === 'L' ? 'Length L (nm)' : 'Aspect ratio R',
+      currentX: sweep === 'L' ? state.lengthNm : state.aspectRatio,
+    };
+  }
+
+  function finiteRange(values: ArrayLike<number>, padRatio = 0.08) {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i];
+      if (!Number.isFinite(value)) continue;
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 };
+    if (max <= min) max = min + 1;
+    const pad = (max - min) * padRatio;
+    return { min: min - pad, max: max + pad };
+  }
+
+  function zeroBasedRange(values: ArrayLike<number>, padRatio = 0.08) {
+    const range = finiteRange(values, padRatio);
+    return { min: 0, max: Math.max(1, range.max) };
+  }
+
+  function ldosFieldData() {
+    if (!result) throw new Error('No spectrum result available.');
+    const count = result.wavelengthNm.length;
+    const ldos = new Float64Array(count);
+    const fieldEnhancement = new Float64Array(count);
+    const epsilonHost = state.hostIndex ** 2;
+    const hostIndex = Math.max(1e-6, state.hostIndex);
+    const modeVolumeNm3 = Math.max(
+      1e-9,
+      result.modes.reduce((sum, mode) => sum + Math.abs(mode.vjOverV * mode.vOverL3), 0) * state.lengthNm ** 3,
+    );
+
+    for (let i = 0; i < count; i++) {
+      const lambda = result.wavelengthNm[i];
+      const kh = 2 * Math.PI * hostIndex / lambda;
+      const inverseDenominatorIm = Math.max(0, result.alpha[i].im) * 4 * Math.PI / (epsilonHost * modeVolumeNm3);
+      const modalPrefactor = 6 * Math.PI * hostIndex / Math.max(1e-12, kh ** 3 * state.lengthNm ** 3);
+      const ldosValue = Math.max(0, modalPrefactor * inverseDenominatorIm);
+      ldos[i] = ldosValue;
+      fieldEnhancement[i] = result.quantumYield[i] * ldosValue / hostIndex;
+    }
+
+    return { wavelengthNm: result.wavelengthNm, ldos, fieldEnhancement };
+  }
+
+  function drawLdosChart() {
+    if (!result) return;
+    const { ctx, w, h, theme } = canvasSetup();
+    const data = ldosFieldData();
+    const m = { top: 18, right: 72, bottom: 44, left: 68 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const xMin = state.lambdaMinNm;
+    const xMax = state.lambdaMaxNm;
+    const ldosRange = zeroBasedRange(data.ldos, 0.12);
+    const feRange = zeroBasedRange(data.fieldEnhancement, 0.12);
+    const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin);
+    const yLdosTo = (y: number) => m.top + ph * (1 - (y - ldosRange.min) / (ldosRange.max - ldosRange.min));
+    const yFeTo = (y: number) => m.top + ph * (1 - (y - feRange.min) / (feRange.max - feRange.min));
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = theme.grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const x = m.left + pw * i / 5;
+      const y = m.top + ph * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, m.top);
+      ctx.lineTo(x, m.top + ph);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(m.left, y);
+      ctx.lineTo(m.left + pw, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top);
+    ctx.stroke();
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = theme.textSoft;
+    for (let i = 0; i <= 5; i++) {
+      const value = xMin + (xMax - xMin) * i / 5;
+      ctx.fillText(fmt(value, 4), m.left + pw * i / 5, m.top + ph + 5);
+    }
+    ctx.fillStyle = theme.text;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('Wavelength λ (nm)', m.left + pw / 2, h - 16);
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const y = m.top + ph * i / 5;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = colors.ldos;
+      ctx.fillText(fmt(ldosRange.max - (ldosRange.max - ldosRange.min) * i / 5, 3), m.left - 6, y);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = colors.fe;
+      ctx.fillText(fmt(feRange.max - (feRange.max - feRange.min) * i / 5, 3), m.left + pw + 6, y);
+    }
+
+    ctx.save();
+    ctx.translate(14, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.ldos;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('LDOS / LDOS0', 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(w - 14, m.top + ph / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.fe;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('Field enhancement', 0, 0);
+    ctx.restore();
+
+    drawLine(ctx, data.wavelengthNm, data.ldos, { xTo, yTo: yLdosTo, left: m.left, right: m.left + pw, top: m.top, bottom: m.top + ph }, colors.ldos, 2.3);
+    drawLine(ctx, data.wavelengthNm, data.fieldEnhancement, { xTo, yTo: yFeTo, left: m.left, right: m.left + pw, top: m.top, bottom: m.top + ph }, colors.fe, 2.3);
+
+    const xPeak = xTo(result.peak.lambdaPeakNm);
+    if (xPeak >= m.left && xPeak <= m.left + pw) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = theme.textSoft;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(xPeak, m.top);
+      ctx.lineTo(xPeak, m.top + ph);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function drawResonanceChart() {
+    const { ctx, w, h, theme } = canvasSetup();
+    const data = resonanceSweepData();
+    const m = { top: 18, right: 62, bottom: 44, left: 64 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const xMin = data.x[0];
+    const xMax = data.x[data.x.length - 1];
+    const lambdaRange = finiteRange(data.lambdaPeak);
+    const qRange = finiteRange(data.q, 0.12);
+    const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin);
+    const yLambdaTo = (y: number) => m.top + ph * (1 - (y - lambdaRange.min) / (lambdaRange.max - lambdaRange.min));
+    const yQTo = (y: number) => m.top + ph * (1 - (y - qRange.min) / (qRange.max - qRange.min));
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = theme.grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const x = m.left + pw * i / 5;
+      const y = m.top + ph * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, m.top);
+      ctx.lineTo(x, m.top + ph);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(m.left, y);
+      ctx.lineTo(m.left + pw, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top);
+    ctx.stroke();
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = theme.textSoft;
+    for (let i = 0; i <= 5; i++) {
+      const value = xMin + (xMax - xMin) * i / 5;
+      ctx.fillText(fmt(value, 3), m.left + pw * i / 5, m.top + ph + 5);
+    }
+    ctx.fillStyle = theme.text;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText(data.xLabel, m.left + pw / 2, h - 16);
+
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const y = m.top + ph * i / 5;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = colors.ext;
+      ctx.fillText(fmt(lambdaRange.max - (lambdaRange.max - lambdaRange.min) * i / 5, 4), m.left - 6, y);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = colors.re;
+      ctx.fillText(fmt(qRange.max - (qRange.max - qRange.min) * i / 5, 3), m.left + pw + 6, y);
+    }
+
+    ctx.save();
+    ctx.translate(14, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.ext;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('Resonance λ (nm)', 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(w - 14, m.top + ph / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.re;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText('Q factor', 0, 0);
+    ctx.restore();
+
+    drawLine(ctx, data.x, data.lambdaPeak, { xTo, yTo: yLambdaTo, left: m.left, right: m.left + pw, top: m.top, bottom: m.top + ph }, colors.ext, 2.3);
+    drawLine(ctx, data.x, data.q, { xTo, yTo: yQTo, left: m.left, right: m.left + pw, top: m.top, bottom: m.top + ph }, colors.re, 2.3);
+
+    if (data.currentX >= xMin && data.currentX <= xMax) {
+      const x = xTo(data.currentX);
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = theme.textSoft;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(x, m.top);
+      ctx.lineTo(x, m.top + ph);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function drawAxes(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    m: { top: number; right: number; bottom: number; left: number },
+    xMin: number,
+    xMax: number,
+    yMin: number,
+    yMax: number,
+    xLabel: string,
+    yLabel: string,
+    theme: ReturnType<typeof chartTheme>,
+  ) {
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin);
+    const yTo = (y: number) => m.top + ph * (1 - (y - yMin) / (yMax - yMin));
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(m.left, m.top, pw, ph);
+    ctx.strokeStyle = theme.grid;
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= 5; i++) {
+      const x = m.left + pw * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, m.top);
+      ctx.lineTo(x, m.top + ph);
+      ctx.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+      const y = m.top + ph * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(m.left, y);
+      ctx.lineTo(m.left + pw, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    ctx.fillStyle = theme.textSoft;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i <= 5; i++) {
+      const value = xMin + (xMax - xMin) * i / 5;
+      ctx.fillText(fmt(value, 4), m.left + pw * i / 5, m.top + ph + 5);
+    }
+    ctx.fillStyle = theme.text;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText(xLabel, m.left + pw / 2, h - 16);
+
+    ctx.fillStyle = theme.textSoft;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const value = yMax - (yMax - yMin) * i / 5;
+      ctx.fillText(fmt(value, 2), m.left - 6, m.top + ph * i / 5);
+    }
+    ctx.save();
+    ctx.translate(14, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = theme.text;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    return { xTo, yTo, left: m.left, right: m.left + pw, top: m.top, bottom: m.top + ph };
+  }
+
+  function drawLine(
+    ctx: CanvasRenderingContext2D,
+    xs: ArrayLike<number>,
+    ys: ArrayLike<number>,
+    plot: { xTo: (x: number) => number; yTo: (y: number) => number; left: number; right: number; top: number; bottom: number },
+    color: string,
+    width: number,
+  ) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plot.left, plot.top, plot.right - plot.left, plot.bottom - plot.top);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < xs.length; i++) {
+      if (!Number.isFinite(xs[i]) || !Number.isFinite(ys[i])) {
+        started = false;
+        continue;
+      }
+      const x = plot.xTo(xs[i]);
+      const y = plot.yTo(ys[i]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        started = false;
+        continue;
+      }
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function bindPair(numId: string, sliderId: string, key: 'lengthNm' | 'aspectRatio' | 'hostIndex') {
+    const num = $<HTMLInputElement>(numId);
+    const slider = $<HTMLInputElement>(sliderId);
+    const commitNumber = () => {
+      const value = Number.parseFloat(num.value);
+      if (!Number.isFinite(value)) {
+        render();
+        return;
+      }
+      state[key] = value;
+      render();
+    };
+    num.addEventListener('change', commitNumber);
+    num.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitNumber();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        num.blur();
+        render();
+      }
+    });
+    slider.addEventListener('input', () => {
+      const value = Number.parseFloat(slider.value);
+      if (!Number.isFinite(value)) return;
+      state[key] = value;
+      render();
+    });
+  }
+
+  bindPair('length-num', 'length-slider', 'lengthNm');
+  bindPair('aspect-num', 'aspect-slider', 'aspectRatio');
+  bindPair('host-num', 'host-slider', 'hostIndex');
+
+  function bindNumberCommit(id: string, commit: (value: number) => void) {
+    const input = $<HTMLInputElement>(id);
+    input.addEventListener('change', () => {
+      const value = Number.parseFloat(input.value);
+      if (!Number.isFinite(value)) {
+        render();
+        return;
+      }
+      commit(value);
+      render();
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const value = Number.parseFloat(input.value);
+        if (Number.isFinite(value)) commit(value);
+        render();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        input.blur();
+        render();
+      }
+    });
+  }
+
+  function bindDrudeInput(id: string, key: 'drudeEpsB' | 'drudeWpEv' | 'drudeGammaEv') {
+    bindNumberCommit(id, value => { state[key] = value; });
+  }
+
+  bindDrudeInput('drude-epsb', 'drudeEpsB');
+  bindDrudeInput('drude-wp', 'drudeWpEv');
+  bindDrudeInput('drude-gamma', 'drudeGammaEv');
+
+  bindNumberCommit('lambda-min', value => { state.lambdaMinNm = value; });
+  bindNumberCommit('lambda-max', value => { state.lambdaMaxNm = value; });
+  $<HTMLInputElement>('file-upload').addEventListener('change', event => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const fileName = $('file-name');
+    if (!file) return;
+    file.text().then(text => {
+      const parsed = parseNKFile(text);
+      if ('error' in parsed) {
+        fileName.className = 'file-error';
+        fileName.textContent = parsed.error;
+        uploadedMaterial = null;
+      } else {
+        fileName.className = 'file-name';
+        fileName.textContent = `${file.name} (${parsed.data.length} points, ${parsed.unit})`;
+        uploadedMaterial = parsed.data;
+      }
+      render();
+    });
+  });
+
+  async function ensureCatalog(): Promise<RIIMaterial[]> {
+    if (!catalogPromise) catalogPromise = loadCatalog();
+    return catalogPromise;
+  }
+
+  function setupDatabaseSearch() {
+    const input = $<HTMLInputElement>('rii-search');
+    const results = $('rii-results');
+    const status = $('rii-status');
+
+    async function refresh() {
+      status.textContent = 'Loading catalog...';
+      try {
+        const catalog = await ensureCatalog();
+        const matches = searchCatalog(catalog, input.value, 18);
+        status.textContent = `${matches.length} matches`;
+        results.innerHTML = matches.map((item, index) => `
+          <div class="rii-result" data-index="${index}">
+            ${item.bookName || item.book} - ${item.pageName}
+            <small>${item.shelf}/${item.book}</small>
+          </div>
+        `).join('');
+        results.querySelectorAll<HTMLElement>('.rii-result').forEach((node, index) => {
+          node.addEventListener('click', async () => {
+            const item = matches[index];
+            status.textContent = 'Loading material...';
+            try {
+              selectedDatabaseMaterial = await fetchMaterialNK(item.dataPath);
+              selectedDatabaseLabel = `${item.bookName || item.book}: ${item.pageName}`;
+              status.textContent = `${selectedDatabaseLabel} (${selectedDatabaseMaterial.length} points)`;
+              $('material-ref').textContent = selectedDatabaseLabel;
+              render();
+            } catch (error) {
+              status.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+              selectedDatabaseMaterial = null;
+              render();
+            }
+          });
+        });
+      } catch (error) {
+        status.textContent = `Catalog error: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+
+    input.addEventListener('input', () => { void refresh(); });
+    input.addEventListener('focus', () => { if (!results.innerHTML) void refresh(); });
+  }
+
+  setupDatabaseSearch();
+
+  $<HTMLSelectElement>('material-select').addEventListener('change', event => {
+    state.materialId = (event.target as HTMLSelectElement).value;
+    if (state.materialId === 'rii') {
+      void ensureCatalog().then(() => {
+        if (!$('rii-results').innerHTML) $<HTMLInputElement>('rii-search').dispatchEvent(new Event('focus'));
+      }).catch(() => {});
+    }
+    render();
+  });
+  $<HTMLSelectElement>('shape-select').addEventListener('change', event => {
+    applyShapeDefaults((event.target as HTMLSelectElement).value as PlasmonShapeId);
+    render();
+  });
+  $('shape-gallery').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.shape-card');
+    if (!btn?.dataset.shape) return;
+    applyShapeDefaults(btn.dataset.shape as PlasmonShapeId);
+    render();
+  });
+  $('host-presets').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.preset-btn');
+    if (!btn) return;
+    state.hostIndex = Number.parseFloat(btn.dataset.val ?? '1.33');
+    render();
+  });
+
+  $('case-presets').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.preset-btn');
+    if (!btn) return;
+    state.materialId = btn.dataset.material ?? state.materialId;
+    state.shape = (btn.dataset.shape ?? state.shape) as PlasmonShapeId;
+    state.lengthNm = Number.parseFloat(btn.dataset.l ?? String(state.lengthNm));
+    state.aspectRatio = Number.parseFloat(btn.dataset.r ?? String(state.aspectRatio));
+    state.hostIndex = Number.parseFloat(btn.dataset.nh ?? String(state.hostIndex));
+    state.lambdaMinNm = Number.parseFloat(btn.dataset.min ?? String(state.lambdaMinNm));
+    state.lambdaMaxNm = Number.parseFloat(btn.dataset.max ?? String(state.lambdaMaxNm));
+    state.modeCount = availableModeCount(state.shape);
+    render();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.tab = btn.dataset.tab as TabId;
+      document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(other => {
+        const active = other === btn;
+        other.classList.toggle('active', active);
+        other.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      updateChartCopy();
+      drawChart();
+    });
+  });
+
+  $('resonance-controls').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
+    if (!btn || btn.disabled || !btn.dataset.sweep) return;
+    state.resonanceSweep = btn.dataset.sweep as ResonanceSweep;
+    updateChartCopy();
+    drawChart();
+  });
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  $('dl-png').addEventListener('click', () => {
+    const canvas = $('plasmon-chart') as HTMLCanvasElement;
+    const name = `plasmonic_${state.materialId}_${state.shape.replace(/\s+/g, '-')}_${state.tab}.png`;
+    canvas.toBlob(blob => { if (blob) downloadBlob(blob, name); }, 'image/png');
+  });
+
+  $('dl-csv').addEventListener('click', () => {
+    if (!result) return;
+    downloadBlob(new Blob([currentCsv()], { type: 'text/csv' }), `plasmonic_${state.materialId}_${state.tab}.csv`);
+  });
+
+  function currentCsv(): string {
+    const header = [
+      `# Plasmonic nanoparticles lab`,
+      `# material=${materialLabelForExport()}, shape=${state.shape}, L_nm=${state.lengthNm}, R=${state.aspectRatio}, n_host=${state.hostIndex}, modes=${state.modeCount}`,
+    ];
+    if (state.tab === 'spectrum' && result) {
+      const lines = [...header, 'wavelength_nm,sigma_ext_nm2,sigma_abs_nm2,sigma_sca_nm2,sigma_ext_over_V_nm-1,sigma_abs_over_V_nm-1,sigma_sca_over_V_nm-1,quantum_yield'];
+      for (let i = 0; i < result.wavelengthNm.length; i++) {
+        lines.push([
+          result.wavelengthNm[i],
+          result.sigmaExtNm2[i],
+          result.sigmaAbsNm2[i],
+          result.sigmaScaNm2[i],
+          result.sigmaExtOverV[i],
+          result.sigmaAbsOverV[i],
+          result.sigmaScaOverV[i],
+          result.quantumYield[i],
+        ].map(v => Number(v).toPrecision(8)).join(','));
+      }
+      return lines.join('\n') + '\n';
+    }
+    if (state.tab === 'material') {
+      const lines = [...header, 'wavelength_nm,epsilon_re,epsilon_im'];
+      for (let i = 0; i < 320; i++) {
+        const lambda = state.lambdaMinNm + (state.lambdaMaxNm - state.lambdaMinNm) * i / 319;
+        const eps = currentEpsilon(lambda);
+        lines.push(`${lambda.toPrecision(8)},${eps.re.toPrecision(8)},${eps.im.toPrecision(8)}`);
+      }
+      return lines.join('\n') + '\n';
+    }
+    if (state.tab === 'resonance') {
+      const sweep = resonanceSweepData();
+      const xName = sweep.sweep === 'L' ? 'length_nm' : 'aspect_ratio';
+      const lines = [...header, `${xName},lambda_peak_nm,Q`];
+      for (let i = 0; i < sweep.x.length; i++) {
+        lines.push([sweep.x[i], sweep.lambdaPeak[i], sweep.q[i]].map(v => Number(v).toPrecision(8)).join(','));
+      }
+      return lines.join('\n') + '\n';
+    }
+    if (state.tab === 'ldos' && result) {
+      const data = ldosFieldData();
+      const lines = [
+        ...header,
+        `# ${ldosProbeDescription()} distance_nm=${LDOS_PROBE_DISTANCE_NM}`,
+        'wavelength_nm,ldos_over_ldos0_modal,field_enhancement',
+      ];
+      for (let i = 0; i < data.wavelengthNm.length; i++) {
+        lines.push([data.wavelengthNm[i], data.ldos[i], data.fieldEnhancement[i]].map(v => Number(v).toPrecision(8)).join(','));
+      }
+      return lines.join('\n') + '\n';
+    }
+    return header.join('\n') + '\n';
+  }
+
+  function materialLabelForExport(): string {
+    if (state.materialId === 'drude') return `drude(eps_b=${state.drudeEpsB},wp_eV=${state.drudeWpEv},gamma_eV=${state.drudeGammaEv})`;
+    if (state.materialId === 'file') return uploadedMaterial ? 'uploaded_file' : 'file_unloaded';
+    if (state.materialId === 'rii') return selectedDatabaseLabel || 'database_unselected';
+    return `${state.materialId} (${MATERIALS[state.materialId]?.ref ?? ''})`;
+  }
+
+  const shareBtn = $('share-btn');
+  function serializeState(): string {
+    const p = new URLSearchParams();
+    p.set('mat', state.materialId);
+    if (state.materialId === 'drude') {
+      p.set('epsb', String(state.drudeEpsB));
+      p.set('wp', String(state.drudeWpEv));
+      p.set('gamma', String(state.drudeGammaEv));
+    }
+    p.set('shape', state.shape);
+    p.set('L', String(state.lengthNm));
+    p.set('R', String(state.aspectRatio));
+    p.set('nh', String(state.hostIndex));
+    p.set('min', String(state.lambdaMinNm));
+    p.set('max', String(state.lambdaMaxNm));
+    p.set('modes', String(state.modeCount));
+    p.set('view', state.tab);
+    p.set('sweep', state.resonanceSweep);
+    return p.toString();
+  }
+  shareBtn.addEventListener('click', () => {
+    const url = `${location.origin}${location.pathname}#${serializeState()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const old = shareBtn.innerHTML;
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => { shareBtn.innerHTML = old; }, 1400);
+    });
+  });
+
+  function restoreState() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const p = new URLSearchParams(hash);
+    if (p.has('mat')) state.materialId = p.get('mat')!;
+    if (p.has('epsb')) state.drudeEpsB = Number.parseFloat(p.get('epsb')!);
+    if (p.has('wp')) state.drudeWpEv = Number.parseFloat(p.get('wp')!);
+    if (p.has('gamma')) state.drudeGammaEv = Number.parseFloat(p.get('gamma')!);
+    if (p.has('shape')) state.shape = p.get('shape') as PlasmonShapeId;
+    if (p.has('L')) state.lengthNm = Number.parseFloat(p.get('L')!);
+    if (p.has('R')) state.aspectRatio = Number.parseFloat(p.get('R')!);
+    if (p.has('nh')) state.hostIndex = Number.parseFloat(p.get('nh')!);
+    if (p.has('min')) state.lambdaMinNm = Number.parseFloat(p.get('min')!);
+    if (p.has('max')) state.lambdaMaxNm = Number.parseFloat(p.get('max')!);
+    if (p.has('modes')) state.modeCount = Number.parseInt(p.get('modes')!, 10);
+    if (p.has('view') && ['spectrum', 'material', 'resonance', 'ldos'].includes(p.get('view')!)) state.tab = p.get('view') as TabId;
+    if (p.has('sweep') && ['L', 'R'].includes(p.get('sweep')!)) state.resonanceSweep = p.get('sweep') as ResonanceSweep;
+
+    document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(btn => {
+      const active = btn.dataset.tab === state.tab;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  restoreState();
+  render();
+
+  new ResizeObserver(() => drawChart()).observe($('chart-wrap'));
+  onThemeChange(() => drawChart());
+</script>
