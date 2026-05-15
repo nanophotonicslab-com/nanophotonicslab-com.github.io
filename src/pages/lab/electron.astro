@@ -436,7 +436,8 @@ import Layout from '../../layouts/Layout.astro';
     for (let e = -2; e <= 4; e++) ctx.fillText(xLabels[e], kToX(10 ** e), m.top + ph + 6);
     ctx.font = '12px Inter, system-ui, sans-serif';
     ctx.fillStyle = ct.text;
-    ctx.fillText('K (keV)', m.left + pw / 2, h - 8);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('K (keV)', m.left + pw / 2, h - 4);
 
     // Y labels
     ctx.textAlign = 'right';
