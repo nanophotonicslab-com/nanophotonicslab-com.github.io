@@ -12,6 +12,14 @@ const widgets = [
     url: `${base}lab/mie-scattering/`,
   },
   {
+    title: 'Plasmonic Nanoparticles',
+    description: 'Analytical spectra for rods, cages, disks, rings, bipyramids, and related plasmonic shapes using geometry-only modal parameters and tabulated n,k data.',
+    color: '#10B981',
+    icon: 'plasmon',
+    status: 'Live',
+    url: `${base}lab/plasmonic-nanoparticles/`,
+  },
+  {
     title: 'Relativistic Electron Calculator',
     description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.',
     color: '#7C3AED',
@@ -118,6 +126,14 @@ const widgets = [
                 {widget.icon === 'bolt' && (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                )}
+                {widget.icon === 'plasmon' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M4 12c2.2-5 4.8-5 8 0s5.8 5 8 0"/>
+                    <path d="M4 12c2.2 5 4.8 5 8 0s5.8-5 8 0"/>
+                    <path d="M12 4v2"/><path d="M12 18v2"/>
                   </svg>
                 )}
                 {widget.icon === 'electron' && (
