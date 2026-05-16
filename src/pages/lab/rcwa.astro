@@ -37,7 +37,11 @@ import Layout from '../../layouts/Layout.astro';
                 <input type="text" class="field-input" id="p-width" inputmode="decimal" value="350">
               </div>
               <div class="field">
-                <label for="p-numg">Harmonics</label>
+                <div class="field-label-with-info">
+                  <label for="p-numg">Harmonics</label>
+                  <button class="field-info" type="button" aria-label="Harmonics info" aria-describedby="harmonics-tooltip">i</button>
+                  <span class="field-tooltip" id="harmonics-tooltip" role="tooltip">Number of Fourier orders used in the RCWA expansion. Higher values improve convergence for sharp or high-contrast gratings, but make the calculation slower.</span>
+                </div>
                 <input type="text" class="field-input" id="p-numg" inputmode="numeric" value="25">
               </div>
             </div>
@@ -146,6 +150,91 @@ import Layout from '../../layouts/Layout.astro';
             <canvas id="rt-canvas" aria-label="Reflection and transmission spectrum"></canvas>
           </div>
           <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          <section class="rcwa-conventions" aria-labelledby="rcwa-schematic-title">
+            <div class="rcwa-conventions__header">
+              <span class="rcwa-conventions__title" id="rcwa-schematic-title">Geometry and solver conventions</span>
+              <span class="rcwa-conventions__tag">1D periodic, &phi; = 0</span>
+            </div>
+            <div class="rcwa-conventions__body">
+              <svg class="rcwa-schematic" viewBox="0 0 820 350" role="img" aria-labelledby="rcwa-svg-title rcwa-svg-desc">
+                <title id="rcwa-svg-title">RCWA 1D grating geometry convention</title>
+                <desc id="rcwa-svg-desc">A 1D grating with x-period Lambda, invariant y direction, z layer stacking, top superstrate, finite patterned grating, substrate, incident wave vector, incidence angle theta, and TE/TM polarization definitions.</desc>
+                <defs>
+                  <marker id="rcwa-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth">
+                    <path d="M0,0 L8,4 L0,8" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+                  </marker>
+                  <marker id="rcwa-arrow-filled" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L8,4 L0,8 Z" fill="currentColor"></path>
+                  </marker>
+                  <linearGradient id="rcwa-top-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="#DBEAFE" stop-opacity="0.55"></stop>
+                    <stop offset="1" stop-color="#DBEAFE" stop-opacity="0.16"></stop>
+                  </linearGradient>
+                  <linearGradient id="rcwa-sub-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="#D1FAE5" stop-opacity="0.32"></stop>
+                    <stop offset="1" stop-color="#D1FAE5" stop-opacity="0.72"></stop>
+                  </linearGradient>
+                  <pattern id="rcwa-sub-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-opacity="0.08" stroke-width="2"></line>
+                  </pattern>
+                </defs>
+
+                <rect class="rcwa-svg-bg" x="0" y="0" width="820" height="350" rx="10"></rect>
+                <rect class="rcwa-superstrate" x="150" y="38" width="570" height="90" rx="4"></rect>
+                <rect class="rcwa-groove" x="150" y="128" width="570" height="88"></rect>
+                <rect class="rcwa-substrate" x="150" y="216" width="570" height="76" rx="4"></rect>
+                <rect class="rcwa-hatch" x="150" y="216" width="570" height="76"></rect>
+
+                <line class="rcwa-interface" x1="150" y1="128" x2="720" y2="128"></line>
+                <line class="rcwa-interface" x1="150" y1="216" x2="720" y2="216"></line>
+                <line class="rcwa-boundary" x1="150" y1="64" x2="150" y2="292"></line>
+                <line class="rcwa-boundary" x1="340" y1="64" x2="340" y2="306"></line>
+                <line class="rcwa-boundary" x1="530" y1="64" x2="530" y2="306"></line>
+                <line class="rcwa-boundary" x1="720" y1="64" x2="720" y2="292"></line>
+
+                <g class="rcwa-ridges">
+                  <rect x="150" y="128" width="88" height="88" rx="3"></rect>
+                  <rect x="340" y="128" width="88" height="88" rx="3"></rect>
+                  <rect x="530" y="128" width="88" height="88" rx="3"></rect>
+                </g>
+                <g class="rcwa-material-labels">
+                  <text x="384" y="177" text-anchor="middle">Ridge</text>
+                  <text x="479" y="177" text-anchor="middle">Groove</text>
+                </g>
+
+                <text class="rcwa-label rcwa-label-strong" x="132" y="70" text-anchor="end">Superstrate / top</text>
+                <text class="rcwa-label" x="132" y="91" text-anchor="end">semi-infinite input</text>
+                <text class="rcwa-label rcwa-label-strong" x="132" y="165" text-anchor="end">Patterned layer</text>
+                <text class="rcwa-label" x="132" y="186" text-anchor="end">ridge + groove</text>
+                <text class="rcwa-label rcwa-label-strong" x="132" y="252" text-anchor="end">Substrate</text>
+                <text class="rcwa-label" x="132" y="273" text-anchor="end">semi-infinite output</text>
+
+                <g class="rcwa-dimension">
+                  <line x1="340" y1="308" x2="530" y2="308" marker-start="url(#rcwa-arrow)" marker-end="url(#rcwa-arrow)"></line>
+                  <text x="435" y="327" text-anchor="middle">&Lambda; period along x</text>
+                  <line x1="340" y1="204" x2="428" y2="204" marker-start="url(#rcwa-arrow)" marker-end="url(#rcwa-arrow)"></line>
+                  <text x="384" y="196" text-anchor="middle">ridge width</text>
+                  <line x1="754" y1="128" x2="754" y2="216" marker-start="url(#rcwa-arrow)" marker-end="url(#rcwa-arrow)"></line>
+                  <text x="771" y="172" transform="rotate(90 771 172)" text-anchor="middle">thickness d</text>
+                </g>
+
+                <g class="rcwa-incidence">
+                  <line class="rcwa-wave" x1="276" y1="50" x2="335" y2="122" marker-end="url(#rcwa-arrow-filled)"></line>
+                  <path d="M340 96 A32 32 0 0 0 319 104"></path>
+                  <text x="258" y="86">k<tspan baseline-shift="sub" font-size="10">inc</tspan></text>
+                  <text x="323" y="92">&theta;</text>
+                  <text x="352" y="76">surface normal</text>
+                </g>
+              </svg>
+
+              <ul class="rcwa-convention-list">
+                <li><strong>x</strong> is periodic with period &Lambda;; <strong>y</strong> is invariant along the ridge direction.</li>
+                <li><strong>z</strong> follows the layer stack from top/superstrate to substrate.</li>
+                <li>The incident plane wave enters from the top region; &theta; is measured from the surface normal in the x-z plane.</li>
+                <li><strong>s/TE</strong> means E along y; <strong>p/TM</strong> means E lies in the x-z incidence plane.</li>
+              </ul>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -171,7 +260,12 @@ import Layout from '../../layouts/Layout.astro';
   }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
-  .controls { position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px); }
+  .controls {
+    position: sticky;
+    top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px);
+    z-index: 4;
+  }
+  .controls.card { overflow: visible; }
   .controls h3 {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
     color: var(--text-muted); margin: var(--space-md) 0 0.5rem;
@@ -183,6 +277,69 @@ import Layout from '../../layouts/Layout.astro';
   .fields { display: flex; flex-direction: column; gap: 0.5rem; }
   .field { display: flex; align-items: center; gap: 0.5rem; }
   .field label { flex: 0 0 auto; min-width: 100px; font-size: 0.8rem; color: var(--text-soft); }
+  .field-label-with-info {
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .field-label-with-info label {
+    min-width: 0;
+  }
+  .field-info {
+    position: relative;
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1;
+    cursor: help;
+  }
+  .field-info:hover,
+  .field-info:focus-visible {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    outline: none;
+  }
+  .field-tooltip {
+    position: absolute;
+    left: calc(100% + 0.45rem);
+    top: 50%;
+    width: min(230px, 70vw);
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-50%) translateX(-3px);
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 20;
+  }
+  .field-label-with-info:hover .field-tooltip,
+  .field-label-with-info:focus-within .field-tooltip,
+  .field-info:hover + .field-tooltip,
+  .field-info:focus + .field-tooltip,
+  .field-info:focus-visible + .field-tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
   .field-input {
     flex: 1; min-width: 0; padding: 0.35rem 0.55rem;
     font-size: 0.85rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
@@ -225,6 +382,155 @@ import Layout from '../../layouts/Layout.astro';
   .chart-title { font-weight: 600; font-size: 0.95rem; }
   .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
   .chart-status { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  .rcwa-conventions {
+    margin-top: var(--space-md);
+    padding: 0.75rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--bg-soft) 58%, transparent);
+  }
+  .rcwa-conventions__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: 0.55rem;
+  }
+  .rcwa-conventions__title {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .rcwa-conventions__tag {
+    flex: 0 0 auto;
+    padding: 0.18rem 0.55rem;
+    border-radius: var(--radius-full);
+    background: rgba(99, 102, 241, 0.10);
+    color: var(--primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .rcwa-conventions__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .rcwa-schematic {
+    display: block;
+    width: 100%;
+    height: auto;
+    color: var(--text-soft);
+  }
+  .rcwa-svg-bg {
+    fill: var(--bg);
+    stroke: var(--bg-muted);
+  }
+  .rcwa-superstrate {
+    fill: url(#rcwa-top-fill);
+    stroke: rgba(59, 130, 246, 0.25);
+  }
+  .rcwa-groove {
+    fill: rgba(245, 158, 11, 0.13);
+    stroke: rgba(245, 158, 11, 0.22);
+  }
+  .rcwa-substrate {
+    fill: url(#rcwa-sub-fill);
+    stroke: rgba(16, 185, 129, 0.25);
+  }
+  .rcwa-hatch { fill: url(#rcwa-sub-hatch); color: var(--text); }
+  .rcwa-interface {
+    stroke: var(--text-muted);
+    stroke-width: 1;
+    stroke-opacity: 0.45;
+  }
+  .rcwa-boundary {
+    stroke: var(--primary);
+    stroke-width: 1;
+    stroke-dasharray: 5 5;
+    stroke-opacity: 0.5;
+  }
+  .rcwa-ridges rect {
+    fill: rgba(99, 102, 241, 0.70);
+    stroke: rgba(49, 46, 129, 0.42);
+    stroke-width: 1;
+  }
+  .rcwa-label,
+  .rcwa-schematic text {
+    fill: var(--text-soft);
+    font-family: var(--font);
+    font-size: 14px;
+  }
+  .rcwa-label-strong {
+    fill: var(--text);
+    font-weight: 700;
+  }
+  .rcwa-material-labels text {
+    fill: var(--text);
+    font-size: 13px;
+    font-weight: 750;
+    paint-order: stroke;
+    stroke: rgba(255, 255, 255, 0.72);
+    stroke-width: 3px;
+  }
+  .rcwa-dimension {
+    color: var(--text-soft);
+  }
+  .rcwa-dimension line {
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+  .rcwa-dimension text {
+    fill: var(--text);
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .rcwa-incidence {
+    color: #EF4444;
+  }
+  .rcwa-incidence line,
+  .rcwa-incidence path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+  .rcwa-incidence text {
+    fill: var(--text);
+    font-weight: 700;
+  }
+  .rcwa-convention-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.7rem 0.75rem;
+    list-style: none;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    font-size: 0.76rem;
+    line-height: 1.42;
+    color: var(--text-muted);
+  }
+  .rcwa-convention-list li {
+    padding-left: 0.75rem;
+    border-left: 2px solid rgba(99, 102, 241, 0.22);
+  }
+  .rcwa-convention-list strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+  @media (max-width: 1100px) {
+    .rcwa-convention-list { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .rcwa-conventions { padding: 0.55rem; }
+    .rcwa-conventions__header { align-items: flex-start; flex-direction: column; }
+    .rcwa-convention-list { font-size: 0.72rem; }
+  }
+
   .share-btn {
     display: inline-flex; align-items: center; gap: 0.35rem;
     padding: 0.3rem 0.7rem; font-size: 0.78rem; font-weight: 500;
