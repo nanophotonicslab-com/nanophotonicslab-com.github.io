@@ -185,7 +185,7 @@ p {
   border: 1px solid var(--bg-muted);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  transition: transform 0.25s, box-shadow 0.25s;
+  transition: none;
   position: relative;
   overflow: hidden;
 }
@@ -203,12 +203,28 @@ p {
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: none;
+  box-shadow: none;
 }
 
 .card:hover::before {
   opacity: 1;
+}
+
+.card,
+.card:hover,
+.card:focus,
+.card:focus-within,
+.card:active,
+.controls.card,
+.chart-panel.card,
+.results.card,
+.results-panel.card,
+.output-card.card {
+  transform: none !important;
+  translate: none !important;
+  box-shadow: none !important;
+  transition: none !important;
 }
 
 /* ===== Buttons ===== */

@@ -172,37 +172,9 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
-          <div class="param">
-            <div class="param-header"><label>Quantity</label></div>
-            <div class="plot-tabs" id="qty-tabs" role="radiogroup">
-              <button class="plot-tab active" data-qty="csca" role="radio" aria-checked="true">C<sub>sca</sub></button>
-              <button class="plot-tab" data-qty="cext" role="radio" aria-checked="false">C<sub>ext</sub></button>
-              <button class="plot-tab" data-qty="cabs" role="radio" aria-checked="false">C<sub>abs</sub></button>
-              <button class="plot-tab" data-qty="qsca" role="radio" aria-checked="false">Q<sub>sca</sub></button>
-              <button class="plot-tab" data-qty="all" role="radio" aria-checked="false">All</button>
-            </div>
-          </div>
-
-          <div class="param">
-            <div class="param-header"><label>Decomposition</label></div>
-            <div class="plot-tabs" id="decomp-tabs" role="radiogroup">
-              <button class="plot-tab active" data-decomp="total" role="radio" aria-checked="true">Total</button>
-              <button class="plot-tab" data-decomp="em" role="radio" aria-checked="false">E / M</button>
-              <button class="plot-tab" data-decomp="multipole" role="radio" aria-checked="false">Multipoles</button>
-            </div>
-          </div>
-
-          <div class="param">
-            <div class="param-header"><label>X axis</label></div>
-            <div class="plot-tabs" id="axis-tabs" role="radiogroup">
-              <button class="plot-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
-              <button class="plot-tab" data-axis="energy" role="radio" aria-checked="false">E (eV)</button>
-            </div>
-          </div>
-
           <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
 
-          <div class="config-check" id="config-check"></div>
+          <button type="button" class="config-check" id="config-check" aria-haspopup="dialog" aria-controls="structure-dialog" title="Open structure drawing"></button>
 
           <p class="theory-note" id="theory-note">
             <strong>Mie theory</strong> gives exact solutions for light scattering by
@@ -217,8 +189,36 @@ import Layout from '../../layouts/Layout.astro';
               <button class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
               <button class="plot-tab" data-view="angular" role="radio" aria-checked="false">Angular</button>
               <button class="plot-tab" data-view="nearfield" role="radio" aria-checked="false">Near-field</button>
+              <button class="plot-tab" data-view="material" role="radio" aria-checked="false">Material</button>
             </div>
             <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
+            <div class="spectrum-controls" id="spectrum-controls">
+              <div class="toolbar-control">
+                <span class="toolbar-label">Quantity</span>
+                <div class="plot-tabs plot-tabs--toolbar" id="qty-tabs" role="radiogroup">
+                  <button class="plot-tab active" data-qty="csca" role="radio" aria-checked="true">C<sub>sca</sub></button>
+                  <button class="plot-tab" data-qty="cext" role="radio" aria-checked="false">C<sub>ext</sub></button>
+                  <button class="plot-tab" data-qty="cabs" role="radio" aria-checked="false">C<sub>abs</sub></button>
+                  <button class="plot-tab" data-qty="qsca" role="radio" aria-checked="false">Q<sub>sca</sub></button>
+                  <button class="plot-tab" data-qty="all" role="radio" aria-checked="false">All</button>
+                </div>
+              </div>
+              <div class="toolbar-control">
+                <span class="toolbar-label">Decomposition</span>
+                <div class="plot-tabs plot-tabs--toolbar" id="decomp-tabs" role="radiogroup">
+                  <button class="plot-tab active" data-decomp="total" role="radio" aria-checked="true">Total</button>
+                  <button class="plot-tab" data-decomp="em" role="radio" aria-checked="false">E / M</button>
+                  <button class="plot-tab" data-decomp="multipole" role="radio" aria-checked="false">Multipoles</button>
+                </div>
+              </div>
+            </div>
+            <div class="material-controls" id="material-controls" style="display:none">
+              <span class="toolbar-label">Display</span>
+              <div class="plot-tabs plot-tabs--toolbar" id="material-prop-tabs" role="radiogroup">
+                <button class="plot-tab active" data-material-prop="epsilon" role="radio" aria-checked="true">&epsilon;</button>
+                <button class="plot-tab" data-material-prop="nk" role="radio" aria-checked="false">n, k</button>
+              </div>
+            </div>
             <span id="zoom-hint" class="chart-hint">Zoomed &mdash; double-click to reset</span>
             <span id="angular-controls" class="angular-controls" style="display:none">
               <label class="angular-label">&lambda; =</label>
@@ -236,6 +236,12 @@ import Layout from '../../layouts/Layout.astro';
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="mie-chart" aria-label="Mie scattering cross-section spectrum"></canvas>
             <canvas id="chart-overlay" aria-hidden="true"></canvas>
+            <div class="axis-overlay" id="axis-overlay">
+              <div class="plot-tabs plot-tabs--toolbar" id="axis-tabs" role="radiogroup" aria-label="X axis">
+                <button class="plot-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
+                <button class="plot-tab" data-axis="energy" role="radio" aria-checked="false">E (eV)</button>
+              </div>
+            </div>
             <div class="chart-tooltip" id="chart-tooltip"></div>
           </div>
           <div class="color-swatches" id="color-swatches">
@@ -267,6 +273,61 @@ import Layout from '../../layouts/Layout.astro';
         </div>
       </div>
 
+      <dialog class="structure-dialog" id="structure-dialog" aria-labelledby="structure-dialog-title">
+        <div class="structure-dialog__panel">
+          <div class="structure-dialog__header">
+            <h3 id="structure-dialog-title">Structure Drawing</h3>
+            <button type="button" class="structure-dialog__close" id="structure-dialog-close" aria-label="Close structure drawing">&times;</button>
+          </div>
+          <div class="structure-dialog__art" id="structure-dialog-art"></div>
+        </div>
+      </dialog>
+
+      <dialog class="material-import-dialog" id="material-import-dialog" aria-labelledby="material-import-title">
+        <div class="material-import-dialog__panel">
+          <div class="material-import-dialog__header">
+            <div>
+              <h3 id="material-import-title">Confirm Material Import</h3>
+              <p id="material-import-file">No file selected</p>
+            </div>
+            <button type="button" class="structure-dialog__close" id="material-import-close" aria-label="Cancel material import">&times;</button>
+          </div>
+          <div class="material-import-dialog__grid">
+            <label>
+              <span>First column</span>
+              <select id="material-import-axis" class="param-select">
+                <option value="energy-ev">Photon energy (eV)</option>
+                <option value="wavelength-nm">Wavelength (nm)</option>
+                <option value="wavelength-um">Wavelength (&micro;m)</option>
+              </select>
+            </label>
+            <label>
+              <span>Columns 2 and 3</span>
+              <select id="material-import-values" class="param-select">
+                <option value="epsilon">Re &epsilon;, Im &epsilon;</option>
+                <option value="nk">n, k</option>
+              </select>
+            </label>
+          </div>
+          <div class="material-import-dialog__preview">
+            <canvas id="material-import-preview" aria-label="Material preview"></canvas>
+          </div>
+          <div class="material-import-dialog__table-wrap">
+            <table class="material-import-dialog__table">
+              <thead>
+                <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+              </thead>
+              <tbody id="material-import-rows"></tbody>
+            </table>
+          </div>
+          <p class="material-import-dialog__status" id="material-import-status"></p>
+          <div class="material-import-dialog__actions">
+            <button type="button" class="chart-tool-btn" id="material-import-cancel">Cancel</button>
+            <button type="button" class="chart-tool-btn active" id="material-import-accept">Use material</button>
+          </div>
+        </div>
+      </dialog>
+
       <div class="references card">
         <h4>References &amp; data sources</h4>
         <ul>
@@ -290,13 +351,13 @@ import Layout from '../../layouts/Layout.astro';
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
   .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
-  .controls { display: flex; flex-direction: column; gap: var(--space-lg); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
-  .controls h3 { font-size: 1rem; margin-bottom: calc(-0.5 * var(--space-sm)); }
-  .param { display: flex; flex-direction: column; gap: 0.4rem; }
+  .controls { display: flex; flex-direction: column; gap: 0.85rem; position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
+  .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
+  .param { display: flex; flex-direction: column; gap: 0.28rem; }
   .param-header { display: flex; justify-content: space-between; align-items: center; }
   .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .param-number {
-    width: 5rem; padding: 0.2rem 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    width: 5rem; padding: 0.16rem 0.38rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums;
     color: var(--primary); text-align: right; outline: none; background: var(--bg); transition: border-color 0.15s;
   }
@@ -306,17 +367,17 @@ import Layout from '../../layouts/Layout.astro';
   .param-number::-webkit-inner-spin-button, .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .param-number { -moz-appearance: textfield; }
   .param-slider {
-    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
     background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer;
   }
-  .param-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; transition: box-shadow 0.15s; }
+  .param-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); cursor: pointer; transition: box-shadow 0.15s; }
   .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
-  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
-  .param-slider::-moz-range-track { height: 6px; background: var(--bg-muted); border-radius: 3px; border: none; }
+  .param-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
+  .param-slider::-moz-range-track { height: 5px; background: var(--bg-muted); border-radius: 3px; border: none; }
   .param-limits { display: flex; align-items: center; gap: 0.25rem; }
   .param-limit-dash { flex: 1; text-align: center; color: var(--bg-muted); font-size: 0.75rem; }
   .param-limit {
-    width: 3.5rem; padding: 0.15rem 0.3rem; border: 1px solid transparent; border-radius: var(--radius-sm);
+    width: 3.5rem; padding: 0.1rem 0.25rem; border: 1px solid transparent; border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.6875rem; font-variant-numeric: tabular-nums; color: var(--text-muted);
     text-align: center; background: var(--bg-soft); outline: none; transition: border-color 0.15s, color 0.15s;
   }
@@ -328,7 +389,7 @@ import Layout from '../../layouts/Layout.astro';
   .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
   .preset-btn.active { border-color: var(--primary-light); background: rgba(99,102,241,0.06); color: var(--primary); }
   .param-select {
-    width: 100%; padding: 0.35rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    width: 100%; padding: 0.3rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.8125rem; font-weight: 500; color: var(--text);
     background: var(--bg); outline: none; cursor: pointer; transition: border-color 0.15s;
   }
@@ -357,13 +418,166 @@ import Layout from '../../layouts/Layout.astro';
   .rii-result:hover { background: rgba(99,102,241,0.06); }
   .rii-result-book { font-weight: 600; color: var(--text); }
   .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }
-  .plot-tabs--sm { padding: 2px; }
-  .plot-tabs--sm .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.6875rem; }
+  .plot-tabs--sm { padding: 3px; }
+  .plot-tabs--sm .plot-tab { padding: 0.45rem 0.85rem; font-size: 0.8125rem; font-weight: 600; }
+  .plot-tabs--toolbar { padding: 2px; }
+  .plot-tabs--toolbar .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
+  .spectrum-controls,
+  .material-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+  .toolbar-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .toolbar-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: var(--text-muted);
+  }
   .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
   .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .angular-pol-wrap { margin-bottom: var(--space-sm); }
-  .config-check { border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); }
+  .config-check {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--bg-muted);
+    padding: var(--space-sm) 0 0;
+    margin-top: var(--space-xs);
+    background: transparent;
+    color: inherit;
+    cursor: zoom-in;
+  }
+  .config-check:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+  }
   .config-check svg { width: 100%; height: auto; border-radius: var(--radius-sm); }
+  .structure-dialog {
+    width: min(780px, calc(100vw - 2rem));
+    padding: 0;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .structure-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .structure-dialog__panel { padding: var(--space-md); }
+  .structure-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+  }
+  .structure-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .structure-dialog__close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-soft);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .structure-dialog__close:hover { color: var(--primary); border-color: var(--primary-light); }
+  .structure-dialog__art svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+  }
+  .material-import-dialog {
+    width: min(860px, calc(100vw - 2rem));
+    padding: 0;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .material-import-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .material-import-dialog__panel { padding: var(--space-md); }
+  .material-import-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  .material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .material-import-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+  .material-import-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  .material-import-dialog__grid label { display: flex; flex-direction: column; gap: 0.3rem; }
+  .material-import-dialog__grid span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: var(--text-muted);
+  }
+  .material-import-dialog__preview canvas {
+    width: 100%;
+    aspect-ratio: 3 / 1;
+    display: block;
+  }
+  .material-import-dialog__table-wrap {
+    max-height: 132px;
+    overflow: auto;
+    margin-top: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+  }
+  .material-import-dialog__table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .material-import-dialog__table th,
+  .material-import-dialog__table td {
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid var(--bg-muted);
+    text-align: center;
+  }
+  .material-import-dialog__table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    color: var(--text-soft);
+    font-weight: 700;
+  }
+  .material-import-dialog__status {
+    margin: var(--space-sm) 0 0;
+    min-height: 1.2em;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+  }
+  .material-import-dialog__status.error { color: var(--rose); }
+  .material-import-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+  @media (max-width: 640px) {
+    .material-import-dialog__grid { grid-template-columns: 1fr; }
+  }
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -376,7 +590,7 @@ import Layout from '../../layouts/Layout.astro';
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
   .theory-note strong { color: var(--text-soft); }
   .chart-panel { padding: var(--space-md); }
-  .chart-toolbar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+  .chart-toolbar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap; }
   .chart-tool-btn { padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   .chart-tool-btn:hover { border-color: var(--primary-light); color: var(--primary); }
   .chart-tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
@@ -385,6 +599,18 @@ import Layout from '../../layouts/Layout.astro';
   .chart-wrap { position: relative; cursor: crosshair; }
   .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; }
   #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+  .axis-overlay {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .axis-overlay .plot-tabs {
+    box-shadow: 0 1px 8px rgba(30, 27, 75, 0.08);
+    background: rgba(241, 240, 251, 0.9);
+    backdrop-filter: blur(6px);
+  }
   .chart-tooltip { position: absolute; pointer-events: none; background: rgba(30,27,75,0.92); color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.6875rem; font-family: var(--font); font-variant-numeric: tabular-nums; line-height: 1.5; white-space: nowrap; display: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
   .chart-tooltip.visible { display: block; }
   .color-swatches { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
@@ -405,7 +631,7 @@ import Layout from '../../layouts/Layout.astro';
   .layer-details summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; }
   .layer-details[open] summary::before { transform: rotate(90deg); }
   .layer-details summary::-webkit-details-marker { display: none; }
-  .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.4rem; }
+  .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.32rem; padding-top: 0.32rem; }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .controls { position: static; gap: var(--space-md); }
@@ -463,6 +689,123 @@ import Layout from '../../layouts/Layout.astro';
       for (const row of data) row[0] /= 1000;
     }
     return { data, unit };
+  }
+
+  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
+  type ImportValueMode = 'nk' | 'epsilon';
+  type RawOpticalRow = [number, number, number];
+  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
+  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
+
+  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
+    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
+    let delim = /\t/;
+    if (lines[0].split(delim).length < 3) delim = /,/;
+    if (lines[0].split(delim).length < 3) delim = /\s+/;
+    let startIdx = 0;
+    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
+
+    const rows: RawOpticalRow[] = [];
+    let skipped = 0;
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = lines[i].split(delim).map(Number);
+      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
+        skipped++;
+        continue;
+      }
+      rows.push([parts[0], parts[1], parts[2]]);
+    }
+    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
+    return { rows, skipped };
+  }
+
+  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
+    const epsAbs = Math.hypot(epsRe, epsIm);
+    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
+    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
+    return [n, Math.abs(k)];
+  }
+
+  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
+    const data: number[][] = [];
+    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
+    for (const [x, a, b] of rows) {
+      let lambdaUm: number;
+      if (axisMode === 'energy-ev') {
+        if (x <= 0) continue;
+        lambdaUm = HC_EV_NM / x / 1000;
+      } else if (axisMode === 'wavelength-nm') {
+        if (x <= 0) continue;
+        lambdaUm = x / 1000;
+      } else {
+        if (x <= 0) continue;
+        lambdaUm = x;
+      }
+      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
+      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
+      data.push([lambdaUm, n, k]);
+      nMin = Math.min(nMin, n); nMax = Math.max(nMax, n);
+      kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
+    }
+    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
+    data.sort((a, b) => a[0] - b[0]);
+    return {
+      data,
+      lambdaMinNm: data[0][0] * 1000,
+      lambdaMaxNm: data[data.length - 1][0] * 1000,
+      nMin, nMax, kMin, kMax,
+    };
+  }
+
+  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
+    const xs = rows.map(r => r[0]).filter(Number.isFinite);
+    const ys = rows.flatMap(r => [r[1], r[2]]).filter(Number.isFinite);
+    const xMax = Math.max(...xs);
+    const yMaxAbs = Math.max(...ys.map(Math.abs));
+    const hasNegativeReal = rows.some(r => r[1] < 0);
+    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
+    let axis: ImportAxisMode = 'wavelength-um';
+    if (xMax > 50) axis = 'wavelength-nm';
+    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
+    return { axis, values };
+  }
+
+  function formatCompact(v: number): string {
+    if (!Number.isFinite(v)) return '';
+    const av = Math.abs(v);
+    if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(3);
+    return v.toPrecision(5);
+  }
+
+  function sampleRows<T>(rows: T[], maxRows: number): T[] {
+    if (rows.length <= maxRows) return rows.slice();
+    const sampled: T[] = [];
+    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
+    return sampled;
+  }
+
+  function previewSeries(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): { xArr: Float64Array; series: PlotSeries[]; xLabel: string; yLabel: string; yRange: [number, number] } | null {
+    const parsed = rows
+      .map(([x, a, b]) => Number.isFinite(x) && Number.isFinite(a) && Number.isFinite(b) ? { x, a, b } : null)
+      .filter((r): r is { x: number; a: number; b: number } => !!r)
+      .sort((a, b) => a.x - b.x);
+    if (parsed.length < 2) return null;
+    const sampled = sampleRows(parsed, 320);
+    const xArr = new Float64Array(sampled.length);
+    const y1 = new Float64Array(sampled.length);
+    const y2 = new Float64Array(sampled.length);
+    for (let i = 0; i < sampled.length; i++) {
+      xArr[i] = sampled[i].x;
+      y1[i] = sampled[i].a;
+      y2[i] = valueMode === 'epsilon' ? sampled[i].b : Math.abs(sampled[i].b);
+    }
+    const series = valueMode === 'epsilon'
+      ? [{ y: y1, color: '#6366F1', label: 'Re \u03B5' }, { y: y2, color: '#F59E0B', label: 'Im \u03B5' }]
+      : [{ y: y1, color: '#6366F1', label: 'n' }, { y: y2, color: '#F59E0B', label: 'k' }];
+    const xLabel = axisMode === 'energy-ev' ? 'Photon energy (eV)' : axisMode === 'wavelength-nm' ? 'Wavelength (nm)' : 'Wavelength (\u03BCm)';
+    const yLabel = valueMode === 'epsilon' ? 'Dielectric function' : 'Refractive index';
+    return { xArr, series, xLabel, yLabel, yRange: seriesRange(series) };
   }
 
   // Uploaded material data storage (main + core)
@@ -1285,13 +1628,18 @@ import Layout from '../../layouts/Layout.astro';
     return v.toExponential(2);
   }
 
-  interface PlotSeries { y: Float64Array; color: string; label: string; }
+  interface PlotSeries { y: Float64Array; color: string; label: string; dash?: number[]; hidden?: boolean; }
   interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; fontScale?: number; }
-  interface ChartXforms { tx: (v: number) => number; ty: (v: number) => number; invTx: (px: number) => number; invTy: (py: number) => number; pL: number; pT: number; pW: number; pH: number; }
+  interface ChartLegendItem { x: number; y: number; w: number; h: number; label: string; }
+  interface ChartRect { x: number; y: number; w: number; h: number; }
+  interface ChartXforms { tx: (v: number) => number; ty: (v: number) => number; invTx: (px: number) => number; invTy: (py: number) => number; pL: number; pT: number; pW: number; pH: number; legendItems: ChartLegendItem[]; legendBox: ChartRect | null; }
   function hexToRgba(hex: string, a: number): string { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r},${g},${b},${a})`; }
 
   function drawChart(canvas: HTMLCanvasElement, xArr: Float64Array, series: PlotSeries[], xLabel: string, yLabel: string, opts: ChartOpts = {}): ChartXforms {
     const ct = chartTheme();
+    const visibleSeries = series.filter(s => !s.hidden);
+    const legendItems: ChartLegendItem[] = [];
+    let legendBox: ChartRect | null = null;
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
@@ -1300,7 +1648,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillStyle = ct.bg; ctx.fillRect(0, 0, W, H);
     let dxMin = xArr[0], dxMax = xArr[0], dyMin = Infinity, dyMax = 0;
     for (let i = 0; i < xArr.length; i++) { if (xArr[i] < dxMin) dxMin = xArr[i]; if (xArr[i] > dxMax) dxMax = xArr[i]; }
-    for (const s of series) for (let i = 0; i < s.y.length; i++) { if (s.y[i] > dyMax) dyMax = s.y[i]; if (s.y[i] > 0 && s.y[i] < dyMin) dyMin = s.y[i]; }
+    for (const s of visibleSeries) for (let i = 0; i < s.y.length; i++) { if (s.y[i] > dyMax) dyMax = s.y[i]; if (s.y[i] > 0 && s.y[i] < dyMin) dyMin = s.y[i]; }
     if (dyMin === Infinity) dyMin = 1;
     const xMin = opts.xRange ? opts.xRange[0] : dxMin, xMax = opts.xRange ? opts.xRange[1] : dxMax;
     const xs = niceScale(xMin, xMax);
@@ -1333,15 +1681,18 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillStyle = ct.text; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
     ctx.save(); ctx.translate(14 * fs, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
-    if (series.length === 1) {
+    if (visibleSeries.length === 1) {
+      const fillSeries = visibleSeries[0];
       ctx.beginPath(); let first = true;
-      for (let i = 0; i < xArr.length; i++) { const v = series[0].y[i]; if (opts.logY && v <= 0) continue; const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
-      if (!first) { ctx.lineTo(tx(xArr[xArr.length - 1]), PAD.top + ph); ctx.lineTo(tx(xArr[0]), PAD.top + ph); ctx.closePath(); const g = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + ph); g.addColorStop(0, hexToRgba(series[0].color, 0.10)); g.addColorStop(1, hexToRgba(series[0].color, 0.00)); ctx.fillStyle = g; ctx.fill(); }
+      for (let i = 0; i < xArr.length; i++) { const v = fillSeries.y[i]; if (opts.logY && v <= 0) continue; const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
+      if (!first) { ctx.lineTo(tx(xArr[xArr.length - 1]), PAD.top + ph); ctx.lineTo(tx(xArr[0]), PAD.top + ph); ctx.closePath(); const g = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + ph); g.addColorStop(0, hexToRgba(fillSeries.color, 0.10)); g.addColorStop(1, hexToRgba(fillSeries.color, 0.00)); ctx.fillStyle = g; ctx.fill(); }
     }
-    for (const s of series) {
+    for (const s of visibleSeries) {
       ctx.beginPath(); let first = true;
       for (let i = 0; i < xArr.length; i++) { const v = s.y[i]; if (opts.logY && v <= 0) continue; const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
+      ctx.setLineDash((s.dash ?? []).map(v => v * fs));
       ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+      ctx.setLineDash([]);
     }
     ctx.restore();
     if (series.length > 1) {
@@ -1351,15 +1702,22 @@ import Layout from '../../layouts/Layout.astro';
       const legendW = lineW + gap + Math.max(...labelWidths) + 16;
       const legendH = series.length * itemH + 8;
       const lx = PAD.left + pw - legendW - 8, ly = PAD.top + 8;
+      legendBox = { x: lx, y: ly, w: legendW, h: legendH };
       ctx.fillStyle = hexToRgba(ct.bg, 0.85); ctx.strokeStyle = hexToRgba(ct.text, 0.1); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.roundRect(lx, ly, legendW, legendH, 4); ctx.fill(); ctx.stroke();
       for (let si = 0; si < series.length; si++) {
         const iy = ly + 4 + (si + 0.5) * itemH;
-        ctx.strokeStyle = series[si].color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx + 8, iy); ctx.lineTo(lx + 8 + lineW, iy); ctx.stroke();
+        legendItems.push({ x: lx, y: iy - itemH / 2, w: legendW, h: itemH, label: series[si].label });
+        ctx.save();
+        ctx.globalAlpha = series[si].hidden ? 0.35 : 1;
+        ctx.strokeStyle = series[si].color; ctx.lineWidth = 2; ctx.setLineDash((series[si].dash ?? []).map(v => v * fs));
+        ctx.beginPath(); ctx.moveTo(lx + 8, iy); ctx.lineTo(lx + 8 + lineW, iy); ctx.stroke();
+        ctx.setLineDash([]);
         ctx.fillStyle = ct.text; ctx.fillText(series[si].label, lx + 8 + lineW + gap, iy);
+        ctx.restore();
       }
     }
-    return { tx, ty, invTx, invTy, pL: PAD.left, pT: PAD.top, pW: pw, pH: ph };
+    return { tx, ty, invTx, invTy, pL: PAD.left, pT: PAD.top, pW: pw, pH: ph, legendItems, legendBox };
   }
 
   // === Polar Chart Renderer ===
@@ -1394,11 +1752,11 @@ import Layout from '../../layouts/Layout.astro';
 
     // Concentric grid circles
     ctx.strokeStyle = hexToRgba(ct.textMuted, 0.35); ctx.lineWidth = 1;
-    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textMuted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textMuted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (let p = lf; p <= lc; p++) {
       const rr = r(p); if (rr <= 0) continue;
       ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 2 * Math.PI); ctx.stroke();
-      ctx.fillText(`10${p >= 0 ? '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[p] || '^' + p : '\u207B' + '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[-p] || '^' + p}`, cx + rr + 3, cy - 3);
+      ctx.fillText(`10${p >= 0 ? '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[p] || '^' + p : '\u207B' + '\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079'[-p] || '^' + p}`, cx + rr - 6 * fs, cy - 6 * fs);
     }
 
     // Radial gridlines + angle labels
@@ -1415,7 +1773,7 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     // Draw scattering pattern (right half + mirror)
-    const color = polMode === 'par' ? '#EC4899' : '#6366F1';
+    const color = polMode === 'perp' ? '#10B981' : polMode === 'par' ? '#EC4899' : '#6366F1';
     ctx.beginPath();
     for (let i = 0; i < pattern.theta.length; i++) {
       const I = intensity[i]; if (I <= 0) continue;
@@ -1596,8 +1954,8 @@ import Layout from '../../layouts/Layout.astro';
     const ctx = canvas.getContext('2d')!; ctx.scale(dpr, dpr);
     const W = rect.width, H = rect.height;
     const fs = opts.fontScale || 1;
-    // Compute plot area (square, centered)
-    const plotSide = Math.min(W - 80 * fs, H - 40 * fs);
+    // Compute plot area (square, centered) with room for axis ticks and labels.
+    const plotSide = Math.min(W - 110 * fs, H - 76 * fs);
     const ox = (W - plotSide) / 2, oy = 20 * fs;
     // Log scale
     const logMin = Math.log10(Math.max(nf.minVal, 1e-6)), logMax = Math.log10(nf.maxVal);
@@ -1637,23 +1995,23 @@ import Layout from '../../layouts/Layout.astro';
     // Labels
     ctx.fillStyle = ct.text; ctx.font = `${Math.round(13 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(`\u03BB = ${lambdaNm.toFixed(1)} nm`, 8, 4);
-    // Axis labels
-    ctx.fillStyle = ct.textSoft; ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('x (nm)', ccx, oy + plotSide + 4 * fs);
-    ctx.save(); ctx.translate(ox - 14 * fs, ccy); ctx.rotate(-Math.PI / 2); ctx.fillText('z (nm)', 0, 0); ctx.restore();
     // Tick marks
-    ctx.font = `${Math.round(8 * fs)}px Inter, system-ui, sans-serif`; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    ctx.font = `${Math.round(9 * fs)}px Inter, system-ui, sans-serif`; ctx.fillStyle = ct.textMuted; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
     const ticks = [-nf.extent, -nf.extent / 2, 0, nf.extent / 2, nf.extent];
     for (const v of ticks) {
       const px2 = ox + (v + nf.extent) / (2 * nf.extent) * plotSide;
-      ctx.fillText(`${v.toFixed(0)}`, px2, oy + plotSide + 1);
+      ctx.fillText(`${v.toFixed(0)}`, px2, oy + plotSide + 7 * fs);
     }
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (const v of ticks) {
       const py2 = oy + (nf.extent - v) / (2 * nf.extent) * plotSide;
-      ctx.fillText(`${v.toFixed(0)}`, ox - 3, py2);
+      ctx.fillText(`${v.toFixed(0)}`, ox - 8 * fs, py2);
     }
+    // Axis labels
+    ctx.fillStyle = ct.textSoft; ctx.font = `600 ${Math.round(12 * fs)}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('x (nm)', ccx, oy + plotSide + 27 * fs);
+    ctx.save(); ctx.translate(ox - 38 * fs, ccy); ctx.rotate(-Math.PI / 2); ctx.fillText('z (nm)', 0, 0); ctx.restore();
   }
 
   // === Param + Tab helpers ===
@@ -1695,6 +2053,9 @@ import Layout from '../../layouts/Layout.astro';
   const chartWrap = document.getElementById('chart-wrap')!;
   const zoomHint = document.getElementById('zoom-hint')!;
   const logToggle = document.getElementById('log-toggle')!;
+  const spectrumControls = document.getElementById('spectrum-controls')!;
+  const materialControls = document.getElementById('material-controls')!;
+  const axisOverlay = document.getElementById('axis-overlay')!;
   const angularControls = document.getElementById('angular-controls')!;
   const angularPolWrap = document.getElementById('angular-pol-wrap')!;
   const angularLambdaInput = document.getElementById('angular-lambda') as HTMLInputElement;
@@ -1714,6 +2075,21 @@ import Layout from '../../layouts/Layout.astro';
   const addShellBtn = document.getElementById('add-shell-btn')!;
   const addShellWrap = document.getElementById('add-shell-wrap')!;
   const shellLimitNote = document.getElementById('shell-limit-note')!;
+  const colorSwatches = document.getElementById('color-swatches')!;
+  const configCheckEl = document.getElementById('config-check') as HTMLButtonElement;
+  const structureDialog = document.getElementById('structure-dialog') as HTMLDialogElement;
+  const structureDialogArt = document.getElementById('structure-dialog-art')!;
+  const structureDialogClose = document.getElementById('structure-dialog-close')!;
+  const materialImportDialog = document.getElementById('material-import-dialog') as HTMLDialogElement;
+  const materialImportFile = document.getElementById('material-import-file')!;
+  const materialImportAxis = document.getElementById('material-import-axis') as HTMLSelectElement;
+  const materialImportValues = document.getElementById('material-import-values') as HTMLSelectElement;
+  const materialImportPreview = document.getElementById('material-import-preview') as HTMLCanvasElement;
+  const materialImportRows = document.getElementById('material-import-rows')!;
+  const materialImportStatus = document.getElementById('material-import-status')!;
+  const materialImportAccept = document.getElementById('material-import-accept') as HTMLButtonElement;
+  const materialImportCancel = document.getElementById('material-import-cancel')!;
+  const materialImportClose = document.getElementById('material-import-close')!;
 
   let data: MieResult, chartXforms: ChartXforms | null = null;
   let currentXArr: Float64Array = new Float64Array(0);
@@ -1721,14 +2097,49 @@ import Layout from '../../layouts/Layout.astro';
   let logY = false, zoomBounds: { xRange: [number, number]; yRange: [number, number] } | null = null;
   let geometry: 'sphere' | 'coreshell' = 'sphere';
   let rafPending = false;
+  let radiusOrderNormalizing = false;
+  const RADIUS_GAP_NM = 5;
   function scheduleUpdate() { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; recompute(); render(); updateConfigCheck(); }); } }
-  function resetAndUpdate() { zoomBounds = null; scheduleUpdate(); }
+  function radiusParams(): ParamHandle[] { return [coreRParam, rParam, ...extraShells.map(s => s.rParam)]; }
+  function normalizeRadiusOrder(preferredIndex?: number) {
+    if (geometry !== 'coreshell' || radiusOrderNormalizing) return;
+    radiusOrderNormalizing = true;
+    try {
+      const params = radiusParams();
+      if (params.length < 2) return;
+      const values = params.map(p => p.value);
+
+      if (preferredIndex !== undefined && preferredIndex >= 0 && preferredIndex < values.length) {
+        const lo = preferredIndex === 0 ? RADIUS_GAP_NM : values[preferredIndex - 1] + RADIUS_GAP_NM;
+        const hi = preferredIndex === values.length - 1 ? Number.POSITIVE_INFINITY : values[preferredIndex + 1] - RADIUS_GAP_NM;
+        values[preferredIndex] = Math.max(lo, values[preferredIndex]);
+        if (Number.isFinite(hi)) values[preferredIndex] = Math.min(hi, values[preferredIndex]);
+      }
+
+      values[0] = Math.max(RADIUS_GAP_NM, values[0]);
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < values[i - 1] + RADIUS_GAP_NM) values[i] = values[i - 1] + RADIUS_GAP_NM;
+      }
+      for (let i = values.length - 2; i >= 0; i--) {
+        if (values[i] > values[i + 1] - RADIUS_GAP_NM) values[i] = values[i + 1] - RADIUS_GAP_NM;
+      }
+      values[0] = Math.max(RADIUS_GAP_NM, values[0]);
+
+      for (let i = 0; i < params.length; i++) {
+        if (Math.abs(params[i].value - values[i]) > 1e-6) params[i].setValue(values[i]);
+      }
+    } finally {
+      radiusOrderNormalizing = false;
+    }
+  }
+  function resetAndUpdate() { zoomBounds = null; normalizeRadiusOrder(); scheduleUpdate(); }
+  function radiusChanged(layerIndex: number) { zoomBounds = null; normalizeRadiusOrder(layerIndex); scheduleUpdate(); }
 
   const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
-  const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), resetAndUpdate);
+  const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), () => radiusChanged(1));
   const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), resetAndUpdate);
   const coreEpsParam = setupParam('core-eps-num', 'core-eps-slider', 'core-eps-min', 'core-eps-max', v => v.toFixed(1), resetAndUpdate);
-  const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', v => v.toFixed(0), resetAndUpdate);
+  const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', v => v.toFixed(0), () => radiusChanged(0));
 
   lamMinInput.addEventListener('change', resetAndUpdate);
   lamMaxInput.addEventListener('change', resetAndUpdate);
@@ -1736,13 +2147,20 @@ import Layout from '../../layouts/Layout.astro';
   const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; render(); });
   const decompTabs = setupTabs('decomp-tabs', 'decomp', 'total', () => { zoomBounds = null; render(); });
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
+  const materialPropTabs = setupTabs('material-prop-tabs', 'materialProp', 'epsilon', () => { zoomBounds = null; render(); });
 
   const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
+    const isSpectrum = v === 'spectrum';
+    const isAxisBased = v === 'spectrum' || v === 'material';
     const isSpatial = v === 'angular' || v === 'nearfield';
-    logToggle.style.display = isSpatial ? 'none' : '';
-    zoomHint.style.display = isSpatial ? 'none' : '';
+    logToggle.style.display = isSpectrum ? '' : 'none';
+    spectrumControls.style.display = isSpectrum ? '' : 'none';
+    axisOverlay.style.display = isAxisBased ? '' : 'none';
+    materialControls.style.display = v === 'material' ? '' : 'none';
+    zoomHint.style.display = isSpectrum ? '' : 'none';
     angularControls.style.display = isSpatial ? '' : 'none';
     angularPolWrap.style.display = v === 'angular' ? '' : 'none';
+    colorSwatches.style.display = isSpectrum ? '' : 'none';
     zoomBounds = null;
     render();
   });
@@ -1847,22 +2265,117 @@ import Layout from '../../layouts/Layout.astro';
     resetAndUpdate();
   });
 
+  interface MaterialImportTarget {
+    fileName: string;
+    statusEl: HTMLElement;
+    inputEl: HTMLInputElement;
+    onAccept: (data: number[][], label: string) => void;
+    onCancel?: () => void;
+  }
+  let pendingMaterialImport: (MaterialImportTarget & { parsed: ParsedOpticalFile }) | null = null;
+
+  function renderMaterialImportPreview() {
+    if (!pendingMaterialImport) return;
+    const axisMode = materialImportAxis.value as ImportAxisMode;
+    const valueMode = materialImportValues.value as ImportValueMode;
+    const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    const preview = previewSeries(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    materialImportStatus.classList.toggle('error', 'error' in converted);
+    materialImportAccept.disabled = 'error' in converted;
+
+    const ctx = materialImportPreview.getContext('2d')!;
+    if (preview) {
+      drawChart(materialImportPreview, preview.xArr, preview.series, preview.xLabel, preview.yLabel, { yRange: preview.yRange, fontScale: 0.82 });
+    } else {
+      const rect = materialImportPreview.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      materialImportPreview.width = rect.width * dpr;
+      materialImportPreview.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+    }
+
+    if ('error' in converted) {
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    materialImportStatus.textContent = `${converted.data.length} rows`;
+  }
+
+  function openMaterialImportDialog(target: MaterialImportTarget, text: string) {
+    const parsed = parseOpticalFile(text);
+    if ('error' in parsed) {
+      target.statusEl.className = 'file-error';
+      target.statusEl.textContent = parsed.error;
+      target.inputEl.value = '';
+      target.onCancel?.();
+      return;
+    }
+    pendingMaterialImport = { ...target, parsed };
+    const inferred = inferImportModes(parsed.rows);
+    materialImportAxis.value = inferred.axis;
+    materialImportValues.value = inferred.values;
+    materialImportFile.textContent = `${target.fileName} (${parsed.rows.length} numeric rows)`;
+    materialImportRows.innerHTML = parsed.rows.slice(0, 8).map(r =>
+      `<tr><td>${formatCompact(r[0])}</td><td>${formatCompact(r[1])}</td><td>${formatCompact(r[2])}</td></tr>`
+    ).join('');
+    if (typeof materialImportDialog.showModal === 'function') materialImportDialog.showModal();
+    else materialImportDialog.setAttribute('open', '');
+    requestAnimationFrame(renderMaterialImportPreview);
+  }
+
+  function cancelMaterialImport() {
+    if (pendingMaterialImport) {
+      pendingMaterialImport.statusEl.className = 'file-name';
+      pendingMaterialImport.statusEl.textContent = 'Import cancelled';
+      pendingMaterialImport.inputEl.value = '';
+      pendingMaterialImport.onCancel?.();
+    }
+    pendingMaterialImport = null;
+    materialImportDialog.close();
+  }
+
+  materialImportAxis.addEventListener('change', renderMaterialImportPreview);
+  materialImportValues.addEventListener('change', renderMaterialImportPreview);
+  materialImportCancel.addEventListener('click', cancelMaterialImport);
+  materialImportClose.addEventListener('click', cancelMaterialImport);
+  materialImportDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === materialImportDialog) cancelMaterialImport();
+  });
+  materialImportAccept.addEventListener('click', () => {
+    if (!pendingMaterialImport) return;
+    const axisMode = materialImportAxis.value as ImportAxisMode;
+    const valueMode = materialImportValues.value as ImportValueMode;
+    const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    if ('error' in converted) {
+      materialImportStatus.classList.add('error');
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    const axisLabel = axisMode === 'energy-ev' ? 'energy eV' : axisMode === 'wavelength-nm' ? 'wavelength nm' : 'wavelength um';
+    const valueLabel = valueMode === 'epsilon' ? 'epsilon' : 'n,k';
+    const label = `${pendingMaterialImport.fileName} (${converted.data.length} points, ${axisLabel}, ${valueLabel})`;
+    pendingMaterialImport.onAccept(converted.data, label);
+    pendingMaterialImport = null;
+    materialImportDialog.close();
+  });
+
   fileUpload.addEventListener('change', () => {
     const file = fileUpload.files?.[0];
     if (!file) return;
     file.text().then(text => {
-      const result = parseNKFile(text);
-      if ('error' in result) {
-        fileNameEl.className = 'file-error';
-        fileNameEl.textContent = result.error;
-        uploadedMaterial = null;
-      } else {
-        uploadedMaterial = result.data;
-        fileNameEl.className = 'file-name';
-        fileNameEl.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
-        materialRefEl.textContent = '';
-        resetAndUpdate();
-      }
+      openMaterialImportDialog({
+        fileName: file.name,
+        statusEl: fileNameEl,
+        inputEl: fileUpload,
+        onAccept: (data, label) => {
+          uploadedMaterial = data;
+          fileNameEl.className = 'file-name';
+          fileNameEl.textContent = label;
+          materialRefEl.textContent = '';
+          resetAndUpdate();
+        },
+      }, text);
     });
   });
 
@@ -1896,17 +2409,18 @@ import Layout from '../../layouts/Layout.astro';
     const file = coreFileUpload.files?.[0];
     if (!file) return;
     file.text().then(text => {
-      const result = parseNKFile(text);
-      if ('error' in result) {
-        coreFileNameEl.className = 'file-error';
-        coreFileNameEl.textContent = result.error;
-        uploadedCoreMaterial = null;
-      } else {
-        uploadedCoreMaterial = result.data;
-        coreFileNameEl.className = 'file-name';
-        coreFileNameEl.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
-        resetAndUpdate();
-      }
+      openMaterialImportDialog({
+        fileName: file.name,
+        statusEl: coreFileNameEl,
+        inputEl: coreFileUpload,
+        onAccept: (data, label) => {
+          uploadedCoreMaterial = data;
+          coreFileNameEl.className = 'file-name';
+          coreFileNameEl.textContent = label;
+          coreMaterialRefEl.textContent = '';
+          resetAndUpdate();
+        },
+      }, text);
     });
   });
 
@@ -1947,6 +2461,7 @@ import Layout from '../../layouts/Layout.astro';
     document.querySelector<HTMLButtonElement>('#qty-tabs [data-qty="csca"]')?.click();
     document.querySelector<HTMLButtonElement>('#decomp-tabs [data-decomp="total"]')?.click();
     document.querySelector<HTMLButtonElement>('#axis-tabs [data-axis="lambda"]')?.click();
+    document.querySelector<HTMLButtonElement>('#material-prop-tabs [data-material-prop="epsilon"]')?.click();
     syncPresets();
     resetAndUpdate();
   });
@@ -2000,8 +2515,6 @@ import Layout from '../../layouts/Layout.astro';
             : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
       layers.push({ getDielectric: getDiel, radiusNm: sh.rParam.value });
     }
-    // Sort by radius (enforce r_core < r_shell1 < r_shell2 ...)
-    layers.sort((a, b) => a.radiusNm - b.radiusNm);
     return layers;
   }
 
@@ -2029,6 +2542,7 @@ import Layout from '../../layouts/Layout.astro';
 
   function createShellSection(outerR: number): ShellHandle {
     const idx = extraShells.length;
+    const maxOuterR = Math.max(500, outerR + 100);
     const sec = document.createElement('details');
     sec.className = 'layer-details';
     sec.open = true;
@@ -2078,11 +2592,11 @@ import Layout from '../../layouts/Layout.astro';
             <label>Outer radius (nm)</label>
             <input type="number" class="param-number sh-r-num" value="${outerR}" step="5" min="1">
           </div>
-          <input type="range" class="param-slider sh-r-slider" min="10" max="500" step="5" value="${outerR}">
+          <input type="range" class="param-slider sh-r-slider" min="10" max="${maxOuterR}" step="5" value="${outerR}">
           <div class="param-limits">
             <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
             <span class="param-limit-dash">&mdash;</span>
-            <input type="number" class="param-limit sh-r-max" value="500" step="5" min="1">
+            <input type="number" class="param-limit sh-r-max" value="${maxOuterR}" step="5" min="1">
           </div>
         </div>
       </div>`;
@@ -2099,12 +2613,13 @@ import Layout from '../../layouts/Layout.astro';
       sec.querySelector('.sh-eps-max') as HTMLInputElement,
       v => v.toFixed(1), resetAndUpdate,
     );
+    let handle: ShellHandle;
     const rP = setupParamEl(
       sec.querySelector('.sh-r-num') as HTMLInputElement,
       sec.querySelector('.sh-r-slider') as HTMLInputElement,
       sec.querySelector('.sh-r-min') as HTMLInputElement,
       sec.querySelector('.sh-r-max') as HTMLInputElement,
-      v => v.toFixed(0), resetAndUpdate,
+      v => v.toFixed(0), () => radiusChanged(extraShells.indexOf(handle) + 2),
     );
 
     const shFileGrp = sec.querySelector('.sh-file-group') as HTMLElement;
@@ -2132,23 +2647,24 @@ import Layout from '../../layouts/Layout.astro';
       resetAndUpdate();
     });
 
-    const handle: ShellHandle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl, uploadedData: null };
+    handle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl, uploadedData: null };
 
     shFileInput.addEventListener('change', () => {
       const file = shFileInput.files?.[0];
       if (!file) return;
       file.text().then(text => {
-        const result = parseNKFile(text);
-        if ('error' in result) {
-          shFileName.className = 'file-error';
-          shFileName.textContent = result.error;
-          handle.uploadedData = null;
-        } else {
-          handle.uploadedData = result.data;
-          shFileName.className = 'file-name';
-          shFileName.textContent = `${file.name} (${result.data.length} points, ${result.unit})`;
-          resetAndUpdate();
-        }
+        openMaterialImportDialog({
+          fileName: file.name,
+          statusEl: shFileName,
+          inputEl: shFileInput,
+          onAccept: (data, label) => {
+            handle.uploadedData = data;
+            shFileName.className = 'file-name';
+            shFileName.textContent = label;
+            refEl.textContent = '';
+            resetAndUpdate();
+          },
+        }, text);
       });
     });
     sec.querySelector('.remove-shell-btn')!.addEventListener('click', () => removeShellSection(handle));
@@ -2169,7 +2685,7 @@ import Layout from '../../layouts/Layout.astro';
   addShellBtn.addEventListener('click', () => {
     // Default outer radius: 20 nm larger than current outermost
     const lastR = extraShells.length > 0 ? extraShells[extraShells.length - 1].rParam.value : rParam.value;
-    createShellSection(Math.min(lastR + 20, 500));
+    createShellSection(lastR + 20);
   });
 
   function recompute() {
@@ -2263,6 +2779,122 @@ import Layout from '../../layouts/Layout.astro';
     return { xArr, series, xLabel, yLabel };
   }
 
+  function seriesRange(series: PlotSeries[], zeroFloor = false): [number, number] {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (const s of series) {
+      if (s.hidden) continue;
+      for (let i = 0; i < s.y.length; i++) {
+        const v = s.y[i];
+        if (!Number.isFinite(v)) continue;
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+      }
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+    if (zeroFloor) min = Math.min(0, min);
+    if (max <= min) {
+      const span = Math.max(1, Math.abs(max) * 0.1);
+      min -= span;
+      max += span;
+    }
+    const pad = (max - min) * 0.08;
+    return [min - pad, max + pad];
+  }
+
+  const MATERIAL_LAYER_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EC4899', '#14B8A6', '#8B5CF6'] as const;
+  const hiddenMaterialSeries = new Set<string>();
+  function materialEntries(): { label: string; getDielectric: (lambdaNm: number) => [number, number] }[] {
+    if (geometry !== 'coreshell') return [{ label: 'Particle', getDielectric }];
+    const entries = [
+      { label: 'Core', getDielectric: getCoreDielectric },
+      { label: 'Shell 1', getDielectric },
+    ];
+    for (let i = 0; i < extraShells.length; i++) {
+      const sh = extraShells[i];
+      const mat = sh.material.value;
+      const eps = sh.epsParam.value;
+      const fileData = sh.uploadedData;
+      const getDiel = mat === 'custom'
+        ? (_: number): [number, number] => [Math.sqrt(eps), 0]
+        : (mat === 'file' || mat === 'rii') && fileData
+          ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
+          : (mat === 'file' || mat === 'rii')
+            ? (_: number): [number, number] => [1, 0]
+            : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
+      entries.push({ label: `Shell ${i + 2}`, getDielectric: getDiel });
+    }
+    return entries;
+  }
+
+  function getMaterialPlotData(): { xArr: Float64Array; series: PlotSeries[]; xLabel: string; yLabel: string; yRange: [number, number] } {
+    const n = data.lambda.length;
+    const isEnergy = axisTabs.value === 'energy';
+    const xArr = new Float64Array(n);
+    if (isEnergy) {
+      for (let i = 0; i < n; i++) xArr[i] = data.energy[n - 1 - i];
+    } else {
+      xArr.set(data.lambda);
+    }
+    const orient = (a: Float64Array): Float64Array => {
+      if (!isEnergy) return a;
+      const r = new Float64Array(n);
+      for (let i = 0; i < n; i++) r[i] = a[n - 1 - i];
+      return r;
+    };
+
+    const series: PlotSeries[] = [];
+    const materialSeries = (y: Float64Array, color: string, label: string, dash?: number[]): PlotSeries => ({
+      y,
+      color,
+      label,
+      dash,
+      hidden: hiddenMaterialSeries.has(label),
+    });
+    const entries = materialEntries();
+    if (materialPropTabs.value === 'nk') {
+      for (let mi = 0; mi < entries.length; mi++) {
+        const color = MATERIAL_LAYER_COLORS[mi % MATERIAL_LAYER_COLORS.length];
+        const nArr = new Float64Array(n);
+        const kArr = new Float64Array(n);
+        for (let i = 0; i < n; i++) {
+          const [nr, ki] = entries[mi].getDielectric(data.lambda[i]);
+          nArr[i] = nr;
+          kArr[i] = ki;
+        }
+        series.push(materialSeries(orient(nArr), color, `${entries[mi].label} n`));
+        series.push(materialSeries(orient(kArr), color, `${entries[mi].label} k`, [5, 4]));
+      }
+      return {
+        xArr,
+        series,
+        xLabel: isEnergy ? 'Photon energy (eV)' : 'Wavelength (nm)',
+        yLabel: 'Refractive index',
+        yRange: seriesRange(series, true),
+      };
+    }
+
+    for (let mi = 0; mi < entries.length; mi++) {
+      const color = MATERIAL_LAYER_COLORS[mi % MATERIAL_LAYER_COLORS.length];
+      const realEps = new Float64Array(n);
+      const imagEps = new Float64Array(n);
+      for (let i = 0; i < n; i++) {
+        const [nr, ki] = entries[mi].getDielectric(data.lambda[i]);
+        realEps[i] = nr * nr - ki * ki;
+        imagEps[i] = 2 * nr * ki;
+      }
+      series.push(materialSeries(orient(realEps), color, `${entries[mi].label} Re \u03B5`));
+      series.push(materialSeries(orient(imagEps), color, `${entries[mi].label} Im \u03B5`, [5, 4]));
+    }
+    return {
+      xArr,
+      series,
+      xLabel: isEnergy ? 'Photon energy (eV)' : 'Wavelength (nm)',
+      yLabel: 'Dielectric function',
+      yRange: seriesRange(series),
+    };
+  }
+
   const swatchSca = document.getElementById('swatch-sca') as HTMLElement;
   const swatchTrans = document.getElementById('swatch-trans') as HTMLElement;
 
@@ -2293,6 +2925,7 @@ import Layout from '../../layouts/Layout.astro';
     if (!data) return;
     if (viewTabs.value === 'angular') { renderAngular(); return; }
     if (viewTabs.value === 'nearfield') { renderNearField(); return; }
+    if (viewTabs.value === 'material') { renderMaterial(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
     currentXArr = xArr; currentSeries = series;
     const opts: ChartOpts = { logY };
@@ -2301,6 +2934,14 @@ import Layout from '../../layouts/Layout.astro';
     zoomHint.classList.toggle('visible', !!zoomBounds);
     clearOverlay();
     updateSwatches();
+  }
+
+  function renderMaterial() {
+    chartXforms = null;
+    const { xArr, series, xLabel, yLabel, yRange } = getMaterialPlotData();
+    currentXArr = xArr; currentSeries = series;
+    chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, { yRange });
+    clearOverlay();
   }
 
   function renderAngular() {
@@ -2341,13 +2982,38 @@ import Layout from '../../layouts/Layout.astro';
   function sizeOverlay() { const dpr = window.devicePixelRatio || 1; const r = overlay.getBoundingClientRect(); overlay.width = r.width * dpr; overlay.height = r.height * dpr; const c = overlay.getContext('2d')!; c.scale(dpr, dpr); return c; }
   function clearOverlay() { const c = sizeOverlay(); c.clearRect(0, 0, overlay.width, overlay.height); tooltip.classList.remove('visible'); }
   function nearestIdx(xArr: Float64Array, xVal: number): number { let lo = 0, hi = xArr.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (xArr[m] < xVal) lo = m + 1; else hi = m; } if (lo > 0 && Math.abs(xArr[lo - 1] - xVal) < Math.abs(xArr[lo] - xVal)) lo--; return lo; }
+  function rectsOverlap(a: ChartRect, b: ChartRect): boolean { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+  function materialLegendHit(mx: number, my: number): ChartLegendItem | null {
+    if (viewTabs.value !== 'material' || !chartXforms) return null;
+    return chartXforms.legendItems.find(item => mx >= item.x && mx <= item.x + item.w && my >= item.y && my <= item.y + item.h) ?? null;
+  }
 
   let dragStart: { x: number; y: number } | null = null, isDragging = false;
-  chartWrap.addEventListener('mousedown', (e: MouseEvent) => { if (e.button === 0) { dragStart = { x: e.offsetX, y: e.offsetY }; isDragging = false; } });
+  chartWrap.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    const hit = materialLegendHit(e.offsetX, e.offsetY);
+    if (hit) {
+      if (hiddenMaterialSeries.has(hit.label)) hiddenMaterialSeries.delete(hit.label);
+      else hiddenMaterialSeries.add(hit.label);
+      dragStart = null;
+      isDragging = false;
+      clearOverlay();
+      render();
+      return;
+    }
+    dragStart = { x: e.offsetX, y: e.offsetY };
+    isDragging = false;
+  });
   chartWrap.addEventListener('mousemove', (e: MouseEvent) => {
     if (!chartXforms || !data) return;
     const { tx, ty, invTx, pL, pT, pW, pH } = chartXforms;
     const mx = e.offsetX, my = e.offsetY;
+    if (materialLegendHit(mx, my)) {
+      chartWrap.style.cursor = 'pointer';
+      clearOverlay();
+      return;
+    }
+    chartWrap.style.cursor = 'crosshair';
     if (dragStart) {
       if (Math.abs(mx - dragStart.x) > 5 || Math.abs(my - dragStart.y) > 5) isDragging = true;
       if (isDragging) {
@@ -2359,7 +3025,9 @@ import Layout from '../../layouts/Layout.astro';
         tooltip.classList.remove('visible'); return;
       }
     }
-    if (mx < pL || mx > pL + pW || my < pT || my > pT + pH) { clearOverlay(); return; }
+    if (mx < pL || mx > pL + pW || my < pT || my > pT + pH) { chartWrap.style.cursor = ''; clearOverlay(); return; }
+    const visibleSeries = currentSeries.filter(s => !s.hidden);
+    if (!visibleSeries.length) { clearOverlay(); return; }
     const xVal = invTx(mx);
     const idx = nearestIdx(currentXArr, xVal);
     const dX = currentXArr[idx], px = tx(dX);
@@ -2367,20 +3035,37 @@ import Layout from '../../layouts/Layout.astro';
     c.strokeStyle = 'rgba(99,102,241,0.4)'; c.setLineDash([4, 4]); c.lineWidth = 1;
     c.beginPath(); c.moveTo(px, pT); c.lineTo(px, pT + pH); c.stroke();
     c.setLineDash([]);
-    for (const s of currentSeries) {
+    const usesLogForTooltip = viewTabs.value !== 'material' && logY;
+    for (const s of visibleSeries) {
       const dY = s.y[idx], py = ty(dY);
+      if (!Number.isFinite(dY) || (usesLogForTooltip && dY <= 0)) continue;
       c.fillStyle = s.color; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.fill();
       c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.stroke();
     }
-    const xS = axisTabs.value === 'lambda' ? `\u03BB = ${dX.toFixed(1)} nm` : `E = ${dX.toFixed(3)} eV`;
+    const xS = axisTabs.value === 'lambda'
+      ? `\u03BB = ${dX.toFixed(1)} nm`
+      : `E = ${dX.toFixed(3)} eV`;
     let ttHtml = xS;
-    for (const s of currentSeries) ttHtml += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}`;
+    for (const s of visibleSeries) ttHtml += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}`;
     tooltip.innerHTML = ttHtml;
     tooltip.classList.add('visible');
-    const topPy = Math.min(...currentSeries.map(s => ty(s.y[idx])));
+    const pointYs = visibleSeries.map(s => ty(s.y[idx])).filter(v => Number.isFinite(v));
+    const topPy = pointYs.length ? Math.min(...pointYs) : pT + pH / 2;
     let tL = px + 12, tT = topPy - 36;
-    if (tL + tooltip.offsetWidth > chartWrap.getBoundingClientRect().width - 4) tL = px - tooltip.offsetWidth - 12;
-    if (tT < 4) tT = topPy + 12;
+    const wrapRect = chartWrap.getBoundingClientRect();
+    if (viewTabs.value === 'material') {
+      tL = pL + 10;
+      tT = pT + 10;
+      const proposed = { x: tL, y: tT, w: tooltip.offsetWidth, h: tooltip.offsetHeight };
+      if (chartXforms.legendBox && rectsOverlap(proposed, chartXforms.legendBox)) {
+        tL = Math.max(4, chartXforms.legendBox.x - tooltip.offsetWidth - 12);
+      }
+    } else {
+      if (tL + tooltip.offsetWidth > wrapRect.width - 4) tL = px - tooltip.offsetWidth - 12;
+      if (tT < 4) tT = topPy + 12;
+    }
+    tL = Math.max(4, Math.min(tL, wrapRect.width - tooltip.offsetWidth - 4));
+    tT = Math.max(4, Math.min(tT, wrapRect.height - tooltip.offsetHeight - 4));
     tooltip.style.left = tL + 'px'; tooltip.style.top = tT + 'px';
   });
   chartWrap.addEventListener('mouseup', (e: MouseEvent) => {
@@ -2392,7 +3077,7 @@ import Layout from '../../layouts/Layout.astro';
     }
     dragStart = null; isDragging = false;
   });
-  chartWrap.addEventListener('mouseleave', () => { dragStart = null; isDragging = false; clearOverlay(); });
+  chartWrap.addEventListener('mouseleave', () => { dragStart = null; isDragging = false; chartWrap.style.cursor = ''; clearOverlay(); });
   chartWrap.addEventListener('dblclick', () => { if (zoomBounds) { zoomBounds = null; render(); } });
 
   // === Config Check ===
@@ -2400,8 +3085,11 @@ import Layout from '../../layouts/Layout.astro';
   const MAT_COLORS: Record<string, string> = { au:'#FFD700', ag:'#C0C0C0', si:'#7B68EE', al:'#87CEEB', tio2:'#DDA0DD', custom:'#90EE90', file:'#FFA07A', rii:'#FFA07A' };
   const MAT_NAMES: Record<string, string> = { au:'Au', ag:'Ag', si:'Si', al:'Al', tio2:'TiO\u2082', custom:'Custom \u03B5', file:'File', rii:'Database' };
 
+  function withSvgMarkerId(svg: string, markerId: string): string {
+    return svg.replace('id="arr"', `id="${markerId}"`).replace(/url\(#arr\)/g, `url(#${markerId})`);
+  }
+
   function updateConfigCheck() {
-    const el = document.getElementById('config-check')!;
     interface CLayer { r: number; mat: string; eps: number; ref: string; name: string; }
     const layers: CLayer[] = [];
     if (geometry === 'coreshell') {
@@ -2411,7 +3099,6 @@ import Layout from '../../layouts/Layout.astro';
         const sh = extraShells[i];
         layers.push({ r: sh.rParam.value, mat: sh.material.value, eps: sh.epsParam.value, ref: sh.refEl.textContent || '', name: `Shell ${i+2}` });
       }
-      layers.sort((a, b) => a.r - b.r);
     } else {
       layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Particle' });
     }
@@ -2424,15 +3111,15 @@ import Layout from '../../layouts/Layout.astro';
     // Full-width annotated cross-section SVG
     const W = 280, circR = 44, cx = 68, labelX = cx + circR + 14;
     const rowH = layers.length > 3 ? 18 : 22;
-    const H = Math.max(circR * 2 + 36, layers.length * rowH + 50);
-    const cy = H / 2;
+    const H = Math.max(circR * 2 + 74, layers.length * rowH + 70);
+    const cy = 24 + circR;
     const ct = chartTheme();
     let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
     // Background
     s += `<rect width="${W}" height="${H}" fill="${ct.grid}" rx="6"/>`;
     // Host label
     s += `<text x="${cx}" y="11" text-anchor="middle" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
-    s += `<text x="${cx}" y="${H-4}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
+    s += `<text x="${cx}" y="${H-8}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
     // Concentric circles (outer to inner)
     for (let i = layers.length - 1; i >= 0; i--) {
       const r = Math.max(5, (layers[i].r / maxR) * circR);
@@ -2461,8 +3148,19 @@ import Layout from '../../layouts/Layout.astro';
     s += `<defs><marker id="arr" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="none" stroke="${ct.textMuted}" stroke-width="0.7"/></marker></defs>`;
     s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
     s += '</svg>';
-    el.innerHTML = s;
+    configCheckEl.innerHTML = withSvgMarkerId(s, 'mie-config-radius-arrow');
+    configCheckEl.setAttribute('aria-label', `Open enlarged structure drawing for ${geometry === 'coreshell' ? 'core-shell particle' : 'sphere'}`);
+    structureDialogArt.innerHTML = withSvgMarkerId(s, 'mie-config-radius-arrow-modal');
   }
+
+  configCheckEl.addEventListener('click', () => {
+    if (typeof structureDialog.showModal === 'function') structureDialog.showModal();
+    else structureDialog.setAttribute('open', '');
+  });
+  structureDialogClose.addEventListener('click', () => structureDialog.close());
+  structureDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === structureDialog) structureDialog.close();
+  });
 
   // === Downloads ===
 
@@ -2481,8 +3179,15 @@ import Layout from '../../layouts/Layout.astro';
     ec.width = w * s; ec.height = h * s; const cx = ec.getContext('2d')!; cx.scale(s, s);
     const or = ec.getBoundingClientRect.bind(ec);
     ec.getBoundingClientRect = () => ({ ...or(), width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON() { return this; } });
-    const { xArr, series, xLabel, yLabel } = getPlotData();
-    const opts: ChartOpts = { logY, fontScale: w / canvas.getBoundingClientRect().width }; if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    const materialPlot = viewTabs.value === 'material' ? getMaterialPlotData() : null;
+    const spectrumPlot = materialPlot ? null : getPlotData();
+    const xArr = materialPlot?.xArr ?? spectrumPlot!.xArr;
+    const series = materialPlot?.series ?? spectrumPlot!.series;
+    const xLabel = materialPlot?.xLabel ?? spectrumPlot!.xLabel;
+    const yLabel = materialPlot?.yLabel ?? spectrumPlot!.yLabel;
+    const opts: ChartOpts = { logY: materialPlot ? false : logY, fontScale: w / canvas.getBoundingClientRect().width };
+    if (materialPlot) opts.yRange = materialPlot.yRange;
+    if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
     const sd = window.devicePixelRatio;
     Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
     drawChart(ec, xArr, series, xLabel, yLabel, opts);
@@ -2491,6 +3196,26 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   document.getElementById('dl-csv')!.addEventListener('click', () => {
+    if (viewTabs.value === 'material') {
+      const lines = [
+        `# Mie material function, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`,
+        '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+        'wavelength_nm,n,k,epsilon_re,epsilon_im',
+      ];
+      for (let i = 0; i < data.lambda.length; i++) {
+        const [nr, ki] = getDielectric(data.lambda[i]);
+        lines.push([
+          data.lambda[i].toFixed(4),
+          nr.toFixed(8),
+          ki.toFixed(8),
+          (nr * nr - ki * ki).toFixed(8),
+          (2 * nr * ki).toFixed(8),
+        ].join(','));
+      }
+      downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_material.csv');
+      return;
+    }
+
     const mat = materialSelect.value;
     const matS = mat === 'custom' ? `eps_r=${epsParam.value}` : `material=${mat} (${MATERIALS[mat].ref})`;
     let headerLine: string;
@@ -2525,6 +3250,7 @@ import Layout from '../../layouts/Layout.astro';
     p.set('qty', qtyTabs.value);
     p.set('decomp', decompTabs.value);
     p.set('axis', axisTabs.value);
+    p.set('mprop', materialPropTabs.value);
     p.set('pol', polTabs.value);
     p.set('al', angularLambdaInput.value);
     if (logY) p.set('logY', '1');
@@ -2567,6 +3293,7 @@ import Layout from '../../layouts/Layout.astro';
     if (p.has('qty')) qtyTabs.select(p.get('qty')!, true);
     if (p.has('decomp')) decompTabs.select(p.get('decomp')!, true);
     if (p.has('axis')) axisTabs.select(p.get('axis')!, true);
+    if (p.has('mprop')) materialPropTabs.select(p.get('mprop')!, true);
     if (p.has('pol')) polTabs.select(p.get('pol')!, true);
     if (p.has('view')) viewTabs.select(p.get('view')!);
   }
