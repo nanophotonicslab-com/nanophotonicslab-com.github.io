@@ -29,8 +29,28 @@ import Layout from '../../layouts/Layout.astro';
               <option value="ag">Silver (Ag)</option>
               <option value="al">Aluminum (Al)</option>
               <option value="si">Silicon (Si)</option>
+              <option value="tio2">Titanium dioxide (TiO2)</option>
+              <option value="custom">Custom dielectric</option>
+              <option value="file">Upload file&hellip;</option>
+              <option value="rii">Search database&hellip;</option>
             </select>
             <span class="material-ref" id="material-ref"></span>
+            <div class="file-upload-row" id="file-upload-group" style="display:none">
+              <input type="file" id="file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="file-name"></span>
+            </div>
+            <div class="rii-search" id="rii-search-group" style="display:none">
+              <input type="text" id="rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+              <div class="rii-results" id="rii-results"></div>
+              <span class="material-ref" id="rii-status"></span>
+            </div>
+          </div>
+
+          <div class="param hidden" id="eps-group">
+            <div class="param-header">
+              <label>&epsilon;<sub>r</sub></label>
+              <input type="number" class="param-number" id="eps-num" value="10" step="0.5" min="1">
+            </div>
           </div>
 
           <div class="param">
@@ -80,7 +100,7 @@ import Layout from '../../layouts/Layout.astro';
 
           <div class="param">
             <div class="param-header">
-              <label>Beam waist w<sub>0</sub> (&mu;m)</label>
+              <label>1/e field waist w<sub>0</sub> (&mu;m)</label>
               <input type="number" class="param-number" id="w0-num" value="1" step="0.1" min="0.1">
             </div>
             <input type="range" class="param-slider" id="w0-slider" min="0.1" max="50" step="0.1" value="1">
@@ -136,39 +156,51 @@ import Layout from '../../layouts/Layout.astro';
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="mie-chart" aria-label="Absorption and scattering cross-section spectra"></canvas>
           </div>
+          <div class="color-swatches" id="color-swatches">
+            <span class="swatch-label">Apparent color</span>
+            <div class="swatch-item">
+              <div class="swatch-box" id="swatch-sca"></div>
+              <span class="swatch-name">scattered</span>
+            </div>
+            <div class="swatch-item">
+              <div class="swatch-box" id="swatch-trans"></div>
+              <span class="swatch-name">transmitted</span>
+            </div>
+          </div>
         </div>
 
         <!-- ===== Output panel ===== -->
         <div class="output-card card">
-          <div class="colors-row">
-            <span class="colors-label">Apparent color (CIE&nbsp;1931, illuminant&nbsp;E)</span>
-            <div class="color-item">
-              <div class="color-box" id="swatch-sca"></div>
-              <span class="color-name">scattered</span>
-            </div>
-            <div class="color-item">
-              <div class="color-box" id="swatch-trans"></div>
-              <span class="color-name">transmitted</span>
-            </div>
-          </div>
           <div class="stats">
             <div class="stat">
-              <span class="stat-label">&sigma;<sub>abs</sub></span>
+              <div class="stat-head">
+                <span class="stat-label">&sigma;<sub>abs</sub></span>
+                <button class="stat-info" type="button" aria-label="Absorption cross-section info">i<span class="stat-tooltip" role="tooltip">Effective area for converting incident optical power into heat inside the particle at the selected laser wavelength.</span></button>
+              </div>
               <span class="stat-value" id="out-cabs">&mdash;</span>
               <span class="stat-unit">nm&sup2;</span>
             </div>
             <div class="stat">
-              <span class="stat-label">&sigma;<sub>sca</sub></span>
+              <div class="stat-head">
+                <span class="stat-label">&sigma;<sub>sca</sub></span>
+                <button class="stat-info" type="button" aria-label="Scattering cross-section info">i<span class="stat-tooltip" role="tooltip">Effective area for redirecting light away from the incident beam. This contributes to optical loss but not directly to local heating.</span></button>
+              </div>
               <span class="stat-value" id="out-csca">&mdash;</span>
               <span class="stat-unit">nm&sup2;</span>
             </div>
             <div class="stat">
-              <span class="stat-label">&sigma;<sub>ext</sub></span>
+              <div class="stat-head">
+                <span class="stat-label">&sigma;<sub>ext</sub></span>
+                <button class="stat-info" type="button" aria-label="Extinction cross-section info">i<span class="stat-tooltip" role="tooltip">Total optical removal from the incident beam: absorption plus scattering, &sigma;ext = &sigma;abs + &sigma;sca.</span></button>
+              </div>
               <span class="stat-value" id="out-cext">&mdash;</span>
               <span class="stat-unit">nm&sup2;</span>
             </div>
             <div class="stat">
-              <span class="stat-label">Albedo</span>
+              <div class="stat-head">
+                <span class="stat-label">Albedo</span>
+                <button class="stat-info" type="button" aria-label="Albedo info">i<span class="stat-tooltip" role="tooltip">Scattering fraction of extinction, &sigma;sca / &sigma;ext. Values near 0 are mostly absorptive; values near 1 are mostly scattering.</span></button>
+              </div>
               <span class="stat-value" id="out-albedo">&mdash;</span>
               <span class="stat-unit"></span>
             </div>
@@ -198,9 +230,11 @@ import Layout from '../../layouts/Layout.astro';
           </div>
 
           <div class="delta-t">
-            <span class="delta-t-label">&Delta;T at surface</span>
-            <div class="delta-t-value"><span id="out-dt">&mdash;</span><span class="delta-t-unit">K</span></div>
-            <div class="profile-wrap" id="profile-wrap">
+            <button type="button" class="delta-t-trigger" id="profile-open" aria-haspopup="dialog" aria-controls="profile-dialog">
+              <span class="delta-t-label">&Delta;T at surface</span>
+              <span class="delta-t-value"><span id="out-dt">&mdash;</span><span class="delta-t-unit">K</span></span>
+            </button>
+            <div class="profile-wrap" id="profile-wrap" role="button" tabindex="0" aria-label="Open enlarged radial temperature profile">
               <canvas id="profile-chart" aria-label="Radial temperature profile T(r)"></canvas>
             </div>
             <span class="profile-label">
@@ -210,6 +244,74 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
       </div>
+
+      <dialog class="profile-dialog" id="profile-dialog" aria-labelledby="profile-dialog-title">
+        <div class="profile-dialog__panel">
+          <div class="profile-dialog__header">
+            <div>
+              <h3 id="profile-dialog-title">Radial Temperature Profile</h3>
+              <p><span id="profile-dialog-dt">&mdash;</span> K at the particle surface</p>
+            </div>
+            <div class="profile-dialog__actions">
+              <button type="button" class="chart-tool-btn" id="profile-export-png">Export PNG</button>
+              <button type="button" class="chart-tool-btn" id="profile-export-csv">Export CSV</button>
+              <button type="button" class="profile-dialog__close" id="profile-dialog-close" aria-label="Close temperature profile">&times;</button>
+            </div>
+          </div>
+          <div class="profile-dialog__chart">
+            <canvas id="profile-chart-large" aria-label="Large radial temperature profile"></canvas>
+            <div class="profile-chart-tooltip" id="profile-chart-tooltip" role="status" aria-live="polite"></div>
+          </div>
+          <p class="profile-dialog__note">
+            Steady-state point-source approximation outside the particle: &Delta;T(r) = &Delta;T(R)&middot;R/r for r&nbsp;&ge;&nbsp;R.
+          </p>
+        </div>
+      </dialog>
+
+      <dialog class="material-import-dialog" id="material-import-dialog" aria-labelledby="material-import-title">
+        <div class="material-import-dialog__panel">
+          <div class="material-import-dialog__header">
+            <div>
+              <h3 id="material-import-title">Confirm Material Import</h3>
+              <p id="material-import-file">No file selected</p>
+            </div>
+            <button type="button" class="profile-dialog__close" id="material-import-close" aria-label="Cancel material import">&times;</button>
+          </div>
+          <div class="material-import-dialog__grid">
+            <label>
+              <span>First column</span>
+              <select id="material-import-axis" class="param-select">
+                <option value="energy-ev">Photon energy (eV)</option>
+                <option value="wavelength-nm">Wavelength (nm)</option>
+                <option value="wavelength-um">Wavelength (&micro;m)</option>
+              </select>
+            </label>
+            <label>
+              <span>Columns 2 and 3</span>
+              <select id="material-import-values" class="param-select">
+                <option value="epsilon">Re &epsilon;, Im &epsilon;</option>
+                <option value="nk">n, k</option>
+              </select>
+            </label>
+          </div>
+          <div class="material-import-dialog__preview">
+            <canvas id="material-import-preview" aria-label="Material preview"></canvas>
+          </div>
+          <div class="material-import-dialog__table-wrap">
+            <table class="material-import-dialog__table">
+              <thead>
+                <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+              </thead>
+              <tbody id="material-import-rows"></tbody>
+            </table>
+          </div>
+          <p class="material-import-dialog__status" id="material-import-status"></p>
+          <div class="material-import-dialog__actions">
+            <button type="button" class="chart-tool-btn" id="material-import-cancel">Cancel</button>
+            <button type="button" class="chart-tool-btn active" id="material-import-accept">Use material</button>
+          </div>
+        </div>
+      </dialog>
 
       <div class="references card">
         <h4>References &amp; data sources</h4>
@@ -272,7 +374,24 @@ import Layout from '../../layouts/Layout.astro';
     font-family: var(--font); font-size: 0.8125rem; font-weight: 500; color: var(--text);
     background: var(--bg); outline: none; cursor: pointer;
   }
+  .param-select:focus { border-color: var(--primary-light); }
+  .hidden { display: none !important; }
   .material-ref { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; }
+  .file-input { font-size: 0.75rem; font-family: var(--font); color: var(--text-soft); }
+  .file-input::file-selector-button { padding: 0.2rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-soft); cursor: pointer; margin-right: 0.4rem; transition: all 0.15s; }
+  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
+  .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .file-error { font-size: 0.6875rem; color: var(--rose); }
+  .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
+  .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
+  .rii-results:empty { display: none; }
+  .rii-result { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
+  .rii-result:last-child { border-bottom: none; }
+  .rii-result:hover { background: rgba(99,102,241,0.06); }
+  .rii-result-book { font-weight: 600; color: var(--text); }
+  .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }
 
   .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
   .preset-btn {
@@ -303,6 +422,11 @@ import Layout from '../../layouts/Layout.astro';
   .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
   .chart-wrap { position: relative; }
   .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+  .color-swatches { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
+  .swatch-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  .swatch-item { display: flex; align-items: center; gap: 0.35rem; }
+  .swatch-box { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid var(--bg-muted); background: #222; transition: background 0.3s; }
+  .swatch-name { font-size: 0.75rem; color: var(--text-soft); }
 
   /* Output card */
   .output-card {
@@ -312,39 +436,81 @@ import Layout from '../../layouts/Layout.astro';
     gap: var(--space-md) var(--space-lg);
     align-items: start;
   }
-  .colors-row {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: var(--space-lg);
-    padding-bottom: var(--space-sm);
-    border-bottom: 1px solid var(--bg-muted);
-  }
-  .colors-label {
-    font-size: 0.6875rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-  .color-item { display: flex; align-items: center; gap: 0.5rem; }
-  .color-box {
-    width: 36px; height: 36px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--bg-muted);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
-    transition: background 0.3s;
-    background: #222;
-  }
-  .color-name {
-    font-size: 0.75rem; color: var(--text-soft);
-    font-weight: 500;
-  }
+  .output-card.card,
+  .output-card,
+  .stats,
+  .stat,
+  .stat-info { overflow: visible; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .stat {
+    position: relative;
     display: flex; flex-direction: column; gap: 0.15rem;
     padding: var(--space-sm); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     background: var(--bg-soft);
   }
+  .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
   .stat-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .stat-info {
+    position: relative;
+    width: 1.1rem;
+    height: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1;
+    cursor: help;
+    z-index: 1;
+    isolation: isolate;
+  }
+  .stat-info:hover,
+  .stat-info:focus-visible {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    outline: none;
+  }
+  .stat-tooltip {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    right: auto;
+    bottom: auto;
+    width: min(280px, calc(100vw - 2rem));
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 0.15s, transform 0.15s;
+    visibility: hidden;
+    z-index: 1000;
+  }
+  .stat-info:hover .stat-tooltip,
+  .stat-info:focus-visible .stat-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .stat:has(.stat-info:hover),
+  .stat:has(.stat-info:focus-visible),
+  .output-card:hover,
+  .output-card:focus-within {
+    z-index: 20;
+  }
   .stat-value { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); }
   .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
 
@@ -365,13 +531,207 @@ import Layout from '../../layouts/Layout.astro';
   .budget-value { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary); }
 
   .delta-t { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-start; }
+  .delta-t-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: var(--font);
+    cursor: zoom-in;
+    text-align: left;
+  }
+  .delta-t-trigger:hover .delta-t-label,
+  .delta-t-trigger:focus-visible .delta-t-label { color: var(--primary); }
   .delta-t-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
   .delta-t-value { display: flex; align-items: baseline; gap: 0.35rem; }
   .delta-t-value span:first-child { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #EF4444; line-height: 1; }
   .delta-t-unit { font-size: 0.875rem; font-weight: 600; color: var(--text-soft); }
-  .profile-wrap { width: 100%; margin-top: 0.35rem; }
+  .profile-wrap {
+    width: 100%;
+    margin-top: 0.35rem;
+    border-radius: var(--radius-sm);
+    cursor: zoom-in;
+  }
   .profile-wrap canvas { width: 100%; aspect-ratio: 2.2 / 1; display: block; }
+  .profile-wrap:hover,
+  .profile-wrap:focus-visible {
+    outline: 1px solid var(--primary-light);
+    outline-offset: 3px;
+  }
   .profile-label { font-size: 0.6875rem; color: var(--text-muted); line-height: 1.4; }
+
+  .profile-dialog {
+    width: min(960px, calc(100vw - 2rem));
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: var(--shadow-lg);
+  }
+  .profile-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .profile-dialog__panel { padding: var(--space-md); }
+  .profile-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+  }
+  .profile-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .profile-dialog__header p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .profile-dialog__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+  .profile-dialog__close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .profile-dialog__close:hover { color: var(--primary); border-color: var(--primary-light); }
+  .profile-dialog__chart {
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    padding: var(--space-sm);
+    position: relative;
+    cursor: crosshair;
+  }
+  .profile-dialog__chart canvas {
+    width: 100%;
+    aspect-ratio: 2.15 / 1;
+    display: block;
+  }
+  .profile-chart-tooltip {
+    position: absolute;
+    display: none;
+    min-width: 9.5rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.45;
+    pointer-events: none;
+    z-index: 3;
+  }
+  [data-theme="dark"] .profile-chart-tooltip {
+    background: rgba(17, 24, 39, 0.96);
+  }
+  .profile-chart-tooltip strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .profile-dialog__note {
+    margin: var(--space-sm) 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  .material-import-dialog {
+    width: min(860px, calc(100vw - 2rem));
+    padding: 0;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .material-import-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .material-import-dialog__panel { padding: var(--space-md); }
+  .material-import-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  .material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .material-import-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+  .material-import-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  .material-import-dialog__grid label { display: flex; flex-direction: column; gap: 0.3rem; }
+  .material-import-dialog__grid span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: var(--text-muted);
+  }
+  .material-import-dialog__preview canvas {
+    width: 100%;
+    aspect-ratio: 3 / 1;
+    display: block;
+  }
+  .material-import-dialog__table-wrap {
+    max-height: 132px;
+    overflow: auto;
+    margin-top: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+  }
+  .material-import-dialog__table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .material-import-dialog__table th,
+  .material-import-dialog__table td {
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid var(--bg-muted);
+    text-align: center;
+  }
+  .material-import-dialog__table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    color: var(--text-soft);
+    font-weight: 700;
+  }
+  .material-import-dialog__status {
+    margin: var(--space-sm) 0 0;
+    min-height: 1.2em;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+  }
+  .material-import-dialog__status.error { color: var(--rose); }
+  .material-import-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+  .chart-tool-btn { padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .chart-tool-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .chart-tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
+  @media (max-width: 640px) {
+    .material-import-dialog__grid { grid-template-columns: 1fr; }
+  }
 
   .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
@@ -389,6 +749,7 @@ import Layout from '../../layouts/Layout.astro';
 <!-- ===== Script ===== -->
 <script>
   import { MATERIALS } from '../../data/optical-constants';
+  import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
   import { mieAt, interpolateNK } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
@@ -403,15 +764,157 @@ import Layout from '../../layouts/Layout.astro';
     power_mW: 1,
     w0_um: 1,
     kappa: 0.606,
+    eps: 10,
   };
 
   const LAM_MIN = 300, LAM_MAX = 1200, NPTS = 240;
+  const HC_EV_NM = 1239.841984;
 
   let spectrum: { lambda: Float64Array; csca: Float64Array; cabs: Float64Array; cext: Float64Array } | null = null;
+  let uploadedMaterial: number[][] | null = null;
+  let uploadedMaterialLabel = '';
+  let lastDTSurface = NaN;
+  let profileHoverR: number | null = null;
+
+  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
+    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
+    let delim = /\t/;
+    if (lines[0].split(delim).length < 3) delim = /,/;
+    if (lines[0].split(delim).length < 3) delim = /\s+/;
+    let startIdx = 0;
+    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
+    const data: number[][] = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = lines[i].split(delim).map(Number);
+      if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) continue;
+      data.push([parts[0], parts[1], parts.length >= 3 && !isNaN(parts[2]) ? Math.abs(parts[2]) : 0]);
+    }
+    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
+    data.sort((a, b) => a[0] - b[0]);
+    const maxLam = data[data.length - 1][0];
+    let unit = 'um';
+    if (maxLam > 50) {
+      unit = 'nm';
+      for (const row of data) row[0] /= 1000;
+    }
+    return { data, unit };
+  }
+
+  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
+  type ImportValueMode = 'nk' | 'epsilon';
+  type RawOpticalRow = [number, number, number];
+  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
+  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
+
+  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
+    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
+    let delim = /\t/;
+    if (lines[0].split(delim).length < 3) delim = /,/;
+    if (lines[0].split(delim).length < 3) delim = /\s+/;
+    let startIdx = 0;
+    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
+
+    const rows: RawOpticalRow[] = [];
+    let skipped = 0;
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = lines[i].split(delim).map(Number);
+      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
+        skipped++;
+        continue;
+      }
+      rows.push([parts[0], parts[1], parts[2]]);
+    }
+    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
+    return { rows, skipped };
+  }
+
+  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
+    const epsAbs = Math.hypot(epsRe, epsIm);
+    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
+    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
+    return [n, Math.abs(k)];
+  }
+
+  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
+    const data: number[][] = [];
+    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
+    for (const [x, a, b] of rows) {
+      let lambdaUm: number;
+      if (axisMode === 'energy-ev') {
+        if (x <= 0) continue;
+        lambdaUm = HC_EV_NM / x / 1000;
+      } else if (axisMode === 'wavelength-nm') {
+        if (x <= 0) continue;
+        lambdaUm = x / 1000;
+      } else {
+        if (x <= 0) continue;
+        lambdaUm = x;
+      }
+      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
+      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
+      data.push([lambdaUm, n, k]);
+      nMin = Math.min(nMin, n); nMax = Math.max(nMax, n);
+      kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
+    }
+    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
+    data.sort((a, b) => a[0] - b[0]);
+    return {
+      data,
+      lambdaMinNm: data[0][0] * 1000,
+      lambdaMaxNm: data[data.length - 1][0] * 1000,
+      nMin, nMax, kMin, kMax,
+    };
+  }
+
+  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
+    const xs = rows.map(r => r[0]).filter(Number.isFinite);
+    const ys = rows.flatMap(r => [r[1], r[2]]).filter(Number.isFinite);
+    const xMax = Math.max(...xs);
+    const yMaxAbs = Math.max(...ys.map(Math.abs));
+    const hasNegativeReal = rows.some(r => r[1] < 0);
+    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
+    let axis: ImportAxisMode = 'wavelength-um';
+    if (xMax > 50) axis = 'wavelength-nm';
+    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
+    return { axis, values };
+  }
+
+  function formatCompact(v: number): string {
+    if (!Number.isFinite(v)) return '';
+    const av = Math.abs(v);
+    if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(3);
+    return v.toPrecision(5);
+  }
+
+  function sampleRows<T>(rows: T[], maxRows: number): T[] {
+    if (rows.length <= maxRows) return rows.slice();
+    const sampled: T[] = [];
+    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
+    return sampled;
+  }
+
+  function currentMaterialData(): number[][] | null {
+    if (state.material === 'custom') return null;
+    if (state.material === 'file' || state.material === 'rii') return uploadedMaterial;
+    return MATERIALS[state.material]?.data ?? null;
+  }
+
+  function currentMaterialRef(): string {
+    if (state.material === 'custom') return 'Custom lossless dielectric';
+    if (state.material === 'file' || state.material === 'rii') return uploadedMaterialLabel;
+    return MATERIALS[state.material]?.ref ?? '';
+  }
+
+  function getNK(lambdaNm: number): [number, number] | null {
+    if (state.material === 'custom') return [Math.sqrt(Math.max(state.eps, 0)), 0];
+    const data = currentMaterialData();
+    if (!data) return null;
+    return interpolateNK(data, lambdaNm);
+  }
 
   function computeSpectrum() {
-    const mat = MATERIALS[state.material];
-    if (!mat) return;
     const lambda = new Float64Array(NPTS);
     const csca = new Float64Array(NPTS);
     const cabs = new Float64Array(NPTS);
@@ -419,7 +922,9 @@ import Layout from '../../layouts/Layout.astro';
     for (let i = 0; i < NPTS; i++) {
       const lam = LAM_MIN + (LAM_MAX - LAM_MIN) * i / (NPTS - 1);
       lambda[i] = lam;
-      const [n, k] = interpolateNK(mat.data, lam);
+      const nk = getNK(lam);
+      if (!nk) { csca[i] = 0; cabs[i] = 0; cext[i] = 0; continue; }
+      const [n, k] = nk;
       const v = mieAt(n, k, state.nHost, state.radius, lam);
       csca[i] = v.csca; cabs[i] = v.cabs; cext[i] = v.cext;
     }
@@ -458,8 +963,9 @@ import Layout from '../../layouts/Layout.astro';
 
   function updateOutputs() {
     if (!spectrum) return;
-    const mat = MATERIALS[state.material];
-    const [n, k] = interpolateNK(mat.data, state.lambda);
+    const nk = getNK(state.lambda);
+    if (!nk) return;
+    const [n, k] = nk;
     const v = mieAt(n, k, state.nHost, state.radius, state.lambda);
 
     const albedo = v.cext > 0 ? v.csca / v.cext : 0;
@@ -492,10 +998,13 @@ import Layout from '../../layouts/Layout.astro';
 
     (document.getElementById('out-dt') as HTMLElement).textContent = isFinite(dT) ? fmt(dT, 3) : '—';
 
-    (document.getElementById('material-ref') as HTMLElement).textContent = mat.ref;
+    (document.getElementById('profile-dialog-dt') as HTMLElement).textContent = isFinite(dT) ? fmt(dT, 4) : '-';
+    (document.getElementById('material-ref') as HTMLElement).textContent = currentMaterialRef();
 
     updateColors();
     drawProfile(dT);
+    lastDTSurface = dT;
+    if ((document.getElementById('profile-dialog') as HTMLDialogElement | null)?.open) drawProfileLarge(dT);
     drawChart();
   }
 
@@ -506,13 +1015,11 @@ import Layout from '../../layouts/Layout.astro';
     const R_sca = new Float64Array(spectrum.csca.length);
     if (sMax > 0) for (let i = 0; i < R_sca.length; i++) R_sca[i] = spectrum.csca[i] / sMax;
 
-    // Transmitted color (Beer-Lambert with normalized optical path):
-    // T(λ) = exp(-ln(10) · σ_ext(λ) / max σ_ext)  → peak extinction attenuates to 10 %
+    // Transmitted color: same Beer-Lambert normalization used by the Mie lab.
     const eMax = Math.max(...spectrum.cext);
     const R_trans = new Float64Array(spectrum.cext.length);
     if (eMax > 0) {
-      const k = Math.log(10) / eMax;
-      for (let i = 0; i < R_trans.length; i++) R_trans[i] = Math.exp(-k * spectrum.cext[i]);
+      for (let i = 0; i < R_trans.length; i++) R_trans[i] = Math.exp(-2 * spectrum.cext[i] / eMax);
     } else {
       R_trans.fill(1);
     }
@@ -584,7 +1091,7 @@ import Layout from '../../layouts/Layout.astro';
     }
     ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.fillText('λ (nm)', m.left + pw / 2, h - 14);
+    ctx.fillText('Wavelength λ (nm)', m.left + pw / 2, h - 14);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -601,7 +1108,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.textAlign = 'center';
     ctx.fillStyle = ct.text;
     ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.fillText('σ (nm²)', 0, 0);
+    ctx.fillText('Cross-section σ (nm²)', 0, 0);
     ctx.restore();
 
     // Clip curves to plot area
@@ -741,6 +1248,126 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  function drawProfileLarge(dTSurface: number) {
+    const ct = chartTheme();
+    const canvas = document.getElementById('profile-chart-large') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    if (w === 0 || h === 0) return;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const m = { left: 64, right: 28, top: 24, bottom: 48 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const rMin = 1, rMax = 12;
+    const yMax = isFinite(dTSurface) && dTSurface > 0 ? dTSurface : 1;
+    const xTo = (r: number) => m.left + pw * (r - rMin) / (rMax - rMin);
+    const yTo = (v: number) => m.top + ph * (1 - v / yMax);
+
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    const xTicks = [1, 2, Math.E, 5, Math.E ** 2, 10, 12];
+    for (const r of xTicks) {
+      const x = Math.round(xTo(r)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+    }
+    const yTicks = [0, yMax / (Math.E ** 2), yMax / Math.E, yMax];
+    for (const v of yTicks) {
+      const y = Math.round(yTo(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = ct.textSoft;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const r of xTicks) {
+      const label = Math.abs(r - Math.E) < 0.01 ? 'e' : Math.abs(r - Math.E ** 2) < 0.01 ? 'e^2' : fmt(r, 2);
+      ctx.fillText(label, xTo(r), m.top + ph + 8);
+    }
+    ctx.fillStyle = ct.text;
+    ctx.font = '13px Inter, system-ui, sans-serif';
+    ctx.fillText('Distance from particle center, r / R', m.left + pw / 2, h - 18);
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = ct.textSoft;
+    for (const v of yTicks) ctx.fillText(fmt(v, 3), m.left - 8, yTo(v));
+    ctx.save();
+    ctx.translate(18, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = ct.text;
+    ctx.font = '13px Inter, system-ui, sans-serif';
+    ctx.fillText('Temperature rise, \u0394T(r) (K)', 0, 0);
+    ctx.restore();
+
+    if (!isFinite(dTSurface) || dTSurface <= 0) return;
+    const refs = [
+      { r: Math.E, value: yMax / Math.E, label: '\u0394T / e', color: ct.textMuted },
+      { r: Math.E ** 2, value: yMax / (Math.E ** 2), label: '\u0394T / e^2', color: ct.grid },
+    ];
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    for (const ref of refs) {
+      const y = yTo(ref.value);
+      ctx.strokeStyle = ref.color;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = ct.textSoft;
+      ctx.textAlign = 'left';
+      ctx.fillText(ref.label, m.left + 8, y - 16);
+    }
+
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    const N = 420;
+    for (let i = 0; i < N; i++) {
+      const r = rMin + (rMax - rMin) * i / (N - 1);
+      const x = xTo(r), y = yTo(yMax / r);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    for (const ref of refs) {
+      ctx.fillStyle = '#EF4444';
+      ctx.beginPath(); ctx.arc(xTo(ref.r), yTo(ref.value), 4, 0, Math.PI * 2); ctx.fill();
+    }
+    if (profileHoverR !== null) {
+      const r = Math.max(rMin, Math.min(rMax, profileHoverR));
+      const value = yMax / r;
+      const x = xTo(r);
+      const y = yTo(value);
+      ctx.strokeStyle = '#7C3AED';
+      ctx.lineWidth = 1.3;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7C3AED';
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ct.bg;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
   // ===== Binding helpers =====
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -777,6 +1404,53 @@ import Layout from '../../layouts/Layout.astro';
     });
   }
 
+  function setupRIISearch(
+    searchGroup: HTMLElement, searchInput: HTMLInputElement,
+    resultsList: HTMLElement, statusEl: HTMLElement,
+    onLoaded: (data: number[][], label: string) => void,
+  ) {
+    let catalog: RIIMaterial[] | null = null;
+    let debounce: ReturnType<typeof setTimeout>;
+
+    function showResults(q: string) {
+      if (!catalog) return;
+      const hits = searchCatalog(catalog, q);
+      resultsList.innerHTML = hits.map((m, i) =>
+        `<div class="rii-result" data-idx="${i}"><span class="rii-result-book">${m.bookName}</span><br><span class="rii-result-page">${m.pageName}</span></div>`
+      ).join('');
+      (resultsList as any)._hits = hits;
+    }
+
+    async function ensureCatalog() {
+      if (catalog) { showResults(searchInput.value); return; }
+      statusEl.textContent = 'Loading catalog...';
+      try {
+        catalog = await loadCatalog();
+        statusEl.textContent = `${catalog.length} materials available`;
+        showResults(searchInput.value);
+      } catch { statusEl.textContent = 'Failed to load catalog'; }
+    }
+
+    searchInput.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(() => showResults(searchInput.value), 150); });
+    searchInput.addEventListener('focus', () => { if (catalog) showResults(searchInput.value); });
+
+    resultsList.addEventListener('click', async (e) => {
+      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement;
+      if (!el) return;
+      const hits = (resultsList as any)._hits as RIIMaterial[];
+      const mat = hits[parseInt(el.dataset.idx!)];
+      statusEl.textContent = 'Loading...';
+      resultsList.innerHTML = '';
+      try {
+        const d = await fetchMaterialNK(mat.dataPath);
+        statusEl.textContent = `${d.length} points loaded`;
+        searchInput.value = mat.bookName;
+        onLoaded(d, mat.pageName);
+      } catch { statusEl.textContent = 'Failed to load material'; }
+    });
+    return { ensureCatalog };
+  }
+
   syncPair('r-num', 'r-slider', 'radius', true);
   syncPair('nh-num', 'nh-slider', 'nHost', true);
   syncPair('lam-num', 'lam-slider', 'lambda', false);
@@ -795,10 +1469,235 @@ import Layout from '../../layouts/Layout.astro';
   bindPresets('lam-presets', 'lam-num', 'lam-slider', 'lambda', false);
   bindPresets('k-presets', 'k-num', null, 'kappa', false);
 
-  $<HTMLSelectElement>('material-select').addEventListener('change', (e) => {
-    state.material = (e.target as HTMLSelectElement).value;
+  const materialSelect = $<HTMLSelectElement>('material-select');
+  const epsGroup = $('eps-group');
+  const fileUploadGroup = $('file-upload-group');
+  const fileUpload = $<HTMLInputElement>('file-upload');
+  const fileNameEl = $('file-name');
+  const riiSearchGroup = $('rii-search-group');
+  const riiStatus = $('rii-status');
+
+  const materialImportDialog = $('material-import-dialog') as HTMLDialogElement;
+  const materialImportFile = $('material-import-file');
+  const materialImportAxis = $<HTMLSelectElement>('material-import-axis');
+  const materialImportValues = $<HTMLSelectElement>('material-import-values');
+  const materialImportPreview = $<HTMLCanvasElement>('material-import-preview');
+  const materialImportRows = $('material-import-rows');
+  const materialImportStatus = $('material-import-status');
+  const materialImportAccept = $<HTMLButtonElement>('material-import-accept');
+  const materialImportCancel = $('material-import-cancel');
+  const materialImportClose = $('material-import-close');
+
+  interface MaterialImportTarget {
+    fileName: string;
+    onAccept: (data: number[][], label: string) => void;
+    onCancel?: () => void;
+  }
+  let pendingMaterialImport: (MaterialImportTarget & { parsed: ParsedOpticalFile }) | null = null;
+
+  function drawMaterialImportPreview(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode) {
+    const ct = chartTheme();
+    const rect = materialImportPreview.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, rect.width);
+    const h = Math.max(1, rect.height || rect.width / 3);
+    materialImportPreview.width = Math.round(w * dpr);
+    materialImportPreview.height = Math.round(h * dpr);
+    const ctx = materialImportPreview.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const parsed = rows
+      .map(([x, a, b]) => Number.isFinite(x) && Number.isFinite(a) && Number.isFinite(b) ? { x, a, b } : null)
+      .filter((r): r is { x: number; a: number; b: number } => !!r)
+      .sort((a, b) => a.x - b.x);
+    if (parsed.length < 2) return;
+
+    const sampled = sampleRows(parsed, 320);
+    const values = sampled.flatMap(r => valueMode === 'epsilon' ? [r.a, r.b] : [r.a, Math.abs(r.b)]);
+    const xMin = Math.min(...sampled.map(r => r.x));
+    const xMax = Math.max(...sampled.map(r => r.x));
+    let yMin = Math.min(...values);
+    let yMax = Math.max(...values);
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    const padY = (yMax - yMin) * 0.08;
+    yMin -= padY; yMax += padY;
+
+    const m = { left: 48, right: 18, top: 18, bottom: 32 };
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin || 1);
+    const yTo = (y: number) => m.top + ph * (1 - (y - yMin) / (yMax - yMin || 1));
+
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const x = m.left + pw * i / 4;
+      const y = m.top + ph * i / 4;
+      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
+    }
+    ctx.strokeStyle = ct.textSoft;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    const drawLine = (pick: (r: { x: number; a: number; b: number }) => number, color: string) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < sampled.length; i++) {
+        const x = xTo(sampled[i].x);
+        const y = yTo(pick(sampled[i]));
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    drawLine(r => r.a, '#6366F1');
+    drawLine(r => valueMode === 'epsilon' ? r.b : Math.abs(r.b), '#F59E0B');
+
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(valueMode === 'epsilon' ? 'Re eps' : 'n', m.left + 8, m.top + 14);
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillText(valueMode === 'epsilon' ? 'Im eps' : 'k', m.left + 62, m.top + 14);
+    ctx.fillStyle = ct.textSoft;
+    ctx.textAlign = 'center';
+    const xLabel = axisMode === 'energy-ev' ? 'Photon energy (eV)' : axisMode === 'wavelength-nm' ? 'Wavelength (nm)' : 'Wavelength (um)';
+    ctx.fillText(xLabel, m.left + pw / 2, h - 10);
+    ctx.textAlign = 'right';
+    ctx.fillText(formatCompact(yMax), m.left - 6, m.top + 4);
+    ctx.fillText(formatCompact(yMin), m.left - 6, m.top + ph);
+  }
+
+  function renderMaterialImportPreview() {
+    if (!pendingMaterialImport) return;
+    const axisMode = materialImportAxis.value as ImportAxisMode;
+    const valueMode = materialImportValues.value as ImportValueMode;
+    const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    drawMaterialImportPreview(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    materialImportRows.innerHTML = sampleRows(pendingMaterialImport.parsed.rows, 8)
+      .map(row => `<tr><td>${formatCompact(row[0])}</td><td>${formatCompact(row[1])}</td><td>${formatCompact(row[2])}</td></tr>`)
+      .join('');
+    materialImportStatus.classList.toggle('error', 'error' in converted);
+    materialImportAccept.disabled = 'error' in converted;
+    if ('error' in converted) {
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    materialImportStatus.textContent =
+      `${converted.data.length} points | ${formatCompact(converted.lambdaMinNm)}-${formatCompact(converted.lambdaMaxNm)} nm | n ${formatCompact(converted.nMin)}-${formatCompact(converted.nMax)} | k ${formatCompact(converted.kMin)}-${formatCompact(converted.kMax)}`;
+  }
+
+  function closeMaterialImportDialog(runCancel = false) {
+    if (runCancel) pendingMaterialImport?.onCancel?.();
+    pendingMaterialImport = null;
+    materialImportDialog.close();
+  }
+
+  function openMaterialImportDialog(fileName: string, parsed: ParsedOpticalFile, onAccept: (data: number[][], label: string) => void) {
+    pendingMaterialImport = { fileName, parsed, onAccept };
+    materialImportFile.textContent = fileName;
+    const modes = inferImportModes(parsed.rows);
+    materialImportAxis.value = modes.axis;
+    materialImportValues.value = modes.values;
+    if (typeof materialImportDialog.showModal === 'function') materialImportDialog.showModal();
+    else materialImportDialog.setAttribute('open', '');
+    renderMaterialImportPreview();
+  }
+
+  materialImportAxis.addEventListener('change', renderMaterialImportPreview);
+  materialImportValues.addEventListener('change', renderMaterialImportPreview);
+  materialImportCancel.addEventListener('click', () => closeMaterialImportDialog(true));
+  materialImportClose.addEventListener('click', () => closeMaterialImportDialog(true));
+  materialImportDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === materialImportDialog) closeMaterialImportDialog(true);
+  });
+  materialImportAccept.addEventListener('click', () => {
+    if (!pendingMaterialImport) return;
+    const converted = convertOpticalRows(
+      pendingMaterialImport.parsed.rows,
+      materialImportAxis.value as ImportAxisMode,
+      materialImportValues.value as ImportValueMode,
+    );
+    if ('error' in converted) {
+      materialImportStatus.classList.add('error');
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    const label = `${pendingMaterialImport.fileName} (${converted.data.length} points, ${formatCompact(converted.lambdaMinNm)}-${formatCompact(converted.lambdaMaxNm)} nm)`;
+    pendingMaterialImport.onAccept(converted.data, label);
+    closeMaterialImportDialog(false);
+  });
+
+  function refreshMaterialControls() {
+    const v = materialSelect.value;
+    epsGroup.classList.toggle('hidden', v !== 'custom');
+    fileUploadGroup.style.display = v === 'file' ? '' : 'none';
+    riiSearchGroup.style.display = v === 'rii' ? '' : 'none';
+    $('material-ref').textContent = currentMaterialRef();
+  }
+
+  function recomputeMaterial() {
     computeSpectrum();
     updateOutputs();
+  }
+
+  const riiHandle = setupRIISearch(
+    riiSearchGroup,
+    $<HTMLInputElement>('rii-search'),
+    $('rii-results'),
+    riiStatus,
+    (data, label) => {
+      uploadedMaterial = data;
+      uploadedMaterialLabel = label;
+      $('material-ref').textContent = label;
+      recomputeMaterial();
+    },
+  );
+
+  materialSelect.addEventListener('change', () => {
+    state.material = materialSelect.value;
+    refreshMaterialControls();
+    if (state.material === 'rii') { riiHandle.ensureCatalog(); return; }
+    if (state.material === 'file' && !uploadedMaterial) return;
+    recomputeMaterial();
+  });
+
+  $<HTMLInputElement>('eps-num').addEventListener('input', (e) => {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (!isFinite(v) || v <= 0) return;
+    state.eps = v;
+    if (state.material === 'custom') recomputeMaterial();
+  });
+
+  fileUpload.addEventListener('change', () => {
+    const file = fileUpload.files?.[0];
+    if (!file) return;
+    fileNameEl.className = 'file-name';
+    fileNameEl.textContent = 'Review file mapping...';
+    file.text().then(text => {
+      const parsed = parseOpticalFile(text);
+      if ('error' in parsed) {
+        fileNameEl.className = 'file-error';
+        fileNameEl.textContent = parsed.error;
+        uploadedMaterial = null;
+        return;
+      }
+      openMaterialImportDialog(file.name, parsed, (data, label) => {
+        uploadedMaterial = data;
+        uploadedMaterialLabel = label;
+        fileNameEl.className = 'file-name';
+        fileNameEl.textContent = label;
+        $('material-ref').textContent = label;
+        recomputeMaterial();
+      });
+    });
   });
 
   // ===== Export / Share =====
@@ -830,13 +1729,14 @@ import Layout from '../../layouts/Layout.astro';
   const shareBtn = document.getElementById('share-btn')!;
   function serializeState(): string {
     const p = new URLSearchParams();
-    p.set('mat', state.material);
+    if (!['file', 'rii'].includes(state.material)) p.set('mat', state.material);
     p.set('r', String(state.radius));
     p.set('nh', String(state.nHost));
     p.set('lam', String(state.lambda));
     p.set('pow', String(state.power_mW));
     p.set('w0', String(state.w0_um));
     p.set('k', String(state.kappa));
+    if (state.material === 'custom') p.set('eps', String(state.eps));
     return p.toString();
   }
   shareBtn.addEventListener('click', () => {
@@ -854,7 +1754,14 @@ import Layout from '../../layouts/Layout.astro';
     if (!hash) return;
     const p = new URLSearchParams(hash);
     const setInput = (id: string, v: string) => { const el = document.getElementById(id) as HTMLInputElement | null; if (el) el.value = v; };
-    if (p.has('mat')) { state.material = p.get('mat')!; setInput('material-select', state.material); }
+    if (p.has('mat')) {
+      const mat = p.get('mat')!;
+      if (!['file', 'rii'].includes(mat)) {
+        state.material = mat;
+        materialSelect.value = mat;
+      }
+    }
+    if (p.has('eps')) { state.eps = parseFloat(p.get('eps')!); setInput('eps-num', String(state.eps)); }
     if (p.has('r')) { state.radius = parseFloat(p.get('r')!); setInput('r-num', String(state.radius)); setInput('r-slider', String(state.radius)); }
     if (p.has('nh')) { state.nHost = parseFloat(p.get('nh')!); setInput('nh-num', String(state.nHost)); setInput('nh-slider', String(state.nHost)); }
     if (p.has('lam')) { state.lambda = parseFloat(p.get('lam')!); setInput('lam-num', String(state.lambda)); setInput('lam-slider', String(state.lambda)); }
@@ -864,12 +1771,153 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   restoreState();
+  refreshMaterialControls();
 
   // Initial
   computeSpectrum();
   updateOutputs();
 
-  new ResizeObserver(() => { drawChart(); /* profile redraws with outputs */ }).observe($('chart-wrap'));
+  const profileDialog = $('profile-dialog') as HTMLDialogElement;
+  const profileOpen = $('profile-open') as HTMLButtonElement;
+  const profileClose = $('profile-dialog-close') as HTMLButtonElement;
+  const profileWrap = $('profile-wrap');
+  const profileChartLarge = $<HTMLCanvasElement>('profile-chart-large');
+  const profileChartTooltip = $('profile-chart-tooltip');
+  function openProfileDialog() {
+    if (typeof profileDialog.showModal === 'function') profileDialog.showModal();
+    else profileDialog.setAttribute('open', '');
+    requestAnimationFrame(() => drawProfileLarge(lastDTSurface));
+  }
+  profileOpen.addEventListener('click', openProfileDialog);
+  profileWrap.addEventListener('click', openProfileDialog);
+  profileWrap.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openProfileDialog();
+    }
+  });
+  profileClose.addEventListener('click', () => profileDialog.close());
+  document.getElementById('profile-export-png')!.addEventListener('click', () => {
+    const c = document.getElementById('profile-chart-large') as HTMLCanvasElement;
+    drawProfileLarge(lastDTSurface);
+    c.toBlob(b => {
+      if (b) downloadBlob(b, `photothermal_profile_${state.material}_R${state.radius}nm.png`);
+    }, 'image/png');
+  });
+  document.getElementById('profile-export-csv')!.addEventListener('click', () => {
+    const lines = [
+      `# Photothermal radial temperature profile - material=${state.material}, R=${state.radius} nm, n_host=${state.nHost}, lambda_laser=${state.lambda} nm, P=${state.power_mW} mW, w0=${state.w0_um} um, kappa=${state.kappa} W/mK`,
+      '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+      '# Steady-state outside-particle model: DeltaT(r) = DeltaT(R) * R / r for r >= R',
+      'r_over_R,r_nm,DeltaT_K',
+    ];
+    const n = 420;
+    const rMin = 1;
+    const rMax = 12;
+    for (let i = 0; i < n; i++) {
+      const rOverR = rMin + (rMax - rMin) * i / (n - 1);
+      const rNm = rOverR * state.radius;
+      const dT = isFinite(lastDTSurface) && lastDTSurface > 0 ? lastDTSurface / rOverR : 0;
+      lines.push(`${rOverR.toFixed(6)},${rNm.toFixed(6)},${dT.toFixed(8)}`);
+    }
+    downloadBlob(
+      new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }),
+      `photothermal_profile_${state.material}_R${state.radius}nm.csv`,
+    );
+  });
+  function hideProfilePointer() {
+    if (profileHoverR === null && profileChartTooltip.style.display === 'none') return;
+    profileHoverR = null;
+    profileChartTooltip.style.display = 'none';
+    drawProfileLarge(lastDTSurface);
+  }
+  function updateProfilePointer(e: PointerEvent) {
+    if (!isFinite(lastDTSurface) || lastDTSurface <= 0) {
+      hideProfilePointer();
+      return;
+    }
+    const rect = profileChartLarge.getBoundingClientRect();
+    const m = { left: 64, right: 28, top: 24, bottom: 48 };
+    const pw = rect.width - m.left - m.right;
+    const ph = rect.height - m.top - m.bottom;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (x < m.left || x > m.left + pw || y < m.top || y > m.top + ph) {
+      hideProfilePointer();
+      return;
+    }
+
+    const rMin = 1;
+    const rMax = 12;
+    const rOverR = rMin + (rMax - rMin) * (x - m.left) / pw;
+    const dT = lastDTSurface / rOverR;
+    profileHoverR = rOverR;
+    profileChartTooltip.innerHTML =
+      `<strong>r / R</strong> = ${fmt(rOverR, 4)}<br>` +
+      `<strong>r</strong> = ${fmt(rOverR * state.radius, 4)} nm<br>` +
+      `<strong>&Delta;T</strong> = ${fmt(dT, 4)} K`;
+    profileChartTooltip.style.display = 'block';
+    drawProfileLarge(lastDTSurface);
+
+    const tipRect = profileChartTooltip.getBoundingClientRect();
+    const chartRect = (profileChartTooltip.parentElement as HTMLElement).getBoundingClientRect();
+    const margin = 10;
+    let left = x + 14;
+    let top = y + 14;
+    left = Math.max(margin, Math.min(left, chartRect.width - tipRect.width - margin));
+    top = Math.max(margin, Math.min(top, chartRect.height - tipRect.height - margin));
+    profileChartTooltip.style.left = `${left}px`;
+    profileChartTooltip.style.top = `${top}px`;
+  }
+  profileChartLarge.addEventListener('pointermove', updateProfilePointer);
+  profileChartLarge.addEventListener('pointerleave', hideProfilePointer);
+  profileDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === profileDialog) profileDialog.close();
+  });
+  profileDialog.addEventListener('close', () => {
+    hideProfilePointer();
+    profileOpen.focus();
+  });
+
+  new ResizeObserver(() => { drawChart(); }).observe($('chart-wrap'));
+  new ResizeObserver(() => { drawProfile(lastDTSurface); }).observe($('profile-wrap'));
+  new ResizeObserver(() => { if (profileDialog.open) drawProfileLarge(lastDTSurface); }).observe($('profile-chart-large'));
+
+  function positionStatTooltip(button: HTMLElement) {
+    const tooltip = button.querySelector('.stat-tooltip') as HTMLElement | null;
+    if (!tooltip) return;
+    const margin = 16;
+    const width = Math.min(280, Math.max(180, window.innerWidth - margin * 2));
+    tooltip.style.width = `${width}px`;
+
+    const buttonRect = button.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    let left = buttonRect.right - width;
+    let top = buttonRect.top - tooltipRect.height - 8;
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+    if (top < margin) top = buttonRect.bottom + 8;
+    top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  const statInfoButtons = Array.from(document.querySelectorAll('.stat-info')) as HTMLElement[];
+  for (const button of statInfoButtons) {
+    button.addEventListener('mouseenter', () => positionStatTooltip(button));
+    button.addEventListener('focus', () => positionStatTooltip(button));
+  }
+  const repositionActiveTooltip = () => {
+    const hovered = document.querySelector('.stat-info:hover') as HTMLElement | null;
+    const focused = document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('stat-info')
+      ? document.activeElement
+      : null;
+    const active = hovered ?? focused;
+    if (active) positionStatTooltip(active);
+  };
+  window.addEventListener('resize', repositionActiveTooltip);
+  window.addEventListener('scroll', repositionActiveTooltip, { passive: true });
 
   onThemeChange(() => updateOutputs());
 </script>

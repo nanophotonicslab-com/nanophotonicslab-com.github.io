@@ -29,18 +29,6 @@ import Layout from '../../layouts/Layout.astro';
           <button class="calc-tab" data-tab="bright">Brightness</button>
           <button class="calc-tab" data-tab="modes">Beam Modes</button>
         </div>
-        <button id="dl-png" class="share-btn" title="Download chart as PNG" data-umami-event="laser-export" data-umami-event-format="png">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-          PNG
-        </button>
-        <button id="dl-csv" class="share-btn" title="Download results as CSV" data-umami-event="laser-export" data-umami-event-format="csv">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          CSV
-        </button>
-        <button id="share-btn" class="share-btn" title="Copy shareable link to clipboard" data-umami-event="share" data-umami-event-page="laser">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          Share
-        </button>
       </div>
 
       <!-- ============================================================ -->
@@ -109,6 +97,21 @@ import Layout from '../../layouts/Layout.astro';
             <div class="chart-wrap dual-chart">
               <canvas id="tbp-chart-time" aria-label="Temporal pulse profile"></canvas>
               <canvas id="tbp-chart-spec" aria-label="Spectral profile"></canvas>
+            </div>
+            <div class="download-bar">
+              <span class="download-label">Export</span>
+              <button id="dl-png" class="dl-btn" title="Download chart as PNG" data-umami-event="laser-export" data-umami-event-format="png">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="dl-csv" class="dl-btn" title="Download results as CSV" data-umami-event="laser-export" data-umami-event-format="csv">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="dl-share" class="dl-btn" title="Copy shareable link to clipboard" data-umami-event="share" data-umami-event-page="laser">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
             </div>
           </div>
         </div>
@@ -303,12 +306,30 @@ import Layout from '../../layouts/Layout.astro';
                   <input type="text" class="field-input" id="beam-lam" inputmode="decimal" value="800">
                 </div>
                 <div class="field">
-                  <label for="beam-w0">w<sub>0</sub> (&mu;m)</label>
+                  <div class="field-label-with-info">
+                    <label for="beam-M2">M&sup2;</label>
+                    <button class="field-info" type="button" aria-label="M squared definition" aria-describedby="beam-m2-tooltip">i</button>
+                    <span class="field-tooltip" id="beam-m2-tooltip" role="tooltip">Beam quality factor. M^2 = 1 is a diffraction-limited Gaussian; larger values increase divergence and focused spot size.</span>
+                  </div>
+                  <input type="text" class="field-input" id="beam-M2" inputmode="decimal" value="1">
+                </div>
+              </div>
+            </div>
+
+            <div class="param-group">
+              <span class="param-group__title">Waist size (edit any)</span>
+              <div class="fields waist-fields">
+                <div class="field">
+                  <label for="beam-w1e">1/e intensity radius (&mu;m)</label>
+                  <input type="text" class="field-input" id="beam-w1e" inputmode="decimal" value="7.07">
+                </div>
+                <div class="field">
+                  <label for="beam-w0">1/e<sup>2</sup> intensity radius w<sub>0</sub> (&mu;m)</label>
                   <input type="text" class="field-input" id="beam-w0" inputmode="decimal" value="10">
                 </div>
                 <div class="field">
-                  <label for="beam-M2">M&sup2;</label>
-                  <input type="text" class="field-input" id="beam-M2" inputmode="decimal" value="1">
+                  <label for="beam-fwhm">FWHM intensity &empty; (&mu;m)</label>
+                  <input type="text" class="field-input" id="beam-fwhm" inputmode="decimal" value="11.77">
                 </div>
               </div>
             </div>
@@ -826,24 +847,19 @@ import Layout from '../../layouts/Layout.astro';
 
   /* ---- Tabs ---- */
   .calc-tabs-row {
-    display: flex; align-items: flex-end; gap: 0.75rem;
     margin-bottom: var(--space-lg);
   }
   .calc-tabs {
-    display: flex; gap: 0.25rem; flex: 1; min-width: 0;
+    display: flex; gap: 0.25rem; min-width: 0;
     border-bottom: 2px solid var(--bg-muted); padding-bottom: 0;
     overflow-x: auto; scrollbar-width: none;
   }
   .calc-tabs::-webkit-scrollbar { display: none; }
-  .share-btn {
-    display: inline-flex; align-items: center; gap: 0.35rem; flex-shrink: 0;
-    padding: 0.3rem 0.7rem; margin-bottom: 4px;
-    font-size: 0.78rem; font-weight: 500;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: transparent; color: var(--text-muted); cursor: pointer;
-    transition: all 0.15s;
-  }
-  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
+  .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  .dl-btn:active { transform: scale(0.97); }
   .calc-tab {
     padding: 0.6rem 1.2rem; font-size: 0.875rem; font-weight: 500;
     background: none; border: none; border-bottom: 2px solid transparent;
@@ -881,6 +897,81 @@ import Layout from '../../layouts/Layout.astro';
     font-size: 0.78rem; color: var(--text-soft);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .field-label-with-info {
+    position: relative;
+    flex: 0 0 auto; min-width: 80px; max-width: 100px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .field-label-with-info label {
+    flex: 0 1 auto; min-width: 0; max-width: none;
+  }
+  .field-info {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1;
+    cursor: help;
+  }
+  .field-info:hover,
+  .field-info:focus-visible {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    outline: none;
+  }
+  .field-tooltip {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 0.35rem);
+    width: min(240px, 72vw);
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 20;
+  }
+  .field-label-with-info:hover .field-tooltip,
+  .field-label-with-info:focus-within .field-tooltip,
+  .field-info:hover + .field-tooltip,
+  .field-info:focus + .field-tooltip,
+  .field-info:focus-visible + .field-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .waist-fields {
+    gap: 0.65rem;
+  }
+  .waist-fields .field {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .waist-fields label {
+    max-width: none; min-width: 0;
+    white-space: normal; line-height: 1.25;
+  }
+  .waist-fields .field-input { flex: none; width: 100%; }
   .field-input {
     flex: 1; min-width: 0; padding: 0.35rem 0.55rem; font-size: 0.85rem;
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
@@ -943,12 +1034,23 @@ import Layout from '../../layouts/Layout.astro';
   /* ================================================================ */
   const tabs = document.querySelectorAll<HTMLButtonElement>('.calc-tab');
   const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+  const downloadBar = document.querySelector<HTMLElement>('.download-bar');
+
+  function moveDownloadBarToActivePanel() {
+    const activePanel = document.querySelector<HTMLElement>('.tab-panel.active');
+    const activeResults = activePanel?.querySelector<HTMLElement>('.results.card');
+    if (downloadBar && activeResults && downloadBar.parentElement !== activeResults) {
+      activeResults.appendChild(downloadBar);
+    }
+  }
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       panels.forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById(`panel-${tab.dataset.tab}`)!.classList.add('active');
+      moveDownloadBarToActivePanel();
       // Redraw charts now that the panel is visible
       requestAnimationFrame(() => {
         if (tab.dataset.tab === 'tbp') calcTBP();
@@ -967,7 +1069,7 @@ import Layout from '../../layouts/Layout.astro';
   /* ================================================================ */
   /*  Constants                                                        */
   /* ================================================================ */
-  const c_nm_fs = 299792.458;  // speed of light in nm/fs
+  const c_nm_fs = 299.792458;  // speed of light in nm/fs
   const c_m_s = 299792458;     // speed of light in m/s
   const ln2 = Math.log(2);
 
@@ -1524,13 +1626,44 @@ import Layout from '../../layouts/Layout.astro';
   /* ================================================================ */
   /*  Calculator 4: Gaussian Beam                                      */
   /* ================================================================ */
+  const BEAM_FWHM_DIAMETER_PER_W0 = Math.sqrt(2 * ln2);
+  const BEAM_1E_INTENSITY_RADIUS_PER_W0 = 1 / Math.sqrt(2);
+  const beamW1eInput = el<HTMLInputElement>('beam-w1e');
+  const beamW0Input = el<HTMLInputElement>('beam-w0');
+  const beamFwhmInput = el<HTMLInputElement>('beam-fwhm');
+  let beamWaistLastEdited: 'w1e' | 'w0' | 'fwhm' = 'w0';
+
+  function formatBeamWaist(value: number): string {
+    if (!Number.isFinite(value)) return '';
+    const digits = value >= 10 ? 2 : value >= 1 ? 3 : 4;
+    return value.toFixed(digits).replace(/\.?0+$/, '');
+  }
+
+  function getBeamW0(): number {
+    if (beamWaistLastEdited === 'fwhm') {
+      return parseFloat(beamFwhmInput.value) / BEAM_FWHM_DIAMETER_PER_W0;
+    }
+    if (beamWaistLastEdited === 'w1e') {
+      return parseFloat(beamW1eInput.value) / BEAM_1E_INTENSITY_RADIUS_PER_W0;
+    }
+    return parseFloat(beamW0Input.value);
+  }
+
+  function syncBeamWaistFields(w0_um: number) {
+    if (!Number.isFinite(w0_um) || w0_um <= 0) return;
+    if (beamWaistLastEdited !== 'w1e') beamW1eInput.value = formatBeamWaist(w0_um * BEAM_1E_INTENSITY_RADIUS_PER_W0);
+    if (beamWaistLastEdited !== 'w0') beamW0Input.value = formatBeamWaist(w0_um);
+    if (beamWaistLastEdited !== 'fwhm') beamFwhmInput.value = formatBeamWaist(w0_um * BEAM_FWHM_DIAMETER_PER_W0);
+  }
+
   function calcBeam() {
     const lam_nm = parseFloat(el<HTMLInputElement>('beam-lam').value);
-    const w0_um = parseFloat(el<HTMLInputElement>('beam-w0').value);
+    const w0_um = getBeamW0();
     const M2 = parseFloat(el<HTMLInputElement>('beam-M2').value) || 1;
     const z_mm = parseFloat(el<HTMLInputElement>('beam-z').value);
 
     if (!lam_nm || !w0_um || !z_mm) return;
+    syncBeamWaistFields(w0_um);
 
     const lam_um = lam_nm / 1000;
     const zR_um = Math.PI * w0_um * w0_um / (M2 * lam_um);
@@ -1683,7 +1816,13 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillText('z (mm)', ml + pw / 2, mt + ph + 28 * fs);
   }
 
-  ['beam-lam', 'beam-w0', 'beam-M2', 'beam-z'].forEach(id =>
+  beamW1eInput.addEventListener('input', () => { beamWaistLastEdited = 'w1e'; calcBeam(); });
+  beamW0Input.addEventListener('input', () => { beamWaistLastEdited = 'w0'; calcBeam(); });
+  beamFwhmInput.addEventListener('input', () => { beamWaistLastEdited = 'fwhm'; calcBeam(); });
+  beamW1eInput.addEventListener('blur', () => syncBeamWaistFields(getBeamW0()));
+  beamW0Input.addEventListener('blur', () => syncBeamWaistFields(getBeamW0()));
+  beamFwhmInput.addEventListener('blur', () => syncBeamWaistFields(getBeamW0()));
+  ['beam-lam', 'beam-M2', 'beam-z'].forEach(id =>
     el<HTMLInputElement>(id).addEventListener('input', calcBeam)
   );
 
@@ -2712,7 +2851,7 @@ import Layout from '../../layouts/Layout.astro';
     'tbp-lam','tbp-dlam','tbp-dt',
     'peak-pavg','peak-frep','peak-dt',
     'gdd-dt','gdd-mat','gdd-wl','gdd-L','gdd-passes',
-    'beam-lam','beam-w0','beam-M2','beam-z',
+    'beam-lam','beam-w1e','beam-w0','beam-fwhm','beam-M2','beam-z',
     'foc-lam','foc-d','foc-M2','foc-f','foc-energy','foc-dt',
     'chirp-dt','chirp-lam','chirp-dlam','chirp-mat',
     'nlc-lam1','nlc-lam2',
@@ -2779,7 +2918,7 @@ import Layout from '../../layouts/Layout.astro';
     return true;
   }
 
-  const shareBtn = document.getElementById('share-btn')!;
+  const shareBtn = document.getElementById('dl-share')!;
   shareBtn.addEventListener('click', () => {
     const url = location.origin + location.pathname + '#' + serializeState();
     navigator.clipboard.writeText(url).then(() => {
@@ -2797,6 +2936,7 @@ import Layout from '../../layouts/Layout.astro';
     tbpDlam.value = '10';
     calcTBP();
   }
+  moveDownloadBarToActivePanel();
   calcPeak();
   updateGVD();
 </script>
