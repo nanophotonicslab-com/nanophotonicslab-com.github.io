@@ -18,6 +18,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
         and related shapes. Materials use the same tabulated n,k interpolation as
         the Mie scattering lab.
       </p>
+      <p class="widget-hero__validity">
+        <strong>Validity:</strong> this analytical model is based on the electrostatic
+        (quasi-static) approximation with geometry-only modal polarizabilities. It is not
+        a fully retarded electrodynamic solution, so retardation and phase effects are approximate, especially for larger particles.
+      </p>
     </div>
   </section>
 
@@ -314,6 +319,14 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
   .widget-hero h1 { margin-bottom: var(--space-sm); }
   .widget-hero__subtitle { font-size: 1.125rem; max-width: 760px; }
+  .widget-hero__validity {
+    max-width: 860px;
+    margin: var(--space-sm) 0 0;
+    color: var(--text-soft);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+  .widget-hero__validity strong { color: var(--text); }
   .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
