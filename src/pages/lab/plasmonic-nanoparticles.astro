@@ -181,6 +181,12 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
             </div>
             <div class="chart-wrap" id="chart-wrap">
               <canvas id="plasmon-chart" aria-label="Plasmonic nanoparticle analytical model chart"></canvas>
+              <div class="axis-overlay" id="axis-overlay">
+                <div class="axis-toggle" id="axis-tabs" role="radiogroup" aria-label="X axis">
+                  <button class="axis-btn active" type="button" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
+                  <button class="axis-btn" type="button" data-axis="energy" role="radio" aria-checked="false">E (eV)</button>
+                </div>
+              </div>
             </div>
             <div class="ldos-probe-note" id="ldos-probe-note" style="display:none"></div>
             <div class="color-swatches" id="color-swatches">
@@ -247,6 +253,51 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
           </section>
         </main>
       </div>
+
+      <dialog class="material-import-dialog" id="material-import-dialog" aria-labelledby="material-import-title">
+        <div class="material-import-dialog__panel">
+          <div class="material-import-dialog__header">
+            <div>
+              <h3 id="material-import-title">Confirm Material Import</h3>
+              <p id="material-import-file">No file selected</p>
+            </div>
+            <button type="button" class="material-import-close" id="material-import-close" aria-label="Cancel material import">&times;</button>
+          </div>
+          <div class="material-import-dialog__grid">
+            <label>
+              <span>First column</span>
+              <select id="material-import-axis" class="param-select">
+                <option value="energy-ev">Photon energy (eV)</option>
+                <option value="wavelength-nm">Wavelength (nm)</option>
+                <option value="wavelength-um">Wavelength (&micro;m)</option>
+              </select>
+            </label>
+            <label>
+              <span>Columns 2 and 3</span>
+              <select id="material-import-values" class="param-select">
+                <option value="epsilon">Re &epsilon;, Im &epsilon;</option>
+                <option value="nk">n, k</option>
+              </select>
+            </label>
+          </div>
+          <div class="material-import-dialog__preview">
+            <canvas id="material-import-preview" aria-label="Material preview"></canvas>
+          </div>
+          <div class="material-import-dialog__table-wrap">
+            <table class="material-import-dialog__table">
+              <thead>
+                <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+              </thead>
+              <tbody id="material-import-rows"></tbody>
+            </table>
+          </div>
+          <p class="material-import-dialog__status" id="material-import-status"></p>
+          <div class="material-import-dialog__actions">
+            <button type="button" class="tool-btn" id="material-import-cancel">Cancel</button>
+            <button type="button" class="tool-btn material-import-primary" id="material-import-accept">Use material</button>
+          </div>
+        </div>
+      </dialog>
 
       <div class="references card">
         <h4>References &amp; data sources</h4>
@@ -362,6 +413,101 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
   .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
   .file-error { font-size: 0.6875rem; color: var(--rose); }
+  .material-import-dialog {
+    width: min(860px, calc(100vw - 2rem));
+    padding: 0;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .material-import-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .material-import-dialog__panel { padding: var(--space-md); }
+  .material-import-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  .material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .material-import-dialog__header p {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .material-import-close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-soft);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }
+  .material-import-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  .material-import-dialog__grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .material-import-dialog__grid span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: var(--text-muted);
+  }
+  .material-import-dialog__preview canvas {
+    width: 100%;
+    aspect-ratio: 3 / 1;
+    display: block;
+  }
+  .material-import-dialog__table-wrap {
+    max-height: 132px;
+    overflow: auto;
+    margin-top: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+  }
+  .material-import-dialog__table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .material-import-dialog__table th,
+  .material-import-dialog__table td {
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid var(--bg-muted);
+    text-align: center;
+  }
+  .material-import-dialog__table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    color: var(--text-soft);
+    font-weight: 700;
+  }
+  .material-import-dialog__status {
+    margin: var(--space-sm) 0 0;
+    min-height: 1.2em;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+  }
+  .material-import-dialog__status.error { color: var(--rose); }
+  .material-import-dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-sm); }
+  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
+  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
   .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
   .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
@@ -564,8 +710,41 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     transition: all 0.15s;
   }
   .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .chart-wrap { position: relative; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+  .chart-wrap { position: relative; margin-bottom: 2.35rem; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  .axis-overlay {
+    position: absolute;
+    left: 6px;
+    bottom: -2.15rem;
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .axis-toggle {
+    display: inline-flex;
+    gap: 0.2rem;
+    padding: 0.18rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: rgba(241, 240, 251, 0.9);
+    box-shadow: 0 1px 8px rgba(30, 27, 75, 0.08);
+    backdrop-filter: blur(6px);
+  }
+  .axis-btn {
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 650;
+    padding: 0.3rem 0.62rem;
+  }
+  .axis-btn.active {
+    background: var(--bg);
+    color: var(--primary);
+    box-shadow: var(--shadow-sm);
+  }
   .ldos-probe-note {
     padding: 0.45rem 0.6rem;
     border: 1px solid var(--bg-muted);
@@ -742,6 +921,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   type TabId = 'spectrum' | 'material' | 'resonance' | 'ldos';
   type ResonanceSweep = 'L' | 'R';
+  type ChartAxisMode = 'lambda' | 'energy';
 
   const colors = {
     ext: '#10B981',
@@ -753,6 +933,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     ldos: '#06B6D4',
     fe: '#8B5CF6',
   };
+  const HC_EV_NM = 1239.841984;
+  const IMPORT_PREVIEW_ROWS = 320;
   const LDOS_PROBE_DISTANCE_NM = 5;
   const COLOR_LAMBDA_MIN_NM = 380;
   const COLOR_LAMBDA_MAX_NM = 780;
@@ -770,6 +952,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     lambdaMaxNm: number;
     modeCount: number;
     tab: TabId;
+    xAxis: ChartAxisMode;
     resonanceSweep: ResonanceSweep;
   } = {
     materialId: 'au',
@@ -784,6 +967,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     lambdaMaxNm: 1250,
     modeCount: 1,
     tab: 'spectrum',
+    xAxis: 'lambda',
     resonanceSweep: 'L',
   };
 
@@ -796,37 +980,172 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
+  const materialImportDialog = $<HTMLDialogElement>('material-import-dialog');
+  const materialImportFile = $('material-import-file');
+  const materialImportAxis = $<HTMLSelectElement>('material-import-axis');
+  const materialImportValues = $<HTMLSelectElement>('material-import-values');
+  const materialImportPreview = $<HTMLCanvasElement>('material-import-preview');
+  const materialImportRows = $('material-import-rows');
+  const materialImportStatus = $('material-import-status');
+  const materialImportAccept = $<HTMLButtonElement>('material-import-accept');
+  const materialImportCancel = $('material-import-cancel');
+  const materialImportClose = $('material-import-close');
+
   function syncNumberInput(id: string, value: string) {
     const input = $<HTMLInputElement>(id);
     if (document.activeElement !== input) input.value = value;
   }
 
-  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
+  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
+  type ImportValueMode = 'nk' | 'epsilon';
+  type RawOpticalRow = [number, number, number];
+  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
+  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
+  interface MaterialImportTarget {
+    fileName: string;
+    statusEl: HTMLElement;
+    inputEl: HTMLInputElement;
+    onAccept: (data: number[][], label: string) => void;
+    onCancel?: () => void;
+  }
+  let pendingMaterialImport: (MaterialImportTarget & { parsed: ParsedOpticalFile }) | null = null;
+
+  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
     const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#') && !line.startsWith('%'));
     if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-
     let delimiter = /\t/;
     if (lines[0].split(delimiter).length < 3) delimiter = /,/;
     if (lines[0].split(delimiter).length < 3) delimiter = /\s+/;
-
     const first = lines[0].split(delimiter)[0];
     const start = Number.isNaN(Number.parseFloat(first)) ? 1 : 0;
-    const data: number[][] = [];
+    const rows: RawOpticalRow[] = [];
+    let skipped = 0;
     for (let i = start; i < lines.length; i++) {
       const parts = lines[i].split(delimiter).map(Number);
-      if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) continue;
-      data.push([parts[0], parts[1], parts.length >= 3 && !Number.isNaN(parts[2]) ? Math.abs(parts[2]) : 0]);
+      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
+        skipped++;
+        continue;
+      }
+      rows.push([parts[0], parts[1], parts[2]]);
     }
-    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
+    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
+    return { rows, skipped };
+  }
 
-    data.sort((a, b) => a[0] - b[0]);
-    const maxLambda = data[data.length - 1][0];
-    let unit = 'um';
-    if (maxLambda > 50) {
-      unit = 'nm';
-      for (const row of data) row[0] /= 1000;
+  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
+    const epsAbs = Math.hypot(epsRe, epsIm);
+    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
+    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
+    return [n, Math.abs(k)];
+  }
+
+  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
+    const data: number[][] = [];
+    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
+    for (const [x, a, b] of rows) {
+      let lambdaUm: number;
+      if (axisMode === 'energy-ev') {
+        if (x <= 0) continue;
+        lambdaUm = HC_EV_NM / x / 1000;
+      } else if (axisMode === 'wavelength-nm') {
+        if (x <= 0) continue;
+        lambdaUm = x / 1000;
+      } else {
+        if (x <= 0) continue;
+        lambdaUm = x;
+      }
+      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
+      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
+      data.push([lambdaUm, n, k]);
+      nMin = Math.min(nMin, n);
+      nMax = Math.max(nMax, n);
+      kMin = Math.min(kMin, k);
+      kMax = Math.max(kMax, k);
     }
-    return { data, unit };
+    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
+    data.sort((a, b) => a[0] - b[0]);
+    return {
+      data,
+      lambdaMinNm: data[0][0] * 1000,
+      lambdaMaxNm: data[data.length - 1][0] * 1000,
+      nMin,
+      nMax,
+      kMin,
+      kMax,
+    };
+  }
+
+  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
+    const xs = rows.map(row => row[0]).filter(Number.isFinite);
+    const ys = rows.flatMap(row => [row[1], row[2]]).filter(Number.isFinite);
+    const xMax = Math.max(...xs);
+    const yMaxAbs = Math.max(...ys.map(Math.abs));
+    const hasNegativeReal = rows.some(row => row[1] < 0);
+    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
+    let axis: ImportAxisMode = 'wavelength-um';
+    if (xMax > 50) axis = 'wavelength-nm';
+    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
+    return { axis, values };
+  }
+
+  function formatCompact(value: number): string {
+    if (!Number.isFinite(value)) return '';
+    const abs = Math.abs(value);
+    if (abs >= 1000 || (abs > 0 && abs < 0.01)) return value.toExponential(3);
+    return value.toPrecision(5);
+  }
+
+  function sampleRows<T>(rows: T[], maxRows: number): T[] {
+    if (rows.length <= maxRows) return rows.slice();
+    const sampled: T[] = [];
+    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
+    return sampled;
+  }
+
+  function previewRange(series: Array<{ y: Float64Array }>): [number, number] {
+    let min = Infinity, max = -Infinity;
+    for (const item of series) {
+      for (let i = 0; i < item.y.length; i++) {
+        const value = item.y[i];
+        if (!Number.isFinite(value)) continue;
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+    if (max <= min) max = min + 1;
+    const pad = (max - min) * 0.08;
+    return [min - pad, max + pad];
+  }
+
+  function previewSeries(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode) {
+    const parsed = rows
+      .map(([x, a, b]) => Number.isFinite(x) && Number.isFinite(a) && Number.isFinite(b) ? { x, a, b } : null)
+      .filter((row): row is { x: number; a: number; b: number } => !!row)
+      .sort((a, b) => a.x - b.x);
+    if (parsed.length < 2) return null;
+    const sampled = sampleRows(parsed, IMPORT_PREVIEW_ROWS);
+    const xArr = new Float64Array(sampled.length);
+    const y1 = new Float64Array(sampled.length);
+    const y2 = new Float64Array(sampled.length);
+    for (let i = 0; i < sampled.length; i++) {
+      xArr[i] = sampled[i].x;
+      y1[i] = sampled[i].a;
+      y2[i] = valueMode === 'epsilon' ? sampled[i].b : Math.abs(sampled[i].b);
+    }
+    const series = valueMode === 'epsilon'
+      ? [{ y: y1, color: colors.re, label: 'Re epsilon' }, { y: y2, color: colors.im, label: 'Im epsilon' }]
+      : [{ y: y1, color: colors.re, label: 'n' }, { y: y2, color: colors.im, label: 'k' }];
+    const xLabel = axisMode === 'energy-ev' ? 'Photon energy (eV)' : axisMode === 'wavelength-nm' ? 'Wavelength (nm)' : 'Wavelength (um)';
+    const yLabel = valueMode === 'epsilon' ? 'Dielectric function' : 'Refractive index';
+    return {
+      xArr,
+      series,
+      xRange: [xArr[0], xArr[xArr.length - 1]] as [number, number],
+      yRange: previewRange(series),
+      xLabel,
+      yLabel,
+    };
   }
 
   function currentEpsilon(lambdaNm: number): Complex {
@@ -965,7 +1284,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   function materialReferenceText(): string {
     if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
-    if (state.materialId === 'file') return uploadedMaterial ? 'Uploaded n,k data' : 'Upload a wavelength, n, k table';
+    if (state.materialId === 'file') return uploadedMaterial ? '' : 'Upload optical constants file';
     if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search refractiveindex.info database';
     return MATERIALS[state.materialId]?.ref ?? '';
   }
@@ -1282,6 +1601,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   }
 
   function updateChartCopy() {
+    updateAxisControls();
     const title = $('chart-title');
     const subtitle = $('chart-subtitle');
     const legend = $('chart-legend');
@@ -1331,7 +1651,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   function materialChartSubtitle(): string {
     if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
-    if (state.materialId === 'file') return uploadedMaterial ? 'Computed from uploaded n,k data' : 'Upload n,k data to replace the fallback preview';
+    if (state.materialId === 'file') return uploadedMaterial ? 'Computed from uploaded optical constants' : 'Upload optical constants to replace the fallback preview';
     if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search database to replace the fallback preview';
     return 'Computed from tabulated n,k interpolation';
   }
@@ -1357,6 +1677,52 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     else drawResonanceChart();
   }
 
+  function hasAxisToggle(): boolean {
+    return state.tab === 'spectrum' || state.tab === 'material';
+  }
+
+  function updateAxisControls() {
+    const overlay = $('axis-overlay');
+    overlay.style.display = hasAxisToggle() ? 'block' : 'none';
+    overlay.querySelectorAll<HTMLButtonElement>('.axis-btn').forEach(btn => {
+      const active = btn.dataset.axis === state.xAxis;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+  }
+
+  function axisRange(): [number, number] {
+    if (state.xAxis === 'energy') return [HC_EV_NM / state.lambdaMaxNm, HC_EV_NM / state.lambdaMinNm];
+    return [state.lambdaMinNm, state.lambdaMaxNm];
+  }
+
+  function axisLabel(): string {
+    return state.xAxis === 'energy' ? 'Photon energy (eV)' : 'Wavelength \u03BB (nm)';
+  }
+
+  function axisValue(lambdaNm: number): number {
+    return state.xAxis === 'energy' ? HC_EV_NM / lambdaNm : lambdaNm;
+  }
+
+  function axisArray(lambdaNm: Float64Array): ArrayLike<number> {
+    if (state.xAxis === 'lambda') return lambdaNm;
+    const x = new Float64Array(lambdaNm.length);
+    for (let i = 0; i < lambdaNm.length; i++) x[i] = HC_EV_NM / lambdaNm[lambdaNm.length - 1 - i];
+    return x;
+  }
+
+  function axisSeries(values: Float64Array): ArrayLike<number> {
+    if (state.xAxis === 'lambda') return values;
+    const y = new Float64Array(values.length);
+    for (let i = 0; i < values.length; i++) y[i] = values[values.length - 1 - i];
+    return y;
+  }
+
+  function peakAxisLabel(lambdaNm: number): string {
+    if (state.xAxis === 'energy') return `${fmtFixed(HC_EV_NM / lambdaNm, 2)} eV`;
+    return `${fmtFixed(lambdaNm, 0)} nm`;
+  }
+
   function canvasSetup() {
     const canvas = $('plasmon-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -1373,12 +1739,12 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (!result) return;
     const { ctx, w, h, theme } = canvasSetup();
     const m = { top: 18, right: 22, bottom: 42, left: 58 };
-    const xMin = state.lambdaMinNm;
-    const xMax = state.lambdaMaxNm;
+    const [xMin, xMax] = axisRange();
+    const xArr = axisArray(result.wavelengthNm);
     const series = [
-      { data: result.sigmaExtOverV, color: colors.ext, label: 'Extinction' },
-      { data: result.sigmaAbsOverV, color: colors.abs, label: 'Absorption' },
-      { data: result.sigmaScaOverV, color: colors.sca, label: 'Scattering' },
+      { data: axisSeries(result.sigmaExtOverV), color: colors.ext, label: 'Extinction' },
+      { data: axisSeries(result.sigmaAbsOverV), color: colors.abs, label: 'Absorption' },
+      { data: axisSeries(result.sigmaScaOverV), color: colors.sca, label: 'Scattering' },
     ];
     let yMin = 0;
     let yMax = 0;
@@ -1391,10 +1757,10 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (yMax <= yMin) yMax = yMin + 1;
     yMax *= 1.08;
 
-    const plot = drawAxes(ctx, w, h, m, xMin, xMax, yMin, yMax, 'Wavelength λ (nm)', 'sigma / V (nm^-1)', theme);
-    for (const s of series) drawLine(ctx, result.wavelengthNm, s.data, plot, s.color, 2.2);
+    const plot = drawAxes(ctx, w, h, m, xMin, xMax, yMin, yMax, axisLabel(), 'sigma / V (nm^-1)', theme);
+    for (const s of series) drawLine(ctx, xArr, s.data, plot, s.color, 2.2);
 
-    const xPeak = plot.xTo(result.peak.lambdaPeakNm);
+    const xPeak = plot.xTo(axisValue(result.peak.lambdaPeakNm));
     if (xPeak >= m.left && xPeak <= w - m.right) {
       ctx.setLineDash([3, 3]);
       ctx.strokeStyle = colors.peak;
@@ -1408,23 +1774,24 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       ctx.font = '600 10px Inter, system-ui, sans-serif';
       ctx.textAlign = xPeak > w - m.right - 72 ? 'right' : 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`${fmtFixed(result.peak.lambdaPeakNm, 0)} nm`, xPeak + (xPeak > w - m.right - 72 ? -5 : 5), m.top + 3);
+      ctx.fillText(peakAxisLabel(result.peak.lambdaPeakNm), xPeak + (xPeak > w - m.right - 72 ? -5 : 5), m.top + 3);
     }
   }
 
   function drawMaterialChart() {
     const { ctx, w, h, theme } = canvasSetup();
     const count = 280;
-    const lambda = new Float64Array(count);
+    const xArr = new Float64Array(count);
     const re = new Float64Array(count);
     const im = new Float64Array(count);
     let yMin = Number.POSITIVE_INFINITY;
     let yMax = Number.NEGATIVE_INFINITY;
 
     for (let i = 0; i < count; i++) {
-      const l = state.lambdaMinNm + (state.lambdaMaxNm - state.lambdaMinNm) * i / (count - 1);
+      const t = i / (count - 1);
+      const l = state.xAxis === 'energy' ? state.lambdaMaxNm - (state.lambdaMaxNm - state.lambdaMinNm) * t : state.lambdaMinNm + (state.lambdaMaxNm - state.lambdaMinNm) * t;
       const eps = currentEpsilon(l);
-      lambda[i] = l;
+      xArr[i] = axisValue(l);
       re[i] = eps.re;
       im[i] = eps.im;
       yMin = Math.min(yMin, eps.re, eps.im);
@@ -1433,9 +1800,10 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
     if (yMax <= yMin) yMax = yMin + 1;
     const pad = (yMax - yMin) * 0.08;
-    const plot = drawAxes(ctx, w, h, { top: 18, right: 22, bottom: 42, left: 58 }, state.lambdaMinNm, state.lambdaMaxNm, yMin - pad, yMax + pad, 'Wavelength λ (nm)', 'epsilon', theme);
-    drawLine(ctx, lambda, re, plot, colors.re, 2.2);
-    drawLine(ctx, lambda, im, plot, colors.im, 2.2);
+    const [xMin, xMax] = axisRange();
+    const plot = drawAxes(ctx, w, h, { top: 18, right: 22, bottom: 42, left: 58 }, xMin, xMax, yMin - pad, yMax + pad, axisLabel(), 'epsilon', theme);
+    drawLine(ctx, xArr, re, plot, colors.re, 2.2);
+    drawLine(ctx, xArr, im, plot, colors.im, 2.2);
   }
 
   function resonanceSweepData() {
@@ -1914,23 +2282,123 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   bindNumberCommit('lambda-min', value => { state.lambdaMinNm = value; });
   bindNumberCommit('lambda-max', value => { state.lambdaMaxNm = value; });
+
+  function clearMaterialImportCanvas() {
+    const rect = materialImportPreview.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(320, rect.width || materialImportPreview.clientWidth);
+    const height = Math.max(140, rect.height || materialImportPreview.clientHeight);
+    materialImportPreview.width = width * dpr;
+    materialImportPreview.height = height * dpr;
+    const ctx = materialImportPreview.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+  }
+
+  function renderMaterialImportPreview() {
+    if (!pendingMaterialImport) return;
+    const axisMode = materialImportAxis.value as ImportAxisMode;
+    const valueMode = materialImportValues.value as ImportValueMode;
+    const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    const preview = previewSeries(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    materialImportStatus.classList.toggle('error', 'error' in converted);
+    materialImportAccept.disabled = 'error' in converted;
+    if (preview) {
+      const rect = materialImportPreview.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(320, rect.width || materialImportPreview.clientWidth);
+      const height = Math.max(140, rect.height || materialImportPreview.clientHeight);
+      materialImportPreview.width = width * dpr;
+      materialImportPreview.height = height * dpr;
+      const ctx = materialImportPreview.getContext('2d')!;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const plot = drawAxes(ctx, width, height, { top: 18, right: 22, bottom: 42, left: 58 }, preview.xRange[0], preview.xRange[1], preview.yRange[0], preview.yRange[1], preview.xLabel, preview.yLabel, chartTheme());
+      for (const item of preview.series) drawLine(ctx, preview.xArr, item.y, plot, item.color, 2.1);
+    } else {
+      clearMaterialImportCanvas();
+    }
+    if ('error' in converted) {
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    materialImportStatus.textContent = `${converted.data.length} rows`;
+  }
+
+  function openMaterialImportDialog(target: MaterialImportTarget, text: string) {
+    const parsed = parseOpticalFile(text);
+    if ('error' in parsed) {
+      target.statusEl.className = 'file-error';
+      target.statusEl.textContent = parsed.error;
+      target.inputEl.value = '';
+      target.onCancel?.();
+      return;
+    }
+    pendingMaterialImport = { ...target, parsed };
+    const inferred = inferImportModes(parsed.rows);
+    materialImportAxis.value = inferred.axis;
+    materialImportValues.value = inferred.values;
+    materialImportFile.textContent = `${target.fileName} (${parsed.rows.length} numeric rows)`;
+    materialImportRows.innerHTML = parsed.rows.slice(0, 8).map(row =>
+      `<tr><td>${formatCompact(row[0])}</td><td>${formatCompact(row[1])}</td><td>${formatCompact(row[2])}</td></tr>`
+    ).join('');
+    if (typeof materialImportDialog.showModal === 'function') materialImportDialog.showModal();
+    else materialImportDialog.setAttribute('open', '');
+    requestAnimationFrame(renderMaterialImportPreview);
+  }
+
+  function cancelMaterialImport() {
+    if (pendingMaterialImport) {
+      pendingMaterialImport.statusEl.className = 'file-name';
+      pendingMaterialImport.statusEl.textContent = 'Import cancelled';
+      pendingMaterialImport.inputEl.value = '';
+      pendingMaterialImport.onCancel?.();
+    }
+    pendingMaterialImport = null;
+    materialImportDialog.close();
+  }
+
+  materialImportAxis.addEventListener('change', renderMaterialImportPreview);
+  materialImportValues.addEventListener('change', renderMaterialImportPreview);
+  materialImportCancel.addEventListener('click', cancelMaterialImport);
+  materialImportClose.addEventListener('click', cancelMaterialImport);
+  materialImportDialog.addEventListener('click', event => {
+    if (event.target === materialImportDialog) cancelMaterialImport();
+  });
+  materialImportAccept.addEventListener('click', () => {
+    if (!pendingMaterialImport) return;
+    const axisMode = materialImportAxis.value as ImportAxisMode;
+    const valueMode = materialImportValues.value as ImportValueMode;
+    const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    if ('error' in converted) {
+      materialImportStatus.classList.add('error');
+      materialImportStatus.textContent = converted.error;
+      return;
+    }
+    const axisLabel = axisMode === 'energy-ev' ? 'energy eV' : axisMode === 'wavelength-nm' ? 'wavelength nm' : 'wavelength um';
+    const valueLabel = valueMode === 'epsilon' ? 'epsilon' : 'n,k';
+    const label = `${pendingMaterialImport.fileName} (${converted.data.length} points, ${axisLabel}, ${valueLabel})`;
+    pendingMaterialImport.onAccept(converted.data, label);
+    pendingMaterialImport = null;
+    materialImportDialog.close();
+  });
+
   $<HTMLInputElement>('file-upload').addEventListener('change', event => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     const fileName = $('file-name');
     if (!file) return;
     file.text().then(text => {
-      const parsed = parseNKFile(text);
-      if ('error' in parsed) {
-        fileName.className = 'file-error';
-        fileName.textContent = parsed.error;
-        uploadedMaterial = null;
-      } else {
-        fileName.className = 'file-name';
-        fileName.textContent = `${file.name} (${parsed.data.length} points, ${parsed.unit})`;
-        uploadedMaterial = parsed.data;
-      }
-      render();
+      openMaterialImportDialog({
+        fileName: file.name,
+        statusEl: fileName,
+        inputEl: input,
+        onAccept: (data, label) => {
+          uploadedMaterial = data;
+          fileName.className = 'file-name';
+          fileName.textContent = label;
+          render();
+        },
+      }, text);
     });
   });
 
@@ -2037,6 +2505,16 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     });
   });
 
+  $('axis-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.axis-btn');
+    if (!btn || !btn.dataset.axis) return;
+    state.xAxis = btn.dataset.axis as ChartAxisMode;
+    updateAxisControls();
+    if (state.tab === 'spectrum' || state.tab === 'material') {
+      drawChart();
+    }
+  });
+
   $('resonance-controls').addEventListener('click', event => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
     if (!btn || btn.disabled || !btn.dataset.sweep) return;
@@ -2071,10 +2549,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       `# material=${materialLabelForExport()}, shape=${state.shape}, L_nm=${state.lengthNm}, R=${state.aspectRatio}, n_host=${state.hostIndex}, modes=${state.modeCount}`,
     ];
     if (state.tab === 'spectrum' && result) {
-      const lines = [...header, 'wavelength_nm,sigma_ext_nm2,sigma_abs_nm2,sigma_sca_nm2,sigma_ext_over_V_nm-1,sigma_abs_over_V_nm-1,sigma_sca_over_V_nm-1,quantum_yield'];
+      const lines = [...header, 'wavelength_nm,energy_eV,sigma_ext_nm2,sigma_abs_nm2,sigma_sca_nm2,sigma_ext_over_V_nm-1,sigma_abs_over_V_nm-1,sigma_sca_over_V_nm-1,quantum_yield'];
       for (let i = 0; i < result.wavelengthNm.length; i++) {
         lines.push([
           result.wavelengthNm[i],
+          HC_EV_NM / result.wavelengthNm[i],
           result.sigmaExtNm2[i],
           result.sigmaAbsNm2[i],
           result.sigmaScaNm2[i],
@@ -2087,11 +2566,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       return lines.join('\n') + '\n';
     }
     if (state.tab === 'material') {
-      const lines = [...header, 'wavelength_nm,epsilon_re,epsilon_im'];
+      const lines = [...header, 'wavelength_nm,energy_eV,epsilon_re,epsilon_im'];
       for (let i = 0; i < 320; i++) {
         const lambda = state.lambdaMinNm + (state.lambdaMaxNm - state.lambdaMinNm) * i / 319;
         const eps = currentEpsilon(lambda);
-        lines.push(`${lambda.toPrecision(8)},${eps.re.toPrecision(8)},${eps.im.toPrecision(8)}`);
+        lines.push(`${lambda.toPrecision(8)},${(HC_EV_NM / lambda).toPrecision(8)},${eps.re.toPrecision(8)},${eps.im.toPrecision(8)}`);
       }
       return lines.join('\n') + '\n';
     }
@@ -2143,6 +2622,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     p.set('max', String(state.lambdaMaxNm));
     p.set('modes', String(state.modeCount));
     p.set('view', state.tab);
+    p.set('axis', state.xAxis);
     p.set('sweep', state.resonanceSweep);
     return p.toString();
   }
@@ -2171,6 +2651,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (p.has('max')) state.lambdaMaxNm = Number.parseFloat(p.get('max')!);
     if (p.has('modes')) state.modeCount = Number.parseInt(p.get('modes')!, 10);
     if (p.has('view') && ['spectrum', 'material', 'resonance', 'ldos'].includes(p.get('view')!)) state.tab = p.get('view') as TabId;
+    if (p.has('axis') && ['lambda', 'energy'].includes(p.get('axis')!)) state.xAxis = p.get('axis') as ChartAxisMode;
     if (p.has('sweep') && ['L', 'R'].includes(p.get('sweep')!)) state.resonanceSweep = p.get('sweep') as ResonanceSweep;
 
     document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(btn => {
