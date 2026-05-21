@@ -17,7 +17,8 @@ import Layout from '../../layouts/Layout.astro';
   <section class="section">
     <div class="container">
       <div class="widget-layout">
-        <div class="controls card">
+        <div class="widget-column widget-column--controls">
+          <div class="controls card">
           <div class="param excitation-param">
             <div class="param-header"><label>Excitation</label></div>
             <div class="plot-tabs" id="excitation-tabs" role="radiogroup">
@@ -316,9 +317,12 @@ import Layout from '../../layouts/Layout.astro';
             spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.
             Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.
           </p>
+          </div>
+
         </div>
 
-        <div class="chart-panel card">
+        <div class="widget-column widget-column--results">
+          <div class="chart-panel card">
           <div class="chart-toolbar">
             <div class="plot-tabs plot-tabs--sm" id="view-tabs" role="radiogroup">
               <button class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
@@ -424,12 +428,23 @@ import Layout from '../../layouts/Layout.astro';
               Share
             </button>
           </div>
-        </div>
+          </div>
 
-        <div class="notes-card card" id="notes-card">
-          <h4>Notes</h4>
-          <div id="notes-body"></div>
+          <div class="notes-card card" id="notes-card">
+            <h4>Notes</h4>
+            <div id="notes-body"></div>
+          </div>
         </div>
+      </div>
+
+      <div class="references card">
+        <h4>References</h4>
+        <ul class="reference-list">
+          <li><span class="ref-index">[1]</span><span>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983).</span></li>
+          <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, <em>Relativistic energy loss and induced photon emission in the interaction of a dielectric sphere with an external electron beam</em>, Phys. Rev. B <strong>59</strong>, 3095 (1999), <a href="https://doi.org/10.1103/PhysRevB.59.3095" target="_blank" rel="noopener">doi:10.1103/PhysRevB.59.3095</a>.</span></li>
+          <li><span class="ref-index">[3]</span><span>P. E. Stamatopoulou, W. Zhao, A. Rodr&iacute;guez Echarri, N. A. Mortensen, K. Busch, C. Tserkezis &amp; C. Wolff, <em>Electron beams traversing spherical nanoparticles: analytic and numerical treatment</em>, Phys. Rev. Research <strong>6</strong>, 013239 (2024), <a href="https://doi.org/10.1103/PhysRevResearch.6.013239" target="_blank" rel="noopener">doi:10.1103/PhysRevResearch.6.013239</a>.</span></li>
+          <li><span class="ref-index">[4]</span><span>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Au, Ag: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1995); TiO<sub>2</sub>: Sarkar et al. (2019).</span></li>
+        </ul>
       </div>
 
       <dialog class="structure-dialog" id="structure-dialog" aria-labelledby="structure-dialog-title">
@@ -491,15 +506,6 @@ import Layout from '../../layouts/Layout.astro';
         </div>
       </dialog>
 
-      <div class="references card">
-        <h4>References</h4>
-        <ul class="reference-list">
-          <li><span class="ref-index">[1]</span><span>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983).</span></li>
-          <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, <em>Relativistic energy loss and induced photon emission in the interaction of a dielectric sphere with an external electron beam</em>, Phys. Rev. B <strong>59</strong>, 3095 (1999), <a href="https://doi.org/10.1103/PhysRevB.59.3095" target="_blank" rel="noopener">doi:10.1103/PhysRevB.59.3095</a>.</span></li>
-          <li><span class="ref-index">[3]</span><span>P. E. Stamatopoulou, W. Zhao, A. Rodr&iacute;guez Echarri, N. A. Mortensen, K. Busch, C. Tserkezis &amp; C. Wolff, <em>Electron beams traversing spherical nanoparticles: analytic and numerical treatment</em>, Phys. Rev. Research <strong>6</strong>, 013239 (2024), <a href="https://doi.org/10.1103/PhysRevResearch.6.013239" target="_blank" rel="noopener">doi:10.1103/PhysRevResearch.6.013239</a>.</span></li>
-          <li><span class="ref-index">[4]</span><span>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Au, Ag: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1995); TiO<sub>2</sub>: Sarkar et al. (2019).</span></li>
-        </ul>
-      </div>
     </div>
   </section>
 </Layout>
@@ -512,7 +518,8 @@ import Layout from '../../layouts/Layout.astro';
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
   .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
-  .controls { display: flex; flex-direction: column; gap: 0.85rem; position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
+  .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .controls { display: flex; flex-direction: column; gap: 0.85rem; }
   .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
   .param { display: flex; flex-direction: column; gap: 0.28rem; }
   .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
@@ -781,16 +788,28 @@ import Layout from '../../layouts/Layout.astro';
   @media (max-width: 640px) {
     .material-import-dialog__grid { grid-template-columns: 1fr; }
   }
-  .notes-card {
-    grid-column: 2;
-    padding: var(--space-md);
-  }
+  .notes-card { padding: var(--space-md); }
   .notes-card h4,
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
-  .notes-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
-  .notes-card li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
-  .notes-card strong { color: var(--text); }
-  .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
+  .notes-card :global(ul) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin: 0;
+    padding-left: 2rem;
+    list-style: disc outside;
+  }
+  .notes-card :global(li) {
+    padding-left: 0.35rem;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .notes-card :global(li)::marker {
+    color: var(--text-soft);
+  }
+  .notes-card :global(strong) { color: var(--text); }
+  .references { width: 100%; margin-top: var(--space-lg); padding: var(--space-md); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li {
     display: grid;
@@ -857,8 +876,8 @@ import Layout from '../../layouts/Layout.astro';
   .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.32rem; padding-top: 0.32rem; }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
-    .notes-card { grid-column: auto; }
-    .controls { position: static; gap: var(--space-md); }
+    .widget-column { gap: var(--space-md); }
+    .controls { gap: var(--space-md); }
     .param-limits { display: none; }
     .drude-grid { grid-template-columns: 1fr; }
     .chart-wrap canvas { aspect-ratio: 4 / 3; }
@@ -3772,14 +3791,9 @@ import Layout from '../../layouts/Layout.astro';
       const trajX = cx + Math.min(circR + 16, (electronBParam.value / maxR) * circR);
       const y1 = cy - circR - 16;
       const y2 = cy + circR + 18;
-      const guideY = cy - circR - 9;
-      const radiusX = cx + circR;
-      const guideEndX = Math.max(trajX, radiusX);
+      s += `<text x="8" y="14" fill="${ct.textMuted}" font-size="7.5" font-weight="700" font-family="Inter,system-ui">R=${maxR} nm</text>`;
       s += `<line x1="${trajX}" y1="${y1}" x2="${trajX}" y2="${y2}" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arr)"/>`;
-      s += `<line x1="${cx}" y1="${guideY}" x2="${guideEndX}" y2="${guideY}" stroke="#2563EB" stroke-width="0.65" stroke-dasharray="2,2"/>`;
-      s += `<circle cx="${radiusX}" cy="${guideY}" r="2.8" fill="#EF4444" stroke="${ct.grid}" stroke-width="1"/>`;
-      s += `<text x="${radiusX}" y="${guideY - 5}" text-anchor="middle" fill="#EF4444" font-size="7" font-weight="700" font-family="Inter,system-ui">R</text>`;
-      s += `<text x="${(cx + trajX) / 2}" y="${guideY - 13}" text-anchor="middle" fill="#2563EB" font-size="7.5" font-family="Inter,system-ui">b=${electronBParam.value.toFixed(0)} nm</text>`;
+      s += `<text x="${trajX + 4}" y="${y1 + 21}" fill="#2563EB" font-size="7.5" font-family="Inter,system-ui">b=${electronBParam.value.toFixed(0)} nm</text>`;
       s += `<text x="${trajX + 4}" y="${y1 + 10}" fill="#2563EB" font-size="8" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="6">-</tspan></text>`;
     }
     // Dimension lines and labels
@@ -3803,7 +3817,9 @@ import Layout from '../../layouts/Layout.astro';
     s += `<line x1="${cx}" y1="${arrowY}" x2="${cx + circR}" y2="${arrowY}" stroke="${ct.textMuted}" stroke-width="0.7" marker-end="url(#arr)"/>`;
     s += `<line x1="${cx}" y1="${arrowY-3}" x2="${cx}" y2="${arrowY+3}" stroke="${ct.textMuted}" stroke-width="0.7"/>`;
     s += `<defs><marker id="arr" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4" fill="none" stroke="${ct.textMuted}" stroke-width="0.7"/></marker></defs>`;
-    s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
+    if (excitation !== 'electron') {
+      s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
+    }
     s += '</svg>';
     configCheckEl.innerHTML = withSvgMarkerId(s, 'mie-config-radius-arrow');
     configCheckEl.setAttribute('aria-label', `Open enlarged structure drawing for ${geometry === 'coreshell' ? 'core-shell particle' : 'sphere'}`);
