@@ -4131,7 +4131,6 @@ import Layout from '../../layouts/Layout.astro';
   });
 
   if (location.hash.slice(1)) restoreState();
-  else applyElectronDefaultState();
   updateExcitationUI();
   updateElectronRadiusMarker();
   new ResizeObserver(() => render()).observe(canvas);
