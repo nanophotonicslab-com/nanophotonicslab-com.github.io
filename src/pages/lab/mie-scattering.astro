@@ -3771,7 +3771,8 @@ import Layout from '../../layouts/Layout.astro';
       : `\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm`;
 
     // Full-width annotated cross-section SVG
-    const W = 280, circR = 44, cx = 68, labelX = cx + circR + 14;
+    const W = 280, circR = 44, cx = 68;
+    const labelX = cx + circR + (excitation === 'electron' ? 34 : 14);
     const rowH = layers.length > 3 ? 18 : 22;
     const H = Math.max(circR * 2 + 74, layers.length * rowH + 70);
     const cy = 24 + circR;
@@ -3788,7 +3789,7 @@ import Layout from '../../layouts/Layout.astro';
       s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.25)" stroke-width="0.7"/>`;
     }
     if (excitation === 'electron') {
-      const trajX = cx + Math.min(circR + 16, (electronBParam.value / maxR) * circR);
+      const trajX = cx + Math.min(circR + 12, (electronBParam.value / maxR) * circR);
       const y1 = cy - circR - 16;
       const y2 = cy + circR + 18;
       s += `<text x="8" y="14" fill="${ct.textMuted}" font-size="7.5" font-weight="700" font-family="Inter,system-ui">R=${maxR} nm</text>`;
