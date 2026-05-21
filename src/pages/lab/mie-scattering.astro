@@ -18,6 +18,15 @@ import Layout from '../../layouts/Layout.astro';
     <div class="container">
       <div class="widget-layout">
         <div class="controls card">
+          <div class="param excitation-param">
+            <div class="param-header"><label>Excitation</label></div>
+            <div class="plot-tabs" id="excitation-tabs" role="radiogroup">
+              <button class="plot-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
+              <button class="plot-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
+              <button class="plot-tab" data-excitation="dipole" role="radio" aria-checked="false" aria-disabled="true" disabled>Dipoles</button>
+            </div>
+          </div>
+
           <h3>Parameters</h3>
 
           <!-- Geometry type -->
@@ -29,12 +38,60 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <div class="param electron-only" id="electron-impact-group" style="display:none">
+            <div class="param-header">
+              <label>Impact parameter b (nm)</label>
+              <input type="number" class="param-number" id="electron-b-num" value="60" step="5" min="0.1">
+            </div>
+            <div class="slider-marker-wrap">
+              <input type="range" class="param-slider" id="electron-b-slider" min="1" max="250" step="1" value="60">
+              <span class="radius-threshold-marker" id="electron-radius-marker" title="Particle radius threshold"></span>
+            </div>
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="electron-b-min" value="1" step="1" min="0.1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="electron-b-max" value="250" step="5" min="1">
+            </div>
+          </div>
+
+          <div class="param electron-only" id="electron-beta-group" style="display:none">
+            <div class="param-header">
+              <label>Electron energy</label>
+            </div>
+            <div class="param-dual-row">
+              <label>
+                <span>&beta; = v/c</span>
+                <input type="number" class="param-number" id="electron-beta-num" value="0.33" step="0.01" min="0.02" max="0.95">
+              </label>
+              <label>
+                <span>K (keV)</span>
+                <input type="number" class="param-number" id="electron-kev-num" value="30.00" step="0.1" min="0.001">
+              </label>
+            </div>
+            <input type="range" class="param-slider" id="electron-beta-slider" min="0.02" max="0.95" step="0.01" value="0.33">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="electron-beta-min" value="0.02" step="0.01" min="0.01">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="electron-beta-max" value="0.95" step="0.01" min="0.02">
+            </div>
+          </div>
+
+          <div class="param electron-only" id="electron-energy-group" style="display:none">
+            <div class="param-header"><label>Energy loss range (eV)</label></div>
+            <div class="param-range-row">
+              <input type="number" class="param-number param-number--sm" id="electron-emin" value="1.5" step="0.1" min="0.1">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-number param-number--sm" id="electron-emax" value="5.5" step="0.1" min="0.2">
+            </div>
+          </div>
+
           <!-- Shell / particle material -->
           <div class="param">
             <div class="param-header"><label id="material-label">Material</label></div>
             <select id="material-select" class="param-select">
-              <option value="custom" selected>Custom dielectric</option>
-              <option value="au">Gold (Au)</option>
+              <option value="custom">Custom dielectric</option>
+              <option value="drude">Drude model</option>
+              <option value="au" selected>Gold (Au)</option>
               <option value="ag">Silver (Ag)</option>
               <option value="si">Silicon (Si)</option>
               <option value="al">Aluminum (Al)</option>
@@ -54,8 +111,26 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
+          <div class="param drude-panel" id="drude-group" style="display:none">
+            <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+            <div class="drude-grid">
+              <label>
+                <span>&epsilon;<sub>b</sub></span>
+                <input type="number" class="param-number" id="drude-epsb" value="1" step="0.1">
+              </label>
+              <label>
+                <span>&omega;<sub>p</sub> (eV)</span>
+                <input type="number" class="param-number" id="drude-wp" value="5" step="0.01" min="0.01">
+              </label>
+              <label>
+                <span>&gamma; (eV)</span>
+                <input type="number" class="param-number" id="drude-gamma" value="0.05" step="0.001" min="0">
+              </label>
+            </div>
+          </div>
+
           <!-- Custom epsilon for shell/particle -->
-          <div class="param" id="eps-group">
+          <div class="param hidden" id="eps-group">
             <div class="param-header">
               <label>&epsilon;<sub>r</sub></label>
               <input type="number" class="param-number" id="eps-num" value="10" step="0.5" min="1">
@@ -75,6 +150,7 @@ import Layout from '../../layouts/Layout.astro';
               <div class="param" id="core-mat-group">
                 <div class="param-header"><label>Material</label></div>
                 <select id="core-material-select" class="param-select">
+                  <option value="drude">Drude model</option>
                   <option value="au" selected>Gold (Au)</option>
                   <option value="ag">Silver (Ag)</option>
                   <option value="si">Silicon (Si)</option>
@@ -93,6 +169,23 @@ import Layout from '../../layouts/Layout.astro';
                   <input type="text" id="core-rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
                   <div class="rii-results" id="core-rii-results"></div>
                   <span class="material-ref" id="core-rii-status"></span>
+                </div>
+              </div>
+              <div class="param drude-panel" id="core-drude-group" style="display:none">
+                <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+                <div class="drude-grid">
+                  <label>
+                    <span>&epsilon;<sub>b</sub></span>
+                    <input type="number" class="param-number" id="core-drude-epsb" value="1" step="0.1">
+                  </label>
+                  <label>
+                    <span>&omega;<sub>p</sub> (eV)</span>
+                    <input type="number" class="param-number" id="core-drude-wp" value="5" step="0.01" min="0.01">
+                  </label>
+                  <label>
+                    <span>&gamma; (eV)</span>
+                    <input type="number" class="param-number" id="core-drude-gamma" value="0.05" step="0.001" min="0">
+                  </label>
                 </div>
               </div>
               <div class="param" id="core-eps-group" style="display:none">
@@ -125,9 +218,9 @@ import Layout from '../../layouts/Layout.astro';
           <div class="param">
             <div class="param-header">
               <label id="radius-label">Radius (nm)</label>
-              <input type="number" class="param-number" id="r-num" value="100" step="5" min="1">
+              <input type="number" class="param-number" id="r-num" value="50" step="5" min="1">
             </div>
-            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="5" value="100">
+            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="5" value="50">
             <div class="param-limits">
               <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
               <span class="param-limit-dash">&mdash;</span>
@@ -163,7 +256,7 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
 
-          <div class="param">
+          <div class="param" id="plane-range-group">
             <div class="param-header"><label>&lambda; range (nm)</label></div>
             <div class="param-range-row">
               <input type="number" class="param-number param-number--sm" id="lam-min" value="300" step="10" min="100">
@@ -171,6 +264,48 @@ import Layout from '../../layouts/Layout.astro';
               <input type="number" class="param-number param-number--sm" id="lam-max" value="1200" step="10" min="100">
             </div>
           </div>
+
+          <details class="layer-details electron-only" id="electron-numerics" style="display:none">
+            <summary>Electron numerics</summary>
+            <div class="layer-body">
+              <div class="param">
+                <div class="param-header">
+                  <label>l<sub>max</sub></label>
+                  <input type="number" class="param-number" id="electron-lmax-num" value="6" step="1" min="1" max="14">
+                </div>
+                <input type="range" class="param-slider" id="electron-lmax-slider" min="1" max="14" step="1" value="6">
+                <div class="param-limits">
+                  <input type="number" class="param-limit" id="electron-lmax-min" value="1" step="1" min="1">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit" id="electron-lmax-max" value="14" step="1" min="1">
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-header">
+                  <label>q<sub>c</sub> (nm<sup>-1</sup>)</label>
+                  <input type="number" class="param-number" id="electron-qc-num" value="0.71" step="0.01" min="0.01">
+                </div>
+                <input type="range" class="param-slider" id="electron-qc-slider" min="0.05" max="20" step="0.01" value="0.71">
+                <div class="param-limits">
+                  <input type="number" class="param-limit" id="electron-qc-min" value="0.05" step="0.01" min="0.001">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit" id="electron-qc-max" value="20" step="0.1" min="0.01">
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-header">
+                  <label>z quadrature</label>
+                  <input type="number" class="param-number" id="electron-nz-num" value="64" step="8" min="8" max="160">
+                </div>
+                <input type="range" class="param-slider" id="electron-nz-slider" min="8" max="160" step="8" value="64">
+                <div class="param-limits">
+                  <input type="number" class="param-limit" id="electron-nz-min" value="8" step="8" min="8">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit" id="electron-nz-max" value="160" step="8" min="8">
+                </div>
+              </div>
+            </div>
+          </details>
 
           <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
 
@@ -209,6 +344,25 @@ import Layout from '../../layouts/Layout.astro';
                   <button class="plot-tab active" data-decomp="total" role="radio" aria-checked="true">Total</button>
                   <button class="plot-tab" data-decomp="em" role="radio" aria-checked="false">E / M</button>
                   <button class="plot-tab" data-decomp="multipole" role="radio" aria-checked="false">Multipoles</button>
+                </div>
+              </div>
+            </div>
+            <div class="electron-controls" id="electron-controls" style="display:none">
+              <div class="toolbar-control">
+                <span class="toolbar-label">Signal</span>
+                <div class="plot-tabs plot-tabs--toolbar" id="electron-signal-tabs" role="radiogroup">
+                  <button class="plot-tab active" data-electron-signal="eels" role="radio" aria-checked="true">EELS</button>
+                  <button class="plot-tab" data-electron-signal="cl" role="radio" aria-checked="false">CL</button>
+                  <button class="plot-tab" data-electron-signal="both" role="radio" aria-checked="false">Both</button>
+                </div>
+              </div>
+              <div class="toolbar-control">
+                <span class="toolbar-label">Decomposition</span>
+                <div class="plot-tabs plot-tabs--toolbar" id="electron-decomp-tabs" role="radiogroup">
+                  <button class="plot-tab active" data-electron-decomp="total" role="radio" aria-checked="true">Total</button>
+                  <button class="plot-tab" data-electron-decomp="terms" role="radio" aria-checked="false">Terms</button>
+                  <button class="plot-tab" data-electron-decomp="em" role="radio" aria-checked="false">E / M</button>
+                  <button class="plot-tab" data-electron-decomp="multipole" role="radio" aria-checked="false">Multipoles</button>
                 </div>
               </div>
             </div>
@@ -270,6 +424,11 @@ import Layout from '../../layouts/Layout.astro';
               Share
             </button>
           </div>
+        </div>
+
+        <div class="notes-card card" id="notes-card">
+          <h4>Notes</h4>
+          <div id="notes-body"></div>
         </div>
       </div>
 
@@ -333,14 +492,12 @@ import Layout from '../../layouts/Layout.astro';
       </dialog>
 
       <div class="references card">
-        <h4>References &amp; data sources</h4>
-        <ul>
-          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983). Algorithm: BHCOAT for coated spheres, generalized to N concentric shells.</li>
-          <li>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a> &mdash;
-            Au, Ag: Johnson &amp; Christy (1972);
-            Si: Aspnes &amp; Studna (1983);
-            Al: Raki&cacute; (1995);
-            TiO<sub>2</sub>: Sarkar et al. (2019).</li>
+        <h4>References</h4>
+        <ul class="reference-list">
+          <li><span class="ref-index">[1]</span><span>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983).</span></li>
+          <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, <em>Relativistic energy loss and induced photon emission in the interaction of a dielectric sphere with an external electron beam</em>, Phys. Rev. B <strong>59</strong>, 3095 (1999), <a href="https://doi.org/10.1103/PhysRevB.59.3095" target="_blank" rel="noopener">doi:10.1103/PhysRevB.59.3095</a>.</span></li>
+          <li><span class="ref-index">[3]</span><span>P. E. Stamatopoulou, W. Zhao, A. Rodr&iacute;guez Echarri, N. A. Mortensen, K. Busch, C. Tserkezis &amp; C. Wolff, <em>Electron beams traversing spherical nanoparticles: analytic and numerical treatment</em>, Phys. Rev. Research <strong>6</strong>, 013239 (2024), <a href="https://doi.org/10.1103/PhysRevResearch.6.013239" target="_blank" rel="noopener">doi:10.1103/PhysRevResearch.6.013239</a>.</span></li>
+          <li><span class="ref-index">[4]</span><span>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Au, Ag: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1995); TiO<sub>2</sub>: Sarkar et al. (2019).</span></li>
         </ul>
       </div>
     </div>
@@ -358,6 +515,7 @@ import Layout from '../../layouts/Layout.astro';
   .controls { display: flex; flex-direction: column; gap: 0.85rem; position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
   .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
   .param { display: flex; flex-direction: column; gap: 0.28rem; }
+  .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
   .param-header { display: flex; justify-content: space-between; align-items: center; }
   .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .param-number {
@@ -368,11 +526,30 @@ import Layout from '../../layouts/Layout.astro';
   .param-number:focus { border-color: var(--primary-light); }
   .param-number--sm { width: 4.2rem; font-size: 0.8125rem; }
   .param-range-row { display: flex; align-items: center; gap: 0.35rem; }
+  .param-dual-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+  .param-dual-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.7rem; font-weight: 600; color: var(--text-soft); }
+  .param-dual-row .param-number { width: 100%; }
   .param-number::-webkit-inner-spin-button, .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .param-number { -moz-appearance: textfield; }
   .param-slider {
     -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
     background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .slider-marker-wrap { position: relative; display: flex; align-items: center; padding: 4px 0; }
+  .slider-marker-wrap .param-slider { position: relative; z-index: 1; }
+  .radius-threshold-marker {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    z-index: 2;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
   .param-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); cursor: pointer; transition: box-shadow 0.15s; }
   .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
@@ -413,6 +590,20 @@ import Layout from '../../layouts/Layout.astro';
   .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
   .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
   .file-error { font-size: 0.6875rem; color: var(--rose); }
+  .drude-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+    padding: 0.55rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  .drude-formula { font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }
+  .drude-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .drude-grid label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.7rem; font-weight: 600; color: var(--text-soft); }
+  .drude-grid .param-number { width: 100%; }
   .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
   .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
   .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
@@ -427,7 +618,8 @@ import Layout from '../../layouts/Layout.astro';
   .plot-tabs--toolbar { padding: 2px; }
   .plot-tabs--toolbar .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .spectrum-controls,
-  .material-controls {
+  .material-controls,
+  .electron-controls {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -589,15 +781,35 @@ import Layout from '../../layouts/Layout.astro';
   @media (max-width: 640px) {
     .material-import-dialog__grid { grid-template-columns: 1fr; }
   }
-  .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
+  .notes-card {
+    grid-column: 2;
+    padding: var(--space-md);
+  }
+  .notes-card h4,
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .notes-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+  .notes-card li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .notes-card strong { color: var(--text); }
+  .references { margin-top: var(--space-lg); grid-column: 1 / -1; }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
-  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .references li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .ref-index { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
   .references a { color: var(--primary); }
   .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
   .plot-tab { flex: 1; padding: 0.35rem 0.4rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.75rem; font-weight: 500; cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center; }
   .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .plot-tab:hover:not(.active) { color: var(--text); }
+  .plot-tab:disabled,
+  .plot-tab[aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
+  .plot-tab:disabled:hover,
+  .plot-tab[aria-disabled="true"]:hover { color: var(--text-soft); }
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
   .theory-note strong { color: var(--text-soft); }
   .chart-panel { padding: var(--space-md); }
@@ -645,8 +857,10 @@ import Layout from '../../layouts/Layout.astro';
   .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.32rem; padding-top: 0.32rem; }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
+    .notes-card { grid-column: auto; }
     .controls { position: static; gap: var(--space-md); }
     .param-limits { display: none; }
+    .drude-grid { grid-template-columns: 1fr; }
     .chart-wrap canvas { aspect-ratio: 4 / 3; }
   }
 </style>
@@ -654,6 +868,7 @@ import Layout from '../../layouts/Layout.astro';
 <script>
   import { MATERIALS } from '../../data/optical-constants';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
+  import { computeElectronSphereSpectrum, type ElectronSpectrum } from '../../lib/electron-sphere';
   import { interpolateNK } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
@@ -736,6 +951,48 @@ import Layout from '../../layouts/Layout.astro';
     const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
     const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
     return [n, Math.abs(k)];
+  }
+
+  interface DrudeHandle {
+    group: HTMLElement;
+    epsB: HTMLInputElement;
+    wp: HTMLInputElement;
+    gamma: HTMLInputElement;
+  }
+
+  function clampFinite(value: number, min: number, max: number, fallback: number): number {
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function readDrude(handle: DrudeHandle): { epsB: number; wp: number; gamma: number } {
+    return {
+      epsB: clampFinite(parseFloat(handle.epsB.value), -100, 100, 1),
+      wp: clampFinite(parseFloat(handle.wp.value), 0.01, 50, 5),
+      gamma: clampFinite(parseFloat(handle.gamma.value), 0, 10, 0.05),
+    };
+  }
+
+  function setDrude(handle: DrudeHandle, epsB = 1, wp = 5, gamma = 0.05): void {
+    handle.epsB.value = epsB.toString();
+    handle.wp.value = wp.toString();
+    handle.gamma.value = gamma.toString();
+  }
+
+  function drudeNK(lambdaNm: number, handle: DrudeHandle): [number, number] {
+    const { epsB, wp, gamma } = readDrude(handle);
+    const energyEv = HC_EV_NM / lambdaNm;
+    const denomRe = energyEv * energyEv;
+    const denomIm = energyEv * gamma;
+    const denomAbs2 = denomRe * denomRe + denomIm * denomIm;
+    const wp2 = wp * wp;
+    const termRe = wp2 * denomRe / denomAbs2;
+    const termIm = -wp2 * denomIm / denomAbs2;
+    return epsilonToNK(epsB - termRe, -termIm);
+  }
+
+  function drudeRef(_: DrudeHandle): string {
+    return '';
   }
 
   function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
@@ -826,6 +1083,11 @@ import Layout from '../../layouts/Layout.astro';
   // === Mie Engine (Bohren-Huffman algorithm with logarithmic derivatives) ===
 
   const HC_EV_NM = 1239.841984;
+  const ELECTRON_AU_EV = 27.2113834;
+  const ELECTRON_C_AU = 137.03599971;
+  const ELECTRON_DEFAULT_RADIUS_NM = 50;
+  const ELECTRON_DEFAULT_IMPACT_NM = 60;
+  const ELECTRON_DEFAULT_KINETIC_KEV = 30;
   const NUM_POINTS = 500;
   const MAX_N = 100;
 
@@ -849,6 +1111,24 @@ import Layout from '../../layouts/Layout.astro';
     radiusNm: number;
   }
   const MAX_SHELLS = 5;
+
+  function betaToKineticKeV(beta: number): number {
+    const b = clampFinite(beta, 1e-6, 0.999999, 0.33);
+    return ELECTRON_AU_EV * ELECTRON_C_AU * ELECTRON_C_AU * (1 / Math.sqrt(1 - b * b) - 1) / 1000;
+  }
+
+  function kineticKeVToBeta(kineticKeV: number): number {
+    const kineticEv = Math.max(0, kineticKeV * 1000);
+    const gamma = kineticEv / (ELECTRON_AU_EV * ELECTRON_C_AU * ELECTRON_C_AU) + 1;
+    return Math.sqrt(Math.max(0, 1 - 1 / (gamma * gamma)));
+  }
+
+  function formatKineticKeV(value: number): string {
+    if (!Number.isFinite(value)) return '';
+    if (value < 1) return value.toFixed(3);
+    if (value < 100) return value.toFixed(2);
+    return value.toFixed(1);
+  }
 
   function computeMie(
     getDielectric: (lambdaNm: number) => [number, number],
@@ -2049,7 +2329,11 @@ import Layout from '../../layouts/Layout.astro';
   function setupTabs(cId: string, attr: string, init: string, onSel: (v: string) => void) {
     const tabs = document.getElementById(cId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
     let cur = init;
-    tabs.forEach(t => t.addEventListener('click', () => { tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); }); t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = t.dataset[attr]!; onSel(cur); }));
+    tabs.forEach(t => t.addEventListener('click', () => {
+      if (t.disabled || t.getAttribute('aria-disabled') === 'true') return;
+      tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); });
+      t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = t.dataset[attr]!; onSel(cur);
+    }));
     function select(v: string, silent = false) {
       for (const t of tabs) { if (t.dataset[attr] === v) { tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); }); t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = v; if (!silent) onSel(v); return; } }
     }
@@ -2065,6 +2349,7 @@ import Layout from '../../layouts/Layout.astro';
   const zoomHint = document.getElementById('zoom-hint')!;
   const logToggle = document.getElementById('log-toggle')!;
   const spectrumControls = document.getElementById('spectrum-controls')!;
+  const electronControls = document.getElementById('electron-controls')!;
   const materialControls = document.getElementById('material-controls')!;
   const axisOverlay = document.getElementById('axis-overlay')!;
   const angularControls = document.getElementById('angular-controls')!;
@@ -2072,13 +2357,20 @@ import Layout from '../../layouts/Layout.astro';
   const angularLambdaInput = document.getElementById('angular-lambda') as HTMLInputElement;
   const materialSelect = document.getElementById('material-select') as HTMLSelectElement;
   const epsGroup = document.getElementById('eps-group')!;
+  const drudeGroup = document.getElementById('drude-group')!;
   const materialRefEl = document.getElementById('material-ref')!;
   const materialLabel = document.getElementById('material-label')!;
   const radiusLabel = document.getElementById('radius-label')!;
+  const planeRangeGroup = document.getElementById('plane-range-group')!;
   const lamMinInput = document.getElementById('lam-min') as HTMLInputElement;
   const lamMaxInput = document.getElementById('lam-max') as HTMLInputElement;
+  const electronKeVInput = document.getElementById('electron-kev-num') as HTMLInputElement;
+  const electronRadiusMarker = document.getElementById('electron-radius-marker') as HTMLElement;
+  const electronEminInput = document.getElementById('electron-emin') as HTMLInputElement;
+  const electronEmaxInput = document.getElementById('electron-emax') as HTMLInputElement;
   const coreMaterialSelect = document.getElementById('core-material-select') as HTMLSelectElement;
   const coreEpsGroup = document.getElementById('core-eps-group')!;
+  const coreDrudeGroup = document.getElementById('core-drude-group')!;
   const coreSection = document.getElementById('core-section')!;
   const coreMaterialRefEl = document.getElementById('core-material-ref')!;
   const theoryNote = document.getElementById('theory-note')!;
@@ -2103,16 +2395,41 @@ import Layout from '../../layouts/Layout.astro';
   const materialImportAccept = document.getElementById('material-import-accept') as HTMLButtonElement;
   const materialImportCancel = document.getElementById('material-import-cancel')!;
   const materialImportClose = document.getElementById('material-import-close')!;
+  const notesBody = document.getElementById('notes-body')!;
 
-  let data: MieResult, chartXforms: ChartXforms | null = null;
+  let data: MieResult, electronData: ElectronSpectrum | null = null, chartXforms: ChartXforms | null = null;
   let currentXArr: Float64Array = new Float64Array(0);
   let currentSeries: PlotSeries[] = [];
   let logY = false, zoomBounds: { xRange: [number, number]; yRange: [number, number] } | null = null;
+  let excitation: 'plane' | 'electron' | 'dipole' = 'plane';
   let geometry: 'sphere' | 'coreshell' = 'sphere';
-  let rafPending = false;
+  let rafPending = false, updateTimer: number | null = null;
   let radiusOrderNormalizing = false;
   const RADIUS_GAP_NM = 5;
-  function scheduleUpdate() { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; recompute(); render(); updateConfigCheck(); }); } }
+  function runScheduledUpdate() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      recompute();
+      render();
+      updateConfigCheck();
+    });
+  }
+  function scheduleUpdate() {
+    if (updateTimer !== null) {
+      window.clearTimeout(updateTimer);
+      updateTimer = null;
+    }
+    if (excitation === 'electron') {
+      updateTimer = window.setTimeout(() => {
+        updateTimer = null;
+        runScheduledUpdate();
+      }, 140);
+      return;
+    }
+    runScheduledUpdate();
+  }
   function radiusParams(): ParamHandle[] { return [coreRParam, rParam, ...extraShells.map(s => s.rParam)]; }
   function normalizeRadiusOrder(preferredIndex?: number) {
     if (geometry !== 'coreshell' || radiusOrderNormalizing) return;
@@ -2145,14 +2462,93 @@ import Layout from '../../layouts/Layout.astro';
       radiusOrderNormalizing = false;
     }
   }
-  function resetAndUpdate() { zoomBounds = null; normalizeRadiusOrder(); scheduleUpdate(); }
-  function radiusChanged(layerIndex: number) { zoomBounds = null; normalizeRadiusOrder(layerIndex); scheduleUpdate(); }
+  function resetAndUpdate() { zoomBounds = null; normalizeRadiusOrder(); updateElectronRadiusMarker(); scheduleUpdate(); }
+  function radiusChanged(layerIndex: number) { zoomBounds = null; normalizeRadiusOrder(layerIndex); updateElectronRadiusMarker(); scheduleUpdate(); }
+
+  function drudeHandleFromIds(groupId: string, epsBId: string, wpId: string, gammaId: string): DrudeHandle {
+    return {
+      group: document.getElementById(groupId)!,
+      epsB: document.getElementById(epsBId) as HTMLInputElement,
+      wp: document.getElementById(wpId) as HTMLInputElement,
+      gamma: document.getElementById(gammaId) as HTMLInputElement,
+    };
+  }
+
+  function bindDrudeInputs(handle: DrudeHandle, onChange = resetAndUpdate): void {
+    [handle.epsB, handle.wp, handle.gamma].forEach(input => {
+      const commit = () => {
+        const { epsB, wp, gamma } = readDrude(handle);
+        setDrude(handle, epsB, wp, gamma);
+        onChange();
+      };
+      input.addEventListener('change', commit);
+      input.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        commit();
+        input.blur();
+      });
+    });
+  }
+
+  const drudeHandle = drudeHandleFromIds('drude-group', 'drude-epsb', 'drude-wp', 'drude-gamma');
+  const coreDrudeHandle = drudeHandleFromIds('core-drude-group', 'core-drude-epsb', 'core-drude-wp', 'core-drude-gamma');
+  bindDrudeInputs(drudeHandle, () => {
+    if (materialSelect.value === 'drude') materialRefEl.textContent = drudeRef(drudeHandle);
+    resetAndUpdate();
+  });
+  bindDrudeInputs(coreDrudeHandle, () => {
+    if (coreMaterialSelect.value === 'drude') coreMaterialRefEl.textContent = drudeRef(coreDrudeHandle);
+    resetAndUpdate();
+  });
 
   const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
   const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), () => radiusChanged(1));
   const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), resetAndUpdate);
   const coreEpsParam = setupParam('core-eps-num', 'core-eps-slider', 'core-eps-min', 'core-eps-max', v => v.toFixed(1), resetAndUpdate);
   const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', v => v.toFixed(0), () => radiusChanged(0));
+  const electronBParam = setupParam('electron-b-num', 'electron-b-slider', 'electron-b-min', 'electron-b-max', v => v.toFixed(0), resetAndUpdate);
+  const electronBetaParam = setupParam('electron-beta-num', 'electron-beta-slider', 'electron-beta-min', 'electron-beta-max', v => v.toFixed(2), electronBetaChanged);
+  const electronLmaxParam = setupParam('electron-lmax-num', 'electron-lmax-slider', 'electron-lmax-min', 'electron-lmax-max', v => v.toFixed(0), resetAndUpdate);
+  const electronQcParam = setupParam('electron-qc-num', 'electron-qc-slider', 'electron-qc-min', 'electron-qc-max', v => v.toFixed(2), resetAndUpdate);
+  const electronNzParam = setupParam('electron-nz-num', 'electron-nz-slider', 'electron-nz-min', 'electron-nz-max', v => v.toFixed(0), resetAndUpdate);
+
+  function updateElectronRadiusMarker(): void {
+    const slider = document.getElementById('electron-b-slider') as HTMLInputElement;
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const radius = rParam.value;
+    const pct = max > min ? Math.max(0, Math.min(1, (radius - min) / (max - min))) * 100 : 0;
+    electronRadiusMarker.style.left = `${pct}%`;
+    electronRadiusMarker.title = `Particle radius R = ${radius.toFixed(0)} nm`;
+    electronRadiusMarker.style.opacity = radius < min || radius > max ? '0.45' : '1';
+  }
+
+  function syncElectronKeVFromBeta(): void {
+    electronKeVInput.value = formatKineticKeV(betaToKineticKeV(electronBetaParam.value));
+  }
+
+  function electronBetaChanged(): void {
+    syncElectronKeVFromBeta();
+    resetAndUpdate();
+  }
+
+  function commitElectronKeV(): void {
+    const kineticKeV = clampFinite(parseFloat(electronKeVInput.value), 0, 1e6, betaToKineticKeV(electronBetaParam.value));
+    electronBetaParam.setValue(kineticKeVToBeta(kineticKeV));
+    syncElectronKeVFromBeta();
+  }
+
+  electronKeVInput.addEventListener('change', commitElectronKeV);
+  electronKeVInput.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    commitElectronKeV();
+    electronKeVInput.blur();
+  });
+  syncElectronKeVFromBeta();
+
+  [electronEminInput, electronEmaxInput].forEach(input => input.addEventListener('change', resetAndUpdate));
 
   lamMinInput.addEventListener('change', resetAndUpdate);
   lamMaxInput.addEventListener('change', resetAndUpdate);
@@ -2161,32 +2557,54 @@ import Layout from '../../layouts/Layout.astro';
   const decompTabs = setupTabs('decomp-tabs', 'decomp', 'total', () => { zoomBounds = null; render(); });
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
   const materialPropTabs = setupTabs('material-prop-tabs', 'materialProp', 'epsilon', () => { zoomBounds = null; render(); });
+  const electronSignalTabs = setupTabs('electron-signal-tabs', 'electronSignal', 'eels', () => { zoomBounds = null; render(); });
+  const electronDecompTabs = setupTabs('electron-decomp-tabs', 'electronDecomp', 'total', () => { zoomBounds = null; render(); });
 
   const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
     const isSpectrum = v === 'spectrum';
     const isAxisBased = v === 'spectrum' || v === 'material';
     const isSpatial = v === 'angular' || v === 'nearfield';
     logToggle.style.display = isSpectrum ? '' : 'none';
-    spectrumControls.style.display = isSpectrum ? '' : 'none';
+    spectrumControls.style.display = isSpectrum && excitation === 'plane' ? '' : 'none';
+    electronControls.style.display = isSpectrum && excitation === 'electron' ? '' : 'none';
     axisOverlay.style.display = isAxisBased ? '' : 'none';
     materialControls.style.display = v === 'material' ? '' : 'none';
     zoomHint.style.display = isSpectrum ? '' : 'none';
-    angularControls.style.display = isSpatial ? '' : 'none';
-    angularPolWrap.style.display = v === 'angular' ? '' : 'none';
-    colorSwatches.style.display = isSpectrum ? '' : 'none';
+    angularControls.style.display = isSpatial && excitation === 'plane' ? '' : 'none';
+    angularPolWrap.style.display = v === 'angular' && excitation === 'plane' ? '' : 'none';
+    colorSwatches.style.display = isSpectrum && excitation === 'plane' ? '' : 'none';
     zoomBounds = null;
     render();
   });
   const polTabs = setupTabs('pol-tabs', 'pol', 'total', () => render());
+  const excitationTabs = setupTabs('excitation-tabs', 'excitation', 'plane', (v: string) => {
+    excitation = v as 'plane' | 'electron' | 'dipole';
+    if (excitation === 'dipole') {
+      excitation = 'plane';
+      excitationTabs.select('plane', true);
+    }
+    if (excitation === 'electron') {
+      axisTabs.select('energy', true);
+      if (geometry === 'coreshell') geoTabs.select('sphere');
+    }
+    updateExcitationUI();
+    zoomBounds = null;
+    scheduleUpdate();
+  });
   angularLambdaInput.addEventListener('change', () => render());
 
   // Geometry tabs (Sphere / Core-Shell)
   const geoTabs = setupTabs('geo-tabs', 'geo', 'sphere', (v: string) => {
+    if (excitation === 'electron' && v === 'coreshell') {
+      geoTabs.select('sphere');
+      return;
+    }
     geometry = v as 'sphere' | 'coreshell';
     const cs = geometry === 'coreshell';
     // Toggle core-shell-only controls
     coreSection.style.display = cs ? '' : 'none';
     coreEpsGroup.style.display = coreMaterialSelect.value === 'custom' ? '' : 'none';
+    coreDrudeGroup.style.display = cs && coreMaterialSelect.value === 'drude' ? '' : 'none';
     extraShellsContainer.style.display = cs ? '' : 'none';
     addShellWrap.style.display = cs ? '' : 'none';
     // Update labels for shell/particle context
@@ -2194,12 +2612,59 @@ import Layout from '../../layouts/Layout.astro';
     radiusLabel.textContent = cs ? 'Shell 1 outer radius (nm)' : 'Radius (nm)';
     // In core-shell mode, epsilon group tracks shell material
     epsGroup.classList.toggle('hidden', materialSelect.value !== 'custom');
-    // Theory note
-    theoryNote.innerHTML = cs
-      ? '<strong>Multi-shell Mie</strong> extends Mie theory to layered spheres with up to ' + MAX_SHELLS + ' concentric shells. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.'
-      : '<strong>Mie theory</strong> gives exact solutions for light scattering by spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>. Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.';
+    updateTheoryNote();
     resetAndUpdate();
   });
+
+  function updateTheoryNote() {
+    if (excitation === 'electron') {
+      theoryNote.innerHTML = '<strong>Electron excitation</strong> uses the analytical sphere formalism for EELS and CL. The total EELS signal is split into surface, bulk, and Begrenzung terms; CL can be inspected by multipole order.';
+      return;
+    }
+    theoryNote.innerHTML = geometry === 'coreshell'
+      ? '<strong>Multi-shell Mie</strong> extends Mie theory to layered spheres with up to ' + MAX_SHELLS + ' concentric shells. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.'
+      : '<strong>Mie theory</strong> gives exact solutions for light scattering by spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>. Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.';
+  }
+
+  function updateNotes() {
+    if (excitation === 'electron') {
+      notesBody.innerHTML = `
+        <ul>
+          <li><strong>Electron EELS/CL currently uses the analytical homogeneous-sphere model.</strong></li>
+          <li>For penetrating trajectories, b &lt; R, the bulk and Begrenzung terms depend on q<sub>c</sub> and on the path quadrature. Increase z quadrature and l<sub>max</sub> when checking convergence for small b, large radius, or broad energy ranges.</li>
+          <li>q<sub>c</sub> is the bulk momentum cut-off used by the analytical local-response model. Aloof trajectories, b &ge; R, do not use the inside-path bulk contribution.</li>
+        </ul>`;
+      return;
+    }
+    notesBody.innerHTML = geometry === 'coreshell'
+      ? '<ul><li><strong>Core-shell mode</strong> uses concentric layers ordered from core to outer shell. Keep outer radii increasing outward.</li></ul>'
+      : '<ul><li><strong>Plane-wave mode</strong> uses the standard homogeneous-sphere Mie solution for the selected material and host index.</li></ul>';
+  }
+
+  function updateExcitationUI() {
+    const electronMode = excitation === 'electron';
+    document.querySelectorAll<HTMLElement>('.electron-only').forEach(el => { el.style.display = electronMode ? '' : 'none'; });
+    planeRangeGroup.style.display = electronMode ? 'none' : '';
+    const coreShellBtn = document.querySelector<HTMLButtonElement>('#geo-tabs [data-geo="coreshell"]');
+    if (coreShellBtn) {
+      coreShellBtn.disabled = electronMode;
+      coreShellBtn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
+      coreShellBtn.title = electronMode ? 'Electron EELS/CL currently supports homogeneous spheres.' : '';
+    }
+    document.querySelectorAll<HTMLButtonElement>('#view-tabs [data-view="angular"], #view-tabs [data-view="nearfield"]').forEach(btn => {
+      btn.disabled = electronMode;
+      btn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
+    });
+    if (electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield')) viewTabs.select('spectrum', true);
+    spectrumControls.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
+    electronControls.style.display = viewTabs.value === 'spectrum' && electronMode ? '' : 'none';
+    colorSwatches.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
+    axisOverlay.style.display = (viewTabs.value === 'spectrum' || viewTabs.value === 'material') ? '' : 'none';
+    angularControls.style.display = !electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield') ? '' : 'none';
+    angularPolWrap.style.display = !electronMode && viewTabs.value === 'angular' ? '' : 'none';
+    updateTheoryNote();
+    updateNotes();
+  }
 
   // === RII search helper (reusable for any material selector) ===
 
@@ -2270,9 +2735,10 @@ import Layout from '../../layouts/Layout.astro';
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
     epsGroup.classList.toggle('hidden', v !== 'custom');
+    drudeGroup.style.display = v === 'drude' ? '' : 'none';
     fileUploadGroup.style.display = v === 'file' ? '' : 'none';
     riiSearchGroup.style.display = v === 'rii' ? '' : 'none';
-    materialRefEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+    materialRefEl.textContent = v === 'drude' ? drudeRef(drudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
     if (v === 'rii') { riiHandle.ensureCatalog(); return; }
     if (v === 'file' && !uploadedMaterial) return; // wait for file
     resetAndUpdate();
@@ -2410,9 +2876,10 @@ import Layout from '../../layouts/Layout.astro';
   coreMaterialSelect.addEventListener('change', () => {
     const v = coreMaterialSelect.value;
     coreEpsGroup.style.display = v === 'custom' ? '' : 'none';
+    coreDrudeGroup.style.display = v === 'drude' ? '' : 'none';
     coreFileUploadGroup.style.display = v === 'file' ? '' : 'none';
     coreRiiSearchGroup.style.display = v === 'rii' ? '' : 'none';
-    coreMaterialRefEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+    coreMaterialRefEl.textContent = v === 'drude' ? drudeRef(coreDrudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
     if (v === 'rii') { coreRiiHandle.ensureCatalog(); return; }
     if (v === 'file' && !uploadedCoreMaterial) return;
     resetAndUpdate();
@@ -2446,42 +2913,60 @@ import Layout from '../../layouts/Layout.astro';
 
   logToggle.addEventListener('click', () => { logY = !logY; logToggle.classList.toggle('active', logY); zoomBounds = null; render(); });
 
-  // Reset button
-  document.getElementById('reset-btn')!.addEventListener('click', () => {
+  function applyElectronDefaultState(): void {
     // Remove extra shells
     while (extraShells.length > 0) removeShellSection(extraShells[0]);
-    // Switch to Sphere mode
-    const sphereBtn = document.querySelector<HTMLButtonElement>('#geo-tabs [data-geo="sphere"]')!;
-    sphereBtn.click();
-    // Restore defaults
-    materialSelect.value = 'custom';
-    epsGroup.classList.remove('hidden');
+    // Electron defaults start from a gold sphere with an aloof trajectory.
+    excitationTabs.select('electron');
+    geoTabs.select('sphere');
+    materialSelect.value = 'au';
+    epsGroup.classList.add('hidden');
+    drudeGroup.style.display = 'none';
     fileUploadGroup.style.display = 'none';
     riiSearchGroup.style.display = 'none';
     uploadedMaterial = null;
-    materialRefEl.textContent = '';
+    materialRefEl.textContent = MATERIALS.au.ref;
+    setDrude(drudeHandle);
     epsParam.setValue(10);
-    rParam.setValue(100);
+    rParam.setValue(ELECTRON_DEFAULT_RADIUS_NM);
     nhParam.setValue(1.0);
     coreMaterialSelect.value = 'au';
     coreMaterialRefEl.textContent = '';
+    coreDrudeGroup.style.display = 'none';
+    setDrude(coreDrudeHandle);
     coreEpsParam.setValue(10);
     coreRParam.setValue(60);
     (document.getElementById('lam-min') as HTMLInputElement).value = '300';
     (document.getElementById('lam-max') as HTMLInputElement).value = '1200';
+    electronBParam.setValue(ELECTRON_DEFAULT_IMPACT_NM);
+    electronBetaParam.setValue(kineticKeVToBeta(ELECTRON_DEFAULT_KINETIC_KEV));
+    electronLmaxParam.setValue(6);
+    electronQcParam.setValue(0.71);
+    electronNzParam.setValue(64);
+    electronEminInput.value = '1.5';
+    electronEmaxInput.value = '5.5';
     // Reset plot options
     logY = false; logToggle.classList.remove('active');
     document.querySelector<HTMLButtonElement>('#qty-tabs [data-qty="csca"]')?.click();
     document.querySelector<HTMLButtonElement>('#decomp-tabs [data-decomp="total"]')?.click();
-    document.querySelector<HTMLButtonElement>('#axis-tabs [data-axis="lambda"]')?.click();
+    document.querySelector<HTMLButtonElement>('#electron-signal-tabs [data-electron-signal="eels"]')?.click();
+    document.querySelector<HTMLButtonElement>('#electron-decomp-tabs [data-electron-decomp="total"]')?.click();
+    document.querySelector<HTMLButtonElement>('#axis-tabs [data-axis="energy"]')?.click();
     document.querySelector<HTMLButtonElement>('#material-prop-tabs [data-material-prop="epsilon"]')?.click();
     syncPresets();
+    updateElectronRadiusMarker();
     resetAndUpdate();
+  }
+
+  // Reset button
+  document.getElementById('reset-btn')!.addEventListener('click', () => {
+    applyElectronDefaultState();
   });
 
   function getDielectric(lambdaNm: number): [number, number] {
     const mat = materialSelect.value;
     if (mat === 'custom') return [Math.sqrt(epsParam.value), 0];
+    if (mat === 'drude') return drudeNK(lambdaNm, drudeHandle);
     if ((mat === 'file' || mat === 'rii') && uploadedMaterial) return interpolateNK(uploadedMaterial, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
@@ -2490,6 +2975,7 @@ import Layout from '../../layouts/Layout.astro';
   function getCoreDielectric(lambdaNm: number): [number, number] {
     const mat = coreMaterialSelect.value;
     if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
+    if (mat === 'drude') return drudeNK(lambdaNm, coreDrudeHandle);
     if ((mat === 'file' || mat === 'rii') && uploadedCoreMaterial) return interpolateNK(uploadedCoreMaterial, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
@@ -2501,6 +2987,7 @@ import Layout from '../../layouts/Layout.astro';
     material: HTMLSelectElement;
     epsParam: ParamHandle;
     epsGroup: HTMLElement;
+    drudeHandle: DrudeHandle;
     rParam: ParamHandle;
     refEl: HTMLElement;
     uploadedData: number[][] | null;
@@ -2521,6 +3008,8 @@ import Layout from '../../layouts/Layout.astro';
       const fileData = sh.uploadedData;
       const getDiel = mat === 'custom'
         ? (_: number): [number, number] => [Math.sqrt(eps), 0]
+        : mat === 'drude'
+          ? (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle)
         : (mat === 'file' || mat === 'rii') && fileData
           ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
           : (mat === 'file' || mat === 'rii')
@@ -2569,6 +3058,7 @@ import Layout from '../../layouts/Layout.astro';
           <div class="param-header"><label>Material</label></div>
           <select class="param-select shell-mat-sel">
             <option value="custom" selected>Custom dielectric</option>
+            <option value="drude">Drude model</option>
             <option value="au">Gold (Au)</option>
             <option value="ag">Silver (Ag)</option>
             <option value="si">Silicon (Si)</option>
@@ -2586,6 +3076,23 @@ import Layout from '../../layouts/Layout.astro';
             <input type="text" class="param-number rii-input sh-rii-search" placeholder="Search materials\u2026">
             <div class="rii-results sh-rii-results"></div>
             <span class="material-ref sh-rii-status"></span>
+          </div>
+        </div>
+        <div class="param drude-panel sh-drude-group" style="display:none">
+          <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+          <div class="drude-grid">
+            <label>
+              <span>&epsilon;<sub>b</sub></span>
+              <input type="number" class="param-number sh-drude-epsb" value="1" step="0.1">
+            </label>
+            <label>
+              <span>&omega;<sub>p</sub> (eV)</span>
+              <input type="number" class="param-number sh-drude-wp" value="5" step="0.01" min="0.01">
+            </label>
+            <label>
+              <span>&gamma; (eV)</span>
+              <input type="number" class="param-number sh-drude-gamma" value="0.05" step="0.001" min="0">
+            </label>
           </div>
         </div>
         <div class="param shell-eps-group">
@@ -2619,6 +3126,12 @@ import Layout from '../../layouts/Layout.astro';
     const matSel = sec.querySelector('.shell-mat-sel') as HTMLSelectElement;
     const epsGrp = sec.querySelector('.shell-eps-group') as HTMLElement;
     const refEl = sec.querySelector('.shell-ref') as HTMLElement;
+    const shellDrudeHandle: DrudeHandle = {
+      group: sec.querySelector('.sh-drude-group') as HTMLElement,
+      epsB: sec.querySelector('.sh-drude-epsb') as HTMLInputElement,
+      wp: sec.querySelector('.sh-drude-wp') as HTMLInputElement,
+      gamma: sec.querySelector('.sh-drude-gamma') as HTMLInputElement,
+    };
     const epsP = setupParamEl(
       sec.querySelector('.sh-eps-num') as HTMLInputElement,
       sec.querySelector('.sh-eps-slider') as HTMLInputElement,
@@ -2652,15 +3165,21 @@ import Layout from '../../layouts/Layout.astro';
     matSel.addEventListener('change', () => {
       const v = matSel.value;
       epsGrp.classList.toggle('hidden', v !== 'custom');
+      shellDrudeHandle.group.style.display = v === 'drude' ? '' : 'none';
       shFileGrp.style.display = v === 'file' ? '' : 'none';
       shRiiGrp.style.display = v === 'rii' ? '' : 'none';
-      refEl.textContent = (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
+      refEl.textContent = v === 'drude' ? drudeRef(shellDrudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
       if (v === 'rii') { shRiiHandle.ensureCatalog(); return; }
       if (v === 'file' && !handle.uploadedData) return;
       resetAndUpdate();
     });
 
-    handle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, rParam: rP, refEl, uploadedData: null };
+    bindDrudeInputs(shellDrudeHandle, () => {
+      if (matSel.value === 'drude') refEl.textContent = drudeRef(shellDrudeHandle);
+      resetAndUpdate();
+    });
+
+    handle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, drudeHandle: shellDrudeHandle, rParam: rP, refEl, uploadedData: null };
 
     shFileInput.addEventListener('change', () => {
       const file = shFileInput.files?.[0];
@@ -2701,14 +3220,40 @@ import Layout from '../../layouts/Layout.astro';
     createShellSection(lastR + 20);
   });
 
+  function electronEnergyRange(): [number, number] {
+    let eMin = parseFloat(electronEminInput.value);
+    let eMax = parseFloat(electronEmaxInput.value);
+    eMin = clampFinite(eMin, 0.05, 50, 1.5);
+    eMax = clampFinite(eMax, 0.06, 60, 5.5);
+    if (eMin >= eMax) eMax = eMin + 0.1;
+    return [eMin, eMax];
+  }
+
   function recompute() {
     try {
       let lMin = parseFloat(lamMinInput.value) || 300, lMax = parseFloat(lamMaxInput.value) || 1200;
       if (lMin >= lMax) { lMin = 300; lMax = 1200; }
+      const [eMin, eMax] = electronEnergyRange();
+      if (excitation === 'electron') {
+        lMin = HC_EV_NM / eMax;
+        lMax = HC_EV_NM / eMin;
+      }
       if (geometry === 'coreshell') {
         data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
       } else {
         data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+      }
+      if (excitation === 'electron') {
+        electronData = computeElectronSphereSpectrum(getDielectric, {
+          radiusNm: rParam.value,
+          beta: electronBetaParam.value,
+          impactNm: electronBParam.value,
+          lmax: Math.round(clampFinite(electronLmaxParam.value, 1, 14, 6)),
+          qCutNm: electronQcParam.value,
+          nz: Math.round(clampFinite(electronNzParam.value, 8, 160, 64)),
+        }, eMin, eMax, 96);
+      } else {
+        electronData = null;
       }
     } catch (e) {
       console.error('Mie recompute error:', e);
@@ -2719,6 +3264,7 @@ import Layout from '../../layouts/Layout.astro';
   const PLOT_COLORS = {
     csca: '#6366F1', cext: '#EC4899', cabs: '#F59E0B',
     electric: '#6366F1', magnetic: '#EC4899',
+    eels: '#2563EB', cl: '#D97706', surface: '#10B981', bulk: '#EC4899', begrenzung: '#8B5CF6',
     mp: ['#6366F1', '#EC4899', '#10B981', '#F59E0B'] as const,
   };
   const MP_LABELS = ['Dipole (n=1)', 'Quadrupole (n=2)', 'Octupole (n=3)', 'n \u2265 4'];
@@ -2792,6 +3338,66 @@ import Layout from '../../layouts/Layout.astro';
     return { xArr, series, xLabel, yLabel };
   }
 
+  function getElectronPlotData(): { xArr: Float64Array; series: PlotSeries[]; xLabel: string; yLabel: string } {
+    if (!electronData) return { xArr: new Float64Array(0), series: [], xLabel: 'Energy loss (eV)', yLabel: 'Probability (1/eV)' };
+    const signal = electronSignalTabs.value;
+    const decomp = electronDecompTabs.value;
+    const useLambda = axisTabs.value === 'lambda';
+    const n = electronData.energy.length;
+    const xArr = new Float64Array(n);
+    if (useLambda) {
+      for (let i = 0; i < n; i++) xArr[i] = HC_EV_NM / electronData.energy[n - 1 - i];
+    } else {
+      xArr.set(electronData.energy);
+    }
+    const orient = (a: Float64Array): Float64Array => {
+      if (!useLambda) return a;
+      const r = new Float64Array(n);
+      for (let i = 0; i < n; i++) r[i] = a[n - 1 - i];
+      return r;
+    };
+    const xLabel = useLambda ? 'Equivalent wavelength (nm)' : 'Energy loss (eV)';
+    const series: PlotSeries[] = [];
+
+    if (signal === 'both') {
+      series.push({ y: orient(electronData.eelsTotal), color: PLOT_COLORS.eels, label: 'EELS total' });
+      series.push({ y: orient(electronData.clTotal), color: PLOT_COLORS.cl, label: 'CL total' });
+      return { xArr, series, xLabel, yLabel: 'Probability (1/eV)' };
+    }
+
+    if (signal === 'cl') {
+      if (decomp === 'em') {
+        series.push({ y: orient(electronData.clElectric), color: PLOT_COLORS.electric, label: 'CL electric' });
+        series.push({ y: orient(electronData.clMagnetic), color: PLOT_COLORS.magnetic, label: 'CL magnetic' });
+      } else if (decomp === 'multipole') {
+        for (let i = 0; i < Math.min(4, electronData.clMultipoles.length); i++) {
+          series.push({ y: orient(electronData.clMultipoles[i]), color: PLOT_COLORS.mp[i], label: MP_LABELS[i] ?? `l = ${i + 1}` });
+        }
+      } else {
+        series.push({ y: orient(electronData.clTotal), color: PLOT_COLORS.cl, label: 'CL total' });
+      }
+      return { xArr, series, xLabel, yLabel: 'CL probability (1/eV)' };
+    }
+
+    if (decomp === 'terms') {
+      series.push({ y: orient(electronData.eelsSurface), color: PLOT_COLORS.surface, label: 'surface' });
+      series.push({ y: orient(electronData.eelsBulk), color: PLOT_COLORS.bulk, label: 'bulk' });
+      series.push({ y: orient(electronData.eelsBegrenzung), color: PLOT_COLORS.begrenzung, label: 'Begrenzung' });
+    } else if (decomp === 'em') {
+      series.push({ y: orient(electronData.eelsElectric), color: PLOT_COLORS.electric, label: 'EELS electric' });
+      series.push({ y: orient(electronData.eelsMagnetic), color: PLOT_COLORS.magnetic, label: 'EELS magnetic' });
+      series.push({ y: orient(electronData.eelsBulk), color: PLOT_COLORS.bulk, label: 'bulk' });
+    } else if (decomp === 'multipole') {
+      for (let i = 0; i < Math.min(4, electronData.eelsMultipoles.length); i++) {
+        series.push({ y: orient(electronData.eelsMultipoles[i]), color: PLOT_COLORS.mp[i], label: MP_LABELS[i] ?? `l = ${i + 1}` });
+      }
+      series.push({ y: orient(electronData.eelsBulk), color: PLOT_COLORS.bulk, label: 'bulk' });
+    } else {
+      series.push({ y: orient(electronData.eelsTotal), color: PLOT_COLORS.eels, label: 'EELS total' });
+    }
+    return { xArr, series, xLabel, yLabel: 'EELS probability (1/eV)' };
+  }
+
   function seriesRange(series: PlotSeries[], zeroFloor = false): [number, number] {
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
@@ -2830,6 +3436,8 @@ import Layout from '../../layouts/Layout.astro';
       const fileData = sh.uploadedData;
       const getDiel = mat === 'custom'
         ? (_: number): [number, number] => [Math.sqrt(eps), 0]
+        : mat === 'drude'
+          ? (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle)
         : (mat === 'file' || mat === 'rii') && fileData
           ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
           : (mat === 'file' || mat === 'rii')
@@ -2936,9 +3544,11 @@ import Layout from '../../layouts/Layout.astro';
 
   function render() {
     if (!data) return;
+    updateExcitationUI();
     if (viewTabs.value === 'angular') { renderAngular(); return; }
     if (viewTabs.value === 'nearfield') { renderNearField(); return; }
     if (viewTabs.value === 'material') { renderMaterial(); return; }
+    if (excitation === 'electron') { renderElectron(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
     currentXArr = xArr; currentSeries = series;
     const opts: ChartOpts = { logY };
@@ -2947,6 +3557,18 @@ import Layout from '../../layouts/Layout.astro';
     zoomHint.classList.toggle('visible', !!zoomBounds);
     clearOverlay();
     updateSwatches();
+  }
+
+  function renderElectron() {
+    if (!electronData) return;
+    const { xArr, series, xLabel, yLabel } = getElectronPlotData();
+    currentXArr = xArr; currentSeries = series;
+    const opts: ChartOpts = { logY };
+    if (!logY) opts.yRange = seriesRange(series);
+    if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, opts);
+    zoomHint.classList.toggle('visible', !!zoomBounds);
+    clearOverlay();
   }
 
   function renderMaterial() {
@@ -3055,7 +3677,12 @@ import Layout from '../../layouts/Layout.astro';
       c.fillStyle = s.color; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.fill();
       c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.stroke();
     }
-    const xS = axisTabs.value === 'lambda'
+    const isElectronSpectrum = excitation === 'electron' && viewTabs.value === 'spectrum';
+    const xS = isElectronSpectrum && axisTabs.value === 'lambda'
+      ? `\u03BB = ${dX.toFixed(1)} nm`
+      : isElectronSpectrum
+      ? `E_loss = ${dX.toFixed(3)} eV`
+      : axisTabs.value === 'lambda'
       ? `\u03BB = ${dX.toFixed(1)} nm`
       : `E = ${dX.toFixed(3)} eV`;
     let ttHtml = xS;
@@ -3095,8 +3722,8 @@ import Layout from '../../layouts/Layout.astro';
 
   // === Config Check ===
 
-  const MAT_COLORS: Record<string, string> = { au:'#FFD700', ag:'#C0C0C0', si:'#7B68EE', al:'#87CEEB', tio2:'#DDA0DD', custom:'#90EE90', file:'#FFA07A', rii:'#FFA07A' };
-  const MAT_NAMES: Record<string, string> = { au:'Au', ag:'Ag', si:'Si', al:'Al', tio2:'TiO\u2082', custom:'Custom \u03B5', file:'File', rii:'Database' };
+  const MAT_COLORS: Record<string, string> = { au:'#FFD700', ag:'#C0C0C0', si:'#7B68EE', al:'#87CEEB', tio2:'#DDA0DD', drude:'#60A5FA', custom:'#90EE90', file:'#FFA07A', rii:'#FFA07A' };
+  const MAT_NAMES: Record<string, string> = { au:'Au', ag:'Ag', si:'Si', al:'Al', tio2:'TiO\u2082', drude:'Drude', custom:'Custom \u03B5', file:'File', rii:'Database' };
 
   function withSvgMarkerId(svg: string, markerId: string): string {
     return svg.replace('id="arr"', `id="${markerId}"`).replace(/url\(#arr\)/g, `url(#${markerId})`);
@@ -3120,6 +3747,9 @@ import Layout from '../../layouts/Layout.astro';
     const hostPresets: Record<string, string> = { '1.00':'Air', '1.33':'Water', '1.46':'Oil', '1.50':'Glass' };
     const nhStr = nhParam.value.toFixed(2);
     const hostLabel = hostPresets[nhStr] ? `${hostPresets[nhStr]} (n=${nhStr})` : `n\u2095 = ${nhStr}`;
+    const spectralLabel = excitation === 'electron'
+      ? `E_loss ${electronEminInput.value}\u2013${electronEmaxInput.value} eV`
+      : `\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm`;
 
     // Full-width annotated cross-section SVG
     const W = 280, circR = 44, cx = 68, labelX = cx + circR + 14;
@@ -3130,13 +3760,27 @@ import Layout from '../../layouts/Layout.astro';
     let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
     // Background
     s += `<rect width="${W}" height="${H}" fill="${ct.grid}" rx="6"/>`;
-    // Host label
-    s += `<text x="${cx}" y="11" text-anchor="middle" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
-    s += `<text x="${cx}" y="${H-8}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">\u03BB ${lamMinInput.value}\u2013${lamMaxInput.value} nm</text>`;
+    // Spectral and host labels
+    s += `<text x="${cx}" y="${H-8}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${spectralLabel}</text>`;
+    s += `<text x="${W - 8}" y="${H-8}" text-anchor="end" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">${hostLabel}</text>`;
     // Concentric circles (outer to inner)
     for (let i = layers.length - 1; i >= 0; i--) {
       const r = Math.max(5, (layers[i].r / maxR) * circR);
       s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.25)" stroke-width="0.7"/>`;
+    }
+    if (excitation === 'electron') {
+      const trajX = cx + Math.min(circR + 16, (electronBParam.value / maxR) * circR);
+      const y1 = cy - circR - 16;
+      const y2 = cy + circR + 18;
+      const guideY = cy - circR - 9;
+      const radiusX = cx + circR;
+      const guideEndX = Math.max(trajX, radiusX);
+      s += `<line x1="${trajX}" y1="${y1}" x2="${trajX}" y2="${y2}" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arr)"/>`;
+      s += `<line x1="${cx}" y1="${guideY}" x2="${guideEndX}" y2="${guideY}" stroke="#2563EB" stroke-width="0.65" stroke-dasharray="2,2"/>`;
+      s += `<circle cx="${radiusX}" cy="${guideY}" r="2.8" fill="#EF4444" stroke="${ct.grid}" stroke-width="1"/>`;
+      s += `<text x="${radiusX}" y="${guideY - 5}" text-anchor="middle" fill="#EF4444" font-size="7" font-weight="700" font-family="Inter,system-ui">R</text>`;
+      s += `<text x="${(cx + trajX) / 2}" y="${guideY - 13}" text-anchor="middle" fill="#2563EB" font-size="7.5" font-family="Inter,system-ui">b=${electronBParam.value.toFixed(0)} nm</text>`;
+      s += `<text x="${trajX + 4}" y="${y1 + 10}" fill="#2563EB" font-size="8" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="6">-</tspan></text>`;
     }
     // Dimension lines and labels
     const labStartY = cy - (layers.length - 1) * rowH / 2;
@@ -3180,11 +3824,23 @@ import Layout from '../../layouts/Layout.astro';
   function downloadBlob(blob: Blob, fn: string) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fn; a.click(); URL.revokeObjectURL(u); }
   function filenameStem() {
     const m = materialSelect.value;
+    const matPart = m === 'custom' ? 'eps' + epsParam.value : m === 'drude' ? `drude_wp${readDrude(drudeHandle).wp}` : m;
+    if (excitation === 'electron') return `electron_sphere_${matPart}_R${rParam.value}nm_b${electronBParam.value}nm`;
     if (geometry === 'coreshell') {
       const nLayers = 1 + 1 + extraShells.length; // core + shell1 + extras
       return `mie_${nLayers}layer_n${nhParam.value}`;
     }
-    return `mie_${m === 'custom' ? 'eps' + epsParam.value : m}_R${rParam.value}nm_n${nhParam.value}`;
+    return `mie_${matPart}_R${rParam.value}nm_n${nhParam.value}`;
+  }
+
+  function materialLabelForExport(mat: string, eps: number, handle: DrudeHandle, ref = ''): string {
+    if (mat === 'custom') return `eps_r=${eps}`;
+    if (mat === 'drude') {
+      const { epsB, wp, gamma } = readDrude(handle);
+      return `drude(eps_b=${epsB},wp_eV=${wp},gamma_eV=${gamma})`;
+    }
+    if (mat === 'file' || mat === 'rii') return ref || mat;
+    return `material=${mat} (${MATERIALS[mat].ref})`;
   }
 
   function exportStructurePng() {
@@ -3222,8 +3878,11 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   function exportStructureCsv() {
+    const spectralRange = excitation === 'electron'
+      ? `E_loss=${electronEminInput.value}-${electronEmaxInput.value} eV`
+      : `lambda=${lamMinInput.value}-${lamMaxInput.value} nm`;
     const rows: Array<Array<string | number>> = [
-      [`# Mie structure drawing, geometry=${geometry}, n_host=${nhParam.value}, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`],
+      [`# Mie structure drawing, excitation=${excitation}, geometry=${geometry}, n_host=${nhParam.value}, ${spectralRange}`],
       ['# Generated by NanophotonicsLab (nanophotonicslab.com)'],
       ['layer', 'material', 'epsilon_r', 'outer_radius_nm', 'reference'],
     ];
@@ -3240,6 +3899,11 @@ import Layout from '../../layouts/Layout.astro';
     } else {
       addRow('Particle', materialSelect.value, epsParam.value, rParam.value, materialRefEl.textContent || '');
     }
+    if (excitation === 'electron') {
+      rows.push([]);
+      rows.push(['electron_trajectory', 'impact_parameter_nm', electronBParam.value, 'beta', electronBetaParam.value]);
+      rows.push(['electron_numerics', 'lmax', electronLmaxParam.value, 'q_c_nm^-1', electronQcParam.value, 'z_quadrature', electronNzParam.value]);
+    }
     const lines = rows.map(row => row.map(csvCell).join(','));
     downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_structure.csv');
   }
@@ -3253,13 +3917,15 @@ import Layout from '../../layouts/Layout.astro';
     const or = ec.getBoundingClientRect.bind(ec);
     ec.getBoundingClientRect = () => ({ ...or(), width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON() { return this; } });
     const materialPlot = viewTabs.value === 'material' ? getMaterialPlotData() : null;
-    const spectrumPlot = materialPlot ? null : getPlotData();
-    const xArr = materialPlot?.xArr ?? spectrumPlot!.xArr;
-    const series = materialPlot?.series ?? spectrumPlot!.series;
-    const xLabel = materialPlot?.xLabel ?? spectrumPlot!.xLabel;
-    const yLabel = materialPlot?.yLabel ?? spectrumPlot!.yLabel;
+    const electronPlot = !materialPlot && excitation === 'electron' ? getElectronPlotData() : null;
+    const spectrumPlot = materialPlot || electronPlot ? null : getPlotData();
+    const xArr = materialPlot?.xArr ?? electronPlot?.xArr ?? spectrumPlot!.xArr;
+    const series = materialPlot?.series ?? electronPlot?.series ?? spectrumPlot!.series;
+    const xLabel = materialPlot?.xLabel ?? electronPlot?.xLabel ?? spectrumPlot!.xLabel;
+    const yLabel = materialPlot?.yLabel ?? electronPlot?.yLabel ?? spectrumPlot!.yLabel;
     const opts: ChartOpts = { logY: materialPlot ? false : logY, fontScale: w / canvas.getBoundingClientRect().width };
     if (materialPlot) opts.yRange = materialPlot.yRange;
+    if (electronPlot && !logY) opts.yRange = seriesRange(electronPlot.series);
     if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
     const sd = window.devicePixelRatio;
     Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
@@ -3289,8 +3955,33 @@ import Layout from '../../layouts/Layout.astro';
       return;
     }
 
+    if (excitation === 'electron' && electronData) {
+      const lines = [
+        `# Electron-sphere EELS/CL, R=${rParam.value} nm, b=${electronBParam.value} nm, beta=${electronBetaParam.value}, lmax=${electronLmaxParam.value}, q_c=${electronQcParam.value} nm^-1`,
+        '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+        '# References: Garcia de Abajo, Phys. Rev. B 59, 3095 (1999); Stamatopoulou et al., Phys. Rev. Research 6, 013239 (2024).',
+        'energy_eV,eels_total,eels_surface,eels_bulk,eels_begrenzung,eels_electric,eels_magnetic,cl_total,cl_electric,cl_magnetic',
+      ];
+      for (let i = 0; i < electronData.energy.length; i++) {
+        lines.push([
+          electronData.energy[i].toFixed(6),
+          electronData.eelsTotal[i].toExponential(8),
+          electronData.eelsSurface[i].toExponential(8),
+          electronData.eelsBulk[i].toExponential(8),
+          electronData.eelsBegrenzung[i].toExponential(8),
+          electronData.eelsElectric[i].toExponential(8),
+          electronData.eelsMagnetic[i].toExponential(8),
+          electronData.clTotal[i].toExponential(8),
+          electronData.clElectric[i].toExponential(8),
+          electronData.clMagnetic[i].toExponential(8),
+        ].join(','));
+      }
+      downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_electron.csv');
+      return;
+    }
+
     const mat = materialSelect.value;
-    const matS = mat === 'custom' ? `eps_r=${epsParam.value}` : `material=${mat} (${MATERIALS[mat].ref})`;
+    const matS = materialLabelForExport(mat, epsParam.value, drudeHandle, materialRefEl.textContent || '');
     let headerLine: string;
     if (geometry === 'coreshell') {
       const nLayers = 1 + 1 + extraShells.length;
@@ -3312,6 +4003,7 @@ import Layout from '../../layouts/Layout.astro';
 
   function serializeState(): string {
     const p = new URLSearchParams();
+    p.set('exc', excitation);
     p.set('geo', geometry);
     p.set('mat', materialSelect.value);
     if (materialSelect.value === 'custom') p.set('eps', epsParam.value.toString());
@@ -3324,17 +4016,44 @@ import Layout from '../../layouts/Layout.astro';
     p.set('decomp', decompTabs.value);
     p.set('axis', axisTabs.value);
     p.set('mprop', materialPropTabs.value);
+    if (materialSelect.value === 'drude') {
+      const d = readDrude(drudeHandle);
+      p.set('depsb', d.epsB.toString());
+      p.set('dwp', d.wp.toString());
+      p.set('dgamma', d.gamma.toString());
+    }
+    p.set('esig', electronSignalTabs.value);
+    p.set('edec', electronDecompTabs.value);
+    p.set('eb', electronBParam.value.toString());
+    p.set('ebeta', electronBetaParam.value.toString());
+    p.set('emin', electronEminInput.value);
+    p.set('emax', electronEmaxInput.value);
+    p.set('elmax', electronLmaxParam.value.toString());
+    p.set('eqc', electronQcParam.value.toString());
+    p.set('enz', electronNzParam.value.toString());
     p.set('pol', polTabs.value);
     p.set('al', angularLambdaInput.value);
     if (logY) p.set('logY', '1');
     if (geometry === 'coreshell') {
       p.set('cmat', coreMaterialSelect.value);
       if (coreMaterialSelect.value === 'custom') p.set('ceps', coreEpsParam.value.toString());
+      if (coreMaterialSelect.value === 'drude') {
+        const d = readDrude(coreDrudeHandle);
+        p.set('cdepsb', d.epsB.toString());
+        p.set('cdwp', d.wp.toString());
+        p.set('cdgamma', d.gamma.toString());
+      }
       p.set('cr', coreRParam.value.toString());
       for (let i = 0; i < extraShells.length; i++) {
         const sh = extraShells[i];
         p.set(`s${i + 2}mat`, sh.material.value);
         if (sh.material.value === 'custom') p.set(`s${i + 2}eps`, sh.epsParam.value.toString());
+        if (sh.material.value === 'drude') {
+          const d = readDrude(sh.drudeHandle);
+          p.set(`s${i + 2}depsb`, d.epsB.toString());
+          p.set(`s${i + 2}dwp`, d.wp.toString());
+          p.set(`s${i + 2}dgamma`, d.gamma.toString());
+        }
         p.set(`s${i + 2}r`, sh.rParam.value.toString());
       }
     }
@@ -3345,21 +4064,48 @@ import Layout from '../../layouts/Layout.astro';
     const hash = location.hash.slice(1);
     if (!hash) return;
     const p = new URLSearchParams(hash);
+    const ex = p.get('exc');
+    if (ex === 'electron') { excitation = 'electron'; excitationTabs.select('electron', true); }
     const g = p.get('geo');
-    if (g === 'coreshell') geoTabs.select('coreshell', true);
+    if (g === 'coreshell') geoTabs.select('coreshell');
     const mat = p.get('mat');
     if (mat && !['file', 'rii'].includes(mat)) { materialSelect.value = mat; materialSelect.dispatchEvent(new Event('change')); }
     if (mat === 'custom' && p.has('eps')) epsParam.setValue(parseFloat(p.get('eps')!));
+    if (mat === 'drude') {
+      setDrude(
+        drudeHandle,
+        p.has('depsb') ? parseFloat(p.get('depsb')!) : readDrude(drudeHandle).epsB,
+        p.has('dwp') ? parseFloat(p.get('dwp')!) : readDrude(drudeHandle).wp,
+        p.has('dgamma') ? parseFloat(p.get('dgamma')!) : readDrude(drudeHandle).gamma,
+      );
+      materialRefEl.textContent = drudeRef(drudeHandle);
+    }
     if (p.has('r')) rParam.setValue(parseFloat(p.get('r')!));
     if (p.has('nh')) nhParam.setValue(parseFloat(p.get('nh')!));
     if (p.has('lmin')) { lamMinInput.value = p.get('lmin')!; lamMinInput.dispatchEvent(new Event('change')); }
     if (p.has('lmax')) { lamMaxInput.value = p.get('lmax')!; lamMaxInput.dispatchEvent(new Event('change')); }
     if (p.has('al')) angularLambdaInput.value = p.get('al')!;
+    if (p.has('eb')) electronBParam.setValue(parseFloat(p.get('eb')!));
+    if (p.has('ebeta')) electronBetaParam.setValue(parseFloat(p.get('ebeta')!));
+    if (p.has('emin')) electronEminInput.value = p.get('emin')!;
+    if (p.has('emax')) electronEmaxInput.value = p.get('emax')!;
+    if (p.has('elmax')) electronLmaxParam.setValue(parseFloat(p.get('elmax')!));
+    if (p.has('eqc')) electronQcParam.setValue(parseFloat(p.get('eqc')!));
+    if (p.has('enz')) electronNzParam.setValue(parseFloat(p.get('enz')!));
     if (p.get('logY') === '1') { logY = true; logToggle.classList.add('active'); }
     if (g === 'coreshell') {
       const cm = p.get('cmat');
       if (cm && !['file', 'rii'].includes(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }
       if (cm === 'custom' && p.has('ceps')) coreEpsParam.setValue(parseFloat(p.get('ceps')!));
+      if (cm === 'drude') {
+        setDrude(
+          coreDrudeHandle,
+          p.has('cdepsb') ? parseFloat(p.get('cdepsb')!) : readDrude(coreDrudeHandle).epsB,
+          p.has('cdwp') ? parseFloat(p.get('cdwp')!) : readDrude(coreDrudeHandle).wp,
+          p.has('cdgamma') ? parseFloat(p.get('cdgamma')!) : readDrude(coreDrudeHandle).gamma,
+        );
+        coreMaterialRefEl.textContent = drudeRef(coreDrudeHandle);
+      }
       if (p.has('cr')) coreRParam.setValue(parseFloat(p.get('cr')!));
     }
     // Restore tab selections (silent to avoid intermediate renders)
@@ -3367,8 +4113,11 @@ import Layout from '../../layouts/Layout.astro';
     if (p.has('decomp')) decompTabs.select(p.get('decomp')!, true);
     if (p.has('axis')) axisTabs.select(p.get('axis')!, true);
     if (p.has('mprop')) materialPropTabs.select(p.get('mprop')!, true);
+    if (p.has('esig')) electronSignalTabs.select(p.get('esig')!, true);
+    if (p.has('edec')) electronDecompTabs.select(p.get('edec')!, true);
     if (p.has('pol')) polTabs.select(p.get('pol')!, true);
     if (p.has('view')) viewTabs.select(p.get('view')!);
+    updateExcitationUI();
   }
 
   const shareBtn = document.getElementById('dl-share')!;
@@ -3381,7 +4130,10 @@ import Layout from '../../layouts/Layout.astro';
     });
   });
 
-  restoreState();
+  if (location.hash.slice(1)) restoreState();
+  else applyElectronDefaultState();
+  updateExcitationUI();
+  updateElectronRadiusMarker();
   new ResizeObserver(() => render()).observe(canvas);
   onThemeChange(() => render());
   recompute(); render(); updateConfigCheck();
