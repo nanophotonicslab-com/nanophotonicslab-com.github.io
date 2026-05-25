@@ -1,5 +1,4 @@
-import { MATERIALS } from '../data/optical-constants';
-import { interpolateNK } from './mie';
+import { MATERIALS, interpolateNK } from './materials';
 
 export type PlasmonShapeId =
   | 'rod'

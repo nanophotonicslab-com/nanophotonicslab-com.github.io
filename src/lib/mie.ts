@@ -116,15 +116,6 @@ export function mieAt(
  * @param lambdaNm  Query wavelength in nm
  * @returns [n, k] at the query wavelength
  */
-export function interpolateNK(data: number[][], lambdaNm: number): [number, number] {
-  const lam = lambdaNm / 1000;
-  if (lam <= data[0][0]) return [data[0][1], data[0][2]];
-  const last = data.length - 1;
-  if (lam >= data[last][0]) return [data[last][1], data[last][2]];
-  let lo = 0, hi = last;
-  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (data[mid][0] <= lam) lo = mid; else hi = mid; }
-  const t = (lam - data[lo][0]) / (data[hi][0] - data[lo][0]);
-  return [data[lo][1] + t * (data[hi][1] - data[lo][1]), data[lo][2] + t * (data[hi][2] - data[lo][2])];
-}
+export { interpolateNK } from './materials';
 
 export const HC_EV_NM = 1239.841984;

@@ -748,9 +748,9 @@ import Layout from '../../layouts/Layout.astro';
 
 <!-- ===== Script ===== -->
 <script>
-  import { MATERIALS } from '../../data/optical-constants';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
-  import { mieAt, interpolateNK } from '../../lib/mie';
+  import { MATERIALS, interpolateNK } from '../../lib/materials';
+  import { mieAt } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 

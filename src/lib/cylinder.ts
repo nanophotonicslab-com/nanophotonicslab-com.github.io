@@ -447,6 +447,168 @@ export function det4(M: Mat4): C {
 
 export const HC_EV_NM = 197.3269804;
 
+// ============================================================================
+// Plane-wave scattering at normal incidence (Bohren-Huffman BHCYL)
+// ============================================================================
+
+export interface CylinderPlaneWaveResult {
+  sizeParameter: number;
+  relativeRefractiveIndex: C;
+  anglesDeg: number[];
+  /** Parallel-polarized amplitude array from the Bohren-Huffman caller. */
+  t1: C[];
+  /** Perpendicular-polarized amplitude array from the Bohren-Huffman caller. */
+  t2: C[];
+  qscpar: number;
+  qscper: number;
+  qexpar: number;
+  qexper: number;
+}
+
+export interface CylinderScatteringMatrixRow {
+  angleDeg: number;
+  t11: number;
+  pol: number;
+  t33: number;
+  t34: number;
+}
+
+/**
+ * Normally illuminated infinite dielectric cylinder series.
+ *
+ * Implements the Bohren-Huffman `BHCYL` infinite-cylinder series. The returned
+ * efficiencies are
+ * normalized by the geometrical width `2a`; multiply by `2a` to obtain
+ * scattering/extinction cross-sections per unit cylinder length.
+ */
+export function cylinderPlaneWaveNormal(
+  sizeParameter: number,
+  relativeRefractiveIndex: C,
+  finalAngleDeg = 180,
+  intervals = 180,
+): CylinderPlaneWaveResult {
+  const x = sizeParameter;
+  if (!(x > 0)) throw new Error('sizeParameter must be positive');
+  if (!(intervals > 0)) throw new Error('intervals must be positive');
+
+  const refrel = relativeRefractiveIndex;
+  const y = Cx.scale(refrel, x);
+  const xstop = x + 4 * Math.pow(x, 0.3333) + 2;
+  const nstop = Math.floor(xstop);
+  const nmx = Math.floor(Math.max(xstop, Cx.abs(y)) + 15);
+  const npts = intervals + 1;
+  const anglesDeg = Array.from({ length: npts }, (_, i) => finalAngleDeg * i / intervals);
+  const theta = anglesDeg.map(a => a * Math.PI / 180);
+
+  const g = Array.from({ length: nmx + 2 }, () => Cx.zero());
+  g[nmx] = Cx.zero();
+  for (let n = 1; n < nmx; n++) {
+    const rn = nmx - n + 1;
+    const k = nmx - n;
+    const left = Cx.div([rn - 2, 0], y);
+    const denom = Cx.add(g[k + 1], Cx.div([rn - 1, 0], y));
+    g[k] = Cx.sub(left, Cx.div([1, 0], denom));
+  }
+
+  const nDelta = Math.floor(Math.sqrt(101 + x));
+  let mst = nstop + nDelta;
+  mst = Math.floor(mst / 2) * 2;
+
+  const f = new Array<number>(mst + 2).fill(0);
+  f[mst + 1] = 0;
+  f[mst] = 1e-32;
+  for (let ml = mst - 1; ml >= 1; ml--) {
+    f[ml] = 2 * ml * f[ml + 1] / x - f[ml + 2];
+  }
+
+  let alpha = f[1];
+  for (let index = 3; index < mst; index += 2) alpha += 2 * f[index];
+
+  const bj = new Array<number>(mst + 2).fill(0);
+  for (let n = 1; n < mst; n++) bj[n] = f[n] / alpha;
+
+  const by = new Array<number>(nstop + 3).fill(0);
+  by[1] = bj[1] * (Math.log(0.5 * x) + 0.577215664);
+  for (let ell = 1; ell < Math.floor(mst / 2); ell++) {
+    by[1] -= 2 * ((ell % 2 === 0 ? 1 : -1) * bj[2 * ell + 1]) / ell;
+  }
+  by[1] *= 0.636619772;
+  by[2] = (bj[2] * by[1] - 0.636619772 / x) / bj[1];
+  for (let kk = 1; kk < nstop; kk++) {
+    by[kk + 2] = 2 * kk * by[kk + 1] / x - by[kk];
+  }
+
+  const bh = Array.from({ length: nstop + 3 }, () => Cx.zero());
+  for (let n = 1; n < nstop + 2; n++) bh[n] = [bj[n], by[n]];
+
+  const a0 = Cx.div(
+    Cx.add(Cx.div(Cx.scale(g[1], bj[1]), refrel), [bj[2], 0]),
+    Cx.add(Cx.div(Cx.mul(g[1], bh[1]), refrel), bh[2]),
+  );
+  const b0 = Cx.div(
+    Cx.add(Cx.scale(Cx.mul(refrel, g[1]), bj[1]), [bj[2], 0]),
+    Cx.add(Cx.mul(Cx.mul(refrel, g[1]), bh[1]), bh[2]),
+  );
+
+  let qscpar = Cx.abs2(b0);
+  let qscper = Cx.abs2(a0);
+  const t1 = Array.from({ length: npts }, () => [b0[0], b0[1]] as C);
+  const t2 = Array.from({ length: npts }, () => [a0[0], a0[1]] as C);
+
+  for (let n = 1; n <= nstop; n++) {
+    const rn = n;
+    const gOverM = Cx.div(g[n + 1], refrel);
+    const aCore = Cx.add(gOverM, [rn / x, 0]);
+    const an = Cx.div(
+      Cx.sub(Cx.scale(aCore, bj[n + 1]), [bj[n], 0]),
+      Cx.sub(Cx.mul(aCore, bh[n + 1]), bh[n]),
+    );
+
+    const mg = Cx.mul(refrel, g[n + 1]);
+    const bCore = Cx.add(mg, [rn / x, 0]);
+    const bn = Cx.div(
+      Cx.sub(Cx.scale(bCore, bj[n + 1]), [bj[n], 0]),
+      Cx.sub(Cx.mul(bCore, bh[n + 1]), bh[n]),
+    );
+
+    for (let i = 0; i < npts; i++) {
+      const c = Math.cos(rn * theta[i]);
+      t1[i] = Cx.add(t1[i], Cx.scale(bn, 2 * c));
+      t2[i] = Cx.add(t2[i], Cx.scale(an, 2 * c));
+    }
+    qscpar += 2 * Cx.abs2(bn);
+    qscper += 2 * Cx.abs2(an);
+  }
+
+  qscpar *= 2 / x;
+  qscper *= 2 / x;
+  const qexper = (2 / x) * t2[0][0];
+  const qexpar = (2 / x) * t1[0][0];
+
+  return { sizeParameter: x, relativeRefractiveIndex: refrel, anglesDeg, t1, t2, qscpar, qscper, qexpar, qexper };
+}
+
+export function cylinderScatteringMatrix(result: CylinderPlaneWaveResult): CylinderScatteringMatrixRow[] {
+  const tpar0 = Cx.abs2(result.t1[0]);
+  const tper0 = Cx.abs2(result.t2[0]);
+  const t11Forward = 0.5 * (tpar0 + tper0) || 1;
+  return result.anglesDeg.map((angleDeg, i) => {
+    const t1 = result.t1[i];
+    const t2 = result.t2[i];
+    const tpar = Cx.abs2(t1);
+    const tper = Cx.abs2(t2);
+    const t11Raw = 0.5 * (tpar + tper) || 1;
+    const cross = Cx.mul(t1, [t2[0], -t2[1]]);
+    return {
+      angleDeg,
+      t11: t11Raw / t11Forward,
+      pol: 0.5 * (tpar - tper) / t11Raw,
+      t33: cross[0] / t11Raw,
+      t34: cross[1] / t11Raw,
+    };
+  });
+}
+
 export interface DispersionOpts {
   /** Energies to scan, eV. */
   energies_eV: number[];
@@ -557,6 +719,13 @@ export interface EELSParOpts {
   w_eV: number[];                               // energies to sample
   vFrac: number;                                // v/c in (0, 1)
   maxOrder: number;                             // use |m| ≤ maxOrder
+  /**
+   * Parallel trajectory geometry.
+   * - outside: material cylinder in host, electron travels outside.
+   * - inside-hole: host-filled cylindrical hole in the selected material.
+   * - inside-material: electron travels inside the selected material cylinder.
+   */
+  trajectory?: 'auto' | 'outside' | 'inside-hole' | 'inside-material';
 }
 
 /**
@@ -574,18 +743,22 @@ export function eelsParallel(opts: EELSParOpts): number[] {
   const a_au = a_nm * NM_AU;
   const b_au = b_nm * NM_AU;
   const v = vFrac * C_AU;                       // velocity in a.u.
-  const outside = b_nm > a_nm;
+  let trajectory = opts.trajectory ?? 'auto';
+  if (trajectory === 'auto') trajectory = b_nm > a_nm ? 'outside' : 'inside-material';
+  const source = trajectory === 'outside' ? 'outside' : 'inside';
 
   const out: number[] = [];
 
   for (const we of w_eV) {
-    const eps1 = eps1_of_w(we);
+    const epsMaterial = eps1_of_w(we);
+    const epsInside = trajectory === 'inside-hole' ? eps_h : epsMaterial;
+    const epsOutside = trajectory === 'inside-hole' ? epsMaterial : eps_h;
     const W = we / AU_EV;                       // energy (Hartree)
     const qz = W / v;
     const k = W / C_AU;
 
     // Lorentz factor uses the medium the electron traverses.
-    const eps_med = outside ? eps_h : eps1;
+    const eps_med = trajectory === 'outside' ? epsOutside : epsInside;
     const beta2 = vFrac * vFrac;
     const one_minus = Cx.sub([1, 0], Cx.scale(eps_med, beta2));
     const g_inv = Cx.sqrt(one_minus);
@@ -601,19 +774,19 @@ export function eelsParallel(opts: EELSParOpts): number[] {
       const absm = Math.abs(mm);
       const signM = mm % 2 === 0 ? 1 : -1;
 
-      if (outside) {
-        const coefs = getRTCoefs(qz * a_au, k * a_au, eps1, eps_h, mm, 'outside');
+      if (trajectory === 'outside') {
+        const coefs = getRTCoefs(qz * a_au, k * a_au, epsInside, epsOutside, mm, source);
         const Km = besselK(absm, arg);
         const Km2 = Cx.mul(Km, Km);
         const t_pp_re: C = [coefs.t_pp[0], 0];  // Re(t_pp) only
         const contrib = Cx.scale(Cx.mul(t_pp_re, Km2), signM);
         sum = Cx.add(sum, contrib);
       } else {
-        const coefs = getRTCoefs(qz * a_au, k * a_au, eps1, eps_h, mm, 'inside');
+        const coefs = getRTCoefs(qz * a_au, k * a_au, epsInside, epsOutside, mm, source);
         const Im = besselI(absm, arg);
         const Im2 = Cx.mul(Im, Im);
         // MATLAB: TT = Im²·(-1)^(m-1)·Re(r_pp/ε₁) → sign is −(−1)^m = −signM
-        const r_over_eps = Cx.div(coefs.r_pp, eps1);
+        const r_over_eps = Cx.div(coefs.r_pp, epsInside);
         const r_re: C = [r_over_eps[0], 0];
         const contrib = Cx.scale(Cx.mul(r_re, Im2), -signM);
         sum = Cx.add(sum, contrib);
@@ -624,10 +797,10 @@ export function eelsParallel(opts: EELSParOpts): number[] {
     const v2 = v * v;
     const g2 = Cx.mul(g, g);
     let eels_au: C;
-    if (outside) {
+    if (trajectory === 'outside') {
       // 4/π²/v²/g² · sum / eps_h
       const pref = 4 / (Math.PI * Math.PI * v2);
-      eels_au = Cx.scale(Cx.div(sum, Cx.mul(g2, eps_h)), pref);
+      eels_au = Cx.scale(Cx.div(sum, Cx.mul(g2, epsOutside)), pref);
     } else {
       const pref = 1 / v2;
       eels_au = Cx.scale(Cx.div(sum, g2), pref);
@@ -654,6 +827,17 @@ export interface EELSPerpOpts {
   maxOrder: number;                             // use |m| ≤ maxOrder
   /** qz grid in nm⁻¹ used for numerical integration; must start at 0 or near 0 and be sorted ascending. */
   qz_nm: number[];
+  /** Bounded refinement choice for the integrated qz quadrature. */
+  integrationGrid?: 'standard' | 'fine' | 'high';
+}
+
+export interface EELSPerpQResolved {
+  w_eV: number[];
+  qz_nm: number[];
+  /** Momentum-resolved probability density dGamma/(dE dqz), in nm/eV. */
+  values_nm_per_eV: number[][];
+  /** qz-integrated EELS Gamma(E), in 1/eV. */
+  integrated_1_per_eV: number[];
 }
 
 /**
@@ -666,17 +850,21 @@ export interface EELSPerpOpts {
  * nm/eV. The electron is assumed to travel in vacuum, so the Lorentz
  * factor uses the bare v/c and not the host dielectric.
  */
-export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
-  const { a_nm, b_nm, eps_h, eps1_of_w, w_eV, vFrac, maxOrder, qz_nm } = opts;
+export function eelsPerpendicularQResolved(opts: EELSPerpOpts): EELSPerpQResolved {
+  const { a_nm, b_nm, eps_h, eps1_of_w, w_eV, vFrac, maxOrder, qz_nm, integrationGrid = 'standard' } = opts;
+  const grid = {
+    standard: { inside: 32, outside: 112 },
+    fine: { inside: 48, outside: 160 },
+    high: { inside: 64, outside: 224 },
+  }[integrationGrid] ?? { inside: 32, outside: 112 };
 
   const a_au = a_nm * NM_AU;
   const b_au = b_nm * NM_AU;
   const v = vFrac * C_AU;
   const g = 1 / Math.sqrt(1 - vFrac * vFrac); // vacuum Lorentz factor
-  const q_scan = qz_nm.map(q => q / NM_AU);   // qz grid in a.u.
-
-  const out: number[] = [];
-  const scale = 1 / AU_EV / NM_AU;
+  const values_nm_per_eV: number[][] = [];
+  const integrated_1_per_eV: number[] = [];
+  const qResolvedScale = 1 / (AU_EV * NM_AU);
 
   for (const we of w_eV) {
     const eps1 = eps1_of_w(we);
@@ -684,10 +872,8 @@ export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
     const q = W / v;
     const k = W / C_AU;
 
-    // Compute the differential spectrum at each qz, then trapezoidal-integrate.
-    const diff = new Array<number>(q_scan.length);
-    for (let iq = 0; iq < q_scan.length; iq++) {
-      const qz = q_scan[iq];
+    const densityAtQzNm = (qzNm: number): number => {
+      const qz = qzNm / NM_AU;
       const D = Math.sqrt((q / g) * (q / g) + qz * qz);
       const Q = Cx.sqrt([k * k - qz * qz, 0]);
 
@@ -720,19 +906,59 @@ export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
       const expTerm = Math.exp(-2 * D * Math.abs(b_au));
       const core = Cx.div(Cx.scale(sumTT, expTerm), denom);
       const dgamma = pref * core[0];
-      diff[iq] = dgamma;
-    }
+      return dgamma * qResolvedScale;
+    };
+
+    const diff = qz_nm.map(densityAtQzNm);
 
     // Trapezoidal integration over qz (×2 for symmetry about qz=0).
+    values_nm_per_eV.push(diff);
+
+    // Split the integration at the host light cone. Inside the light cone a
+    // modest linear grid is enough; outside, cluster points near the boundary
+    // and stop at the user-selected q_max.
+    const qzMaxNm = Math.max(0, qz_nm[qz_nm.length - 1] ?? 0);
+    const qLightNm = Math.min(qzMaxNm, Math.sqrt(Math.max(0, eps_h[0])) * we / HC_EV_NM);
+    const integrationQzNm: number[] = [];
+    const addQ = (value: number) => {
+      if (!Number.isFinite(value)) return;
+      const qv = Math.max(0, Math.min(qzMaxNm, value));
+      if (integrationQzNm.length === 0 || Math.abs(integrationQzNm[integrationQzNm.length - 1] - qv) > 1e-8) {
+        integrationQzNm.push(qv);
+      }
+    };
+    const nInside = grid.inside;
+    const nOutside = grid.outside;
+    if (qLightNm > 1e-10) {
+      for (let i = 0; i < nInside; i++) addQ(qLightNm * i / (nInside - 1));
+    } else {
+      addQ(0);
+    }
+    if (qLightNm < qzMaxNm) {
+      addQ(qLightNm);
+      for (let i = 1; i <= nOutside; i++) {
+        const t = i / nOutside;
+        const clustered = 0.7 * t * t + 0.3 * t;
+        addQ(qLightNm + (qzMaxNm - qLightNm) * clustered);
+      }
+    }
+    addQ(qzMaxNm);
+    integrationQzNm.sort((a, b) => a - b);
+    const integrationDiff = integrationQzNm.map(densityAtQzNm);
+
     let integral = 0;
-    for (let i = 1; i < q_scan.length; i++) {
-      integral += 0.5 * (diff[i] + diff[i - 1]) * (q_scan[i] - q_scan[i - 1]);
+    for (let i = 1; i < integrationQzNm.length; i++) {
+      integral += 0.5 * (integrationDiff[i] + integrationDiff[i - 1]) * (integrationQzNm[i] - integrationQzNm[i - 1]);
     }
     integral *= 2;
 
-    out.push(integral * scale);
+    integrated_1_per_eV.push(integral);
   }
-  return out;
+  return { w_eV, qz_nm, values_nm_per_eV, integrated_1_per_eV };
+}
+
+export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
+  return eelsPerpendicularQResolved(opts).integrated_1_per_eV;
 }
 
 /** Integer power of a complex number via repeated squaring. */
