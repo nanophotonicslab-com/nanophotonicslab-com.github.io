@@ -2,15 +2,15 @@
 import Layout from '../../layouts/Layout.astro';
 ---
 
-<Layout title="Cylinder Dispersion" description="Guided-mode dispersion of an infinite dielectric cylinder: ω(q_z) branches from exact electromagnetic matching, solved in the browser.">
+<Layout title="Cylinder Scattering" description="Plane-wave scattering and electron-loss spectroscopy for infinite cylinders, solved in the browser.">
   <section class="widget-hero">
     <div class="container">
       <a href="/lab/" class="back-link">&larr; Back to Lab</a>
-      <h1>Cylinder <span class="gradient-text">Dispersion</span></h1>
+      <h1>Cylinder <span class="gradient-text">Scattering</span></h1>
       <p class="widget-hero__subtitle">
-        Guided-mode dispersion ω(q<sub>z</sub>) of an infinite cylinder in a
-        homogeneous host. Roots are found from det&nbsp;M(qa, ka, ε₁, ε<sub>h</sub>, m)&nbsp;=&nbsp;0
-        with exact complex-argument Bessel functions.
+        Compare normally incident plane-wave scattering with electron energy-loss
+        spectra for an infinite cylinder in a homogeneous host. Materials use the
+        same optical-constants pipeline as the Mie lab.
       </p>
     </div>
   </section>
@@ -20,6 +20,14 @@ import Layout from '../../layouts/Layout.astro';
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
+          <div class="param excitation-param">
+            <div class="param-header"><label>Excitation</label></div>
+            <div class="view-tabs" id="excitation-tabs" role="radiogroup">
+              <button class="view-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
+              <button class="view-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
+            </div>
+          </div>
+
           <h3>Parameters</h3>
 
           <div class="param">
@@ -27,7 +35,10 @@ import Layout from '../../layouts/Layout.astro';
               <label>Radius a (nm)</label>
               <input type="number" class="param-number" id="r-num" value="15" step="1" min="1" max="200">
             </div>
-            <input type="range" class="param-slider" id="r-slider" min="2" max="100" step="1" value="15">
+            <div class="slider-marker-wrap">
+              <input type="range" class="param-slider" id="r-slider" min="2" max="100" step="1" value="15">
+              <span class="threshold-marker" id="radius-impact-marker" title="Impact parameter b"></span>
+            </div>
           </div>
 
           <div class="param">
@@ -44,14 +55,43 @@ import Layout from '../../layouts/Layout.astro';
           </div>
 
           <div class="param">
+            <div class="param-header"><label>Material</label></div>
+            <select id="material-select" class="param-select">
+              <option value="custom">Custom dielectric</option>
+              <option value="drude">Drude model</option>
+              <option value="au" selected>Gold (Au)</option>
+              <option value="ag">Silver (Ag)</option>
+              <option value="si">Silicon (Si)</option>
+              <option value="al">Aluminum (Al)</option>
+              <option value="tio2">TiO₂</option>
+            </select>
+            <span class="material-ref" id="material-ref"></span>
+          </div>
+
+          <div class="param drude-panel" id="drude-group" style="display:none">
+            <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+            <div class="drude-grid">
+              <label>
+                <span>&epsilon;<sub>b</sub></span>
+                <input type="number" class="param-number" id="drude-epsb" value="1" step="0.1">
+              </label>
+              <label>
+                <span>&omega;<sub>p</sub> (eV)</span>
+                <input type="number" class="param-number" id="drude-wp" value="5" step="0.01" min="0.01">
+              </label>
+              <label>
+                <span>&gamma; (eV)</span>
+                <input type="number" class="param-number" id="drude-gamma" value="0.05" step="0.001" min="0">
+              </label>
+            </div>
+          </div>
+
+          <div class="param custom-epsilon" id="eps-group" style="display:none">
             <div class="param-header">
               <label>Re(&epsilon;<sub>1</sub>)</label>
               <input type="number" class="param-number" id="e1r-num" value="10.0" step="0.1" min="1">
             </div>
             <input type="range" class="param-slider" id="e1r-slider" min="1" max="30" step="0.1" value="10">
-          </div>
-
-          <div class="param">
             <div class="param-header">
               <label>Im(&epsilon;<sub>1</sub>)</label>
               <input type="number" class="param-number" id="e1i-num" value="0.10" step="0.01" min="0">
@@ -60,50 +100,56 @@ import Layout from '../../layouts/Layout.astro';
           </div>
 
           <div class="param">
-            <div class="param-header"><label>&omega; range (eV)</label></div>
+            <div class="param-header"><label>&hbar;&omega; range (eV)</label></div>
             <div class="param-range-row">
               <input type="number" class="param-number param-number--sm" id="w-min" value="1" step="0.5" min="0">
               <span class="param-limit-dash">&mdash;</span>
-              <input type="number" class="param-number param-number--sm" id="w-max" value="20" step="0.5" min="0.1">
+              <input type="number" class="param-number param-number--sm" id="w-max" value="6" step="0.5" min="0.1">
             </div>
           </div>
 
-          <div class="param">
-            <div class="param-header"><label>Angular orders m</label></div>
-            <div class="m-chips" id="m-chips">
-              <button class="m-chip active" data-m="0">0</button>
-              <button class="m-chip active" data-m="1">1</button>
-              <button class="m-chip active" data-m="2">2</button>
-              <button class="m-chip" data-m="3">3</button>
-            </div>
-          </div>
-
-          <details class="eels-section" id="eels-section">
+          <details class="eels-section electron-only" id="eels-section" style="display:none" open>
             <summary>EELS parameters</summary>
             <div class="param">
               <div class="param-header">
                 <label>Impact b (nm)</label>
                 <input type="number" class="param-number" id="b-num" value="25" step="1" min="0">
               </div>
-              <input type="range" class="param-slider" id="b-slider" min="0" max="100" step="0.5" value="25">
+              <div class="slider-marker-wrap">
+                <input type="range" class="param-slider" id="b-slider" min="0" max="100" step="0.5" value="25">
+                <span class="threshold-marker" id="impact-radius-marker" title="Cylinder radius a"></span>
+              </div>
               <span class="param-note" id="b-note">outside the cylinder</span>
             </div>
+            <div class="param" id="parallel-geometry-param">
+              <div class="param-header"><label>Parallel geometry</label></div>
+              <div class="view-tabs" id="parallel-geometry-tabs" role="radiogroup">
+                <button class="view-tab active" data-parallel-geometry="outside" role="radio" aria-checked="true">Outside cylinder</button>
+                <button class="view-tab" data-parallel-geometry="inside-hole" role="radio" aria-checked="false">Inside hole</button>
+              </div>
+            </div>
             <div class="param">
-              <div class="param-header">
-                <label>Electron v / c</label>
-                <input type="number" class="param-number" id="v-num" value="0.3" step="0.01" min="0.01" max="0.99">
+              <div class="param-header"><label>Electron</label></div>
+              <div class="param-dual-row">
+                <label>
+                  <span>v / c</span>
+                  <input type="number" class="param-number" id="v-num" value="0.3" step="0.01" min="0.01" max="0.99">
+                </label>
+                <label>
+                  <span>K (keV)</span>
+                  <input type="number" class="param-number" id="kev-num" value="24.7" step="0.1" min="0.001">
+                </label>
               </div>
               <input type="range" class="param-slider" id="v-slider" min="0.05" max="0.99" step="0.01" value="0.3">
               <div class="param-presets" id="v-presets">
-                <button class="preset-btn" data-val="0.3">slow</button>
+                <button class="preset-btn" data-val="0.328">30&thinsp;keV</button>
                 <button class="preset-btn" data-val="0.55">100&thinsp;keV</button>
                 <button class="preset-btn" data-val="0.70">200&thinsp;keV</button>
-                <button class="preset-btn" data-val="0.78">300&thinsp;keV</button>
               </div>
             </div>
             <div class="param">
               <div class="param-header">
-                <label>Max |m| (EELS)</label>
+                <label>Max |m|</label>
                 <input type="number" class="param-number" id="Mmax-num" value="4" step="1" min="0" max="10">
               </div>
             </div>
@@ -111,12 +157,13 @@ import Layout from '../../layouts/Layout.astro';
 
           <button id="reset-btn" class="reset-btn" title="Reset all parameters">Reset defaults</button>
 
-          <p class="theory-note">
-            <strong>Model.</strong>
-            Tangential <b>E</b>, <b>H</b> matching at r&nbsp;=&nbsp;a gives a 4×4
-            system. Guided modes satisfy det&nbsp;M&nbsp;=&nbsp;0 inside the
-            window k<sub>h</sub>&nbsp;&lt;&nbsp;q&nbsp;&lt;&nbsp;k<sub>mat</sub>.
-            A small Im(ε₁) regularizes the search.
+          <button type="button" class="config-check" id="config-check" aria-haspopup="dialog" aria-controls="structure-dialog" title="Open structure drawing"></button>
+
+          <p class="theory-note" id="theory-note">
+            <strong>Plane wave.</strong>
+            Normal-incidence cylinder scattering uses the Bohren-Huffman
+            infinite-cylinder series. Efficiencies are normalized by the
+            geometrical width 2a and converted to cross-section per unit length.
           </p>
         </div>
 
@@ -124,48 +171,138 @@ import Layout from '../../layouts/Layout.astro';
         <div class="chart-panel card">
           <div class="chart-toolbar">
             <div class="view-tabs" id="view-tabs" role="radiogroup">
-              <button class="view-tab active" data-view="disp-wq" role="radio" aria-checked="true">
-                &omega;&ndash;q<sub>z</sub>
+              <button class="view-tab active" data-view="cross-section" data-source="plane" role="radio" aria-checked="true">
+                Cross sections
               </button>
-              <button class="view-tab" data-view="disp-bV" role="radio" aria-checked="false">
-                b&ndash;V
+              <button class="view-tab" data-view="angular" data-source="plane" role="radio" aria-checked="false">
+                Angular
               </button>
-              <button class="view-tab" data-view="eels-par" role="radio" aria-checked="false">
+              <button class="view-tab" data-view="eels-par" data-source="electron" role="radio" aria-checked="false" style="display:none">
                 EELS ∥
               </button>
-              <button class="view-tab" data-view="eels-perp" role="radio" aria-checked="false">
+              <button class="view-tab" data-view="eels-perp" data-source="electron" role="radio" aria-checked="false" style="display:none">
                 EELS ⊥
               </button>
+              <button class="view-tab" data-view="disp-wq" data-source="electron" role="radio" aria-checked="false" style="display:none">
+                &hbar;&omega;&ndash;q<sub>z</sub>
+              </button>
+              <button class="view-tab" data-view="disp-bV" data-source="electron" role="radio" aria-checked="false" style="display:none">
+                b&ndash;V
+              </button>
             </div>
-            <div class="toolbar-actions">
-              <button id="dl-png" class="tool-btn" title="Download chart as PNG" data-umami-event="cylinder-export" data-umami-event-format="png">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                PNG
-              </button>
-              <button id="dl-csv" class="tool-btn" title="Download data as CSV" data-umami-event="cylinder-export" data-umami-event-format="csv">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                CSV
-              </button>
-              <button id="share-btn" class="tool-btn" title="Copy shareable link" data-umami-event="share" data-umami-event-page="cylinder">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                Share
-              </button>
-              <span id="compute-status" class="compute-status"></span>
+            <button id="perp-compute-btn" class="chart-tool-btn chart-tool-btn--primary" type="button" title="Compute perpendicular EELS" style="display:none">Compute</button>
+            <label id="perp-grid-control" class="toolbar-control toolbar-control--compact" style="display:none">
+              <span class="toolbar-label">Grid</span>
+              <select id="perp-grid-select" class="toolbar-select" title="Perpendicular EELS integration grid">
+                <option value="standard" selected>Standard</option>
+                <option value="fine">Fine</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
+            <div class="spectrum-controls" id="spectrum-controls">
+              <div class="toolbar-control">
+                <span class="toolbar-label">Components</span>
+                <div class="view-tabs view-tabs--toolbar" id="quantity-tabs" role="radiogroup">
+                  <button class="view-tab active" data-qty="csca" role="radio" aria-checked="true">C<sub>sca</sub></button>
+                  <button class="view-tab" data-qty="cext" role="radio" aria-checked="false">C<sub>ext</sub></button>
+                  <button class="view-tab" data-qty="cabs" role="radio" aria-checked="false">C<sub>abs</sub></button>
+                  <button class="view-tab" data-qty="qsca" role="radio" aria-checked="false">Q<sub>sca</sub></button>
+                  <button class="view-tab" data-qty="all" role="radio" aria-checked="false">All</button>
+                </div>
+              </div>
+              <div class="toolbar-control">
+                <span class="toolbar-label">Breakdown</span>
+                <div class="view-tabs view-tabs--toolbar" id="decomp-tabs" role="radiogroup">
+                  <button class="view-tab active" data-decomp="total" role="radio" aria-checked="true">Total</button>
+                  <button class="view-tab" data-decomp="em" role="radio" aria-checked="false">E / M</button>
+                </div>
+              </div>
+            </div>
+            <span id="angular-controls" class="angular-controls" style="display:none">
+              <label class="angular-label">E =</label>
+              <input type="number" class="param-number param-number--sm" id="angle-energy-num" value="2.4" step="0.1" min="0.1">
+              <span class="angular-label">eV</span>
+            </span>
+            <span id="compute-status" class="compute-status"></span>
+          </div>
+          <div id="angular-pol-wrap" class="angular-pol-wrap" style="display:none">
+            <div class="view-tabs" id="pol-tabs" role="radiogroup">
+              <button class="view-tab active" data-pol="total" role="radio" aria-checked="true">Unpolarized</button>
+              <button class="view-tab" data-pol="perp" role="radio" aria-checked="false">&perp;</button>
+              <button class="view-tab" data-pol="par" role="radio" aria-checked="false">&#x2016;</button>
             </div>
           </div>
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="cyl-chart" aria-label="Cylinder dispersion or EELS chart"></canvas>
+            <canvas id="chart-overlay" aria-hidden="true"></canvas>
+            <div class="axis-overlay" id="axis-overlay">
+              <div class="view-tabs view-tabs--toolbar" id="axis-tabs" role="radiogroup" aria-label="X axis">
+                <button class="view-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
+                <button class="view-tab" data-axis="energy" role="radio" aria-checked="false">&hbar;&omega; (eV)</button>
+              </div>
+            </div>
+            <div class="chart-tooltip" id="chart-tooltip"></div>
           </div>
-          <div class="chart-legend" id="chart-legend"></div>
+          <input type="range" class="param-slider angular-slider" id="angle-energy-slider" min="0.5" max="6" step="0.05" value="2.4" style="display:none">
+          <div class="chart-legend" id="chart-legend" style="display:none"></div>
+          <div class="download-bar">
+            <span class="download-label">Export</span>
+            <button id="dl-png" class="dl-btn" title="Download chart as PNG" data-umami-event="cylinder-export" data-umami-event-format="png">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button id="dl-csv" class="dl-btn" title="Download data as CSV" data-umami-event="cylinder-export" data-umami-event-format="csv">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              CSV
+            </button>
+            <button id="share-btn" class="dl-btn" title="Copy shareable link" data-umami-event="share" data-umami-event-page="cylinder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Share
+            </button>
+          </div>
+          <div class="perp-map-panel" id="perp-map-panel" style="display:none">
+            <div class="perp-map-toolbar">
+              <span class="perp-map-title">Momentum-resolved EELS</span>
+              <button type="button" id="map-dl-png" class="chart-tool-btn" title="Download momentum-resolved EELS as PNG">PNG</button>
+              <button type="button" id="map-log-toggle" class="chart-tool-btn" title="Toggle log10 color scale">Log10 color</button>
+              <button type="button" id="map-light-toggle" class="chart-tool-btn active" title="Show host light line">Light line</button>
+              <button type="button" id="map-electron-toggle" class="chart-tool-btn active" title="Show electron line">Electron line</button>
+              <button type="button" id="map-custom-toggle" class="chart-tool-btn" title="Show custom line">Custom line</button>
+              <label class="map-inline-control">slope v/c
+                <input type="number" class="param-number param-number--sm" id="custom-slope-num" value="0.30" step="0.01" min="0.001">
+              </label>
+            </div>
+            <div class="perp-map-wrap" id="perp-map-wrap">
+              <canvas id="perp-map-canvas" aria-label="Perpendicular cylinder momentum-resolved EELS map"></canvas>
+            </div>
+            <div class="perp-map-footer">
+              <label class="map-inline-control">q<sub>max</sub>
+                <input type="number" class="param-number param-number--sm" id="qz-max-num" value="0.1" step="0.01" min="0.02">
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 
+      <dialog class="structure-dialog" id="structure-dialog" aria-labelledby="structure-dialog-title">
+        <div class="structure-dialog__panel">
+          <div class="structure-dialog__header">
+            <h3 id="structure-dialog-title">Cylinder Drawing</h3>
+            <div class="structure-dialog__actions">
+              <button type="button" class="chart-tool-btn" id="structure-export-png" title="Download cylinder drawing as PNG">PNG</button>
+              <button type="button" class="structure-dialog__close" id="structure-dialog-close" aria-label="Close structure drawing">&times;</button>
+            </div>
+          </div>
+          <div class="structure-dialog__art" id="structure-dialog-art"></div>
+        </div>
+      </dialog>
+
       <div class="references card">
         <h4>References</h4>
-        <ul>
-          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983), §8 — infinite cylinder expansion.</li>
-          <li>Abramowitz &amp; Stegun, §9.1.11 — integer-order Y<sub>m</sub> series used to compute complex-argument Bessel functions in the browser.</li>
-          <li>Internal port of Álvaro Rodríguez Echarri's MATLAB <code>cylinders</code> library (matrix <code>giveM</code>, dispersion root solver).</li>
+        <ul class="reference-list">
+          <li><span class="ref-index">[1]</span><span>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983), §8.</span></li>
+          <li><span class="ref-index">[2]</span><span>A. Rodr&iacute;guez Echarri, W. Zhao, K. Busch &amp; F. J. Garc&iacute;a de Abajo, <em>Relativistic electron energy-loss spectroscopy in cylindrical waveguides and holes</em>, Phys. Rev. B <strong>111</strong>, 205436 (2025).</span></li>
         </ul>
       </div>
     </div>
@@ -199,12 +336,48 @@ import Layout from '../../layouts/Layout.astro';
   .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .param-number { -moz-appearance: textfield; }
   .param-number--sm { width: 4.2rem; font-size: 0.8125rem; }
+  .param-dual-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+  .param-dual-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.7rem; font-weight: 650; color: var(--text-soft); }
+  .param-dual-row .param-number { width: 100%; }
   .param-range-row { display: flex; align-items: center; gap: 0.35rem; }
   .param-limit-dash { color: var(--bg-muted); font-size: 0.75rem; }
+  .param-select {
+    width: 100%;
+    padding: 0.38rem 0.55rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    outline: none;
+  }
+  .param-select:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+  .material-ref { min-height: 1em; font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+  .drude-formula { font-size: 0.75rem; color: var(--text-soft); }
+  .drude-grid { display: grid; grid-template-columns: 1fr; gap: 0.35rem; }
+  .drude-grid label { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+  .drude-grid span { font-size: 0.75rem; color: var(--text-muted); }
 
   .param-slider {
     -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
     background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .slider-marker-wrap { position: relative; display: flex; align-items: center; padding: 4px 0; }
+  .slider-marker-wrap .param-slider { position: relative; z-index: 1; }
+  .threshold-marker {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    z-index: 2;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #EF4444;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
   .param-slider::-webkit-slider-thumb {
     -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
@@ -221,19 +394,6 @@ import Layout from '../../layouts/Layout.astro';
   }
   .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
   .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.06); color: var(--primary); }
-
-  .m-chips { display: flex; gap: 0.35rem; }
-  .m-chip {
-    flex: 1; padding: 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 700;
-    font-variant-numeric: tabular-nums; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-  }
-  .m-chip:hover { border-color: var(--primary-light); color: var(--primary); }
-  .m-chip.active { color: white; border-color: transparent; }
-  .m-chip[data-m="0"].active { background: #6366F1; }
-  .m-chip[data-m="1"].active { background: #06B6D4; }
-  .m-chip[data-m="2"].active { background: #10B981; }
-  .m-chip[data-m="3"].active { background: #F59E0B; }
 
   .reset-btn {
     width: 100%; padding: 0.4rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
@@ -268,8 +428,12 @@ import Layout from '../../layouts/Layout.astro';
     flex: 1; padding: 0.3rem 0.65rem; border: none; background: none;
     border-radius: var(--radius-full);
     font-family: var(--font); font-size: 0.75rem; font-weight: 500;
-    cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap;
+    cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center;
   }
+  #view-tabs { padding: 3px; }
+  #view-tabs .view-tab { padding: 0.45rem 0.85rem; font-size: 0.8125rem; font-weight: 600; }
+  .view-tabs--toolbar { padding: 2px; }
+  .view-tabs--toolbar .view-tab { flex: 0 0 auto; padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .view-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .view-tab:hover:not(.active) { color: var(--text); }
 
@@ -279,38 +443,181 @@ import Layout from '../../layouts/Layout.astro';
   }
   .theory-note strong { color: var(--text-soft); }
 
-  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
-  .chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
-  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
-  .toolbar-actions { display: flex; align-items: center; gap: 0.5rem; }
-  .tool-btn {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.3rem 0.7rem; font-size: 0.78rem; font-weight: 500;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  .config-check {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--bg-muted);
+    padding: var(--space-sm) 0 0;
+    margin-top: var(--space-xs);
+    background: transparent;
+    color: inherit;
+    cursor: zoom-in;
   }
-  .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .compute-status { font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-  .chart-wrap { position: relative; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: var(--radius-sm); }
+  .config-check:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+  }
+  .config-check svg { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); }
+
+  .structure-dialog {
+    width: min(720px, calc(100vw - 2rem));
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: var(--shadow-lg);
+  }
+  .structure-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .structure-dialog__panel { padding: var(--space-md); }
+  .structure-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+  .structure-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .structure-dialog__actions { display: inline-flex; align-items: center; gap: var(--space-xs); }
+  .structure-dialog__close {
+    width: 2rem; height: 2rem; border: 1px solid var(--bg-muted); border-radius: 50%;
+    background: var(--bg); color: var(--text-muted); cursor: pointer; font-size: 1.1rem;
+  }
+  .structure-dialog__close:hover { color: var(--primary); border-color: var(--primary-light); }
+  .structure-dialog__art svg { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); }
+
+  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: 0; }
+  .chart-toolbar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+  .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .spectrum-controls { display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+  .toolbar-control { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .toolbar-control--compact { gap: 0.25rem; }
+  .toolbar-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: var(--text-muted);
+  }
+  .toolbar-select {
+    min-width: 5.2rem;
+    padding: 0.22rem 0.45rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-soft);
+    font: 600 0.6875rem var(--font);
+    outline: none;
+  }
+  .toolbar-select:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+  .chart-tool-btn {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .chart-tool-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .chart-tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
+  .chart-tool-btn--primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .chart-tool-btn--primary:hover { background: var(--primary-dark); color: #fff; }
+  .chart-tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .compute-status { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
+  .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  .angular-pol-wrap { display: flex; justify-content: flex-start; margin-bottom: var(--space-sm); }
+  .angular-pol-wrap .view-tabs { width: fit-content; }
+  .angular-slider { width: 220px; max-width: 100%; margin: -0.15rem 0 var(--space-sm); }
+  .chart-wrap { position: relative; cursor: crosshair; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+  .axis-overlay {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .axis-overlay .view-tabs {
+    box-shadow: 0 1px 8px rgba(30, 27, 75, 0.08);
+    background: rgba(241, 240, 251, 0.9);
+    backdrop-filter: blur(6px);
+  }
+  .chart-tooltip {
+    position: absolute; pointer-events: none; background: rgba(30,27,75,0.92); color: white;
+    padding: 6px 10px; border-radius: 6px; font-size: 0.6875rem; font-family: var(--font);
+    font-variant-numeric: tabular-nums; line-height: 1.5; white-space: nowrap; display: none;
+    z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .chart-tooltip.visible { display: block; }
 
   .chart-legend {
     display: flex; gap: var(--space-md); flex-wrap: wrap;
-    padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
+    padding: 0.2rem 0 var(--space-xs);
+    border-bottom: 1px solid var(--bg-muted);
   }
-  .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-soft); }
+  body:has(#view-tabs [data-view="disp-wq"].active) #chart-legend,
+  body:has(#view-tabs [data-view="disp-bV"].active) #chart-legend {
+    display: none !important;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; font-weight: 650; color: var(--text-soft); }
   .legend-swatch {
-    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    display: inline-block; width: 16px; height: 3px; border-radius: 99px;
   }
   .legend-line {
     display: inline-block; width: 18px; height: 0;
     border-top: 2px dashed currentColor;
   }
+  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
+  .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  .dl-btn:active { transform: scale(0.97); }
+  .perp-map-panel {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--bg-muted);
+  }
+  .perp-map-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-sm);
+  }
+  .perp-map-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-right: auto;
+  }
+  .map-inline-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    color: var(--text-soft);
+  }
+  .perp-map-wrap { position: relative; }
+  .perp-map-wrap canvas {
+    width: 100%;
+    aspect-ratio: 5 / 2.6;
+    display: block;
+    border-radius: var(--radius-sm);
+  }
+  .perp-map-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-xs);
+  }
 
   .references { margin-top: var(--space-lg); }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
-  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  .references li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .ref-index { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .references a { color: var(--primary); }
   .references code {
     font-family: 'SF Mono', Menlo, Consolas, monospace;
     font-size: 0.85em;
@@ -327,50 +634,208 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
-  import { getDispersion, eelsParallel, eelsPerpendicular, HC_EV_NM } from '../../lib/cylinder.ts';
+  import {
+    cylinderPlaneWaveNormal,
+    cylinderScatteringMatrix,
+    getDispersion,
+    eelsParallel,
+    eelsPerpendicularQResolved,
+    HC_EV_NM,
+  } from '../../lib/cylinder.ts';
   import type { C } from '../../lib/cylinder.ts';
+  import {
+    MATERIALS,
+    PHOTON_HC_EV_NM,
+    drudeNK,
+    epsilonToNK,
+    interpolateNK,
+    nkToEpsilon,
+    type DrudeParams,
+  } from '../../lib/materials';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
-  type ViewMode = 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
+  type ExcitationMode = 'plane' | 'electron';
+  type ViewMode = 'cross-section' | 'angular' | 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
+  type AxisMode = 'energy' | 'lambda';
+  type SpectrumQuantity = 'csca' | 'cext' | 'cabs' | 'qsca' | 'all';
+  type SpectrumDecomp = 'total' | 'em';
+  type AngularPolMode = 'total' | 'perp' | 'par';
+  type ParallelGeometry = 'outside' | 'inside-hole';
+  type PerpGridQuality = 'standard' | 'fine' | 'high';
 
   // ===== State =====
 
   const state = {
     a_nm: 15,
     eps_h: 1.0,
+    materialId: 'au',
     eps1_re: 10.0,
     eps1_im: 0.1,
     w_min: 1,
-    w_max: 20,
-    m_active: new Set<number>([0, 1, 2]),
-    view: 'disp-wq' as ViewMode,
+    w_max: 6,
+    angleEnergyEv: 2.4,
+    axisMode: 'lambda' as AxisMode,
+    spectrumQuantity: 'csca' as SpectrumQuantity,
+    spectrumDecomp: 'total' as SpectrumDecomp,
+    angularPol: 'total' as AngularPolMode,
+    logY: false,
+    excitation: 'plane' as ExcitationMode,
+    m_active: new Set<number>([0, 1, 2, 3, 4]),
+    view: 'cross-section' as ViewMode,
+    parallelGeometry: 'outside' as ParallelGeometry,
     b_nm: 25,
     vFrac: 0.3,
     maxOrderEels: 4,
+    qzMaxNm: 0.1,
+    mapLogColor: false,
+    mapShowLight: true,
+    mapShowElectron: true,
+    mapShowCustom: false,
+    mapCustomSlope: 0.3,
+    perpGridQuality: 'standard' as PerpGridQuality,
+    drude: { epsB: 1, wpEv: 5, gammaEv: 0.05 } as DrudeParams,
   };
 
-  const M_COLORS: Record<number, string> = {
-    0: '#6366F1',
-    1: '#06B6D4',
-    2: '#10B981',
-    3: '#F59E0B',
+  const M_PALETTE = ['#6366F1', '#06B6D4', '#10B981', '#F59E0B', '#EC4899', '#84CC16', '#F97316', '#14B8A6', '#8B5CF6', '#64748B', '#DC2626'];
+  const PERP_GRID_META: Record<PerpGridQuality, { mapPoints: number; inside: number; outside: number }> = {
+    standard: { mapPoints: 96, inside: 32, outside: 112 },
+    fine: { mapPoints: 128, inside: 48, outside: 160 },
+    high: { mapPoints: 160, inside: 64, outside: 224 },
   };
+  const ELECTRON_AU_EV = 27.2113834;
+  const ELECTRON_C_AU = 137.03599971;
 
   interface MBranch {
     m: number;
     points: { w: number; q: number }[];
   }
 
+  interface PlaneWavePoint {
+    w: number;
+    csca: number;
+    cext: number;
+    cabs: number;
+    qsca: number;
+    qext: number;
+    qabs: number;
+    cscaE: number;
+    cscaM: number;
+    cextE: number;
+    cextM: number;
+    cabsE: number;
+    cabsM: number;
+    qscaE: number;
+    qscaM: number;
+    qscaPar: number;
+    qscaPer: number;
+    qextPar: number;
+    qextPer: number;
+  }
+
   let branches: MBranch[] = [];
+  let planeSpectrum: PlaneWavePoint[] = [];
+  let angularRows: ReturnType<typeof cylinderScatteringMatrix> = [];
   let qMaxAuto = 0.5;
   let eelsCurve: { w: number[]; y: number[] } | null = null;
+  let perpMap: ReturnType<typeof eelsPerpendicularQResolved> | null = null;
   let computeTimer: number | null = null;
+  let perpNeedsCompute = true;
+
+  interface LegendHit {
+    m: number;
+    rect: ChartRect;
+  }
+  let dispersionLegendHits: LegendHit[] = [];
+
+  function clampFinite(value: number, min: number, max: number, fallback: number): number {
+    if (!Number.isFinite(value)) return fallback;
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function betaToKineticKeV(beta: number): number {
+    const b = clampFinite(beta, 1e-6, 0.999999, 0.3);
+    return ELECTRON_AU_EV * ELECTRON_C_AU * ELECTRON_C_AU * (1 / Math.sqrt(1 - b * b) - 1) / 1000;
+  }
+
+  function kineticKeVToBeta(kineticKeV: number): number {
+    const kineticEv = Math.max(0, kineticKeV * 1000);
+    const gamma = kineticEv / (ELECTRON_AU_EV * ELECTRON_C_AU * ELECTRON_C_AU) + 1;
+    return Math.sqrt(Math.max(0, 1 - 1 / (gamma * gamma)));
+  }
+
+  function formatKineticKeV(value: number): string {
+    if (!Number.isFinite(value)) return '';
+    if (value < 1) return value.toFixed(3);
+    if (value < 100) return value.toFixed(2);
+    return value.toFixed(1);
+  }
+
+  function colorForM(m: number): string {
+    return M_PALETTE[Math.abs(m) % M_PALETTE.length];
+  }
+
+  function mOrders(): number[] {
+    const maxM = Math.round(clampFinite(state.maxOrderEels, 0, 10, 4));
+    return Array.from({ length: maxM + 1 }, (_, m) => m);
+  }
+
+  function resetActiveMToMax(): void {
+    state.m_active = new Set(mOrders());
+  }
+
+  function hostIndex(): number {
+    return Math.sqrt(Math.max(1e-12, state.eps_h));
+  }
+
+  function lambdaNmFromEnergy(wEv: number): number {
+    return PHOTON_HC_EV_NM / Math.max(1e-9, wEv);
+  }
+
+  function materialNK(lambdaNm: number): [number, number] {
+    if (state.materialId === 'custom') return epsilonToNK(state.eps1_re, state.eps1_im);
+    if (state.materialId === 'drude') return drudeNK(lambdaNm, state.drude);
+    const material = MATERIALS[state.materialId];
+    if (!material) return [1, 0];
+    return interpolateNK(material.data, lambdaNm);
+  }
+
+  function materialEpsilonAtEnergy(wEv: number): C {
+    if (state.materialId === 'custom') return [state.eps1_re, state.eps1_im];
+    const eps = nkToEpsilon(...materialNK(lambdaNmFromEnergy(wEv)));
+    return [eps.re, eps.im];
+  }
+
+  function cylinderPlaneWaveAtEnergy(wEv: number, intervals = 180) {
+    const nh = hostIndex();
+    const [n, k] = materialNK(lambdaNmFromEnergy(wEv));
+    const sizeParameter = state.a_nm * wEv * nh / HC_EV_NM;
+    const relativeIndex: C = [n / nh, k / nh];
+    return cylinderPlaneWaveNormal(sizeParameter, relativeIndex, 180, intervals);
+  }
 
   // ===== Compute =====
 
-  function recompute() {
+  function markPerpNeedsCompute() {
+    perpNeedsCompute = true;
+    eelsCurve = null;
+    perpMap = null;
+    const statusEl = document.getElementById('compute-status');
+    if (statusEl) statusEl.textContent = 'Press Compute';
+    updateChartControls();
+    updateConfigCheck();
+    drawChart();
+    drawLegend();
+  }
+
+  function recompute(forcePerp = false) {
+    if (state.excitation === 'electron' && state.view === 'eels-perp' && !forcePerp) {
+      markPerpNeedsCompute();
+      return;
+    }
     const t0 = performance.now();
-    if (state.view === 'eels-par') {
+    if (state.excitation === 'plane') {
+      recomputePlaneWave();
+    } else if (state.view === 'eels-par') {
       recomputeEELSPar();
     } else if (state.view === 'eels-perp') {
       recomputeEELSPerp();
@@ -379,19 +844,74 @@ import Layout from '../../layouts/Layout.astro';
     }
     const dt = performance.now() - t0;
     const statusEl = document.getElementById('compute-status')!;
-    if (state.view === 'eels-par' || state.view === 'eels-perp') {
-      statusEl.textContent = `${eelsCurve?.w.length ?? 0} pts · ${dt.toFixed(0)} ms`;
+    if (state.excitation === 'plane') {
+      statusEl.textContent = state.view === 'angular'
+        ? `${angularRows.length} angles · ${dt.toFixed(0)} ms`
+        : `${planeSpectrum.length} pts · ${dt.toFixed(0)} ms`;
+    } else if (state.view === 'eels-par' || state.view === 'eels-perp') {
+      statusEl.textContent = state.view === 'eels-perp' && perpMap
+        ? `${perpMap.w_eV.length} x ${perpMap.qz_nm.length} pts · ${dt.toFixed(0)} ms`
+        : `${eelsCurve?.w.length ?? 0} pts · ${dt.toFixed(0)} ms`;
     } else {
       const totalPts = branches.reduce((s, b) => s + b.points.length, 0);
       statusEl.textContent = `${totalPts} roots · ${dt.toFixed(0)} ms`;
     }
+    if (state.view === 'eels-perp') perpNeedsCompute = false;
+    updateChartControls();
+    updateConfigCheck();
     drawChart();
     drawLegend();
   }
 
+  function recomputePlaneWave() {
+    perpMap = null;
+    const Nw = 240;
+    const wMin = Math.max(0.05, Math.min(state.w_min, state.w_max - 0.01));
+    const wMax = Math.max(wMin + 0.01, state.w_max);
+    const widthNm = 2 * state.a_nm;
+    planeSpectrum = [];
+    for (let i = 0; i < Nw; i++) {
+      const we = wMin + (wMax - wMin) * i / (Nw - 1);
+      const r = cylinderPlaneWaveAtEnergy(we, 24);
+      const qsca = 0.5 * (r.qscpar + r.qscper);
+      const qext = 0.5 * (r.qexpar + r.qexper);
+      const qabs = Math.max(0, qext - qsca);
+      const qscaE = 0.5 * r.qscpar;
+      const qscaM = 0.5 * r.qscper;
+      const qextE = 0.5 * r.qexpar;
+      const qextM = 0.5 * r.qexper;
+      const qabsE = Math.max(0, qextE - qscaE);
+      const qabsM = Math.max(0, qextM - qscaM);
+      const csca = qsca * widthNm;
+      const cext = qext * widthNm;
+      planeSpectrum.push({
+        w: we,
+        csca,
+        cext,
+        cabs: qabs * widthNm,
+        qsca,
+        qext,
+        qabs,
+        cscaE: qscaE * widthNm,
+        cscaM: qscaM * widthNm,
+        cextE: qextE * widthNm,
+        cextM: qextM * widthNm,
+        cabsE: qabsE * widthNm,
+        cabsM: qabsM * widthNm,
+        qscaE,
+        qscaM,
+        qscaPar: r.qscpar,
+        qscaPer: r.qscper,
+        qextPar: r.qexpar,
+        qextPer: r.qexper,
+      });
+    }
+    angularRows = cylinderScatteringMatrix(cylinderPlaneWaveAtEnergy(state.angleEnergyEv, 180));
+  }
+
   function recomputeDispersion() {
+    perpMap = null;
     const eps_h: C = [state.eps_h, 0];
-    const eps1: C = [state.eps1_re, state.eps1_im];
 
     const Nw = 80;
     const Nq = 240;
@@ -401,7 +921,8 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     const k0_max = state.w_max / HC_EV_NM;
-    const q_upper = Math.sqrt(Math.max(0, state.eps1_re)) * k0_max;
+    const epsAtMax = materialEpsilonAtEnergy(state.w_max);
+    const q_upper = Math.sqrt(Math.max(0, epsAtMax[0])) * k0_max;
     qMaxAuto = q_upper * 1.05;
 
     const q_nm: number[] = [];
@@ -410,14 +931,14 @@ import Layout from '../../layouts/Layout.astro';
     }
 
     branches = [];
-    const ms = Array.from(state.m_active).sort((a, b) => a - b);
+    const ms = mOrders().filter(m => state.m_active.has(m));
     for (const m of ms) {
       const res = getDispersion({
         energies_eV: energies,
         q_nm,
         a_nm: state.a_nm,
         eps_h,
-        eps1_of_w: () => eps1,
+        eps1_of_w: materialEpsilonAtEnergy,
         m,
       });
       const pts: { w: number; q: number }[] = [];
@@ -429,8 +950,8 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   function recomputeEELSPar() {
+    perpMap = null;
     const eps_h: C = [state.eps_h, 0];
-    const eps1: C = [state.eps1_re, state.eps1_im];
     const Nw = 240;
     const w: number[] = [];
     for (let i = 0; i < Nw; i++) {
@@ -440,52 +961,56 @@ import Layout from '../../layouts/Layout.astro';
       a_nm: state.a_nm,
       b_nm: state.b_nm,
       eps_h,
-      eps1_of_w: () => eps1,
+      eps1_of_w: materialEpsilonAtEnergy,
       w_eV: w,
       vFrac: state.vFrac,
       maxOrder: state.maxOrderEels,
+      trajectory: state.parallelGeometry,
     });
-    // Match MATLAB sign convention: inside trajectory returns negative raw.
-    // Report |EELS| for display so users see a positive loss spectrum.
-    const y = yRaw.map(v => Math.abs(v));
+    const y = yRaw.map(v => Number.isFinite(v) ? Math.max(0, v) : NaN);
     eelsCurve = { w, y };
   }
 
   function recomputeEELSPerp() {
     if (state.b_nm <= state.a_nm) {
       eelsCurve = { w: [], y: [] };
+      perpMap = null;
       return;
     }
     const eps_h: C = [state.eps_h, 0];
-    const eps1: C = [state.eps1_re, state.eps1_im];
-    const Nw = 140;  // perpendicular is more expensive due to qz integration
+    const Nw = 120;  // perpendicular is more expensive due to qz integration
     const w: number[] = [];
     for (let i = 0; i < Nw; i++) {
       w.push(Math.max(0.05, state.w_min) + (state.w_max - Math.max(0.05, state.w_min)) * i / (Nw - 1));
     }
-    // qz grid: finer near zero (most contribution), spans the evanescent regime
-    const Nq = 60;
-    const qzMax = 1.5;  // nm⁻¹ — well past the effective cutoff for typical radii
+    // qz grid for the displayed map. The integrated curve uses a refined
+    // split-grid quadrature inside the library over the same q_max.
+    const Nq = PERP_GRID_META[state.perpGridQuality].mapPoints;
+    const qzMax = Math.max(0.02, state.qzMaxNm);
     const qz_nm: number[] = [];
     for (let i = 0; i < Nq; i++) {
       const t = i / (Nq - 1);
-      // Geometric-ish density: denser near zero
-      qz_nm.push(1e-4 + qzMax * t * t);
+      qz_nm.push(qzMax * t * t);
     }
-    const y = eelsPerpendicular({
+    perpMap = eelsPerpendicularQResolved({
       a_nm: state.a_nm,
       b_nm: state.b_nm,
       eps_h,
-      eps1_of_w: () => eps1,
+      eps1_of_w: materialEpsilonAtEnergy,
       w_eV: w,
       vFrac: state.vFrac,
       maxOrder: state.maxOrderEels,
       qz_nm,
+      integrationGrid: state.perpGridQuality,
     });
-    eelsCurve = { w, y: y.map(v => Math.abs(v)) };
+    eelsCurve = { w, y: perpMap.integrated_1_per_eV.map(v => Number.isFinite(v) ? Math.max(0, v) : NaN) };
   }
 
   function scheduleRecompute() {
+    if (state.excitation === 'electron' && state.view === 'eels-perp') {
+      markPerpNeedsCompute();
+      return;
+    }
     if (computeTimer !== null) window.clearTimeout(computeTimer);
     computeTimer = window.setTimeout(() => {
       computeTimer = null;
@@ -501,8 +1026,10 @@ import Layout from '../../layouts/Layout.astro';
     pw: number; ph: number; w: number; h: number;
     xMin: number; xMax: number; yMin: number; yMax: number;
     xTo: (x: number) => number;
+    invTx: (px: number) => number;
     yTo: (y: number) => number;
     xLabel: string; yLabel: string;
+    logY: boolean;
   }
 
   function setupCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
@@ -519,13 +1046,23 @@ import Layout from '../../layouts/Layout.astro';
     ctx: CanvasRenderingContext2D, w: number, h: number,
     xMin: number, xMax: number, yMin: number, yMax: number,
     xLabel: string, yLabel: string,
+    logY = false,
   ): Axes {
-    const m = { top: 14, right: 18, bottom: 38, left: 52 };
+    const m = { top: 20, right: 25, bottom: 55, left: 70 };
     const pw = w - m.left - m.right;
     const ph = h - m.top - m.bottom;
+    if (logY) {
+      yMin = Math.max(yMin, 1e-12);
+      yMax = Math.max(yMax, yMin * 10);
+    }
     const xTo = (x: number) => m.left + pw * (x - xMin) / (xMax - xMin);
-    const yTo = (y: number) => m.top + ph * (1 - (y - yMin) / (yMax - yMin));
-    return { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xTo, yTo, xLabel, yLabel };
+    const invTx = (px: number) => xMin + (px - m.left) * (xMax - xMin) / pw;
+    const logMin = Math.log10(yMin);
+    const logMax = Math.log10(yMax);
+    const yTo = logY
+      ? (y: number) => m.top + ph * (1 - (Math.log10(Math.max(y, yMin)) - logMin) / (logMax - logMin))
+      : (y: number) => m.top + ph * (1 - (y - yMin) / (yMax - yMin));
+    return { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xTo, invTx, yTo, xLabel, yLabel, logY };
   }
 
   function drawAxesFrame(ax: Axes, xTicks: number, yTicks: number, xFmt: (v: number) => string, yFmt: (v: number) => string) {
@@ -541,8 +1078,24 @@ import Layout from '../../layouts/Layout.astro';
       const x = m.left + pw * i / xTicks;
       ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
     }
-    for (let i = 0; i <= yTicks; i++) {
-      const y = m.top + ph * i / yTicks;
+    const yTickVals: number[] = [];
+    if (ax.logY) {
+      const p0 = Math.floor(Math.log10(yMin));
+      const p1 = Math.ceil(Math.log10(yMax));
+      for (let p = p0; p <= p1; p++) {
+        const v = Math.pow(10, p);
+        if (v >= yMin && v <= yMax) yTickVals.push(v);
+      }
+      if (yTickVals.length < 2) {
+        for (let i = 0; i <= yTicks; i++) {
+          yTickVals.push(Math.pow(10, Math.log10(yMin) + (Math.log10(yMax) - Math.log10(yMin)) * i / yTicks));
+        }
+      }
+    } else {
+      for (let i = 0; i <= yTicks; i++) yTickVals.push(yMax - (yMax - yMin) * i / yTicks);
+    }
+    for (const v of yTickVals) {
+      const y = ax.yTo(v);
       ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
     }
 
@@ -555,7 +1108,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.stroke();
 
     ctx.fillStyle = ct.textSoft;
-    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.font = '12px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (let i = 0; i <= xTicks; i++) {
@@ -563,37 +1116,370 @@ import Layout from '../../layouts/Layout.astro';
       ctx.fillText(xFmt(v), m.left + pw * i / xTicks, m.top + ph + 4);
     }
     ctx.fillStyle = ct.text;
-    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.font = '13px Inter, system-ui, sans-serif';
     ctx.fillText(xLabel, m.left + pw / 2, h - 16);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = ct.textSoft;
-    ctx.font = '10px Inter, system-ui, sans-serif';
-    for (let i = 0; i <= yTicks; i++) {
-      const v = yMax - (yMax - yMin) * i / yTicks;
-      ctx.fillText(yFmt(v), m.left - 6, m.top + ph * i / yTicks);
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    for (const v of yTickVals) {
+      ctx.fillText(yFmt(v), m.left - 6, ax.yTo(v));
     }
     ctx.save();
     ctx.translate(14, m.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.fillStyle = ct.text;
-    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.font = '13px Inter, system-ui, sans-serif';
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
   }
 
   function drawChart() {
-    if (state.view === 'disp-wq') drawDispersionWQ();
-    else if (state.view === 'disp-bV') drawDispersionBV();
-    else drawEELS();  // both par and perp share the same 1D renderer
+    if (state.view !== 'disp-wq' && state.view !== 'disp-bV') dispersionLegendHits = [];
+    if (state.view === 'cross-section') drawPlaneWaveSpectrum();
+    else {
+      chartXforms = null;
+      currentXArr = [];
+      currentSeries = [];
+      currentLegendBox = null;
+      clearOverlay();
+      if (state.view === 'angular') drawPlaneWaveAngular();
+      else if (state.view === 'disp-wq') drawDispersionWQ();
+      else if (state.view === 'disp-bV') drawDispersionBV();
+      else drawEELS();  // both par and perp share the same 1D renderer
+    }
+    drawPerpMap();
+  }
+
+  function strokeSeries(ax: Axes, xs: number[], ys: number[], color: string, width = 2, dash: number[] = []) {
+    const { ctx } = ax;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < xs.length; i++) {
+      if (ax.logY && ys[i] <= 0) continue;
+      const x = ax.xTo(xs[i]);
+      const y = ax.yTo(ys[i]);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    if (started) ctx.stroke();
+    ctx.restore();
+  }
+
+  interface PlotSeries {
+    label: string;
+    color: string;
+    y: number[];
+    dash?: number[];
+  }
+  interface ChartRect { x: number; y: number; w: number; h: number; }
+
+  let chartXforms: Axes | null = null;
+  let currentXArr: number[] = [];
+  let currentSeries: PlotSeries[] = [];
+  let currentLegendBox: ChartRect | null = null;
+
+  const PLOT_COLORS = {
+    csca: '#06B6D4',
+    cext: '#6366F1',
+    cabs: '#F59E0B',
+    electric: '#EC4899',
+    magnetic: '#10B981',
+  };
+
+  const QUANTITY_META: Record<SpectrumQuantity, { label: string; unit: string; total: keyof PlaneWavePoint; e?: keyof PlaneWavePoint; m?: keyof PlaneWavePoint; color: string }> = {
+    csca: { label: 'Csca', unit: 'nm', total: 'csca', e: 'cscaE', m: 'cscaM', color: PLOT_COLORS.csca },
+    cext: { label: 'Cext', unit: 'nm', total: 'cext', e: 'cextE', m: 'cextM', color: PLOT_COLORS.cext },
+    cabs: { label: 'Cabs', unit: 'nm', total: 'cabs', e: 'cabsE', m: 'cabsM', color: PLOT_COLORS.cabs },
+    qsca: { label: 'Qsca', unit: '', total: 'qsca', e: 'qscaE', m: 'qscaM', color: PLOT_COLORS.csca },
+    all: { label: 'All', unit: 'nm', total: 'csca', color: PLOT_COLORS.csca },
+  };
+
+  function formatLinearTick(v: number): string {
+    if (Math.abs(v) >= 100) return v.toPrecision(3);
+    if (Math.abs(v) >= 10) return v.toFixed(1);
+    if (Math.abs(v) >= 1) return v.toFixed(2);
+    return v.toPrecision(2);
+  }
+
+  function formatLogTick(v: number): string {
+    const p = Math.log10(v);
+    if (Math.abs(p - Math.round(p)) < 0.001) return `1e${Math.round(p)}`;
+    return v.toPrecision(2);
+  }
+
+  function planePlotData(): { xs: number[]; series: PlotSeries[]; xMin: number; xMax: number; xLabel: string; yLabel: string; logY: boolean } {
+    const rows = state.axisMode === 'lambda' ? [...planeSpectrum].reverse() : planeSpectrum;
+    const xs = rows.map(p => state.axisMode === 'lambda' ? lambdaNmFromEnergy(p.w) : p.w);
+    const xLabel = state.axisMode === 'lambda' ? 'Wavelength (nm)' : 'Photon energy \u210F\u03C9 (eV)';
+    const series: PlotSeries[] = [];
+    if (state.spectrumQuantity === 'all') {
+      series.push(
+        { label: 'Cext', color: PLOT_COLORS.cext, y: rows.map(p => p.cext) },
+        { label: 'Csca', color: PLOT_COLORS.csca, y: rows.map(p => p.csca) },
+        { label: 'Cabs', color: PLOT_COLORS.cabs, y: rows.map(p => p.cabs) },
+      );
+    } else {
+      const q = QUANTITY_META[state.spectrumQuantity];
+      if (state.spectrumDecomp === 'em' && q.e && q.m) {
+        series.push(
+          { label: `${q.label} E \u2225 axis`, color: PLOT_COLORS.electric, y: rows.map(p => Number(p[q.e!] ?? 0)) },
+          { label: `${q.label} H \u2225 axis`, color: PLOT_COLORS.magnetic, y: rows.map(p => Number(p[q.m!] ?? 0)) },
+        );
+      } else {
+        series.push({ label: q.label, color: q.color, y: rows.map(p => Number(p[q.total] ?? 0)) });
+      }
+    }
+    const yLabel = state.spectrumQuantity === 'qsca'
+      ? 'efficiency'
+      : 'cross-section per length (nm)';
+    return {
+      xs,
+      series,
+      xMin: Math.min(...xs),
+      xMax: Math.max(...xs),
+      xLabel,
+      yLabel,
+      logY: state.logY,
+    };
+  }
+
+  function seriesRange(series: PlotSeries[], logY: boolean): [number, number] {
+    let yMax = 0;
+    let yMinPos = Infinity;
+    for (const s of series) {
+      for (const v of s.y) {
+        if (!Number.isFinite(v)) continue;
+        yMax = Math.max(yMax, v);
+        if (v > 0) yMinPos = Math.min(yMinPos, v);
+      }
+    }
+    if (yMax <= 0) yMax = 1;
+    if (!logY) return [0, yMax * 1.1];
+    if (!Number.isFinite(yMinPos)) yMinPos = 1e-6;
+    return [Math.max(1e-12, yMinPos * 0.65), yMax * 1.35];
+  }
+
+  function drawPlaneWaveSpectrum() {
+    const { ctx, w, h } = setupCanvas();
+    const plot = planePlotData();
+    currentXArr = plot.xs;
+    currentSeries = plot.series;
+    const [yMin, yMax] = seriesRange(plot.series, plot.logY);
+    const ax = makeAxes(ctx, w, h, plot.xMin, plot.xMax, yMin, yMax,
+                         plot.xLabel, plot.yLabel, plot.logY);
+    chartXforms = ax;
+    drawAxesFrame(ax, 6, 5, v => state.axisMode === 'lambda' ? v.toFixed(0) : v.toFixed(1), plot.logY ? formatLogTick : formatLinearTick);
+    for (const s of plot.series) {
+      strokeSeries(ax, plot.xs, s.y, s.color, 2.4, s.dash ?? []);
+    }
+    currentLegendBox = drawInsetLegend(ax, plot.series);
+    clearOverlay();
+  }
+
+  function hexToRgba(hex: string, alpha: number): string {
+    const c = hex.replace('#', '');
+    const n = parseInt(c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c, 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function drawInsetLegend(ax: Axes, series: PlotSeries[]): ChartRect | null {
+    if (series.length <= 1) return null;
+    const { ctx, m, pw } = ax;
+    const ct = chartTheme();
+    ctx.save();
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const lineW = 16;
+    const gap = 6;
+    const itemH = 18;
+    const labelWidths = series.map(s => ctx.measureText(s.label).width);
+    const legendW = lineW + gap + Math.max(...labelWidths) + 16;
+    const legendH = series.length * itemH + 8;
+    const lx = m.left + pw - legendW - 8;
+    const ly = m.top + 8;
+    ctx.fillStyle = hexToRgba(ct.bg, 0.85);
+    ctx.strokeStyle = hexToRgba(ct.text, 0.1);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(lx, ly, legendW, legendH, 4);
+    ctx.fill();
+    ctx.stroke();
+    for (let i = 0; i < series.length; i++) {
+      const iy = ly + 4 + (i + 0.5) * itemH;
+      ctx.strokeStyle = series[i].color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash(series[i].dash ?? []);
+      ctx.beginPath();
+      ctx.moveTo(lx + 8, iy);
+      ctx.lineTo(lx + 8 + lineW, iy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = ct.text;
+      ctx.fillText(series[i].label, lx + 8 + lineW + gap, iy);
+    }
+    ctx.restore();
+    return { x: lx, y: ly, w: legendW, h: legendH };
+  }
+
+  function drawDispersionModeLegend(ax: Axes): void {
+    const orders = mOrders();
+    dispersionLegendHits = [];
+    if (orders.length === 0) return;
+    const { ctx, m, pw, ph } = ax;
+    const ct = chartTheme();
+    ctx.save();
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const rowH = 18;
+    const lineW = 16;
+    const gap = 6;
+    const labelW = Math.max(...orders.map(order => ctx.measureText(`m = ${order}`).width));
+    const legendW = lineW + gap + labelW + 20;
+    const legendH = rowH * orders.length + 10;
+    const lx = m.left + pw - legendW - 8;
+    const ly = m.top + ph - legendH - 8;
+    ctx.fillStyle = hexToRgba(ct.bg, 0.88);
+    ctx.strokeStyle = hexToRgba(ct.text, 0.1);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(lx, ly, legendW, legendH, 4);
+    ctx.fill();
+    ctx.stroke();
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const active = state.m_active.has(order);
+      const iy = ly + 5 + (i + 0.5) * rowH;
+      ctx.globalAlpha = active ? 1 : 0.35;
+      ctx.strokeStyle = colorForM(order);
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(lx + 8, iy);
+      ctx.lineTo(lx + 8 + lineW, iy);
+      ctx.stroke();
+      ctx.fillStyle = ct.text;
+      ctx.fillText(`m = ${order}`, lx + 8 + lineW + gap, iy);
+      ctx.globalAlpha = 1;
+      dispersionLegendHits.push({ m: order, rect: { x: lx, y: ly + 5 + i * rowH, w: legendW, h: rowH } });
+    }
+    ctx.restore();
+    drawDispersionModeLegend(ax);
+  }
+
+  function angularIntensity(row: (typeof angularRows)[number]): number {
+    if (state.angularPol === 'par') return Math.max(1e-12, row.t11 * (1 + row.pol));
+    if (state.angularPol === 'perp') return Math.max(1e-12, row.t11 * (1 - row.pol));
+    return Math.max(1e-12, row.t11);
+  }
+
+  function drawPlaneWaveAngular() {
+    const { ctx, w, h } = setupCanvas();
+    if (angularRows.length === 0) return;
+    const ct = chartTheme();
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const intensities = angularRows.map(angularIntensity);
+    let logMin = Infinity, logMax = -Infinity;
+    for (const I of intensities) {
+      const l = Math.log10(Math.max(I, 1e-12));
+      logMin = Math.min(logMin, l);
+      logMax = Math.max(logMax, l);
+    }
+    if (!Number.isFinite(logMin)) { logMin = -1; logMax = 0; }
+    if (logMax - logMin < 1) logMin = logMax - 1;
+    const lf = Math.floor(logMin);
+    const lc = Math.ceil(logMax);
+    const margin = 54;
+    const plotR = Math.max(40, Math.min(w, h) / 2 - margin);
+    const cx = w / 2;
+    const cy = h / 2;
+    const rScale = (logI: number) => Math.max(0, ((logI - lf) / Math.max(1e-9, lc - lf)) * plotR);
+
+    ctx.strokeStyle = hexToRgba(ct.textMuted, 0.35);
+    ctx.lineWidth = 1;
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let p = lf; p <= lc; p++) {
+      const rr = rScale(p);
+      if (rr <= 0) continue;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.fillText(`1e${p}`, cx + rr - 6, cy - 7);
+    }
+
+    ctx.strokeStyle = hexToRgba(ct.textMuted, 0.3);
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = ct.textSoft;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let deg = 0; deg < 360; deg += 30) {
+      const a = deg * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + plotR * Math.sin(a), cy - plotR * Math.cos(a));
+      ctx.stroke();
+      if (deg <= 180) {
+        const lx = cx + (plotR + 18) * Math.sin(a);
+        const ly = cy - (plotR + 18) * Math.cos(a);
+        ctx.fillText(`${deg}\u00B0`, lx, ly);
+        if (deg > 0 && deg < 180) ctx.fillText(`${deg}\u00B0`, cx - (plotR + 18) * Math.sin(a), ly);
+      }
+    }
+
+    const color = state.angularPol === 'par' ? PLOT_COLORS.electric : state.angularPol === 'perp' ? PLOT_COLORS.magnetic : PLOT_COLORS.cext;
+    ctx.beginPath();
+    for (let i = 0; i < angularRows.length; i++) {
+      const th = angularRows[i].angleDeg * Math.PI / 180;
+      const rr = rScale(Math.log10(intensities[i]));
+      const px = cx + rr * Math.sin(th);
+      const py = cy - rr * Math.cos(th);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    for (let i = angularRows.length - 1; i >= 0; i--) {
+      const th = angularRows[i].angleDeg * Math.PI / 180;
+      const rr = rScale(Math.log10(intensities[i]));
+      ctx.lineTo(cx - rr * Math.sin(th), cy - rr * Math.cos(th));
+    }
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(color, 0.08);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    const lambdaNm = lambdaNmFromEnergy(state.angleEnergyEv);
+    ctx.fillStyle = ct.text;
+    ctx.font = '14px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`E = ${state.angleEnergyEv.toFixed(2)} eV  /  \u03BB = ${lambdaNm.toFixed(0)} nm`, w - 12, 12);
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillStyle = ct.textMuted;
+    ctx.fillText('0\u00B0 = forward', w - 12, 32);
   }
 
   function drawDispersionWQ() {
     const { ctx, w, h } = setupCanvas();
     const ax = makeAxes(ctx, w, h, 0, qMaxAuto, state.w_min, state.w_max,
-                         'q_z (nm⁻¹)', 'ω (eV)');
+                         'q_z (nm^-1)', '\u210F\u03C9 (eV)');
     drawAxesFrame(ax, 6, 6, v => v.toFixed(3), v => v.toFixed(1));
 
     ctx.save();
@@ -604,7 +1490,7 @@ import Layout from '../../layouts/Layout.astro';
     // Light line and material line
     const k0_at = (we: number) => we / HC_EV_NM;
     const qLightMax = Math.sqrt(state.eps_h) * k0_at(state.w_max);
-    const qMatMax = Math.sqrt(Math.max(0, state.eps1_re)) * k0_at(state.w_max);
+    const qMatMax = Math.sqrt(Math.max(0, materialEpsilonAtEnergy(state.w_max)[0])) * k0_at(state.w_max);
 
     ctx.setLineDash([5, 4]);
     ctx.lineWidth = 1.4;
@@ -632,7 +1518,7 @@ import Layout from '../../layouts/Layout.astro';
 
     // Dispersion points
     for (const br of branches) {
-      const color = M_COLORS[br.m] ?? '#6366F1';
+      const color = colorForM(br.m);
       ctx.fillStyle = color;
       for (const p of br.points) {
         ctx.beginPath(); ctx.arc(ax.xTo(p.q), ax.yTo(p.w), 2.2, 0, Math.PI * 2); ctx.fill();
@@ -643,14 +1529,15 @@ import Layout from '../../layouts/Layout.astro';
     // Line labels
     drawLineLabel(ax, 'light line', qLightMax, '#94A3B8');
     drawLineLabel(ax, 'material line', qMatMax, '#94A3B8');
+    drawDispersionModeLegend(ax);
   }
 
   function drawDispersionBV() {
     const { ctx, w, h } = setupCanvas();
     // V_max at (ω_max, a) for real(ε₁-ε_h). For ε1_re > eps_h.
-    const dEps = state.eps1_re - state.eps_h;
+    const dEpsMax = materialEpsilonAtEnergy(state.w_max)[0] - state.eps_h;
     const k0_max = state.w_max / HC_EV_NM;
-    const Vmax = Math.max(0.1, k0_max * state.a_nm * Math.sqrt(Math.max(0, dEps)));
+    const Vmax = Math.max(0.1, k0_max * state.a_nm * Math.sqrt(Math.max(0, dEpsMax)));
     const ax = makeAxes(ctx, w, h, 0, Vmax * 1.05, 0, 1,
                          'V = k₀ a √(ε₁ − ε_h)', 'b = (n_eff² − ε_h)/(ε₁ − ε_h)');
     drawAxesFrame(ax, 6, 5, v => v.toFixed(2), v => v.toFixed(2));
@@ -680,10 +1567,11 @@ import Layout from '../../layouts/Layout.astro';
 
     // Points in b-V coordinates
     for (const br of branches) {
-      const color = M_COLORS[br.m] ?? '#6366F1';
+      const color = colorForM(br.m);
       ctx.fillStyle = color;
       for (const p of br.points) {
         const k0 = p.w / HC_EV_NM;
+        const dEps = materialEpsilonAtEnergy(p.w)[0] - state.eps_h;
         if (k0 <= 0 || dEps <= 0) continue;
         const V = k0 * state.a_nm * Math.sqrt(dEps);
         const n_eff_sq = (p.q / k0) * (p.q / k0);
@@ -692,29 +1580,31 @@ import Layout from '../../layouts/Layout.astro';
       }
     }
     ctx.restore();
+    drawDispersionModeLegend(ax);
   }
 
   function drawEELS() {
     const { ctx, w, h } = setupCanvas();
+    const xLabel = 'Energy loss \u210F\u03C9 (eV)';
+    const yLabel = state.view === 'eels-par' ? 'dGamma/dE/dz (1/eV/nm)' : 'Gamma(E) (1/eV)';
     if (!eelsCurve || eelsCurve.w.length === 0) {
       // Empty state — typically for perpendicular with b ≤ a
-      const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, 1,
-                           'ω (eV)', '|dΓ/dω|  (arb.)');
+      const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, 1, xLabel, yLabel);
       drawAxesFrame(ax, 6, 5, v => v.toFixed(1), () => '');
       ctx.fillStyle = '#94A3B8';
       ctx.font = '12px Inter, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Perpendicular trajectory requires b > a', ax.m.left + ax.pw / 2, ax.m.top + ax.ph / 2);
+      const message = state.view === 'eels-perp' && perpNeedsCompute
+        ? 'Press Compute to update perpendicular EELS'
+        : 'Perpendicular trajectory requires b > a';
+      ctx.fillText(message, ax.m.left + ax.pw / 2, ax.m.top + ax.ph / 2);
       return;
     }
-    const y = eelsCurve.y;
-    let yMax = 0;
-    for (const v of y) if (v > yMax) yMax = v;
-    if (yMax <= 0) yMax = 1;
-    const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, yMax * 1.08,
-                         'ω (eV)', '|Γ(ω)|  (arb.)');
-    drawAxesFrame(ax, 6, 5, v => v.toFixed(1), v => v.toExponential(1));
+    const series = [{ label: 'EELS', color: '#10B981', y: eelsCurve.y }];
+    const [yMin, yMax] = seriesRange(series, state.logY);
+    const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, yMin, yMax, xLabel, yLabel, state.logY);
+    drawAxesFrame(ax, 6, 5, v => v.toFixed(1), state.logY ? formatLogTick : v => v.toExponential(1));
 
     ctx.save();
     ctx.beginPath();
@@ -722,7 +1612,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.clip();
 
     const par = state.view === 'eels-par';
-    const inside = par && state.b_nm <= state.a_nm;
+    const inside = par && state.parallelGeometry === 'inside-hole';
     const color = par ? (inside ? '#F59E0B' : '#6366F1') : '#10B981';
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
@@ -736,17 +1626,172 @@ import Layout from '../../layouts/Layout.astro';
     ctx.stroke();
 
     // Fill under curve
-    ctx.beginPath();
-    for (let i = 0; i < eelsCurve.w.length; i++) {
-      const x = ax.xTo(eelsCurve.w[i]);
-      const yy = ax.yTo(eelsCurve.y[i]);
-      if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    if (!state.logY) {
+      ctx.beginPath();
+      for (let i = 0; i < eelsCurve.w.length; i++) {
+        const x = ax.xTo(eelsCurve.w[i]);
+        const yy = ax.yTo(eelsCurve.y[i]);
+        if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+      }
+      ctx.lineTo(ax.xTo(eelsCurve.w[eelsCurve.w.length - 1]), ax.yTo(0));
+      ctx.lineTo(ax.xTo(eelsCurve.w[0]), ax.yTo(0));
+      ctx.closePath();
+      ctx.fill();
     }
-    ctx.lineTo(ax.xTo(eelsCurve.w[eelsCurve.w.length - 1]), ax.yTo(0));
-    ctx.lineTo(ax.xTo(eelsCurve.w[0]), ax.yTo(0));
-    ctx.closePath();
-    ctx.fill();
     ctx.restore();
+  }
+
+  function setupPerpMapCanvas(): { ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const ctx = perpMapCanvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = perpMapCanvas.clientWidth;
+    const h = perpMapCanvas.clientHeight;
+    perpMapCanvas.width = w * dpr;
+    perpMapCanvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    return { ctx, w, h };
+  }
+
+  function clearPerpMapCanvas(message = '') {
+    if (perpMapCanvas.clientWidth <= 0 || perpMapCanvas.clientHeight <= 0) return;
+    const { ctx, w, h } = setupPerpMapCanvas();
+    const ct = chartTheme();
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+    if (!message) return;
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(message, w / 2, h / 2);
+  }
+
+  function heatColor(t: number): string {
+    const stops = [
+      [68, 1, 84],
+      [49, 104, 142],
+      [53, 183, 121],
+      [253, 231, 37],
+    ];
+    const x = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0;
+    const pos = x * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(pos));
+    const f = pos - i;
+    const a = stops[i], b = stops[i + 1];
+    const r = Math.round(a[0] + (b[0] - a[0]) * f);
+    const g = Math.round(a[1] + (b[1] - a[1]) * f);
+    const bl = Math.round(a[2] + (b[2] - a[2]) * f);
+    return `rgb(${r},${g},${bl})`;
+  }
+
+  function drawMapInset(ax: Axes, minVal: number, maxVal: number) {
+    const { ctx } = ax;
+    const x = ax.m.left + ax.pw - 148;
+    const y = ax.m.top + 12;
+    const w = 136;
+    const h = 52;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.strokeStyle = 'rgba(148,163,184,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 6);
+    ctx.fill();
+    ctx.stroke();
+    for (let i = 0; i < 84; i++) {
+      ctx.fillStyle = heatColor(i / 83);
+      ctx.fillRect(x + 10 + i, y + 12, 1.3, 8);
+    }
+    ctx.fillStyle = '#475569';
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const label = state.mapLogColor ? 'log10 dGamma' : 'dGamma/dE dqz';
+    ctx.fillText(label, x + 10, y + 27);
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    ctx.fillText(`${minVal.toExponential(1)}`, x + 10, y + 40);
+    ctx.textAlign = 'right';
+    ctx.fillText(`${maxVal.toExponential(1)}`, x + w - 10, y + 40);
+    ctx.restore();
+  }
+
+  function strokeMapLine(ax: Axes, color: string, label: string, qOfEnergy: (energyEv: number) => number) {
+    const { ctx } = ax;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash(label === 'custom' ? [6, 4] : []);
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < 160; i++) {
+      const e = state.w_min + (state.w_max - state.w_min) * i / 159;
+      const q = qOfEnergy(e);
+      if (!Number.isFinite(q) || q < 0) continue;
+      const x = ax.xTo(q);
+      const y = ax.yTo(e);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    if (started) ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPerpMap() {
+    if (state.view !== 'eels-perp') return;
+    if (!perpMap || perpMap.w_eV.length === 0) {
+      clearPerpMapCanvas(perpNeedsCompute ? 'Press Compute to update q-resolved EELS' : '');
+      return;
+    }
+    const { ctx, w, h } = setupPerpMapCanvas();
+    const ax = makeAxes(ctx, w, h, 0, Math.max(0.02, state.qzMaxNm), state.w_min, state.w_max,
+                         'q_z (nm^-1)', '\u210F\u03C9 (eV)');
+    drawAxesFrame(ax, 6, 5, v => v.toFixed(2), v => v.toFixed(1));
+
+    const values = perpMap.values_nm_per_eV.map(row => row.map(v => Math.max(0, v)));
+    const flat = values.flat().filter(v => Number.isFinite(v) && v > 0);
+    const rawMax = flat.length ? Math.max(...flat) : 1;
+    const rawMin = flat.length ? Math.min(...flat) : rawMax * 1e-8;
+    const tiny = Math.max(rawMax * 1e-8, 1e-300);
+    const minVal = state.mapLogColor ? Math.log10(Math.max(rawMin, tiny)) : 0;
+    const maxVal = state.mapLogColor ? Math.log10(Math.max(rawMax, tiny)) : rawMax;
+    const span = Math.max(1e-30, maxVal - minVal);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+    for (let iw = 0; iw < perpMap.w_eV.length; iw++) {
+      const e0 = perpMap.w_eV[iw];
+      const e1 = perpMap.w_eV[iw + 1] ?? state.w_max;
+      const y0 = ax.yTo(e0);
+      const y1 = ax.yTo(e1);
+      for (let iq = 0; iq < perpMap.qz_nm.length; iq++) {
+        const q0 = perpMap.qz_nm[iq];
+        const q1 = perpMap.qz_nm[iq + 1] ?? state.qzMaxNm;
+        const v = values[iw][iq];
+        const z = state.mapLogColor ? Math.log10(Math.max(v, tiny)) : v;
+        ctx.fillStyle = heatColor((z - minVal) / span);
+        const x0 = ax.xTo(q0);
+        const x1 = ax.xTo(q1);
+        ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0) + 1, Math.abs(y1 - y0) + 1);
+      }
+    }
+    ctx.restore();
+
+    if (state.mapShowLight) {
+      strokeMapLine(ax, '#F8FAFC', 'light', energy => Math.sqrt(Math.max(0, state.eps_h)) * energy / HC_EV_NM);
+    }
+    if (state.mapShowElectron) {
+      strokeMapLine(ax, '#EF4444', 'electron', energy => energy / (Math.max(0.01, state.vFrac) * HC_EV_NM));
+    }
+    if (state.mapShowCustom) {
+      const slope = Math.max(1e-6, Math.abs(state.mapCustomSlope));
+      strokeMapLine(ax, '#111827', 'custom', energy => energy / (slope * HC_EV_NM));
+    }
+    drawMapInset(ax, state.mapLogColor ? minVal : rawMin, state.mapLogColor ? maxVal : rawMax);
   }
 
   function drawLineLabel(ax: Axes, text: string, qLineMax: number, color: string) {
@@ -767,26 +1812,35 @@ import Layout from '../../layouts/Layout.astro';
   function drawLegend() {
     const el = document.getElementById('chart-legend')!;
     el.innerHTML = '';
+    if (state.view === 'cross-section') {
+      el.style.display = 'none';
+      return;
+    }
+    if (state.view === 'angular' || state.view === 'disp-wq' || state.view === 'disp-bV') {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = '';
     if (state.view === 'eels-par') {
-      const inside = state.b_nm <= state.a_nm;
+      const inside = state.parallelGeometry === 'inside-hole';
       const item = document.createElement('span');
       item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-swatch" style="background:${inside ? '#F59E0B' : '#6366F1'}"></span> parallel trajectory · ${inside ? 'inside (b < a)' : 'outside (b > a)'} · v/c = ${state.vFrac.toFixed(2)}`;
+      item.innerHTML = `<span class="legend-swatch" style="background:${inside ? '#F59E0B' : '#6366F1'}"></span> parallel trajectory · ${inside ? 'inside hole (b < a)' : 'outside cylinder (b > a)'} · v/c = ${state.vFrac.toFixed(2)}`;
       el.appendChild(item);
       return;
     }
     if (state.view === 'eels-perp') {
       const item = document.createElement('span');
       item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-swatch" style="background:#10B981"></span> perpendicular trajectory · b = ${state.b_nm.toFixed(1)} nm · v/c = ${state.vFrac.toFixed(2)} · Γ(ω) = 2 ∫₀^∞ (dΓ/dq_z) dq_z`;
+      item.innerHTML = `<span class="legend-swatch" style="background:#10B981"></span> perpendicular trajectory · b = ${state.b_nm.toFixed(1)} nm · v/c = ${state.vFrac.toFixed(2)} · Gamma(&hbar;&omega;) = 2 integral dq_z`;
       el.appendChild(item);
       return;
     }
-    const ms = Array.from(state.m_active).sort((a, b) => a - b);
+    const ms = mOrders().filter(m => state.m_active.has(m));
     for (const m of ms) {
       const item = document.createElement('span');
       item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-swatch" style="background:${M_COLORS[m]}"></span> m = ${m}`;
+      item.innerHTML = `<span class="legend-swatch" style="background:${colorForM(m)}"></span> m = ${m}`;
       el.appendChild(item);
     }
     const light = document.createElement('span');
@@ -799,6 +1853,32 @@ import Layout from '../../layouts/Layout.astro';
   // ===== Controls =====
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function syncTabs(containerId: string, dataKey: string, activeValue: string) {
+    document.querySelectorAll<HTMLButtonElement>(`#${containerId} .view-tab`).forEach(btn => {
+      const active = btn.dataset[dataKey] === activeValue;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+  }
+
+  function bindTabs<T extends string>(
+    containerId: string,
+    dataKey: string,
+    read: () => T,
+    write: (value: T) => void,
+    afterChange: () => void,
+  ) {
+    $(containerId).addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
+      if (!btn) return;
+      const value = btn.dataset[dataKey] as T | undefined;
+      if (!value || value === read()) return;
+      write(value);
+      syncTabs(containerId, dataKey, value);
+      afterChange();
+    });
+  }
 
   function syncPair(numId: string, sliderId: string, key: keyof typeof state) {
     const num = $<HTMLInputElement>(numId);
@@ -822,15 +1902,509 @@ import Layout from '../../layouts/Layout.astro';
   syncPair('e1i-num', 'e1i-slider', 'eps1_im');
   syncPair('b-num', 'b-slider', 'b_nm');
   syncPair('v-num', 'v-slider', 'vFrac');
+  syncPair('angle-energy-num', 'angle-energy-slider', 'angleEnergyEv');
+
+  const materialSelect = $<HTMLSelectElement>('material-select');
+  const materialRef = $('material-ref');
+  const epsGroup = $('eps-group');
+  const drudeGroup = $('drude-group');
+  const drudeInputs = {
+    epsB: $<HTMLInputElement>('drude-epsb'),
+    wpEv: $<HTMLInputElement>('drude-wp'),
+    gammaEv: $<HTMLInputElement>('drude-gamma'),
+  };
+  const logToggle = $<HTMLButtonElement>('log-toggle');
+  const perpComputeBtn = $<HTMLButtonElement>('perp-compute-btn');
+  const spectrumControls = $('spectrum-controls');
+  const axisOverlay = $('axis-overlay');
+  const angularControls = $('angular-controls');
+  const angularSlider = $<HTMLInputElement>('angle-energy-slider');
+  const angularPolWrap = $('angular-pol-wrap');
+  const computeStatus = $('compute-status');
+  const chartWrap = $('chart-wrap');
+  const overlay = $<HTMLCanvasElement>('chart-overlay');
+  const tooltip = $('chart-tooltip');
+  const configCheckEl = $<HTMLButtonElement>('config-check');
+  const structureDialog = $<HTMLDialogElement>('structure-dialog');
+  const structureDialogArt = $('structure-dialog-art');
+  const structureDialogClose = $<HTMLButtonElement>('structure-dialog-close');
+  const structureExportPng = $<HTMLButtonElement>('structure-export-png');
+  const parallelGeometryParam = $('parallel-geometry-param');
+  const perpMapPanel = $('perp-map-panel');
+  const perpMapCanvas = $<HTMLCanvasElement>('perp-map-canvas');
+  const mapPngBtn = $<HTMLButtonElement>('map-dl-png');
+  const mapLogToggle = $<HTMLButtonElement>('map-log-toggle');
+  const mapLightToggle = $<HTMLButtonElement>('map-light-toggle');
+  const mapElectronToggle = $<HTMLButtonElement>('map-electron-toggle');
+  const mapCustomToggle = $<HTMLButtonElement>('map-custom-toggle');
+  const qzMaxNum = $<HTMLInputElement>('qz-max-num');
+  const customSlopeNum = $<HTMLInputElement>('custom-slope-num');
+  const perpGridControl = $('perp-grid-control');
+  const perpGridSelect = $<HTMLSelectElement>('perp-grid-select');
+  const kevInput = $<HTMLInputElement>('kev-num');
+  const radiusImpactMarker = $('radius-impact-marker');
+  const impactRadiusMarker = $('impact-radius-marker');
+
+  function sizeOverlay(): CanvasRenderingContext2D {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = overlay.getBoundingClientRect();
+    overlay.width = rect.width * dpr;
+    overlay.height = rect.height * dpr;
+    const ctx = overlay.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    return ctx;
+  }
+
+  function clearOverlay() {
+    if (!overlay || !tooltip) return;
+    const ctx = sizeOverlay();
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    tooltip.classList.remove('visible');
+  }
+
+  function nearestIdx(xs: number[], xVal: number): number {
+    let lo = 0;
+    let hi = xs.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (xs[mid] < xVal) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0 && Math.abs(xs[lo - 1] - xVal) < Math.abs(xs[lo] - xVal)) lo--;
+    return lo;
+  }
+
+  function fmtVal(v: number): string {
+    const a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 1e5) return v.toLocaleString('en', { maximumFractionDigits: 0 });
+    if (a >= 1) return v.toLocaleString('en', { maximumFractionDigits: 2 });
+    if (a >= 0.01) return v.toFixed(4);
+    return v.toExponential(2);
+  }
+
+  function syncKeVFromBeta(): void {
+    kevInput.value = formatKineticKeV(betaToKineticKeV(state.vFrac));
+  }
+
+  function commitKineticEnergy(): void {
+    const beta = kineticKeVToBeta(clampFinite(parseFloat(kevInput.value), 0, 1e6, betaToKineticKeV(state.vFrac)));
+    state.vFrac = clampFinite(beta, 0.01, 0.99, state.vFrac);
+    $<HTMLInputElement>('v-num').value = state.vFrac.toFixed(3);
+    $<HTMLInputElement>('v-slider').value = String(state.vFrac);
+    syncKeVFromBeta();
+    scheduleRecompute();
+  }
+
+  function updateGeometryMarkers(): void {
+    const showMarkers = state.excitation === 'electron';
+    radiusImpactMarker.style.display = showMarkers ? '' : 'none';
+    impactRadiusMarker.style.display = showMarkers ? '' : 'none';
+    if (!showMarkers) return;
+    const rSlider = $<HTMLInputElement>('r-slider');
+    const bSlider = $<HTMLInputElement>('b-slider');
+    const place = (marker: HTMLElement, slider: HTMLInputElement, value: number, title: string) => {
+      const min = parseFloat(slider.min);
+      const max = parseFloat(slider.max);
+      const pct = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) * 100 : 0;
+      marker.style.left = `${pct}%`;
+      marker.title = title;
+      marker.style.opacity = value < min || value > max ? '0.45' : '1';
+    };
+    place(radiusImpactMarker, rSlider, state.b_nm, `Impact b = ${state.b_nm.toFixed(1)} nm`);
+    place(impactRadiusMarker, bSlider, state.a_nm, `Radius a = ${state.a_nm.toFixed(1)} nm`);
+  }
+
+  function updateChartControls() {
+    const isPlane = state.excitation === 'plane';
+    const isSpectrum = isPlane && state.view === 'cross-section';
+    const isAngular = isPlane && state.view === 'angular';
+    const isElectron = state.excitation === 'electron';
+    const isParallel = isElectron && state.view === 'eels-par';
+    const isPerp = isElectron && state.view === 'eels-perp';
+    spectrumControls.style.display = isSpectrum ? '' : 'none';
+    logToggle.style.display = (isSpectrum || isParallel || isPerp) ? '' : 'none';
+    perpComputeBtn.style.display = isPerp ? '' : 'none';
+    axisOverlay.style.display = isSpectrum ? '' : 'none';
+    angularControls.style.display = isAngular ? '' : 'none';
+    angularSlider.style.display = 'none';
+    angularPolWrap.style.display = isAngular ? '' : 'none';
+    parallelGeometryParam.style.display = isParallel ? '' : 'none';
+    perpGridControl.style.display = isPerp ? '' : 'none';
+    perpMapPanel.style.display = isPerp ? '' : 'none';
+    angularControls.style.marginLeft = isAngular ? 'auto' : '';
+    computeStatus.style.marginLeft = isAngular ? '0' : 'auto';
+    logToggle.classList.toggle('active', state.logY);
+    mapLogToggle.classList.toggle('active', state.mapLogColor);
+    mapLightToggle.classList.toggle('active', state.mapShowLight);
+    mapElectronToggle.classList.toggle('active', state.mapShowElectron);
+    mapCustomToggle.classList.toggle('active', state.mapShowCustom);
+    mapPngBtn.disabled = !perpMap;
+  }
+
+  logToggle.addEventListener('click', () => {
+    state.logY = !state.logY;
+    logToggle.classList.toggle('active', state.logY);
+    drawChart();
+    drawLegend();
+  });
+
+  perpComputeBtn.addEventListener('click', () => recompute(true));
+
+  kevInput.addEventListener('change', commitKineticEnergy);
+  kevInput.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    commitKineticEnergy();
+    kevInput.blur();
+  });
+  $<HTMLInputElement>('v-num').addEventListener('input', syncKeVFromBeta);
+  $<HTMLInputElement>('v-slider').addEventListener('input', syncKeVFromBeta);
+
+  bindTabs<SpectrumQuantity>('quantity-tabs', 'qty', () => state.spectrumQuantity, value => { state.spectrumQuantity = value; }, () => {
+    drawChart();
+    drawLegend();
+  });
+  bindTabs<SpectrumDecomp>('decomp-tabs', 'decomp', () => state.spectrumDecomp, value => { state.spectrumDecomp = value; }, () => {
+    drawChart();
+    drawLegend();
+  });
+  bindTabs<AxisMode>('axis-tabs', 'axis', () => state.axisMode, value => { state.axisMode = value; }, () => {
+    drawChart();
+    drawLegend();
+  });
+  bindTabs<AngularPolMode>('pol-tabs', 'pol', () => state.angularPol, value => { state.angularPol = value; }, () => {
+    drawChart();
+    drawLegend();
+  });
+  bindTabs<ParallelGeometry>('parallel-geometry-tabs', 'parallelGeometry', () => state.parallelGeometry, value => {
+    state.parallelGeometry = value;
+  }, () => {
+    updateBNote();
+    scheduleRecompute();
+  });
+
+  mapLogToggle.addEventListener('click', () => {
+    state.mapLogColor = !state.mapLogColor;
+    updateChartControls();
+    drawPerpMap();
+  });
+  mapLightToggle.addEventListener('click', () => {
+    state.mapShowLight = !state.mapShowLight;
+    updateChartControls();
+    drawPerpMap();
+  });
+  mapElectronToggle.addEventListener('click', () => {
+    state.mapShowElectron = !state.mapShowElectron;
+    updateChartControls();
+    drawPerpMap();
+  });
+  mapCustomToggle.addEventListener('click', () => {
+    state.mapShowCustom = !state.mapShowCustom;
+    updateChartControls();
+    drawPerpMap();
+  });
+  qzMaxNum.addEventListener('input', () => {
+    const v = parseFloat(qzMaxNum.value);
+    if (Number.isFinite(v) && v > 0) { state.qzMaxNm = v; scheduleRecompute(); }
+  });
+  customSlopeNum.addEventListener('input', () => {
+    const v = parseFloat(customSlopeNum.value);
+    if (Number.isFinite(v)) { state.mapCustomSlope = v; drawPerpMap(); }
+  });
+  perpGridSelect.addEventListener('change', () => {
+    const quality = perpGridSelect.value as PerpGridQuality;
+    if (quality === 'standard' || quality === 'fine' || quality === 'high') {
+      state.perpGridQuality = quality;
+      markPerpNeedsCompute();
+    }
+  });
+  mapPngBtn.addEventListener('click', () => {
+    if (!perpMap) return;
+    perpMapCanvas.toBlob(b => { if (b) downloadBlob(b, 'cylinder_momentum_resolved_eels.png'); }, 'image/png');
+  });
+
+  chartWrap.addEventListener('mousemove', (e: MouseEvent) => {
+    if (state.view === 'disp-wq' || state.view === 'disp-bV') {
+      const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
+      chartWrap.style.cursor = hit ? 'pointer' : 'crosshair';
+      return;
+    }
+    if (!chartXforms || state.view !== 'cross-section' || !currentXArr.length || !currentSeries.length) return;
+    const { m, pw, ph, invTx, xTo, yTo } = chartXforms;
+    const mx = e.offsetX;
+    const my = e.offsetY;
+    if (mx < m.left || mx > m.left + pw || my < m.top || my > m.top + ph) {
+      chartWrap.style.cursor = '';
+      clearOverlay();
+      return;
+    }
+    chartWrap.style.cursor = 'crosshair';
+    const idx = nearestIdx(currentXArr, invTx(mx));
+    const xVal = currentXArr[idx];
+    const px = xTo(xVal);
+    const ctx = sizeOverlay();
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    ctx.strokeStyle = 'rgba(99,102,241,0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, m.top);
+    ctx.lineTo(px, m.top + ph);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const s of currentSeries) {
+      const yVal = s.y[idx];
+      if (!Number.isFinite(yVal) || (state.logY && yVal <= 0)) continue;
+      const py = yTo(yVal);
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const xText = state.axisMode === 'lambda'
+      ? `\u03BB = ${xVal.toFixed(1)} nm`
+      : `E = ${xVal.toFixed(3)} eV`;
+    let html = xText;
+    for (const s of currentSeries) html += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}`;
+    tooltip.innerHTML = html;
+    tooltip.classList.add('visible');
+    const topPy = Math.min(...currentSeries.map(s => yTo(s.y[idx])).filter(Number.isFinite));
+    let tL = px + 12;
+    let tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) - 36;
+    const wrapRect = chartWrap.getBoundingClientRect();
+    if (currentLegendBox) {
+      const proposed = { x: tL, y: tT, w: tooltip.offsetWidth, h: tooltip.offsetHeight };
+      const overlaps = proposed.x < currentLegendBox.x + currentLegendBox.w
+        && proposed.x + proposed.w > currentLegendBox.x
+        && proposed.y < currentLegendBox.y + currentLegendBox.h
+        && proposed.y + proposed.h > currentLegendBox.y;
+      if (overlaps) tL = Math.max(4, currentLegendBox.x - tooltip.offsetWidth - 12);
+    }
+    if (tL + tooltip.offsetWidth > wrapRect.width - 4) tL = px - tooltip.offsetWidth - 12;
+    if (tT < 4) tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) + 12;
+    tL = Math.max(4, Math.min(tL, wrapRect.width - tooltip.offsetWidth - 4));
+    tT = Math.max(4, Math.min(tT, wrapRect.height - tooltip.offsetHeight - 4));
+    tooltip.style.left = `${tL}px`;
+    tooltip.style.top = `${tT}px`;
+  });
+
+  chartWrap.addEventListener('mouseleave', () => {
+    chartWrap.style.cursor = '';
+    clearOverlay();
+  });
+
+  chartWrap.addEventListener('click', (e: MouseEvent) => {
+    if (state.view !== 'disp-wq' && state.view !== 'disp-bV') return;
+    const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
+    if (!hit) return;
+    if (state.m_active.has(hit.m)) state.m_active.delete(hit.m);
+    else state.m_active.add(hit.m);
+    recompute();
+  });
+
+  function readDrudeInputs() {
+    state.drude = {
+      epsB: parseFloat(drudeInputs.epsB.value) || 1,
+      wpEv: Math.max(0.01, parseFloat(drudeInputs.wpEv.value) || 5),
+      gammaEv: Math.max(0, parseFloat(drudeInputs.gammaEv.value) || 0),
+    };
+  }
+
+  function updateMaterialUI() {
+    state.materialId = materialSelect.value;
+    epsGroup.style.display = state.materialId === 'custom' ? '' : 'none';
+    drudeGroup.style.display = state.materialId === 'drude' ? '' : 'none';
+    if (state.materialId === 'custom') materialRef.textContent = 'Constant dielectric function';
+    else if (state.materialId === 'drude') materialRef.textContent = `Drude model, ωp=${state.drude.wpEv.toFixed(2)} eV`;
+    else materialRef.textContent = MATERIALS[state.materialId]?.ref ?? '';
+  }
+
+  const MAT_COLORS: Record<string, string> = {
+    au: '#D4AF37',
+    ag: '#B8C2CC',
+    si: '#7C3AED',
+    al: '#93C5FD',
+    tio2: '#C084FC',
+    drude: '#60A5FA',
+    custom: '#34D399',
+  };
+
+  function escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
+  }
+
+  function withSvgMarkerId(svg: string, markerId: string): string {
+    return svg.replace('id="arr"', `id="${markerId}"`).replace(/url\(#arr\)/g, `url(#${markerId})`);
+  }
+
+  function materialLabel(): string {
+    if (state.materialId === 'custom') return `custom \u03B5=${state.eps1_re.toFixed(1)}+${state.eps1_im.toFixed(2)}i`;
+    if (state.materialId === 'drude') return `Drude \u03C9p=${state.drude.wpEv.toFixed(2)} eV`;
+    return MATERIALS[state.materialId]?.label ?? state.materialId;
+  }
+
+  function updateConfigCheck() {
+    const ct = chartTheme();
+    const W = 340;
+    const H = 152;
+    const cx = 84;
+    const cy = 72;
+    const r = 42;
+    const detailX = 202;
+    const matColor = MAT_COLORS[state.materialId] ?? '#CBD5E1';
+    const hostLabel = `\u03B5h = ${state.eps_h.toFixed(2)}`;
+    const rangeLabel = state.excitation === 'plane'
+      ? `${state.w_min.toFixed(1)}\u2013${state.w_max.toFixed(1)} eV`
+      : `v/c = ${state.vFrac.toFixed(2)}`;
+    const title = state.excitation === 'plane'
+      ? 'normal plane wave'
+      : state.view === 'eels-perp'
+        ? 'perpendicular electron'
+        : state.parallelGeometry === 'inside-hole'
+          ? 'parallel electron · hole'
+          : 'parallel electron · cylinder';
+    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    s += `<defs><marker id="arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5" fill="none" stroke="${ct.textMuted}" stroke-width="0.8"/></marker></defs>`;
+    s += `<rect width="${W}" height="${H}" fill="${ct.grid}" rx="6"/>`;
+    const insideHoleSketch = state.excitation === 'electron' && state.view === 'eels-par' && state.parallelGeometry === 'inside-hole';
+    if (insideHoleSketch) {
+      s += `<rect x="${cx - r - 8}" y="${cy - r - 8}" width="${2 * r + 16}" height="${2 * r + 16}" rx="8" fill="${matColor}" fill-opacity="0.82"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${ct.grid}" stroke="${ct.text}" stroke-opacity="0.45" stroke-width="1.2"/>`;
+    } else {
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${matColor}" fill-opacity="0.88" stroke="${ct.text}" stroke-opacity="0.35" stroke-width="1"/>`;
+    }
+    s += `<line x1="${cx}" y1="${cy + r + 10}" x2="${cx + r}" y2="${cy + r + 10}" stroke="${ct.textMuted}" stroke-width="0.8" marker-end="url(#arr)"/>`;
+    s += `<line x1="${cx}" y1="${cy + r + 6}" x2="${cx}" y2="${cy + r + 14}" stroke="${ct.textMuted}" stroke-width="0.8"/>`;
+    s += `<text x="${cx + r / 2}" y="${cy + r + 24}" text-anchor="middle" fill="${ct.textMuted}" font-size="8" font-family="Inter,system-ui">a=${state.a_nm.toFixed(0)} nm</text>`;
+    if (state.excitation === 'plane') {
+      const kY = cy - 18;
+      const eX = 31;
+      s += `<line x1="14" y1="${kY}" x2="${cx - r - 9}" y2="${kY}" stroke="#6366F1" stroke-width="2" stroke-linecap="round"/>`;
+      s += `<path d="M${cx - r - 9},${kY} l-7,-4 v8 z" fill="#6366F1"/>`;
+      s += `<text x="16" y="${kY - 10}" fill="#6366F1" font-size="9" font-weight="700" font-family="Inter,system-ui">k</text>`;
+      s += `<line x1="${eX}" y1="${cy + 27}" x2="${eX}" y2="${cy - 4}" stroke="#06B6D4" stroke-width="2" stroke-linecap="round"/>`;
+      s += `<path d="M${eX},${cy - 4} l-4,7 h8 z" fill="#06B6D4"/>`;
+      s += `<text x="${eX + 7}" y="${cy + 18}" fill="#06B6D4" font-size="9" font-weight="700" font-family="Inter,system-ui">E</text>`;
+    } else {
+      const ratio = state.b_nm / Math.max(state.a_nm, 1);
+      const capped = Math.min(1.45, Math.max(0, ratio));
+      const allowed = state.view === 'eels-perp'
+        ? state.b_nm > state.a_nm
+        : state.parallelGeometry === 'inside-hole'
+          ? state.b_nm < state.a_nm
+          : state.b_nm > state.a_nm;
+      const pathColor = allowed ? '#2563EB' : '#DC2626';
+      const radiusDot = state.view === 'eels-perp'
+        ? { x: cx, y: cy - r }
+        : { x: cx + r, y: cy };
+      if (state.view === 'eels-perp') {
+        const trajY = cy - capped * r;
+        const x2 = cx + r + 36;
+        s += `<line x1="14" y1="${trajY}" x2="${x2 - 7}" y2="${trajY}" stroke="${pathColor}" stroke-width="2" stroke-linecap="round"/>`;
+        s += `<path d="M${x2},${trajY} l-8,-5 v10 z" fill="${pathColor}"/>`;
+        s += `<circle cx="${cx}" cy="${trajY}" r="3.5" fill="#EF4444" stroke="#fff" stroke-width="1"/>`;
+        s += `<text x="16" y="${trajY - 9}" fill="${pathColor}" font-size="9" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="7">-</tspan></text>`;
+        s += `<text x="${cx + 6}" y="${trajY + 12}" fill="${pathColor}" font-size="8" font-family="Inter,system-ui">b=${state.b_nm.toFixed(0)} nm</text>`;
+      } else {
+        const trajX = cx + capped * r;
+        s += `<circle cx="${trajX}" cy="${cy}" r="6.5" fill="none" stroke="${pathColor}" stroke-width="1.4" stroke-opacity="0.65"/>`;
+        s += `<circle cx="${trajX}" cy="${cy}" r="3.5" fill="#EF4444" stroke="#fff" stroke-width="1"/>`;
+        s += `<text x="${trajX + 9}" y="${cy - 9}" fill="${pathColor}" font-size="9" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="7">-</tspan></text>`;
+        s += `<text x="${trajX + 9}" y="${cy + 9}" fill="${pathColor}" font-size="8" font-family="Inter,system-ui">b=${state.b_nm.toFixed(0)} nm</text>`;
+      }
+      s += `<circle cx="${radiusDot.x}" cy="${radiusDot.y}" r="3.5" fill="#EF4444" stroke="#fff" stroke-width="1"/>`;
+    }
+    s += `<text x="${detailX}" y="28" fill="${ct.text}" font-size="10" font-weight="700" font-family="Inter,system-ui">${escapeHtml(title)}</text>`;
+    s += `<text x="${detailX}" y="48" fill="${ct.textSoft}" font-size="9" font-family="Inter,system-ui">${escapeHtml(materialLabel())}</text>`;
+    s += `<text x="${detailX}" y="67" fill="${ct.textMuted}" font-size="8.5" font-family="Inter,system-ui">${escapeHtml(hostLabel)}</text>`;
+    s += `<text x="${detailX}" y="85" fill="${ct.textMuted}" font-size="8.5" font-family="Inter,system-ui">${escapeHtml(rangeLabel)}</text>`;
+    s += `<text x="${W - 10}" y="${H - 10}" text-anchor="end" fill="${ct.textMuted}" font-size="8" font-family="Inter,system-ui">infinite cylinder</text>`;
+    s += '</svg>';
+    configCheckEl.innerHTML = withSvgMarkerId(s, 'cylinder-config-radius-arrow');
+    structureDialogArt.innerHTML = withSvgMarkerId(s, 'cylinder-config-radius-arrow-modal');
+  }
+
+  configCheckEl.addEventListener('click', () => {
+    updateConfigCheck();
+    if (typeof structureDialog.showModal === 'function') structureDialog.showModal();
+    else structureDialog.setAttribute('open', '');
+  });
+  structureDialogClose.addEventListener('click', () => structureDialog.close());
+  structureDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === structureDialog) structureDialog.close();
+  });
+  structureExportPng.addEventListener('click', () => {
+    const svg = structureDialogArt.querySelector('svg');
+    if (!svg) return;
+    const viewBox = (svg.getAttribute('viewBox') ?? '0 0 300 152').split(/\s+/).map(Number);
+    const width = viewBox[2] || 300;
+    const height = viewBox[3] || 152;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const out = document.createElement('canvas');
+      const scale = 3;
+      out.width = width * scale;
+      out.height = height * scale;
+      const outCtx = out.getContext('2d')!;
+      outCtx.fillStyle = chartTheme().grid;
+      outCtx.fillRect(0, 0, out.width, out.height);
+      outCtx.drawImage(img, 0, 0, out.width, out.height);
+      URL.revokeObjectURL(url);
+      out.toBlob(b => { if (b) downloadBlob(b, `cylinder_drawing_${state.view}.png`); }, 'image/png');
+    };
+    img.src = url;
+  });
+
+  materialSelect.addEventListener('change', () => {
+    updateMaterialUI();
+    scheduleRecompute();
+  });
+  Object.values(drudeInputs).forEach(input => {
+    input.addEventListener('input', () => {
+      readDrudeInputs();
+      updateMaterialUI();
+      scheduleRecompute();
+    });
+  });
 
   $<HTMLInputElement>('Mmax-num').addEventListener('input', (e) => {
     const v = parseInt((e.target as HTMLInputElement).value, 10);
-    if (isFinite(v) && v >= 0 && v <= 10) { state.maxOrderEels = v; scheduleRecompute(); }
+    if (isFinite(v) && v >= 0 && v <= 10) {
+      state.maxOrderEels = v;
+      resetActiveMToMax();
+      scheduleRecompute();
+    }
   });
 
   function updateBNote() {
     const note = $('b-note');
-    note.textContent = state.b_nm > state.a_nm ? 'outside the cylinder' : 'inside the cylinder';
+    updateGeometryMarkers();
+    if (state.view === 'eels-perp') {
+      note.textContent = state.b_nm > state.a_nm
+        ? 'perpendicular: b > a'
+        : 'perpendicular requires b > a';
+      note.style.color = state.b_nm > state.a_nm ? '' : '#DC2626';
+      return;
+    }
+    if (state.parallelGeometry === 'inside-hole') {
+      note.textContent = state.b_nm < state.a_nm
+        ? 'inside hole: b < a'
+        : 'inside hole requires b < a';
+      note.style.color = state.b_nm < state.a_nm ? '' : '#DC2626';
+      return;
+    }
+    note.textContent = state.b_nm > state.a_nm
+      ? 'outside cylinder: b > a'
+      : 'outside cylinder requires b > a';
+    note.style.color = state.b_nm > state.a_nm ? '' : '#DC2626';
   }
   $<HTMLInputElement>('b-num').addEventListener('input', updateBNote);
   $<HTMLInputElement>('b-slider').addEventListener('input', updateBNote);
@@ -844,24 +2418,71 @@ import Layout from '../../layouts/Layout.astro';
     state.vFrac = v;
     $<HTMLInputElement>('v-num').value = v.toString();
     $<HTMLInputElement>('v-slider').value = v.toString();
+    syncKeVFromBeta();
     scheduleRecompute();
   });
 
-  $('view-tabs').addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
-    if (!btn) return;
-    const v = btn.dataset.view as ViewMode;
-    if (v === state.view) return;
+  function selectView(v: ViewMode, skipCompute = false) {
     state.view = v;
-    document.querySelectorAll('.view-tab').forEach(b => {
-      const active = (b as HTMLElement).dataset.view === v;
+    document.querySelectorAll<HTMLButtonElement>('#view-tabs .view-tab').forEach(b => {
+      const active = b.dataset.view === v;
       b.classList.toggle('active', active);
       b.setAttribute('aria-checked', String(active));
     });
     if (v === 'eels-par' || v === 'eels-perp') {
       $('eels-section').setAttribute('open', '');
     }
-    recompute();
+    updateChartControls();
+    updateBNote();
+    if (!skipCompute) {
+      if (v === 'eels-perp') markPerpNeedsCompute();
+      else recompute();
+    }
+  }
+
+  function updateTheoryNote() {
+    const note = $('theory-note');
+    if (state.excitation === 'plane') {
+      note.innerHTML = '<strong>Plane wave.</strong> Normal-incidence cylinder scattering uses the Bohren-Huffman infinite-cylinder series. Efficiencies are normalized by the geometrical width 2a and converted to cross-section per unit length.';
+    } else {
+      note.innerHTML = '<strong>Electrons.</strong> EELS uses the analytical infinite-cylinder response with absolute units: parallel spectra are in 1/(eV nm), perpendicular integrated spectra are in 1/eV, and the perpendicular map is in nm/eV.';
+    }
+  }
+
+  function updateExcitationUI(skipCompute = false) {
+    document.querySelectorAll<HTMLElement>('.plane-only').forEach(el => { el.style.display = state.excitation === 'plane' ? '' : 'none'; });
+    document.querySelectorAll<HTMLElement>('.electron-only').forEach(el => { el.style.display = state.excitation === 'electron' ? '' : 'none'; });
+    document.querySelectorAll<HTMLButtonElement>('#view-tabs .view-tab').forEach(btn => {
+      const visible = btn.dataset.source === state.excitation;
+      btn.style.display = visible ? '' : 'none';
+    });
+    const desired = state.excitation === 'plane'
+      ? (state.view === 'cross-section' || state.view === 'angular' ? state.view : 'cross-section')
+      : (state.view === 'eels-par' || state.view === 'eels-perp' || state.view === 'disp-wq' || state.view === 'disp-bV' ? state.view : 'eels-par');
+    updateTheoryNote();
+    selectView(desired, skipCompute);
+  }
+
+  $('excitation-tabs').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
+    if (!btn) return;
+    const excitation = btn.dataset.excitation as ExcitationMode;
+    if (!excitation || excitation === state.excitation) return;
+    state.excitation = excitation;
+    document.querySelectorAll<HTMLButtonElement>('#excitation-tabs .view-tab').forEach(b => {
+      const active = b.dataset.excitation === excitation;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-checked', String(active));
+    });
+    updateExcitationUI();
+  });
+
+  $('view-tabs').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
+    if (!btn || btn.dataset.source !== state.excitation) return;
+    const v = btn.dataset.view as ViewMode;
+    if (v === state.view) return;
+    selectView(v);
   });
 
   $<HTMLInputElement>('w-min').addEventListener('input', (e) => {
@@ -885,27 +2506,35 @@ import Layout from '../../layouts/Layout.astro';
     scheduleRecompute();
   });
 
-  $('m-chips').addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.m-chip') as HTMLElement | null;
-    if (!btn) return;
-    const m = parseInt(btn.dataset.m!, 10);
-    if (state.m_active.has(m)) state.m_active.delete(m);
-    else state.m_active.add(m);
-    btn.classList.toggle('active');
-    scheduleRecompute();
-  });
-
   $('reset-btn').addEventListener('click', () => {
     state.a_nm = 15;
     state.eps_h = 1.0;
+    state.materialId = 'au';
     state.eps1_re = 10.0;
     state.eps1_im = 0.1;
     state.w_min = 1;
-    state.w_max = 20;
-    state.m_active = new Set([0, 1, 2]);
+    state.w_max = 6;
+    state.angleEnergyEv = 2.4;
+    state.axisMode = 'lambda';
+    state.spectrumQuantity = 'csca';
+    state.spectrumDecomp = 'total';
+    state.angularPol = 'total';
+    state.logY = false;
+    state.excitation = 'plane';
+    state.view = 'cross-section';
+    state.parallelGeometry = 'outside';
+    state.m_active = new Set([0, 1, 2, 3, 4]);
     state.b_nm = 25;
     state.vFrac = 0.3;
     state.maxOrderEels = 4;
+    state.qzMaxNm = 0.1;
+    state.mapLogColor = false;
+    state.mapShowLight = true;
+    state.mapShowElectron = true;
+    state.mapShowCustom = false;
+    state.mapCustomSlope = 0.3;
+    state.perpGridQuality = 'standard';
+    state.drude = { epsB: 1, wpEv: 5, gammaEv: 0.05 };
     $<HTMLInputElement>('r-num').value = '15';
     $<HTMLInputElement>('r-slider').value = '15';
     $<HTMLInputElement>('eh-num').value = '1.00';
@@ -915,26 +2544,53 @@ import Layout from '../../layouts/Layout.astro';
     $<HTMLInputElement>('e1i-num').value = '0.10';
     $<HTMLInputElement>('e1i-slider').value = '0.1';
     $<HTMLInputElement>('w-min').value = '1';
-    $<HTMLInputElement>('w-max').value = '20';
+    $<HTMLInputElement>('w-max').value = '6';
+    $<HTMLInputElement>('angle-energy-num').value = '2.4';
+    $<HTMLInputElement>('angle-energy-slider').value = '2.4';
     $<HTMLInputElement>('b-num').value = '25';
     $<HTMLInputElement>('b-slider').value = '25';
     $<HTMLInputElement>('v-num').value = '0.3';
     $<HTMLInputElement>('v-slider').value = '0.3';
+    syncKeVFromBeta();
     $<HTMLInputElement>('Mmax-num').value = '4';
-    $('eh-presets').querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
-    document.querySelectorAll('.m-chip').forEach(c => {
-      const mm = parseInt((c as HTMLElement).dataset.m!, 10);
-      c.classList.toggle('active', mm < 3);
+    qzMaxNum.value = '0.1';
+    customSlopeNum.value = '0.30';
+    perpGridSelect.value = 'standard';
+    materialSelect.value = 'au';
+    drudeInputs.epsB.value = '1';
+    drudeInputs.wpEv.value = '5';
+    drudeInputs.gammaEv.value = '0.05';
+    syncTabs('axis-tabs', 'axis', state.axisMode);
+    syncTabs('quantity-tabs', 'qty', state.spectrumQuantity);
+    syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
+    syncTabs('pol-tabs', 'pol', state.angularPol);
+    syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
+    logToggle.classList.remove('active');
+    document.querySelectorAll<HTMLButtonElement>('#excitation-tabs .view-tab').forEach(b => {
+      const active = b.dataset.excitation === 'plane';
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-checked', String(active));
     });
+    $('eh-presets').querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+    updateMaterialUI();
+    updateExcitationUI(true);
     updateBNote();
     recompute();
   });
 
+  updateMaterialUI();
+  updateExcitationUI(true);
+  syncKeVFromBeta();
   updateBNote();
 
   new ResizeObserver(drawChart).observe($('chart-wrap'));
+  new ResizeObserver(drawPerpMap).observe($('perp-map-wrap'));
 
-  onThemeChange(() => drawChart());
+  onThemeChange(() => {
+    updateConfigCheck();
+    drawChart();
+    drawPerpMap();
+  });
 
   // ===== Export / Share =====
   const canvas = document.getElementById('cyl-chart') as HTMLCanvasElement;
@@ -951,12 +2607,22 @@ import Layout from '../../layouts/Layout.astro';
 
   document.getElementById('dl-csv')!.addEventListener('click', () => {
     const header = [
-      `# Cylinder — a=${state.a_nm} nm, ε_h=${state.eps_h}, ε_1=${state.eps1_re}+${state.eps1_im}i`,
+      `# Cylinder — a=${state.a_nm} nm, eps_h=${state.eps_h}, material=${state.materialId}, excitation=${state.excitation}`,
       `# view=${state.view}`,
       '# Generated by NanophotonicsLab (nanophotonicslab.com)',
     ];
     let body: string[] = [];
-    if (state.view === 'disp-wq' || state.view === 'disp-bV') {
+    if (state.view === 'cross-section') {
+      body.push('omega_eV,lambda_nm,c_ext_nm,c_sca_nm,c_abs_nm,q_ext,q_sca,q_abs,c_ext_Eaxis_nm,c_ext_Haxis_nm,c_sca_Eaxis_nm,c_sca_Haxis_nm,c_abs_Eaxis_nm,c_abs_Haxis_nm,q_sca_parallel_raw,q_sca_perpendicular_raw,q_ext_parallel_raw,q_ext_perpendicular_raw');
+      for (const p of planeSpectrum) {
+        body.push(`${p.w.toFixed(6)},${lambdaNmFromEnergy(p.w).toFixed(6)},${p.cext.toExponential(8)},${p.csca.toExponential(8)},${p.cabs.toExponential(8)},${p.qext.toExponential(8)},${p.qsca.toExponential(8)},${p.qabs.toExponential(8)},${p.cextE.toExponential(8)},${p.cextM.toExponential(8)},${p.cscaE.toExponential(8)},${p.cscaM.toExponential(8)},${p.cabsE.toExponential(8)},${p.cabsM.toExponential(8)},${p.qscaPar.toExponential(8)},${p.qscaPer.toExponential(8)},${p.qextPar.toExponential(8)},${p.qextPer.toExponential(8)}`);
+      }
+    } else if (state.view === 'angular') {
+      body.push('angle_deg,T11,POL,T33,T34');
+      for (const row of angularRows) {
+        body.push(`${row.angleDeg.toFixed(4)},${row.t11.toExponential(8)},${row.pol.toExponential(8)},${row.t33.toExponential(8)},${row.t34.toExponential(8)}`);
+      }
+    } else if (state.view === 'disp-wq' || state.view === 'disp-bV') {
       body.push('m,omega_eV,q_nm-1');
       for (const br of branches) {
         for (const pt of br.points) {
@@ -964,9 +2630,19 @@ import Layout from '../../layouts/Layout.astro';
         }
       }
     } else if (eelsCurve) {
-      body.push('omega_eV,probability_nm/eV');
+      body.push(state.view === 'eels-par'
+        ? 'energy_eV,eels_1_per_eV_nm'
+        : 'energy_eV,eels_1_per_eV');
       for (let i = 0; i < eelsCurve.w.length; i++) {
         body.push(`${eelsCurve.w[i].toFixed(6)},${eelsCurve.y[i].toExponential(6)}`);
+      }
+      if (state.view === 'eels-perp' && perpMap) {
+        body.push('');
+        body.push('qresolved_nm_per_eV_rows_energy_columns_qz_nm-1');
+        body.push(['energy_eV', ...perpMap.qz_nm.map(q => q.toFixed(6))].join(','));
+        for (let iw = 0; iw < perpMap.w_eV.length; iw++) {
+          body.push([perpMap.w_eV[iw].toFixed(6), ...perpMap.values_nm_per_eV[iw].map(v => v.toExponential(6))].join(','));
+        }
       }
     } else {
       body.push('# No data for current view');
@@ -980,15 +2656,36 @@ import Layout from '../../layouts/Layout.astro';
     const p = new URLSearchParams();
     p.set('a', String(state.a_nm));
     p.set('eh', String(state.eps_h));
+    p.set('mat', state.materialId);
     p.set('e1r', String(state.eps1_re));
     p.set('e1i', String(state.eps1_im));
     p.set('wmin', String(state.w_min));
     p.set('wmax', String(state.w_max));
+    p.set('angle', String(state.angleEnergyEv));
+    p.set('axis', state.axisMode);
+    p.set('qty', state.spectrumQuantity);
+    p.set('decomp', state.spectrumDecomp);
+    p.set('pol', state.angularPol);
+    if (state.logY) p.set('logY', '1');
+    p.set('exc', state.excitation);
     p.set('m', Array.from(state.m_active).sort().join(','));
     p.set('v', state.view);
+    p.set('pg', state.parallelGeometry);
     p.set('b', String(state.b_nm));
     p.set('vf', String(state.vFrac));
     p.set('mmax', String(state.maxOrderEels));
+    p.set('qmax', String(state.qzMaxNm));
+    if (state.mapLogColor) p.set('maplog', '1');
+    if (!state.mapShowLight) p.set('light', '0');
+    if (!state.mapShowElectron) p.set('eline', '0');
+    if (state.mapShowCustom) p.set('custom', '1');
+    p.set('cslope', String(state.mapCustomSlope));
+    p.set('pgrid', state.perpGridQuality);
+    if (state.materialId === 'drude') {
+      p.set('depsb', String(state.drude.epsB));
+      p.set('dwp', String(state.drude.wpEv));
+      p.set('dgamma', String(state.drude.gammaEv));
+    }
     return p.toString();
   }
   shareBtn.addEventListener('click', () => {
@@ -1007,29 +2704,66 @@ import Layout from '../../layouts/Layout.astro';
     const p = new URLSearchParams(hash);
     if (p.has('a')) { state.a_nm = parseFloat(p.get('a')!); ($('r-num') as HTMLInputElement).value = String(state.a_nm); ($('r-slider') as HTMLInputElement).value = String(state.a_nm); }
     if (p.has('eh')) { state.eps_h = parseFloat(p.get('eh')!); ($('eh-num') as HTMLInputElement).value = String(state.eps_h); ($('eh-slider') as HTMLInputElement).value = String(state.eps_h); }
+    if (p.has('mat')) { state.materialId = p.get('mat')!; materialSelect.value = state.materialId; }
     if (p.has('e1r')) { state.eps1_re = parseFloat(p.get('e1r')!); ($('e1r-num') as HTMLInputElement).value = String(state.eps1_re); ($('e1r-slider') as HTMLInputElement).value = String(state.eps1_re); }
     if (p.has('e1i')) { state.eps1_im = parseFloat(p.get('e1i')!); ($('e1i-num') as HTMLInputElement).value = String(state.eps1_im); ($('e1i-slider') as HTMLInputElement).value = String(state.eps1_im); }
     if (p.has('wmin')) { state.w_min = parseFloat(p.get('wmin')!); ($('w-min') as HTMLInputElement).value = String(state.w_min); }
     if (p.has('wmax')) { state.w_max = parseFloat(p.get('wmax')!); ($('w-max') as HTMLInputElement).value = String(state.w_max); }
+    if (p.has('angle')) { state.angleEnergyEv = parseFloat(p.get('angle')!); ($('angle-energy-num') as HTMLInputElement).value = String(state.angleEnergyEv); ($('angle-energy-slider') as HTMLInputElement).value = String(state.angleEnergyEv); }
+    if (p.get('axis') === 'energy' || p.get('axis') === 'lambda') state.axisMode = p.get('axis') as AxisMode;
+    if (['csca', 'cext', 'cabs', 'qsca', 'all'].includes(p.get('qty') ?? '')) state.spectrumQuantity = p.get('qty') as SpectrumQuantity;
+    if (p.get('decomp') === 'total' || p.get('decomp') === 'em') state.spectrumDecomp = p.get('decomp') as SpectrumDecomp;
+    if (p.get('pol') === 'total' || p.get('pol') === 'perp' || p.get('pol') === 'par') state.angularPol = p.get('pol') as AngularPolMode;
+    if (p.get('logY') === '1') state.logY = true;
+    if (p.has('exc')) {
+      const exc = p.get('exc') as ExcitationMode | null;
+      if (exc === 'plane' || exc === 'electron') state.excitation = exc;
+      document.querySelectorAll<HTMLButtonElement>('#excitation-tabs .view-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.excitation === state.excitation);
+        t.setAttribute('aria-checked', String(t.dataset.excitation === state.excitation));
+      });
+    }
     if (p.has('m')) {
       state.m_active = new Set(p.get('m')!.split(',').filter(Boolean).map(Number));
-      document.querySelectorAll<HTMLButtonElement>('.m-chip').forEach(c => {
-        c.classList.toggle('active', state.m_active.has(parseInt(c.dataset.m!)));
-      });
     }
     if (p.has('v')) {
       state.view = p.get('v')! as ViewMode;
-      document.querySelectorAll<HTMLButtonElement>('.view-tab').forEach(t => {
+      document.querySelectorAll<HTMLButtonElement>('#view-tabs .view-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.view === state.view);
         t.setAttribute('aria-checked', String(t.dataset.view === state.view));
       });
     }
+    if (p.get('pg') === 'outside' || p.get('pg') === 'inside-hole') state.parallelGeometry = p.get('pg') as ParallelGeometry;
     if (p.has('b')) { state.b_nm = parseFloat(p.get('b')!); ($('b-num') as HTMLInputElement).value = String(state.b_nm); ($('b-slider') as HTMLInputElement).value = String(state.b_nm); }
     if (p.has('vf')) { state.vFrac = parseFloat(p.get('vf')!); ($('v-num') as HTMLInputElement).value = String(state.vFrac); ($('v-slider') as HTMLInputElement).value = String(state.vFrac); }
     if (p.has('mmax')) { state.maxOrderEels = parseInt(p.get('mmax')!); ($('Mmax-num') as HTMLInputElement).value = String(state.maxOrderEels); }
+    if (p.has('qmax')) { state.qzMaxNm = Math.max(0.02, parseFloat(p.get('qmax')!)); qzMaxNum.value = String(state.qzMaxNm); }
+    if (p.get('maplog') === '1') state.mapLogColor = true;
+    if (p.get('light') === '0') state.mapShowLight = false;
+    if (p.get('eline') === '0') state.mapShowElectron = false;
+    if (p.get('custom') === '1') state.mapShowCustom = true;
+    if (p.has('cslope')) { state.mapCustomSlope = parseFloat(p.get('cslope')!); customSlopeNum.value = String(state.mapCustomSlope); }
+    if (p.get('pgrid') === 'standard' || p.get('pgrid') === 'fine' || p.get('pgrid') === 'high') {
+      state.perpGridQuality = p.get('pgrid') as PerpGridQuality;
+      perpGridSelect.value = state.perpGridQuality;
+    }
+    if (p.has('depsb')) { state.drude.epsB = parseFloat(p.get('depsb')!); drudeInputs.epsB.value = String(state.drude.epsB); }
+    if (p.has('dwp')) { state.drude.wpEv = parseFloat(p.get('dwp')!); drudeInputs.wpEv.value = String(state.drude.wpEv); }
+    if (p.has('dgamma')) { state.drude.gammaEv = parseFloat(p.get('dgamma')!); drudeInputs.gammaEv.value = String(state.drude.gammaEv); }
+    syncTabs('axis-tabs', 'axis', state.axisMode);
+    syncTabs('quantity-tabs', 'qty', state.spectrumQuantity);
+    syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
+    syncTabs('pol-tabs', 'pol', state.angularPol);
+    syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
+    logToggle.classList.toggle('active', state.logY);
+    syncKeVFromBeta();
+    updateGeometryMarkers();
+    updateMaterialUI();
+    updateExcitationUI(true);
   }
 
   restoreState();
+  updateBNote();
 
   // Initial
   recompute();

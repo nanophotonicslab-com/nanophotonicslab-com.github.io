@@ -885,10 +885,9 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
-  import { MATERIALS } from '../../data/optical-constants';
+  import { MATERIALS, interpolateNK } from '../../lib/materials';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
   import { computeElectronSphereSpectrum, type ElectronSpectrum } from '../../lib/electron-sphere';
-  import { interpolateNK } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 

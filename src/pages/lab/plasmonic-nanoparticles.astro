@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { MATERIALS } from '../../data/optical-constants';
+import { MATERIALS } from '../../lib/materials';
 import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
 
 const materialOptions = PLASMONIC_MATERIAL_IDS
@@ -915,7 +915,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 </style>
 
 <script>
-  import { MATERIALS } from '../../data/optical-constants';
+  import { MATERIALS } from '../../lib/materials';
   import { loadCatalog, fetchMaterialNK, searchCatalog } from '../../data/refractiveindex';
   import type { RIIMaterial } from '../../data/refractiveindex';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
