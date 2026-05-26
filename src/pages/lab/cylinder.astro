@@ -59,8 +59,8 @@ import Layout from '../../layouts/Layout.astro';
             <select id="material-select" class="param-select">
               <option value="custom">Custom dielectric</option>
               <option value="drude">Drude model</option>
-              <option value="au" selected>Gold (Au)</option>
-              <option value="ag">Silver (Ag)</option>
+              <option value="au">Gold (Au)</option>
+              <option value="ag" selected>Silver (Ag)</option>
               <option value="si">Silicon (Si)</option>
               <option value="al">Aluminum (Al)</option>
               <option value="tio2">TiO₂</option>
@@ -102,9 +102,9 @@ import Layout from '../../layouts/Layout.astro';
           <div class="param">
             <div class="param-header"><label>&hbar;&omega; range (eV)</label></div>
             <div class="param-range-row">
-              <input type="number" class="param-number param-number--sm" id="w-min" value="1" step="0.5" min="0">
+              <input type="number" class="param-number param-number--sm" id="w-min" value="0.2" step="0.1" min="0">
               <span class="param-limit-dash">&mdash;</span>
-              <input type="number" class="param-number param-number--sm" id="w-max" value="6" step="0.5" min="0.1">
+              <input type="number" class="param-number param-number--sm" id="w-max" value="4" step="0.1" min="0.1">
             </div>
           </div>
 
@@ -668,11 +668,11 @@ import Layout from '../../layouts/Layout.astro';
   const state = {
     a_nm: 15,
     eps_h: 1.0,
-    materialId: 'au',
+    materialId: 'ag',
     eps1_re: 10.0,
     eps1_im: 0.1,
-    w_min: 1,
-    w_max: 6,
+    w_min: 0.2,
+    w_max: 4,
     angleEnergyEv: 2.4,
     axisMode: 'lambda' as AxisMode,
     spectrumQuantity: 'csca' as SpectrumQuantity,
@@ -849,7 +849,9 @@ import Layout from '../../layouts/Layout.astro';
         ? `${angularRows.length} angles · ${dt.toFixed(0)} ms`
         : `${planeSpectrum.length} pts · ${dt.toFixed(0)} ms`;
     } else if (state.view === 'eels-par' || state.view === 'eels-perp') {
-      statusEl.textContent = state.view === 'eels-perp' && perpMap
+      statusEl.textContent = state.view === 'eels-par' && !isParallelGeometryAllowed()
+        ? 'Configuration not allowed'
+        : state.view === 'eels-perp' && perpMap
         ? `${perpMap.w_eV.length} x ${perpMap.qz_nm.length} pts · ${dt.toFixed(0)} ms`
         : `${eelsCurve?.w.length ?? 0} pts · ${dt.toFixed(0)} ms`;
     } else {
@@ -949,8 +951,24 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  function isParallelGeometryAllowed(): boolean {
+    return state.parallelGeometry === 'inside-hole'
+      ? state.b_nm < state.a_nm
+      : state.b_nm > state.a_nm;
+  }
+
+  function parallelInvalidMessage(): string {
+    return state.parallelGeometry === 'inside-hole'
+      ? 'Inside-hole parallel trajectory requires b < a'
+      : 'Outside parallel trajectory requires b > a';
+  }
+
   function recomputeEELSPar() {
     perpMap = null;
+    if (!isParallelGeometryAllowed()) {
+      eelsCurve = { w: [], y: [] };
+      return;
+    }
     const eps_h: C = [state.eps_h, 0];
     const Nw = 240;
     const w: number[] = [];
@@ -1179,6 +1197,7 @@ import Layout from '../../layouts/Layout.astro';
     label: string;
     color: string;
     y: number[];
+    unit?: string;
     dash?: number[];
   }
   interface ChartRect { x: number; y: number; w: number; h: number; }
@@ -1586,7 +1605,8 @@ import Layout from '../../layouts/Layout.astro';
   function drawEELS() {
     const { ctx, w, h } = setupCanvas();
     const xLabel = 'Energy loss \u210F\u03C9 (eV)';
-    const yLabel = state.view === 'eels-par' ? 'dGamma/dE/dz (1/eV/nm)' : 'Gamma(E) (1/eV)';
+    const yUnit = state.view === 'eels-par' ? '1/eV/nm' : '1/eV';
+    const yLabel = `\u0393 (${yUnit})`;
     if (!eelsCurve || eelsCurve.w.length === 0) {
       // Empty state — typically for perpendicular with b ≤ a
       const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, 0, 1, xLabel, yLabel);
@@ -1597,13 +1617,22 @@ import Layout from '../../layouts/Layout.astro';
       ctx.textBaseline = 'middle';
       const message = state.view === 'eels-perp' && perpNeedsCompute
         ? 'Press Compute to update perpendicular EELS'
-        : 'Perpendicular trajectory requires b > a';
+        : state.view === 'eels-par'
+          ? parallelInvalidMessage()
+          : 'Perpendicular trajectory requires b > a';
       ctx.fillText(message, ax.m.left + ax.pw / 2, ax.m.top + ax.ph / 2);
       return;
     }
-    const series = [{ label: 'EELS', color: '#10B981', y: eelsCurve.y }];
+    const par = state.view === 'eels-par';
+    const inside = par && state.parallelGeometry === 'inside-hole';
+    const color = par ? (inside ? '#F59E0B' : '#6366F1') : '#10B981';
+    const series: PlotSeries[] = [{ label: '\u0393', color, y: eelsCurve.y, unit: yUnit }];
     const [yMin, yMax] = seriesRange(series, state.logY);
     const ax = makeAxes(ctx, w, h, state.w_min, state.w_max, yMin, yMax, xLabel, yLabel, state.logY);
+    chartXforms = ax;
+    currentXArr = eelsCurve.w;
+    currentSeries = series;
+    currentLegendBox = null;
     drawAxesFrame(ax, 6, 5, v => v.toFixed(1), state.logY ? formatLogTick : v => v.toExponential(1));
 
     ctx.save();
@@ -1611,9 +1640,6 @@ import Layout from '../../layouts/Layout.astro';
     ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
     ctx.clip();
 
-    const par = state.view === 'eels-par';
-    const inside = par && state.parallelGeometry === 'inside-hole';
-    const color = par ? (inside ? '#F59E0B' : '#6366F1') : '#10B981';
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.fillStyle = color + '18';
@@ -1706,7 +1732,7 @@ import Layout from '../../layouts/Layout.astro';
     ctx.font = '10px Inter, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const label = state.mapLogColor ? 'log10 dGamma' : 'dGamma/dE dqz';
+    const label = state.mapLogColor ? 'log10 d\u0393' : 'd\u0393/dE dqz';
     ctx.fillText(label, x + 10, y + 27);
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.fillText(`${minVal.toExponential(1)}`, x + 10, y + 40);
@@ -1822,6 +1848,10 @@ import Layout from '../../layouts/Layout.astro';
     }
     el.style.display = '';
     if (state.view === 'eels-par') {
+      if (!isParallelGeometryAllowed()) {
+        el.style.display = 'none';
+        return;
+      }
       const inside = state.parallelGeometry === 'inside-hole';
       const item = document.createElement('span');
       item.className = 'legend-item';
@@ -1832,7 +1862,7 @@ import Layout from '../../layouts/Layout.astro';
     if (state.view === 'eels-perp') {
       const item = document.createElement('span');
       item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-swatch" style="background:#10B981"></span> perpendicular trajectory · b = ${state.b_nm.toFixed(1)} nm · v/c = ${state.vFrac.toFixed(2)} · Gamma(&hbar;&omega;) = 2 integral dq_z`;
+      item.innerHTML = `<span class="legend-swatch" style="background:#10B981"></span> perpendicular trajectory · b = ${state.b_nm.toFixed(1)} nm · v/c = ${state.vFrac.toFixed(2)} · &Gamma; = 2 integral dq_z`;
       el.appendChild(item);
       return;
     }
@@ -2130,7 +2160,8 @@ import Layout from '../../layouts/Layout.astro';
       chartWrap.style.cursor = hit ? 'pointer' : 'crosshair';
       return;
     }
-    if (!chartXforms || state.view !== 'cross-section' || !currentXArr.length || !currentSeries.length) return;
+    const supportsHover = state.view === 'cross-section' || state.view === 'eels-par' || state.view === 'eels-perp';
+    if (!chartXforms || !supportsHover || !currentXArr.length || !currentSeries.length) return;
     const { m, pw, ph, invTx, xTo, yTo } = chartXforms;
     const mx = e.offsetX;
     const my = e.offsetY;
@@ -2167,11 +2198,16 @@ import Layout from '../../layouts/Layout.astro';
       ctx.arc(px, py, 4, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const xText = state.axisMode === 'lambda'
-      ? `\u03BB = ${xVal.toFixed(1)} nm`
+    const xText = state.view === 'cross-section'
+      ? (state.axisMode === 'lambda'
+        ? `\u03BB = ${xVal.toFixed(1)} nm`
+        : `E = ${xVal.toFixed(3)} eV`)
       : `E = ${xVal.toFixed(3)} eV`;
     let html = xText;
-    for (const s of currentSeries) html += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}`;
+    for (const s of currentSeries) {
+      const unitText = s.unit ? ` ${s.unit}` : '';
+      html += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}${unitText}`;
+    }
     tooltip.innerHTML = html;
     tooltip.classList.add('visible');
     const topPy = Math.min(...currentSeries.map(s => yTo(s.y[idx])).filter(Number.isFinite));
@@ -2309,7 +2345,7 @@ import Layout from '../../layouts/Layout.astro';
         s += `<line x1="14" y1="${trajY}" x2="${x2 - 7}" y2="${trajY}" stroke="${pathColor}" stroke-width="2" stroke-linecap="round"/>`;
         s += `<path d="M${x2},${trajY} l-8,-5 v10 z" fill="${pathColor}"/>`;
         s += `<circle cx="${cx}" cy="${trajY}" r="3.5" fill="#EF4444" stroke="#fff" stroke-width="1"/>`;
-        s += `<text x="16" y="${trajY - 9}" fill="${pathColor}" font-size="9" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="7">-</tspan></text>`;
+        s += `<text x="16" y="${trajY + 16}" fill="${pathColor}" font-size="9" font-weight="700" font-family="Inter,system-ui">e<tspan baseline-shift="super" font-size="7">-</tspan></text>`;
         s += `<text x="${cx + 6}" y="${trajY + 12}" fill="${pathColor}" font-size="8" font-family="Inter,system-ui">b=${state.b_nm.toFixed(0)} nm</text>`;
       } else {
         const trajX = cx + capped * r;
@@ -2509,11 +2545,11 @@ import Layout from '../../layouts/Layout.astro';
   $('reset-btn').addEventListener('click', () => {
     state.a_nm = 15;
     state.eps_h = 1.0;
-    state.materialId = 'au';
+    state.materialId = 'ag';
     state.eps1_re = 10.0;
     state.eps1_im = 0.1;
-    state.w_min = 1;
-    state.w_max = 6;
+    state.w_min = 0.2;
+    state.w_max = 4;
     state.angleEnergyEv = 2.4;
     state.axisMode = 'lambda';
     state.spectrumQuantity = 'csca';
@@ -2543,8 +2579,8 @@ import Layout from '../../layouts/Layout.astro';
     $<HTMLInputElement>('e1r-slider').value = '10';
     $<HTMLInputElement>('e1i-num').value = '0.10';
     $<HTMLInputElement>('e1i-slider').value = '0.1';
-    $<HTMLInputElement>('w-min').value = '1';
-    $<HTMLInputElement>('w-max').value = '6';
+    $<HTMLInputElement>('w-min').value = '0.2';
+    $<HTMLInputElement>('w-max').value = '4';
     $<HTMLInputElement>('angle-energy-num').value = '2.4';
     $<HTMLInputElement>('angle-energy-slider').value = '2.4';
     $<HTMLInputElement>('b-num').value = '25';
@@ -2556,7 +2592,7 @@ import Layout from '../../layouts/Layout.astro';
     qzMaxNum.value = '0.1';
     customSlopeNum.value = '0.30';
     perpGridSelect.value = 'standard';
-    materialSelect.value = 'au';
+    materialSelect.value = 'ag';
     drudeInputs.epsB.value = '1';
     drudeInputs.wpEv.value = '5';
     drudeInputs.gammaEv.value = '0.05';
