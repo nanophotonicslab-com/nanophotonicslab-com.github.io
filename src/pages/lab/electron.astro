@@ -56,7 +56,34 @@ import Layout from '../../layouts/Layout.astro';
               <button class="preset-btn" data-kev="80">80&thinsp;kV</button>
               <button class="preset-btn" data-kev="120">120&thinsp;kV</button>
               <button class="preset-btn" data-kev="200">200&thinsp;kV</button>
-              <button class="preset-btn" data-kev="300">300&thinsp;kV</button>
+            </div>
+          </div>
+
+          <div class="param param-box">
+            <div class="param-header"><label>Field probe</label></div>
+            <div class="fields">
+              <div class="field">
+                <label for="field-r">R (nm)</label>
+                <input type="text" class="field-input" id="field-r" inputmode="decimal" value="2">
+              </div>
+              <div class="field">
+                <label for="field-z">z (nm)</label>
+                <input type="text" class="field-input" id="field-z" inputmode="decimal" value="2">
+              </div>
+            </div>
+          </div>
+
+          <div class="param param-box">
+            <div class="param-header"><label>Spectral scan</label></div>
+            <div class="fields">
+              <div class="field">
+                <label for="field-w-min">&hbar;&omega;<sub>min</sub> (eV)</label>
+                <input type="text" class="field-input" id="field-w-min" inputmode="decimal" value="0.01">
+              </div>
+              <div class="field">
+                <label for="field-w-max">&hbar;&omega;<sub>max</sub> (eV)</label>
+                <input type="text" class="field-input" id="field-w-max" inputmode="decimal" value="10">
+              </div>
             </div>
           </div>
 
@@ -82,22 +109,56 @@ import Layout from '../../layouts/Layout.astro';
           </p>
         </div>
 
-        <!-- ===== Chart ===== -->
-        <div class="chart-panel card">
-          <div class="chart-header">
-            <span class="chart-title">&lambda;<sub>e</sub>&ensp;vs&ensp;K &mdash; de&nbsp;Broglie wavelength</span>
+        <!-- ===== Results ===== -->
+        <div class="results-grid">
+          <div class="result-panel card">
+            <div class="chart-header">
+              <span class="chart-title">&lambda;<sub>e</sub>&ensp;vs&ensp;K</span>
+              <span class="chart-stat" id="lambda-value">&mdash;</span>
+            </div>
+            <div class="chart-wrap" id="chart-wrap">
+              <canvas id="electron-chart" aria-label="De Broglie wavelength versus kinetic energy"></canvas>
+            </div>
           </div>
-          <div class="chart-wrap" id="chart-wrap">
-            <canvas id="electron-chart" aria-label="De Broglie wavelength versus kinetic energy"></canvas>
+
+          <div class="result-panel card">
+            <div class="chart-header">
+              <span class="chart-title">FWHM of |E(t)|</span>
+              <span class="chart-stat" id="fwhm-value">&mdash;</span>
+            </div>
+            <div class="chart-wrap" id="fwhm-chart-wrap">
+              <canvas id="fwhm-chart" aria-label="Electron field pulse FWHM versus kinetic energy"></canvas>
+            </div>
           </div>
-          <div class="chart-refs">
-            <span class="chart-refs-label">References</span>
-            <span class="ref-tag ref-tag--sem">SEM 30&thinsp;kV</span>
-            <span class="ref-tag ref-tag--tem">TEM 120&thinsp;kV</span>
-            <span class="ref-tag ref-tag--tem">TEM 200&thinsp;kV</span>
-            <span class="ref-tag ref-tag--tem">TEM 300&thinsp;kV</span>
+
+          <div class="result-panel card">
+            <div class="chart-header">
+              <span class="chart-title">Frequency-domain field</span>
+              <span class="chart-stat" id="freq-field-note">&mdash;</span>
+            </div>
+            <div class="chart-wrap" id="freq-field-wrap">
+              <canvas id="freq-field-chart" aria-label="Parallel and perpendicular electron fields in the frequency domain"></canvas>
+            </div>
+          </div>
+
+          <div class="result-panel card">
+            <div class="chart-header">
+              <span class="chart-title">Time-domain field</span>
+              <span class="chart-stat" id="time-field-note">&mdash;</span>
+            </div>
+            <div class="chart-wrap" id="time-field-wrap">
+              <canvas id="time-field-chart" aria-label="Parallel and perpendicular electron fields in the time domain"></canvas>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div class="references card">
+        <h4>References</h4>
+        <ul class="reference-list">
+          <li><span class="ref-index">[1]</span><span>F. J. Garc&iacute;a de Abajo, <em>Optical excitations in electron microscopy</em>, Reviews of Modern Physics <strong>82</strong>, 209&ndash;275 (2010).</span></li>
+          <li><span class="ref-index">[2]</span><span>J. D. Jackson, <em>Classical Electrodynamics</em>, 3rd ed. (Wiley, 1999).</span></li>
+        </ul>
       </div>
     </div>
   </section>
@@ -114,7 +175,7 @@ import Layout from '../../layouts/Layout.astro';
   .back-link:hover { color: var(--primary); }
 
   /* Layout */
-  .widget-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start; }
+  .widget-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
   .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
   .controls h3 { font-size: 1rem; }
 
@@ -129,6 +190,12 @@ import Layout from '../../layouts/Layout.astro';
   }
   .field-input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
   .field-input::placeholder { color: var(--text-muted); font-weight: 400; }
+  .param-box {
+    padding: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
 
   /* Presets */
   .param { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -170,25 +237,37 @@ import Layout from '../../layouts/Layout.astro';
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
   .theory-note strong { color: var(--text-soft); }
 
-  /* Chart */
-  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
-  .chart-header { display: flex; align-items: center; }
+  /* Results */
+  .results-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); min-width: 0; }
+  .result-panel { min-width: 0; padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-header { min-height: 1.35rem; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
   .chart-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+  .chart-stat { font-size: 0.75rem; font-weight: 600; color: var(--text-soft); font-variant-numeric: tabular-nums; }
   .chart-wrap { position: relative; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
-  .chart-refs { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
-  .chart-refs-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-  .ref-tag {
-    font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: var(--radius-full);
+  .chart-wrap canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: var(--radius-sm); }
+  #freq-field-chart,
+  #time-field-chart { cursor: crosshair; }
+  .references { width: 100%; margin-top: var(--space-lg); padding: var(--space-md); }
+  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+  .references li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.5;
   }
-  .ref-tag--sem { background: #FEF3C7; color: #92400E; }
-  .ref-tag--tem { background: #EDE9FE; color: #5B21B6; }
+  .ref-index { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 1120px) {
+    .widget-layout { grid-template-columns: 280px minmax(0, 1fr); }
+    .results-grid { grid-template-columns: 1fr; }
+  }
 
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .controls { position: static; }
     .fields { grid-template-columns: 1fr; }
-    .chart-wrap canvas { aspect-ratio: 4 / 3; }
   }
 </style>
 
@@ -203,7 +282,10 @@ import Layout from '../../layouts/Layout.astro';
   const C     = 299792458.0;
   const H     = 6.62607015e-34;
   const EV    = 1.602176634e-19;
+  const EPS0  = 8.8541878128e-12;
   const E0    = M_E * C * C;
+  const AU_NM = 0.05291772083;
+  const NM_AU = 1 / AU_NM;
 
   // ===== Conversion functions (canonical unit: eV) =====
 
@@ -275,11 +357,24 @@ import Layout from '../../layouts/Layout.astro';
     vnmfs: $('vnmfs'), ej: $('ej'), gamma: $('gamma'),
   };
 
+  const fieldInputs: Record<string, HTMLInputElement> = {
+    r: $('field-r'),
+    z: $('field-z'),
+    wMin: $('field-w-min'),
+    wMax: $('field-w-max'),
+  };
+
   const gaugeFill = $('gauge-fill');
   const gaugePct  = document.getElementById('gauge-pct')!;
+  const lambdaValue = document.getElementById('lambda-value')!;
+  const fwhmValue = document.getElementById('fwhm-value')!;
+  const freqFieldNote = document.getElementById('freq-field-note')!;
+  const timeFieldNote = document.getElementById('time-field-note')!;
 
   let activeField: string | null = null;
   let currentEv = NaN;
+  let freqHoverX: number | null = null;
+  let timeHoverX: number | null = null;
 
   // ===== Update logic =====
 
@@ -296,7 +391,7 @@ import Layout from '../../layouts/Layout.astro';
 
     updateGauge(vFromKe(eV));
     updatePresets(eV / 1000);
-    drawChart();
+    drawAllCharts();
   }
 
   function clearAll() {
@@ -306,7 +401,7 @@ import Layout from '../../layouts/Layout.astro';
     gaugeFill.style.backgroundPosition = '0% 0';
     gaugePct.innerHTML = '&mdash;';
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-    drawChart();
+    drawAllCharts();
   }
 
   function updateGauge(vc: number) {
@@ -351,6 +446,10 @@ import Layout from '../../layouts/Layout.astro';
     });
   }
 
+  for (const inp of Object.values(fieldInputs)) {
+    inp.addEventListener('input', drawAllCharts);
+  }
+
   // Presets
   document.getElementById('presets')!.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.preset-btn') as HTMLElement | null;
@@ -368,14 +467,13 @@ import Layout from '../../layouts/Layout.astro';
   // ===== Chart =====
 
   const CHART = {
-    kMin: 0.01, kMax: 10000,       // keV
+    kMin: 0.01, kMax: 1000,        // keV
     lMin: 0.1,  lMax: 1000,        // pm
-    margin: { top: 24, right: 24, bottom: 48, left: 56 },
+    margin: { top: 28, right: 18, bottom: 58, left: 58 },
     refs: [
       { k: 30,  label: 'SEM 30 kV',  color: '#D97706' },
       { k: 120, label: 'TEM 120 kV', color: '#7C3AED' },
       { k: 200, label: 'TEM 200 kV', color: '#7C3AED' },
-      { k: 300, label: 'TEM 300 kV', color: '#7C3AED' },
     ],
   };
 
@@ -383,6 +481,502 @@ import Layout from '../../layouts/Layout.astro';
   const logKMax = Math.log10(CHART.kMax);
   const logLMin = Math.log10(CHART.lMin);
   const logLMax = Math.log10(CHART.lMax);
+
+  type PlotSeries = { x: number[]; y: number[]; color: string; label: string; lineWidth?: number };
+  type PlotRef = { x: number; label: string; color: string };
+  type PlotMarker = { x: number; y: number; color: string; label?: string };
+  type HoverValue = { label: string; value: number; color: string };
+
+  const PLOT_MARGIN = { top: 28, right: 18, bottom: 58, left: 58 };
+
+  function parseFieldValue(name: string, fallback: number): number {
+    const v = parseFloat(fieldInputs[name].value);
+    return Number.isFinite(v) ? v : fallback;
+  }
+
+  function fieldSettings() {
+    const rNm = Math.max(0.001, Math.abs(parseFieldValue('r', 2)));
+    const zNm = parseFieldValue('z', 2);
+    let wMin = Math.max(1e-5, parseFieldValue('wMin', 0.01));
+    let wMax = Math.max(1e-5, parseFieldValue('wMax', 10));
+    if (wMax < wMin) [wMin, wMax] = [wMax, wMin];
+    if (Math.abs(wMax - wMin) < 1e-9) wMax = wMin + 1;
+    const points = 240;
+    return { rNm, zNm, wMin, wMax, points };
+  }
+
+  function setupCanvas(canvas: HTMLCanvasElement) {
+    const ct = chartTheme();
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.scale(dpr, dpr);
+    return { ct, ctx, w, h };
+  }
+
+  function drawEmptyChart(canvas: HTMLCanvasElement, message: string) {
+    const { ct, ctx, w, h } = setupCanvas(canvas);
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '600 12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(message, w / 2, h / 2);
+  }
+
+  function niceStep(rawStep: number): number {
+    const exp = Math.floor(Math.log10(rawStep));
+    const f = rawStep / 10 ** exp;
+    const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+    return nf * 10 ** exp;
+  }
+
+  function niceTicks(min: number, max: number, count = 5): number[] {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
+    if (min === max) {
+      const pad = Math.abs(min) > 0 ? Math.abs(min) * 0.5 : 1;
+      min -= pad;
+      max += pad;
+    }
+    const step = niceStep(Math.abs(max - min) / Math.max(1, count - 1));
+    const first = Math.ceil(min / step) * step;
+    const ticks: number[] = [];
+    for (let v = first; v <= max + step * 0.5; v += step) ticks.push(Math.abs(v) < step * 1e-10 ? 0 : v);
+    return ticks;
+  }
+
+  function logTicks(min: number, max: number): number[] {
+    const ticks: number[] = [];
+    const a = Math.ceil(Math.log10(min));
+    const b = Math.floor(Math.log10(max));
+    for (let e = a; e <= b; e++) ticks.push(10 ** e);
+    return ticks;
+  }
+
+  function axisLabel(v: number): string {
+    if (!Number.isFinite(v)) return '';
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a >= 1e4 || a < 1e-2) return v.toExponential(0);
+    if (a >= 100) return v.toFixed(0);
+    if (a >= 10) return parseFloat(v.toFixed(1)).toString();
+    return parseFloat(v.toFixed(2)).toString();
+  }
+
+  function padLinearRange(min: number, max: number, pad = 0.08): [number, number] {
+    if (min === max) {
+      const d = Math.abs(min) > 0 ? Math.abs(min) * 0.5 : 1;
+      return [min - d, max + d];
+    }
+    const d = (max - min) * pad;
+    return [min - d, max + d];
+  }
+
+  function interpolateAt(xs: number[], ys: number[], x: number): number {
+    if (xs.length === 0 || ys.length === 0) return NaN;
+    if (x <= xs[0]) return ys[0];
+    const last = Math.min(xs.length, ys.length) - 1;
+    if (x >= xs[last]) return ys[last];
+    for (let i = 0; i < last; i++) {
+      const x1 = xs[i];
+      const x2 = xs[i + 1];
+      if (x >= x1 && x <= x2) {
+        const t = (x - x1) / (x2 - x1 || 1);
+        return ys[i] + (ys[i + 1] - ys[i]) * t;
+      }
+    }
+    return NaN;
+  }
+
+  function fmtHover(v: number, unit = ''): string {
+    if (!Number.isFinite(v)) return '';
+    const a = Math.abs(v);
+    const s = a > 0 && (a < 1e-2 || a >= 1e4) ? v.toExponential(3) : parseFloat(v.toPrecision(5)).toString();
+    return unit ? `${s} ${unit}` : s;
+  }
+
+  function drawTooltip(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: number, w: number, h: number, ct: ReturnType<typeof chartTheme>) {
+    const padX = 8;
+    const padY = 6;
+    ctx.save();
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    const boxW = Math.max(...lines.map(line => ctx.measureText(line).width)) + padX * 2;
+    const boxH = lines.length * 15 + padY * 2;
+    let bx = x + 12;
+    let by = y - boxH - 10;
+    if (bx + boxW > w - 6) bx = x - boxW - 12;
+    if (by < 6) by = y + 12;
+    if (by + boxH > h - 6) by = h - boxH - 6;
+    ctx.fillStyle = ct.bg;
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, boxW, boxH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    lines.forEach((line, i) => {
+      ctx.fillStyle = i === 0 ? ct.text : ct.textSoft;
+      ctx.fillText(line, bx + padX, by + padY + i * 15);
+    });
+    ctx.restore();
+  }
+
+  function drawPlot(
+    canvas: HTMLCanvasElement,
+    series: PlotSeries[],
+    opts: {
+      xLabel: string;
+      yLabel: string;
+      xScale?: 'linear' | 'log';
+      yScale?: 'linear' | 'log';
+      xRange?: [number, number];
+      yRange?: [number, number];
+      refs?: PlotRef[];
+      marker?: PlotMarker;
+      hoverX?: number | null;
+      hoverFormatter?: (x: number, values: HoverValue[]) => string[];
+    },
+  ) {
+    const { ct, ctx, w, h } = setupCanvas(canvas);
+    const xScale = opts.xScale ?? 'linear';
+    const yScale = opts.yScale ?? 'linear';
+    const prepared = series.map(s => {
+      const x: number[] = [];
+      const y: number[] = [];
+      for (let i = 0; i < Math.min(s.x.length, s.y.length); i++) {
+        const xi = s.x[i];
+        const yi = s.y[i];
+        if (!Number.isFinite(xi) || !Number.isFinite(yi)) continue;
+        if (xScale === 'log' && xi <= 0) continue;
+        if (yScale === 'log' && yi <= 0) continue;
+        x.push(xi);
+        y.push(yi);
+      }
+      return { ...s, x, y };
+    });
+    const allX = prepared.flatMap(s => s.x);
+    const allY = prepared.flatMap(s => s.y);
+    if (allX.length === 0 || allY.length === 0) {
+      drawEmptyChart(canvas, 'No finite values');
+      return;
+    }
+
+    let xMin = opts.xRange?.[0] ?? Math.min(...allX);
+    let xMax = opts.xRange?.[1] ?? Math.max(...allX);
+    let yMin = opts.yRange?.[0] ?? Math.min(...allY);
+    let yMax = opts.yRange?.[1] ?? Math.max(...allY);
+    if (xScale === 'linear') [xMin, xMax] = padLinearRange(xMin, xMax, 0.02);
+    if (yScale === 'linear') [yMin, yMax] = padLinearRange(yMin, yMax, 0.1);
+    if (yScale === 'log') {
+      yMin = Math.max(1e-300, yMin / 1.3);
+      yMax *= 1.3;
+    }
+
+    const m = PLOT_MARGIN;
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    const tx = xScale === 'log'
+      ? (v: number) => m.left + pw * (Math.log10(v) - Math.log10(xMin)) / (Math.log10(xMax) - Math.log10(xMin))
+      : (v: number) => m.left + pw * (v - xMin) / (xMax - xMin);
+    const ty = yScale === 'log'
+      ? (v: number) => m.top + ph * (1 - (Math.log10(v) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin)))
+      : (v: number) => m.top + ph * (1 - (v - yMin) / (yMax - yMin));
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(m.left, m.top, pw, ph);
+
+    const xTicks = xScale === 'log' ? logTicks(xMin, xMax) : niceTicks(xMin, xMax, 6);
+    const yTicks = yScale === 'log' ? logTicks(yMin, yMax) : niceTicks(yMin, yMax, 5);
+    ctx.strokeStyle = ct.grid;
+    ctx.lineWidth = 1;
+    for (const x of xTicks) {
+      const px = tx(x);
+      ctx.beginPath(); ctx.moveTo(px, m.top); ctx.lineTo(px, m.top + ph); ctx.stroke();
+    }
+    for (const y of yTicks) {
+      const py = ty(y);
+      ctx.beginPath(); ctx.moveTo(m.left, py); ctx.lineTo(m.left + pw, py); ctx.stroke();
+    }
+    if (yScale === 'linear' && yMin < 0 && yMax > 0) {
+      const zy = ty(0);
+      ctx.strokeStyle = 'rgba(100, 100, 139, 0.45)';
+      ctx.beginPath(); ctx.moveTo(m.left, zy); ctx.lineTo(m.left + pw, zy); ctx.stroke();
+    }
+
+    for (const ref of opts.refs ?? []) {
+      if (ref.x < xMin || ref.x > xMax) continue;
+      const px = tx(ref.x);
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = ref.color + '70';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px, m.top); ctx.lineTo(px, m.top + ph); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.save();
+      ctx.translate(px + 4, m.top + 8);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = ref.color;
+      ctx.font = '9px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ref.label, 0, 0);
+      ctx.restore();
+    }
+
+    ctx.strokeStyle = ct.text;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, m.top + ph);
+    ctx.lineTo(m.left + pw, m.top + ph);
+    ctx.stroke();
+
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const x of xTicks) ctx.fillText(axisLabel(x), tx(x), m.top + ph + 6);
+    ctx.fillStyle = ct.text;
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(opts.xLabel, m.left + pw / 2, h - 7);
+
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (const y of yTicks) ctx.fillText(axisLabel(y), m.left - 8, ty(y));
+    ctx.save();
+    ctx.translate(12, m.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = ct.text;
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(opts.yLabel, 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(m.left, m.top, pw, ph);
+    ctx.clip();
+    for (const s of prepared) {
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.lineWidth ?? 2.2;
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < s.x.length; i++) {
+        const px = tx(s.x[i]);
+        const py = ty(s.y[i]);
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    if (opts.marker && Number.isFinite(opts.marker.x) && Number.isFinite(opts.marker.y)) {
+      const px = tx(opts.marker.x);
+      const py = ty(opts.marker.y);
+      ctx.fillStyle = opts.marker.color + '30';
+      ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = opts.marker.color;
+      ctx.strokeStyle = ct.bg;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    const hoverX = opts.hoverX;
+    if (hoverX !== null && hoverX !== undefined && hoverX >= xMin && hoverX <= xMax) {
+      const px = tx(hoverX);
+      const values: HoverValue[] = [];
+      for (const s of prepared) {
+        const y = interpolateAt(s.x, s.y, hoverX);
+        if (!Number.isFinite(y)) continue;
+        values.push({ label: s.label, value: y, color: s.color });
+        const py = ty(y);
+        if (Number.isFinite(py)) {
+          ctx.fillStyle = s.color;
+          ctx.strokeStyle = ct.bg;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      }
+      if (values.length > 0) {
+        ctx.strokeStyle = 'rgba(100, 100, 139, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(px, m.top); ctx.lineTo(px, m.top + ph); ctx.stroke();
+        ctx.setLineDash([]);
+        const primaryY = ty(values[0].value);
+        const lines = opts.hoverFormatter
+          ? opts.hoverFormatter(hoverX, values)
+          : [`x ${fmtHover(hoverX)}`, ...values.map(v => `${v.label}: ${fmtHover(v.value)}`)];
+        drawTooltip(ctx, lines, px, Number.isFinite(primaryY) ? primaryY : m.top + 12, w, h, ct);
+      }
+    }
+    ctx.restore();
+
+    let lx = m.left + 8;
+    const ly = m.top + 10;
+    ctx.font = '600 10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const s of prepared) {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(lx, ly - 4, 14, 3);
+      lx += 18;
+      ctx.fillStyle = ct.textSoft;
+      ctx.fillText(s.label, lx, ly);
+      lx += ctx.measureText(s.label).width + 14;
+    }
+  }
+
+  function bessi0(x: number): number {
+    const ax = Math.abs(x);
+    if (ax < 3.75) {
+      const y = (x / 3.75) ** 2;
+      return 1 + y * (3.5156229 + y * (3.0899424 + y * (1.2067492 + y * (0.2659732 + y * (0.0360768 + y * 0.0045813)))));
+    }
+    const y = 3.75 / ax;
+    return Math.exp(ax) / Math.sqrt(ax) * (0.39894228 + y * (0.01328592 + y * (0.00225319 + y * (-0.00157565 + y * (0.00916281 + y * (-0.02057706 + y * (0.02635537 + y * (-0.01647633 + y * 0.00392377))))))));
+  }
+
+  function bessi1(x: number): number {
+    const ax = Math.abs(x);
+    let ans: number;
+    if (ax < 3.75) {
+      const y = (x / 3.75) ** 2;
+      ans = ax * (0.5 + y * (0.87890594 + y * (0.51498869 + y * (0.15084934 + y * (0.02658733 + y * (0.00301532 + y * 0.00032411))))));
+    } else {
+      const y = 3.75 / ax;
+      ans = Math.exp(ax) / Math.sqrt(ax) * (0.39894228 + y * (-0.03988024 + y * (-0.00362018 + y * (0.00163801 + y * (-0.01031555 + y * (0.02282967 + y * (-0.02895312 + y * (0.01787654 - y * 0.00420059))))))));
+    }
+    return x < 0 ? -ans : ans;
+  }
+
+  function besselk0(x: number): number {
+    x = Math.max(x, 1e-12);
+    if (x <= 2) {
+      const y = (x * x) / 4;
+      return -Math.log(x / 2) * bessi0(x) + (-0.57721566 + y * (0.42278420 + y * (0.23069756 + y * (0.03488590 + y * (0.00262698 + y * (0.00010750 + y * 0.00000740))))));
+    }
+    const y = 2 / x;
+    return Math.exp(-x) / Math.sqrt(x) * (1.25331414 + y * (-0.07832358 + y * (0.02189568 + y * (-0.01062446 + y * (0.00587872 + y * (-0.00251540 + y * 0.00053208))))));
+  }
+
+  function besselk1(x: number): number {
+    x = Math.max(x, 1e-12);
+    if (x <= 2) {
+      const y = (x * x) / 4;
+      return Math.log(x / 2) * bessi1(x) + (1 / x) * (1 + y * (0.15443144 + y * (-0.67278579 + y * (-0.18156897 + y * (-0.01919402 + y * (-0.00110404 + y * -0.00004686))))));
+    }
+    const y = 2 / x;
+    return Math.exp(-x) / Math.sqrt(x) * (1.25331414 + y * (0.23498619 + y * (-0.03655620 + y * (0.01504268 + y * (-0.00780353 + y * (0.00325614 + y * -0.00068245))))));
+  }
+
+  function fwhmRatio(u: number, gamma: number): number {
+    const u2 = u * u;
+    return Math.sqrt(1 + u2) / Math.pow(1 + u2 / (gamma * gamma), 1.5);
+  }
+
+  function fwhmFsFromKeR(eV: number, rNm: number): number {
+    const beta = vFromKe(eV);
+    const gamma = gammaFromKe(eV);
+    if (!Number.isFinite(beta) || beta <= 0 || !Number.isFinite(gamma)) return NaN;
+    const rM = Math.max(1e-12, rNm * 1e-9);
+    if (gamma < Math.sqrt(3)) {
+      let lo = 0;
+      let hi = 1;
+      while (fwhmRatio(hi, gamma) > 0.5 && hi < 1e6) hi *= 2;
+      for (let i = 0; i < 64; i++) {
+        const mid = 0.5 * (lo + hi);
+        if (fwhmRatio(mid, gamma) > 0.5) lo = mid;
+        else hi = mid;
+      }
+      return (2 * hi * rM / (beta * C)) * 1e15;
+    }
+
+    const uMax = Math.max(16, gamma * 10);
+    const n = 1601;
+    const y: number[] = [];
+    let ymax = 0;
+    for (let i = 0; i < n; i++) {
+      const u = -uMax + (2 * uMax * i) / (n - 1);
+      const v = fwhmRatio(u, gamma);
+      y.push(v);
+      if (v > ymax) ymax = v;
+    }
+    const half = 0.5 * ymax;
+    let bestWidth = 0;
+    let openStart: number | null = null;
+    for (let i = 0; i < n - 1; i++) {
+      const u1 = -uMax + (2 * uMax * i) / (n - 1);
+      const u2 = -uMax + (2 * uMax * (i + 1)) / (n - 1);
+      const y1 = y[i] - half;
+      const y2 = y[i + 1] - half;
+      if (openStart === null && y1 >= 0) openStart = u1;
+      if (y1 * y2 < 0) {
+        const uc = u1 + (u2 - u1) * (-y1) / (y2 - y1);
+        if (openStart === null) openStart = uc;
+        else {
+          bestWidth = Math.max(bestWidth, uc - openStart);
+          openStart = null;
+        }
+      }
+    }
+    return bestWidth > 0 ? (bestWidth * rM / (beta * C)) * 1e15 : NaN;
+  }
+
+  function spectralFieldAu(rNm: number, zNm: number, wEv: number, beta: number) {
+    if (wEv <= 0 || beta <= 0 || beta >= 1) return { perp: NaN, par: NaN };
+    const rAu = Math.max(1e-9, rNm) * NM_AU;
+    const zAu = zNm * NM_AU;
+    const omega = wEv / AU_EV;
+    const gamma = 1 / Math.sqrt(1 - beta * beta);
+    const v = beta * C_AU;
+    const arg = Math.max(1e-12, (omega * rAu) / (v * gamma));
+    const phase = (omega * zAu) / v;
+    const pref = (2 * omega) / (v * v * gamma);
+    const erRe = -pref * besselk1(arg) * Math.cos(phase);
+    const ezRe = -(pref / gamma) * besselk0(arg) * Math.sin(phase);
+    return { perp: Math.abs(erRe), par: Math.abs(ezRe) };
+  }
+
+  function timeFieldVm(rNm: number, zNm: number, tFs: number, beta: number) {
+    const rM = Math.max(1e-12, rNm * 1e-9);
+    const zM = zNm * 1e-9;
+    const v = beta * C;
+    const s = zM - v * tFs * 1e-15;
+    const gammaInv2 = 1 - beta * beta;
+    const den = Math.pow(rM * rM + gammaInv2 * s * s, 1.5);
+    const pref = (-EV / (4 * Math.PI * EPS0)) * gammaInv2;
+    return { perp: pref * rM / den, par: pref * s / den };
+  }
+
+  function timeRangeFs(settings = fieldSettings(), beta = Number.isFinite(currentEv) ? vFromKe(currentEv) : NaN): [number, number] | null {
+    if (!Number.isFinite(beta) || beta <= 0) return null;
+    const v = beta * C;
+    const centerFs = (settings.zNm * 1e-9 / v) * 1e15;
+    const fwhm = Number.isFinite(currentEv) ? fwhmFsFromKeR(currentEv, settings.rNm) : NaN;
+    const halfWindow = Math.max(Number.isFinite(fwhm) ? 3 * fwhm : 0, (settings.rNm * 1e-9 / v) * 1e15 * 8, 0.01);
+    return [centerFs - halfWindow, centerFs + halfWindow];
+  }
+
+  function dataXFromPointer(canvas: HTMLCanvasElement, e: MouseEvent, xRange: [number, number]): number | null {
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const m = PLOT_MARGIN;
+    const pw = w - m.left - m.right;
+    const ph = h - m.top - m.bottom;
+    if (pw <= 0 || ph <= 0 || px < m.left || px > m.left + pw || py < m.top || py > m.top + ph) return null;
+    return xRange[0] + (xRange[1] - xRange[0]) * (px - m.left) / pw;
+  }
 
   function drawChart() {
     const ct = chartTheme();
@@ -401,6 +995,8 @@ import Layout from '../../layouts/Layout.astro';
 
     const kToX = (keV: number) => m.left + pw * (Math.log10(keV) - logKMin) / (logKMax - logKMin);
     const lToY = (pm: number)  => m.top  + ph * (1 - (Math.log10(pm) - logLMin) / (logLMax - logLMin));
+    const currentLambda = Number.isFinite(currentEv) && currentEv > 0 ? lambdaFromK(currentEv) : NaN;
+    lambdaValue.textContent = Number.isFinite(currentLambda) ? `${fmt(currentLambda)} pm` : '\u2014';
 
     // Background
     ctx.fillStyle = ct.bg;
@@ -409,7 +1005,7 @@ import Layout from '../../layouts/Layout.astro';
     // Grid
     ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
-    for (let e = -2; e <= 4; e++) {
+    for (let e = -2; e <= 3; e++) {
       const x = kToX(10 ** e);
       ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
     }
@@ -432,12 +1028,12 @@ import Layout from '../../layouts/Layout.astro';
     ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const xLabels: Record<number, string> = { '-2': '0.01', '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k', '4': '10k' };
-    for (let e = -2; e <= 4; e++) ctx.fillText(xLabels[e], kToX(10 ** e), m.top + ph + 6);
+    const xLabels: Record<number, string> = { '-2': '0.01', '-1': '0.1', '0': '1', '1': '10', '2': '100', '3': '1k' };
+    for (let e = -2; e <= 3; e++) ctx.fillText(xLabels[e], kToX(10 ** e), m.top + ph + 6);
     ctx.font = '12px Inter, system-ui, sans-serif';
     ctx.fillStyle = ct.text;
     ctx.textBaseline = 'bottom';
-    ctx.fillText('K (keV)', m.left + pw / 2, h - 4);
+    ctx.fillText('K (keV)', m.left + pw / 2, h - 7);
 
     // Y labels
     ctx.textAlign = 'right';
@@ -504,45 +1100,176 @@ import Layout from '../../layouts/Layout.astro';
     // Operating point
     if (isFinite(currentEv) && currentEv > 0) {
       const keV = currentEv / 1000;
-      const lam = lambdaFromK(currentEv);
+      const lam = currentLambda;
       if (keV >= CHART.kMin && keV <= CHART.kMax && lam >= CHART.lMin && lam <= CHART.lMax) {
         const x = kToX(keV), y = lToY(lam);
 
-        // Crosshairs
-        ctx.setLineDash([2, 3]);
-        ctx.strokeStyle = '#F43F5E50';
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(m.left, y); ctx.lineTo(m.left + pw, y); ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Glow
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, 14);
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 11);
         grad.addColorStop(0, 'rgba(244,63,94,0.25)');
         grad.addColorStop(1, 'rgba(244,63,94,0)');
         ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2); ctx.fill();
 
-        // Dot
         ctx.fillStyle = '#F43F5E';
         ctx.strokeStyle = ct.bg;
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // Value label
-        ctx.fillStyle = ct.text;
-        ctx.font = '600 10px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${fmt(keV)} keV, ${fmt(lam)} pm`, x + 10, y - 8);
+        ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       }
     }
   }
 
+  function referenceGuides(): PlotRef[] {
+    return CHART.refs.map(ref => ({ x: ref.k, label: ref.label, color: ref.color }));
+  }
+
+  function drawFwhmChart() {
+    const canvas = document.getElementById('fwhm-chart') as HTMLCanvasElement;
+    const settings = fieldSettings();
+    const x: number[] = [];
+    const y: number[] = [];
+    const n = 320;
+    for (let i = 0; i < n; i++) {
+      const logK = logKMin + (logKMax - logKMin) * i / (n - 1);
+      const keV = 10 ** logK;
+      const fwhm = fwhmFsFromKeR(keV * 1000, settings.rNm);
+      if (Number.isFinite(fwhm) && fwhm > 0) {
+        x.push(keV);
+        y.push(fwhm);
+      }
+    }
+    const currentKeV = currentEv / 1000;
+    const currentFwhm = Number.isFinite(currentEv) ? fwhmFsFromKeR(currentEv, settings.rNm) : NaN;
+    fwhmValue.textContent = Number.isFinite(currentFwhm)
+      ? `${fmt(currentFwhm)} fs`
+      : `R=${fmt(settings.rNm)} nm`;
+    drawPlot(canvas, [
+      { x, y, color: '#14B8A6', label: 'FWHM', lineWidth: 2.4 },
+    ], {
+      xLabel: 'K (keV)',
+      yLabel: 'FWHM (fs)',
+      xScale: 'log',
+      yScale: 'log',
+      xRange: [CHART.kMin, CHART.kMax],
+      refs: referenceGuides(),
+      marker: Number.isFinite(currentFwhm) && currentKeV >= CHART.kMin && currentKeV <= CHART.kMax
+        ? { x: currentKeV, y: currentFwhm, color: '#F43F5E' }
+        : undefined,
+    });
+  }
+
+  function drawFrequencyFieldChart() {
+    const canvas = document.getElementById('freq-field-chart') as HTMLCanvasElement;
+    const settings = fieldSettings();
+    const beta = Number.isFinite(currentEv) ? vFromKe(currentEv) : NaN;
+    freqFieldNote.textContent = `R=${fmt(settings.rNm)} nm, z=${fmt(settings.zNm)} nm`;
+    if (!Number.isFinite(beta) || beta <= 0) {
+      drawEmptyChart(canvas, 'Set K to draw fields');
+      return;
+    }
+    const x: number[] = [];
+    const perp: number[] = [];
+    const par: number[] = [];
+    for (let i = 0; i < settings.points; i++) {
+      const wEv = settings.wMin + (settings.wMax - settings.wMin) * i / Math.max(1, settings.points - 1);
+      const f = spectralFieldAu(settings.rNm, settings.zNm, wEv, beta);
+      x.push(wEv);
+      perp.push(f.perp);
+      par.push(f.par);
+    }
+    drawPlot(canvas, [
+      { x, y: perp, color: '#2563EB', label: 'E_perp' },
+      { x, y: par, color: '#D97706', label: 'E_parallel' },
+    ], {
+      xLabel: 'Photon energy \u210F\u03C9 (eV)',
+      yLabel: '|E_omega| (a.u.)',
+      yScale: 'log',
+      xRange: [settings.wMin, settings.wMax],
+      hoverX: freqHoverX,
+      hoverFormatter: (omegaEv, values) => [
+        `\u210F\u03C9 = ${fmtHover(omegaEv, 'eV')}`,
+        ...values.map(v => `${v.label}: ${fmtHover(v.value, 'a.u.')}`),
+      ],
+    });
+  }
+
+  function drawTimeFieldChart() {
+    const canvas = document.getElementById('time-field-chart') as HTMLCanvasElement;
+    const settings = fieldSettings();
+    const beta = Number.isFinite(currentEv) ? vFromKe(currentEv) : NaN;
+    timeFieldNote.textContent = `R=${fmt(settings.rNm)} nm, z=${fmt(settings.zNm)} nm`;
+    if (!Number.isFinite(beta) || beta <= 0) {
+      drawEmptyChart(canvas, 'Set K to draw fields');
+      return;
+    }
+    const range = timeRangeFs(settings, beta);
+    if (!range) {
+      drawEmptyChart(canvas, 'Set K to draw fields');
+      return;
+    }
+    const n = 520;
+    const x: number[] = [];
+    const perp: number[] = [];
+    const par: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const tFs = range[0] + (range[1] - range[0]) * i / (n - 1);
+      const f = timeFieldVm(settings.rNm, settings.zNm, tFs, beta);
+      x.push(tFs);
+      perp.push(f.perp);
+      par.push(f.par);
+    }
+    drawPlot(canvas, [
+      { x, y: perp, color: '#2563EB', label: 'E_perp' },
+      { x, y: par, color: '#D97706', label: 'E_parallel' },
+    ], {
+      xLabel: 'Time t (fs)',
+      yLabel: 'E (V/m)',
+      xRange: range,
+      hoverX: timeHoverX,
+      hoverFormatter: (tFs, values) => [
+        `t = ${fmtHover(tFs, 'fs')}`,
+        ...values.map(v => `${v.label}: ${fmtHover(v.value, 'V/m')}`),
+      ],
+    });
+  }
+
+  function drawAllCharts() {
+    drawChart();
+    drawFwhmChart();
+    drawFrequencyFieldChart();
+    drawTimeFieldChart();
+  }
+
   // Resize handling
-  new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
+  const resizeObserver = new ResizeObserver(drawAllCharts);
+  document.querySelectorAll('.chart-wrap').forEach(el => resizeObserver.observe(el));
 
-  onThemeChange(drawChart);
+  const freqFieldCanvas = document.getElementById('freq-field-chart') as HTMLCanvasElement;
+  const timeFieldCanvas = document.getElementById('time-field-chart') as HTMLCanvasElement;
 
-  // Initial draw
-  drawChart();
+  freqFieldCanvas.addEventListener('mousemove', (e) => {
+    const settings = fieldSettings();
+    freqHoverX = dataXFromPointer(freqFieldCanvas, e, [settings.wMin, settings.wMax]);
+    drawAllCharts();
+  });
+  freqFieldCanvas.addEventListener('mouseleave', () => {
+    freqHoverX = null;
+    drawAllCharts();
+  });
+
+  timeFieldCanvas.addEventListener('mousemove', (e) => {
+    const settings = fieldSettings();
+    const beta = Number.isFinite(currentEv) ? vFromKe(currentEv) : NaN;
+    const range = timeRangeFs(settings, beta);
+    timeHoverX = range ? dataXFromPointer(timeFieldCanvas, e, range) : null;
+    drawAllCharts();
+  });
+  timeFieldCanvas.addEventListener('mouseleave', () => {
+    timeHoverX = null;
+    drawAllCharts();
+  });
+
+  onThemeChange(drawAllCharts);
+
+  // Initial state
+  updateFrom((parseFloat(inputs.kev.value || inputs.kev.placeholder || '100') || 100) * 1000, 'init');
 </script>
