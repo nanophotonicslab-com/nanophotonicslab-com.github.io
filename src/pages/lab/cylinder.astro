@@ -234,15 +234,33 @@ import Layout from '../../layouts/Layout.astro';
             </div>
           </div>
           <div class="chart-wrap" id="chart-wrap">
-            <canvas id="cyl-chart" aria-label="Cylinder dispersion or EELS chart"></canvas>
-            <canvas id="chart-overlay" aria-hidden="true"></canvas>
-            <div class="axis-overlay" id="axis-overlay">
-              <div class="view-tabs view-tabs--toolbar" id="axis-tabs" role="radiogroup" aria-label="X axis">
-                <button class="view-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
-                <button class="view-tab" data-axis="energy" role="radio" aria-checked="false">&hbar;&omega; (eV)</button>
+            <div class="dispersion-plot-panel" id="dispersion-plot-panel">
+              <div class="plot-panel-toolbar" id="dispersion-plot-toolbar" style="display:none">
+                <span class="plot-panel-title">Dispersion relation</span>
+              </div>
+              <div class="chart-canvas-box" id="chart-canvas-box">
+                <canvas id="cyl-chart" aria-label="Cylinder dispersion or EELS chart"></canvas>
+                <canvas id="chart-overlay" aria-hidden="true"></canvas>
+                <div class="axis-overlay" id="axis-overlay">
+                  <div class="view-tabs view-tabs--toolbar" id="axis-tabs" role="radiogroup" aria-label="X axis">
+                    <button class="view-tab active" data-axis="lambda" role="radio" aria-checked="true">&lambda; (nm)</button>
+                    <button class="view-tab" data-axis="energy" role="radio" aria-checked="false">&hbar;&omega; (eV)</button>
+                  </div>
+                </div>
+                <div class="chart-tooltip" id="chart-tooltip"></div>
               </div>
             </div>
-            <div class="chart-tooltip" id="chart-tooltip"></div>
+            <div class="phase-plot-panel" id="phase-plot-panel" style="display:none">
+              <div class="plot-panel-toolbar">
+                <span class="plot-panel-title">Group velocity</span>
+                <div class="view-tabs view-tabs--toolbar" id="phase-axis-tabs" role="radiogroup" aria-label="Group velocity vertical axis">
+                  <button class="view-tab active" data-phase-axis="q" role="radio" aria-checked="true">q<sub>z</sub></button>
+                  <button class="view-tab" data-phase-axis="energy" role="radio" aria-checked="false">&hbar;&omega;</button>
+                </div>
+              </div>
+              <canvas id="phase-chart" aria-label="Cylinder guided-mode group velocity chart"></canvas>
+              <div class="chart-tooltip" id="phase-tooltip"></div>
+            </div>
           </div>
           <input type="range" class="param-slider angular-slider" id="angle-energy-slider" min="0.5" max="6" step="0.05" value="2.4" style="display:none">
           <div class="chart-legend" id="chart-legend" style="display:none"></div>
@@ -280,6 +298,76 @@ import Layout from '../../layouts/Layout.astro';
               <label class="map-inline-control">q<sub>max</sub>
                 <input type="number" class="param-number param-number--sm" id="qz-max-num" value="0.1" step="0.01" min="0.02">
               </label>
+            </div>
+          </div>
+          <div class="field-profile-panel" id="field-profile-panel" style="display:none">
+            <div class="field-profile-toolbar">
+              <div>
+                <span class="field-profile-title" id="field-profile-title">Mode field profile</span>
+                <span class="field-profile-meta" id="field-profile-meta">Select a point in the dispersion map</span>
+              </div>
+              <div class="field-profile-actions">
+                <button type="button" id="field-normalized-toggle" class="chart-tool-btn" title="Normalize each field panel to its own range">Normalized</button>
+                <button type="button" id="field-log-toggle" class="chart-tool-btn" title="Toggle log10 scale for |E|">Log10 |E|</button>
+              </div>
+            </div>
+            <div class="field-profile-body" id="field-profile-body">
+              <div class="field-profile-grid">
+                <div class="field-tile">
+                  <div class="field-tile__header">
+                    <span class="field-tile__label" id="field-ex-label">Re E<sub>x</sub></span>
+                    <div class="field-component-toggle" role="radiogroup" aria-label="E x component">
+                      <button type="button" class="field-mode-btn active" data-field-component="ex" data-field-part="re" aria-checked="true">Re</button>
+                      <button type="button" class="field-mode-btn" data-field-component="ex" data-field-part="im" aria-checked="false">Im</button>
+                    </div>
+                  </div>
+                  <canvas id="field-ex-canvas" aria-label="Selected mode Re Ex field"></canvas>
+                </div>
+                <div class="field-tile">
+                  <div class="field-tile__header">
+                    <span class="field-tile__label" id="field-ey-label">Re E<sub>y</sub></span>
+                    <div class="field-component-toggle" role="radiogroup" aria-label="E y component">
+                      <button type="button" class="field-mode-btn active" data-field-component="ey" data-field-part="re" aria-checked="true">Re</button>
+                      <button type="button" class="field-mode-btn" data-field-component="ey" data-field-part="im" aria-checked="false">Im</button>
+                    </div>
+                  </div>
+                  <canvas id="field-ey-canvas" aria-label="Selected mode Re Ey field"></canvas>
+                </div>
+                <div class="field-tile">
+                  <div class="field-tile__header">
+                    <span class="field-tile__label" id="field-ez-label">Re E<sub>z</sub></span>
+                    <div class="field-component-toggle" role="radiogroup" aria-label="E z component">
+                      <button type="button" class="field-mode-btn active" data-field-component="ez" data-field-part="re" aria-checked="true">Re</button>
+                      <button type="button" class="field-mode-btn" data-field-component="ez" data-field-part="im" aria-checked="false">Im</button>
+                    </div>
+                  </div>
+                  <canvas id="field-ez-canvas" aria-label="Selected mode Re Ez field"></canvas>
+                </div>
+                <div class="field-tile">
+                  <div class="field-tile__header">
+                    <span class="field-tile__label" id="field-mag-label">|E|</span>
+                  </div>
+                  <canvas id="field-mag-canvas" aria-label="Selected mode electric-field magnitude"></canvas>
+                </div>
+              </div>
+              <div class="field-colorbar-rail" id="field-colorbar-rail">
+                <canvas id="field-colorbar-canvas" aria-label="Selected mode field color scale"></canvas>
+              </div>
+            </div>
+            <div class="download-bar field-export-bar">
+              <span class="download-label">Export fields</span>
+              <button id="field-dl-png" class="dl-btn" title="Download selected fields as PNG" data-umami-event="cylinder-field-export" data-umami-event-format="png">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="field-dl-csv" class="dl-btn" title="Download selected field data as CSV" data-umami-event="cylinder-field-export" data-umami-event-format="csv">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="field-share-btn" class="dl-btn" title="Copy shareable link" data-umami-event="share" data-umami-event-page="cylinder-fields">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
             </div>
           </div>
         </div>
@@ -522,8 +610,41 @@ import Layout from '../../layouts/Layout.astro';
   .angular-pol-wrap .view-tabs { width: fit-content; }
   .angular-slider { width: 220px; max-width: 100%; margin: -0.15rem 0 var(--space-sm); }
   .chart-wrap { position: relative; cursor: crosshair; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  .chart-wrap.is-dispersion-split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    align-items: stretch;
+  }
+  .dispersion-plot-panel,
+  .phase-plot-panel {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-canvas-box { position: relative; min-width: 0; }
+  .chart-canvas-box canvas,
+  .phase-plot-panel canvas {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+    border-radius: var(--radius-sm);
+  }
   #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+  .plot-panel-toolbar {
+    min-height: 1.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
+  }
+  .plot-panel-title {
+    font-size: 0.8rem;
+    font-weight: 750;
+    color: var(--text);
+  }
   .axis-overlay {
     position: absolute;
     left: 6px;
@@ -604,6 +725,120 @@ import Layout from '../../layouts/Layout.astro';
     justify-content: flex-end;
     margin-top: var(--space-xs);
   }
+  .field-profile-panel {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--bg-muted);
+  }
+  .field-profile-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    flex-wrap: wrap;
+  }
+  .field-profile-title {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 750;
+    color: var(--text);
+  }
+  .field-profile-meta {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    font-weight: 550;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .field-profile-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+  }
+  .field-profile-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 58px;
+    gap: var(--space-sm);
+    align-items: stretch;
+  }
+  .field-profile-body.is-normalized {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .field-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+  .field-tile {
+    min-width: 0;
+    padding: 0.55rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  .field-tile__header {
+    min-height: 1.45rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .field-tile__label {
+    display: inline-block;
+    min-width: 4.2rem;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1.2;
+  }
+  .field-component-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    flex: 0 0 auto;
+  }
+  .field-mode-btn {
+    min-width: 1.8rem;
+    padding: 0.12rem 0.35rem;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    font: 700 0.62rem var(--font);
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .field-mode-btn.active {
+    background: rgba(99,102,241,0.12);
+    color: var(--primary);
+  }
+  .field-tile canvas {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: block;
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .field-colorbar-rail {
+    min-width: 0;
+    padding: 1.85rem 0 0;
+  }
+  .field-colorbar-rail canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+    display: block;
+  }
+  .field-export-bar {
+    margin-top: var(--space-md);
+  }
 
   .references { margin-top: var(--space-lg); }
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
@@ -629,7 +864,11 @@ import Layout from '../../layouts/Layout.astro';
   @media (max-width: 900px) {
     .widget-layout { grid-template-columns: 1fr; }
     .controls { position: static; }
-    .chart-wrap canvas { aspect-ratio: 4 / 3; }
+    .chart-wrap.is-dispersion-split { grid-template-columns: 1fr; }
+    .chart-canvas-box canvas,
+    .phase-plot-panel canvas { aspect-ratio: 4 / 3; }
+    .field-profile-body { grid-template-columns: 1fr; }
+    .field-colorbar-rail { padding-top: 0; min-height: 160px; }
   }
 </style>
 
@@ -641,6 +880,10 @@ import Layout from '../../layouts/Layout.astro';
     eelsParallel,
     eelsPerpendicularQResolved,
     HC_EV_NM,
+    Cx,
+    besselJ,
+    besselJ_d,
+    besselK,
   } from '../../lib/cylinder.ts';
   import type { C } from '../../lib/cylinder.ts';
   import {
@@ -662,6 +905,9 @@ import Layout from '../../layouts/Layout.astro';
   type AngularPolMode = 'total' | 'perp' | 'par';
   type ParallelGeometry = 'outside' | 'inside-hole';
   type PerpGridQuality = 'standard' | 'fine' | 'high';
+  type FieldComponent = 'ex' | 'ey' | 'ez';
+  type FieldPart = 're' | 'im';
+  type PhaseAxis = 'q' | 'energy';
 
   // ===== State =====
 
@@ -692,6 +938,10 @@ import Layout from '../../layouts/Layout.astro';
     mapShowElectron: true,
     mapShowCustom: false,
     mapCustomSlope: 0.3,
+    phaseAxis: 'q' as PhaseAxis,
+    fieldLogMag: false,
+    fieldNormalized: false,
+    fieldParts: { ex: 're', ey: 're', ez: 're' } as Record<FieldComponent, FieldPart>,
     perpGridQuality: 'standard' as PerpGridQuality,
     drude: { epsB: 1, wpEv: 5, gammaEv: 0.05 } as DrudeParams,
   };
@@ -708,6 +958,14 @@ import Layout from '../../layouts/Layout.astro';
   interface MBranch {
     m: number;
     points: { w: number; q: number }[];
+  }
+
+  interface FieldSelection {
+    m: number;
+    w: number;
+    q: number;
+    modeLabel: string;
+    modeKind: 'TE' | 'TM' | 'hybrid';
   }
 
   interface PlaneWavePoint {
@@ -746,6 +1004,26 @@ import Layout from '../../layouts/Layout.astro';
     rect: ChartRect;
   }
   let dispersionLegendHits: LegendHit[] = [];
+  interface DispersionPointHit {
+    m: number;
+    w: number;
+    q: number;
+    x: number;
+    y: number;
+  }
+  let dispersionPointHits: DispersionPointHit[] = [];
+  interface GroupVelocityPointHit {
+    m: number;
+    w: number;
+    q: number;
+    vg: number;
+    modeLabel: string;
+    x: number;
+    y: number;
+  }
+  let groupVelocityPointHits: GroupVelocityPointHit[] = [];
+  let groupVelocityPointsCache: Omit<GroupVelocityPointHit, 'x' | 'y'>[] = [];
+  let selectedFieldPoint: FieldSelection | null = null;
 
   function clampFinite(value: number, min: number, max: number, fallback: number): number {
     if (!Number.isFinite(value)) return fallback;
@@ -811,6 +1089,249 @@ import Layout from '../../layouts/Layout.astro';
     const sizeParameter = state.a_nm * wEv * nh / HC_EV_NM;
     const relativeIndex: C = [n / nh, k / nh];
     return cylinderPlaneWaveNormal(sizeParameter, relativeIndex, 180, intervals);
+  }
+
+  // ===== Guided-mode field profile for selected dispersion points =====
+
+  const FIELD_GRID_N = 111;
+
+  interface GuidedModeTerms {
+    omega: number;
+    beta: number;
+    u: number;
+    decay: number;
+    v2: number;
+    epsc: number;
+    epsh: number;
+    A: number;
+    B: number;
+  }
+
+  interface FieldProfile {
+    n: number;
+    limNm: number;
+    components: Record<FieldComponent, { re: number[]; im: number[] }>;
+    mag: number[];
+  }
+
+  function besselK_d(m: number, z: C): C {
+    return Cx.scale(Cx.add(besselK(m - 1, z), besselK(m + 1, z)), -0.5);
+  }
+
+  function besselJ_d_safe(m: number, z: C): C {
+    if (Cx.abs(z) > 1e-12) return besselJ_d(m, z);
+    return m === 1 ? [0.5, 0] : [0, 0];
+  }
+
+  function guidedModeTerms(sel: FieldSelection): GuidedModeTerms | null {
+    const epsc = state.eps1_re;
+    const epsh = state.eps_h;
+    if (!Number.isFinite(epsc) || !Number.isFinite(epsh) || epsc <= epsh || epsh <= 0) return null;
+    const omega = sel.w * state.a_nm / HC_EV_NM;
+    const beta = sel.q * state.a_nm;
+    const u2 = epsc * omega * omega - beta * beta;
+    const w2 = beta * beta - epsh * omega * omega;
+    if (u2 <= 0 || w2 <= 0) return null;
+    const u = Math.sqrt(u2);
+    const decay = Math.sqrt(w2);
+    const m = Math.abs(sel.m);
+    const J = besselJ(m, [u, 0]);
+    const Jp = besselJ_d_safe(m, [u, 0]);
+    const K = besselK(m, [decay, 0]);
+    const Kp = besselK_d(m, [decay, 0]);
+    if (Cx.abs(J) < 1e-12 || Cx.abs(K) < 1e-300) return null;
+    const jr = Cx.div(Jp, Cx.scale(J, u))[0];
+    const kr = Cx.div(Kp, Cx.scale(K, decay))[0];
+    return {
+      omega,
+      beta,
+      u,
+      decay,
+      v2: u2 + w2,
+      epsc,
+      epsh,
+      A: jr + kr,
+      B: epsc * jr + epsh * kr,
+    };
+  }
+
+  function classifyModeKind(m: number, w: number, q: number): FieldSelection['modeKind'] {
+    if (m !== 0) return 'hybrid';
+    const probe: FieldSelection = { m, w, q, modeLabel: 'm = 0', modeKind: 'TM' };
+    const terms = guidedModeTerms(probe);
+    if (!terms) return 'TM';
+    return Math.abs(terms.A) < Math.abs(terms.B) ? 'TE' : 'TM';
+  }
+
+  function labelForModePoint(m: number, w: number, q: number): string {
+    const kind = classifyModeKind(m, w, q);
+    if (m === 0) return `${kind}01`;
+    const branch = branches.find(br => br.m === m);
+    const sameEnergy = (branch?.points ?? [])
+      .filter(p => Math.abs(p.w - w) < 1e-8)
+      .sort((a, b) => b.q - a.q);
+    const branchIndex = Math.max(1, sameEnergy.findIndex(p => Math.abs(p.q - q) < 1e-7) + 1);
+    const family = branchIndex === 1 ? 'HE' : 'EH';
+    const radial = branchIndex === 1 ? 1 : branchIndex - 1;
+    return `${family}${m}${radial}`;
+  }
+
+  function makeFieldSelection(m: number, w: number, q: number): FieldSelection {
+    return {
+      m,
+      w,
+      q,
+      modeKind: classifyModeKind(m, w, q),
+      modeLabel: labelForModePoint(m, w, q),
+    };
+  }
+
+  function allDispersionPoints(): { m: number; w: number; q: number }[] {
+    return branches.flatMap(br => br.points.map(p => ({ m: br.m, w: p.w, q: p.q })));
+  }
+
+  function keepNearestFieldSelection(previous: FieldSelection | null): FieldSelection | null {
+    const pts = allDispersionPoints();
+    if (pts.length === 0) return null;
+    if (!previous) {
+      const midEnergy = 0.5 * (state.w_min + state.w_max);
+      const first = pts.reduce((best, p) => Math.abs(p.w - midEnergy) < Math.abs(best.w - midEnergy) ? p : best, pts[0]);
+      return makeFieldSelection(first.m, first.w, first.q);
+    }
+    let best = pts[0];
+    let bestScore = Infinity;
+    const qScale = Math.max(1e-6, qMaxAuto);
+    const wScale = Math.max(1e-6, state.w_max - state.w_min);
+    for (const p of pts) {
+      const mPenalty = p.m === previous.m ? 0 : 8;
+      const dq = (p.q - previous.q) / qScale;
+      const dw = (p.w - previous.w) / wScale;
+      const score = mPenalty + dq * dq + dw * dw;
+      if (score < bestScore) {
+        best = p;
+        bestScore = score;
+      }
+    }
+    return makeFieldSelection(best.m, best.w, best.q);
+  }
+
+  function jOverRho(m: number, u: number, rho: number): C {
+    if (rho > 1e-10) return Cx.scale(besselJ(m, [u * rho, 0]), 1 / rho);
+    if (m === 1) return [u / 2, 0];
+    return [0, 0];
+  }
+
+  function computeSelectedFieldProfile(): FieldProfile | null {
+    if (!selectedFieldPoint || state.materialId !== 'custom') return null;
+    const terms = guidedModeTerms(selectedFieldPoint);
+    if (!terms) return null;
+    const m = Math.abs(selectedFieldPoint.m);
+    const kind = selectedFieldPoint.modeKind;
+    const n = FIELD_GRID_N;
+    const limNm = 2 * state.a_nm;
+    const count = n * n;
+    const exC: C[] = new Array(count);
+    const eyC: C[] = new Array(count);
+    const ezC: C[] = new Array(count);
+    let dominant: C = [1, 0];
+    let dominantAbs = 0;
+
+    const Jb = besselJ(m, [terms.u, 0]);
+    const Kb = besselK(m, [terms.decay, 0]);
+    const nu: C = kind === 'hybrid' && Math.abs(terms.A) > 1e-14
+      ? [0, (m * terms.beta * terms.v2) / (terms.omega * terms.u * terms.u * terms.decay * terms.decay * terms.A)]
+      : [0, 0];
+
+    for (let iy = 0; iy < n; iy++) {
+      const y = limNm - (2 * limNm * iy) / (n - 1);
+      for (let ix = 0; ix < n; ix++) {
+        const idx = iy * n + ix;
+        const x = -limNm + (2 * limNm * ix) / (n - 1);
+        const rho = Math.hypot(x, y) / Math.max(1e-12, state.a_nm);
+        const phi = Math.atan2(y, x);
+        let EsR: C = [0, 0], EsP: C = [0, 0], EsZ: C = [0, 0];
+        let EpR: C = [0, 0], EpP: C = [0, 0], EpZ: C = [0, 0];
+
+        if (rho < 1) {
+          const z = [terms.u * rho, 0] as C;
+          const J = besselJ(m, z);
+          const Jp = besselJ_d_safe(m, z);
+          const Jover = jOverRho(m, terms.u, rho);
+          const JpOverJb = Cx.div(Jp, Jb);
+          const JoverJb = Cx.div(Jover, Jb);
+          EpR = Cx.scale(Cx.mul(Cx.i(), JpOverJb), terms.beta / terms.u);
+          EpP = Cx.scale(JoverJb, -terms.beta * m / (terms.u * terms.u));
+          EpZ = Cx.div(J, Jb);
+          EsR = Cx.scale(JoverJb, -terms.omega * m / (terms.u * terms.u));
+          EsP = Cx.scale(Cx.mul(Cx.i(), JpOverJb), -terms.omega / terms.u);
+          EsZ = [0, 0];
+        } else {
+          const safeRho = Math.max(rho, 1e-12);
+          const z = [terms.decay * safeRho, 0] as C;
+          const K = besselK(m, z);
+          const Kp = besselK_d(m, z);
+          const KpOverKb = Cx.div(Kp, Kb);
+          const KoverKb = Cx.div(Cx.scale(K, 1 / safeRho), Kb);
+          EpR = Cx.scale(Cx.mul(Cx.i(), KpOverKb), -terms.beta / terms.decay);
+          EpP = Cx.scale(KoverKb, terms.beta * m / (terms.decay * terms.decay));
+          EpZ = Cx.div(K, Kb);
+          EsR = Cx.scale(KoverKb, terms.omega * m / (terms.decay * terms.decay));
+          EsP = Cx.scale(Cx.mul(Cx.i(), KpOverKb), terms.omega / terms.decay);
+          EsZ = [0, 0];
+        }
+
+        let ER: C, EP: C, EZ: C;
+        if (kind === 'TE') {
+          ER = EsR; EP = EsP; EZ = EsZ;
+        } else if (kind === 'TM') {
+          ER = EpR; EP = EpP; EZ = EpZ;
+        } else {
+          ER = Cx.add(Cx.mul(nu, EsR), EpR);
+          EP = Cx.add(Cx.mul(nu, EsP), EpP);
+          EZ = Cx.add(Cx.mul(nu, EsZ), EpZ);
+        }
+
+        const phase: C = [Math.cos(m * phi), Math.sin(m * phi)];
+        ER = Cx.mul(ER, phase);
+        EP = Cx.mul(EP, phase);
+        EZ = Cx.mul(EZ, phase);
+        const c = Math.cos(phi);
+        const s = Math.sin(phi);
+        const Ex = Cx.sub(Cx.scale(ER, c), Cx.scale(EP, s));
+        const Ey = Cx.add(Cx.scale(ER, s), Cx.scale(EP, c));
+        exC[idx] = Ex;
+        eyC[idx] = Ey;
+        ezC[idx] = EZ;
+        for (const comp of [Ex, Ey, EZ]) {
+          const a = Cx.abs(comp);
+          if (a > dominantAbs) {
+            dominant = comp;
+            dominantAbs = a;
+          }
+        }
+      }
+    }
+
+    const phase: C = [Math.cos(-Cx.arg(dominant)), Math.sin(-Cx.arg(dominant))];
+    const components: Record<FieldComponent, { re: number[]; im: number[] }> = {
+      ex: { re: new Array<number>(count), im: new Array<number>(count) },
+      ey: { re: new Array<number>(count), im: new Array<number>(count) },
+      ez: { re: new Array<number>(count), im: new Array<number>(count) },
+    };
+    const mag = new Array<number>(count);
+    for (let i = 0; i < count; i++) {
+      const ex = Cx.mul(phase, exC[i]);
+      const ey = Cx.mul(phase, eyC[i]);
+      const ez = Cx.mul(phase, ezC[i]);
+      components.ex.re[i] = ex[0];
+      components.ex.im[i] = ex[1];
+      components.ey.re[i] = ey[0];
+      components.ey.im[i] = ey[1];
+      components.ez.re[i] = ez[0];
+      components.ez.im[i] = ez[1];
+      mag[i] = Math.hypot(Cx.abs(ex), Cx.abs(ey), Cx.abs(ez));
+    }
+    return { n, limNm, components, mag };
   }
 
   // ===== Compute =====
@@ -949,6 +1470,7 @@ import Layout from '../../layouts/Layout.astro';
       }
       branches.push({ m, points: pts });
     }
+    selectedFieldPoint = keepNearestFieldSelection(selectedFieldPoint);
   }
 
   function isParallelGeometryAllowed(): boolean {
@@ -1060,6 +1582,16 @@ import Layout from '../../layouts/Layout.astro';
     return { canvas, ctx, w, h };
   }
 
+  function setupPhaseCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const canvas = phaseCanvas;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    return { canvas, ctx, w, h };
+  }
+
   function makeAxes(
     ctx: CanvasRenderingContext2D, w: number, h: number,
     xMin: number, xMax: number, yMin: number, yMax: number,
@@ -1156,6 +1688,8 @@ import Layout from '../../layouts/Layout.astro';
 
   function drawChart() {
     if (state.view !== 'disp-wq' && state.view !== 'disp-bV') dispersionLegendHits = [];
+    if (state.view !== 'disp-wq') dispersionPointHits = [];
+    if (state.view !== 'disp-wq') groupVelocityPointHits = [];
     if (state.view === 'cross-section') drawPlaneWaveSpectrum();
     else {
       chartXforms = null;
@@ -1164,11 +1698,15 @@ import Layout from '../../layouts/Layout.astro';
       currentLegendBox = null;
       clearOverlay();
       if (state.view === 'angular') drawPlaneWaveAngular();
-      else if (state.view === 'disp-wq') drawDispersionWQ();
+      else if (state.view === 'disp-wq') {
+        drawPhaseVelocityPlot();
+        drawDispersionWQ();
+      }
       else if (state.view === 'disp-bV') drawDispersionBV();
       else drawEELS();  // both par and perp share the same 1D renderer
     }
     drawPerpMap();
+    drawFieldProfile();
   }
 
   function strokeSeries(ax: Axes, xs: number[], ys: number[], color: string, width = 2, dash: number[] = []) {
@@ -1394,7 +1932,6 @@ import Layout from '../../layouts/Layout.astro';
       dispersionLegendHits.push({ m: order, rect: { x: lx, y: ly + 5 + i * rowH, w: legendW, h: rowH } });
     }
     ctx.restore();
-    drawDispersionModeLegend(ax);
   }
 
   function angularIntensity(row: (typeof angularRows)[number]): number {
@@ -1495,11 +2032,244 @@ import Layout from '../../layouts/Layout.astro';
     ctx.fillText('0\u00B0 = forward', w - 12, 32);
   }
 
+  function pointKey(p: { m: number; w: number; q: number }): string {
+    return `${p.m}|${p.w.toFixed(9)}|${p.q.toFixed(9)}`;
+  }
+
+  function finiteGradient(sorted: { q: number; w: number }[]): number[] {
+    const n = sorted.length;
+    const out = new Array<number>(n).fill(NaN);
+    if (n < 2) return out;
+    if (n === 2) {
+      const dq = sorted[1].q - sorted[0].q;
+      const slope = Math.abs(dq) > 1e-14 ? (sorted[1].w - sorted[0].w) / dq : NaN;
+      out[0] = slope;
+      out[1] = slope;
+      return out;
+    }
+    for (let i = 0; i < n; i++) {
+      if (i === 0) {
+        const dq = sorted[1].q - sorted[0].q;
+        out[i] = Math.abs(dq) > 1e-14 ? (sorted[1].w - sorted[0].w) / dq : NaN;
+      } else if (i === n - 1) {
+        const dq = sorted[i].q - sorted[i - 1].q;
+        out[i] = Math.abs(dq) > 1e-14 ? (sorted[i].w - sorted[i - 1].w) / dq : NaN;
+      } else {
+        const dx1 = sorted[i].q - sorted[i - 1].q;
+        const dx2 = sorted[i + 1].q - sorted[i].q;
+        if (Math.abs(dx1) <= 1e-14 || Math.abs(dx2) <= 1e-14) continue;
+        const a = -dx2 / (dx1 * (dx1 + dx2));
+        const b = (dx2 - dx1) / (dx1 * dx2);
+        const c = dx1 / (dx2 * (dx1 + dx2));
+        out[i] = a * sorted[i - 1].w + b * sorted[i].w + c * sorted[i + 1].w;
+      }
+    }
+    return out;
+  }
+
+  function rankedDispersionCurves(): { m: number; rank: number; points: { w: number; q: number }[] }[] {
+    const curves: { m: number; rank: number; points: { w: number; q: number }[] }[] = [];
+    for (const br of branches) {
+      const byEnergy = new Map<number, { w: number; q: number }[]>();
+      for (const p of br.points) {
+        const arr = byEnergy.get(p.w) ?? [];
+        arr.push(p);
+        byEnergy.set(p.w, arr);
+      }
+      const byRank = new Map<number, { w: number; q: number }[]>();
+      for (const pts of byEnergy.values()) {
+        pts.sort((a, b) => b.q - a.q);
+        pts.forEach((p, rank) => {
+          const arr = byRank.get(rank) ?? [];
+          arr.push(p);
+          byRank.set(rank, arr);
+        });
+      }
+      for (const [rank, points] of byRank) {
+        curves.push({ m: br.m, rank, points });
+      }
+    }
+    return curves;
+  }
+
+  function modeLabelForRank(m: number, rank: number, w: number, q: number): string {
+    if (m === 0) return makeFieldSelection(m, w, q).modeLabel;
+    const family = rank === 0 ? 'HE' : 'EH';
+    const radial = rank === 0 ? 1 : rank;
+    return `${family}${m}${radial}`;
+  }
+
+  function computeGroupVelocityPoints(): Omit<GroupVelocityPointHit, 'x' | 'y'>[] {
+    const points: Omit<GroupVelocityPointHit, 'x' | 'y'>[] = [];
+    for (const curve of rankedDispersionCurves()) {
+      const sorted = curve.points
+        .slice()
+        .sort((a, b) => a.q - b.q)
+        .filter((p, i, arr) => i === 0 || Math.abs(p.q - arr[i - 1].q) > 1e-12);
+      const gradients = finiteGradient(sorted);
+      for (let i = 0; i < sorted.length; i++) {
+        const dEdq = gradients[i];
+        const vg = dEdq / HC_EV_NM;
+        if (!Number.isFinite(vg)) continue;
+        const p = sorted[i];
+        points.push({
+          m: curve.m,
+          w: p.w,
+          q: p.q,
+          vg,
+          modeLabel: modeLabelForRank(curve.m, curve.rank, p.w, p.q),
+        });
+      }
+    }
+    groupVelocityPointsCache = points;
+    return points;
+  }
+
+  function groupVelocityForPoint(point: { m: number; w: number; q: number }): number {
+    const pts = groupVelocityPointsCache.length ? groupVelocityPointsCache : computeGroupVelocityPoints();
+    const key = pointKey(point);
+    const exact = pts.find(p => pointKey(p) === key);
+    if (exact) return exact.vg;
+    let best: Omit<GroupVelocityPointHit, 'x' | 'y'> | null = null;
+    let bestScore = Infinity;
+    const qScale = Math.max(1e-8, qMaxAuto);
+    const wScale = Math.max(1e-8, state.w_max - state.w_min);
+    for (const p of pts) {
+      if (p.m !== point.m) continue;
+      const dq = (p.q - point.q) / qScale;
+      const dw = (p.w - point.w) / wScale;
+      const score = dq * dq + dw * dw;
+      if (score < bestScore) {
+        best = p;
+        bestScore = score;
+      }
+    }
+    return best ? best.vg : NaN;
+  }
+
+  function lineGroupVelocityAtEnergy(energyEv: number, epsOfEnergy: (energyEv: number) => number): number {
+    const span = Math.max(1e-3, state.w_max - state.w_min);
+    const dE = Math.max(1e-5, span * 1e-4);
+    const e0 = Math.max(1e-6, energyEv - dE);
+    const e1 = energyEv + dE;
+    const qAt = (energy: number) => {
+      const eps = epsOfEnergy(energy);
+      if (!Number.isFinite(eps) || eps <= 0) return NaN;
+      return Math.sqrt(eps) * energy / HC_EV_NM;
+    };
+    const q0 = qAt(e0);
+    const q1 = qAt(e1);
+    const dqde = (q1 - q0) / (e1 - e0);
+    if (!Number.isFinite(dqde) || Math.abs(dqde) <= 1e-14) return NaN;
+    return 1 / (HC_EV_NM * dqde);
+  }
+
+  function materialGroupVelocityAtEnergy(energyEv: number): number {
+    return lineGroupVelocityAtEnergy(energyEv, energy => materialEpsilonAtEnergy(energy)[0]);
+  }
+
+  function drawPhaseVelocityPlot() {
+    if (state.view !== 'disp-wq' || phasePlotPanel.style.display === 'none') return;
+    const { ctx, w, h } = setupPhaseCanvas();
+    const points = computeGroupVelocityPoints();
+    groupVelocityPointHits = [];
+
+    const yIsQ = state.phaseAxis === 'q';
+    const referenceEnergy = selectedFieldPoint?.w ?? 0.5 * (state.w_min + state.w_max);
+    const hostVg = lineGroupVelocityAtEnergy(referenceEnergy, () => state.eps_h);
+    const materialVg = materialGroupVelocityAtEnergy(referenceEnergy);
+    const pointMin = points.length ? Math.min(...points.map(p => p.vg)) : 0;
+    const xMin = Math.min(0, pointMin) * 1.08;
+    const xMax = Math.max(
+      0.2,
+      Number.isFinite(hostVg) ? hostVg : 0,
+      Number.isFinite(materialVg) ? materialVg : 0,
+      points.length ? Math.max(...points.map(p => p.vg)) : 0,
+    ) * 1.08;
+    const yMin = yIsQ ? 0 : state.w_min;
+    const yMax = yIsQ ? Math.max(0.01, qMaxAuto) : state.w_max;
+    const ax = makeAxes(
+      ctx,
+      w,
+      h,
+      xMin,
+      xMax,
+      yMin,
+      yMax,
+      'v_g / c',
+      yIsQ ? 'q_z (nm^-1)' : '\u210F\u03C9 (eV)',
+    );
+    drawAxesFrame(ax, 5, 6, v => v.toFixed(2), yIsQ ? v => v.toFixed(3) : v => v.toFixed(1));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+    ctx.clip();
+
+    const drawReferenceVelocity = (vg: number, color: string, label: string) => {
+      if (!Number.isFinite(vg) || vg < xMin || vg > xMax) return;
+      const x = ax.xTo(vg);
+      ctx.strokeStyle = color;
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(x, ax.yTo(yMin));
+      ctx.lineTo(x, ax.yTo(yMax));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.font = '10px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.save();
+      ctx.translate(Math.min(x + 5, ax.m.left + ax.pw - 78), ax.m.top + ax.ph * 0.42);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    };
+
+    drawReferenceVelocity(hostVg, '#94A3B8', 'host group speed');
+    drawReferenceVelocity(materialVg, '#CBD5E1', 'material Re(eps)');
+    ctx.setLineDash([]);
+
+    for (const p of points) {
+      const color = colorForM(p.m);
+      const x = ax.xTo(p.vg);
+      const y = ax.yTo(yIsQ ? p.q : p.w);
+      groupVelocityPointHits.push({ ...p, x, y });
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (selectedFieldPoint) {
+      const vg = groupVelocityForPoint(selectedFieldPoint);
+      const x = ax.xTo(vg);
+      const y = ax.yTo(yIsQ ? selectedFieldPoint.q : selectedFieldPoint.w);
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 6.2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
   function drawDispersionWQ() {
     const { ctx, w, h } = setupCanvas();
     const ax = makeAxes(ctx, w, h, 0, qMaxAuto, state.w_min, state.w_max,
                          'q_z (nm^-1)', '\u210F\u03C9 (eV)');
     drawAxesFrame(ax, 6, 6, v => v.toFixed(3), v => v.toFixed(1));
+    dispersionPointHits = [];
 
     ctx.save();
     ctx.beginPath();
@@ -1540,7 +2310,26 @@ import Layout from '../../layouts/Layout.astro';
       const color = colorForM(br.m);
       ctx.fillStyle = color;
       for (const p of br.points) {
-        ctx.beginPath(); ctx.arc(ax.xTo(p.q), ax.yTo(p.w), 2.2, 0, Math.PI * 2); ctx.fill();
+        const x = ax.xTo(p.q);
+        const y = ax.yTo(p.w);
+        dispersionPointHits.push({ m: br.m, w: p.w, q: p.q, x, y });
+        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (selectedFieldPoint) {
+      const sx = ax.xTo(selectedFieldPoint.q);
+      const sy = ax.yTo(selectedFieldPoint.w);
+      if (Number.isFinite(sx) && Number.isFinite(sy)) {
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 6.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 4.4, 0, Math.PI * 2);
+        ctx.stroke();
       }
     }
     ctx.restore();
@@ -1710,6 +2499,360 @@ import Layout from '../../layouts/Layout.astro';
     return `rgb(${r},${g},${bl})`;
   }
 
+  function heatRgb(t: number): [number, number, number] {
+    const stops = [
+      [68, 1, 84],
+      [49, 104, 142],
+      [53, 183, 121],
+      [253, 231, 37],
+    ];
+    const x = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0;
+    const pos = x * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(pos));
+    const f = pos - i;
+    const a = stops[i], b = stops[i + 1];
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * f),
+      Math.round(a[1] + (b[1] - a[1]) * f),
+      Math.round(a[2] + (b[2] - a[2]) * f),
+    ];
+  }
+
+  function signedRgb(v: number): [number, number, number] {
+    const z = Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0;
+    if (z >= 0) {
+      return [255, Math.round(255 * (1 - z)), Math.round(255 * (1 - z))];
+    }
+    return [Math.round(255 * (1 + z)), Math.round(255 * (1 + z)), 255];
+  }
+
+  function percentile(vals: number[], p: number): number {
+    const clean = vals.filter(Number.isFinite).sort((a, b) => a - b);
+    if (!clean.length) return 1;
+    const idx = Math.max(0, Math.min(clean.length - 1, Math.round((clean.length - 1) * p)));
+    return clean[idx];
+  }
+
+  interface FieldTileScale {
+    min: number;
+    max: number;
+    signedMax: number;
+    tiny: number;
+    log: boolean;
+    normalized: boolean;
+    showColorbar: boolean;
+  }
+
+  function formatFieldTick(v: number, log = false): string {
+    if (!Number.isFinite(v)) return '';
+    if (log) return v.toFixed(1);
+    const a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 1e3 || a < 1e-2) return v.toExponential(1);
+    if (a >= 10) return v.toFixed(1);
+    if (a >= 1) return v.toFixed(2);
+    return v.toFixed(3);
+  }
+
+  function makeSignedScale(values: number[], sharedMax: number | null, showColorbar: boolean): FieldTileScale {
+    const max = Math.max(1e-18, sharedMax ?? percentile(values.map(v => Math.abs(v)), 0.995));
+    return {
+      min: -max,
+      max,
+      signedMax: max,
+      tiny: 1e-18,
+      log: false,
+      normalized: state.fieldNormalized,
+      showColorbar,
+    };
+  }
+
+  function makeMagScale(values: number[], showColorbar: boolean): FieldTileScale {
+    const rawMax = Math.max(1e-18, percentile(values, 0.995));
+    const tiny = Math.max(1e-24, rawMax * 1e-6);
+    if (state.fieldLogMag) {
+      const scaled = values.map(v => Math.log10(Math.max(v, tiny)));
+      return {
+        min: percentile(scaled, 0.01),
+        max: percentile(scaled, 0.995),
+        signedMax: 1,
+        tiny,
+        log: true,
+        normalized: state.fieldNormalized,
+        showColorbar,
+      };
+    }
+    return {
+      min: 0,
+      max: rawMax,
+      signedMax: 1,
+      tiny,
+      log: false,
+      normalized: state.fieldNormalized,
+      showColorbar,
+    };
+  }
+
+  function setupFieldCanvas(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; size: number; dpr: number } {
+    const dpr = window.devicePixelRatio || 1;
+    const size = Math.max(180, Math.round(canvas.clientWidth || 240));
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    return { ctx, size, dpr };
+  }
+
+  function clearFieldCanvases(message: string): void {
+    const canvases = [fieldExCanvas, fieldEyCanvas, fieldEzCanvas, fieldMagCanvas];
+    for (const canvas of canvases) {
+      if (!canvas) continue;
+      const { ctx, size } = setupFieldCanvas(canvas);
+      const ct = chartTheme();
+      ctx.fillStyle = ct.bg;
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = ct.textMuted;
+      ctx.font = '12px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(message, size / 2, size / 2, size - 24);
+    }
+    clearFieldColorbarCanvas();
+  }
+
+  function drawFieldColorbar(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    h: number,
+    mode: 'signed' | 'mag',
+    scale: FieldTileScale,
+    textColor: string,
+  ): void {
+    const barW = 10;
+    for (let i = 0; i < h; i++) {
+      const t = 1 - i / Math.max(1, h - 1);
+      const rgb = mode === 'signed'
+        ? signedRgb(2 * t - 1)
+        : heatRgb(t);
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      ctx.fillRect(x, y + i, barW, 1);
+    }
+    ctx.strokeStyle = hexToRgba(textColor, 0.35);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, barW, h);
+
+    ctx.fillStyle = textColor;
+    ctx.font = '9px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    if (mode === 'signed') {
+      ctx.fillText(formatFieldTick(scale.signedMax), x + barW + 4, y + 5);
+      ctx.fillText('0', x + barW + 4, y + h / 2);
+      ctx.fillText(formatFieldTick(-scale.signedMax), x + barW + 4, y + h - 5);
+      return;
+    }
+    ctx.fillText(formatFieldTick(scale.max, scale.log), x + barW + 4, y + 5);
+    ctx.fillText(formatFieldTick(scale.min, scale.log), x + barW + 4, y + h - 5);
+  }
+
+  function setupFieldColorbarCanvas(): { ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(48, Math.round(fieldColorbarCanvas.clientWidth || 58));
+    const h = Math.max(220, Math.round(fieldColorbarCanvas.clientHeight || 320));
+    fieldColorbarCanvas.width = w * dpr;
+    fieldColorbarCanvas.height = h * dpr;
+    const ctx = fieldColorbarCanvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    return { ctx, w, h };
+  }
+
+  function clearFieldColorbarCanvas(): void {
+    if (!fieldColorbarCanvas) return;
+    const { ctx, w, h } = setupFieldColorbarCanvas();
+    ctx.clearRect(0, 0, w, h);
+  }
+
+  function drawFieldColorbarRail(signedScale: FieldTileScale, magScale: FieldTileScale): void {
+    const { ctx, w, h } = setupFieldColorbarCanvas();
+    const ct = chartTheme();
+    const signedDisplay = state.fieldNormalized
+      ? { ...signedScale, min: -1, max: 1, signedMax: 1, log: false }
+      : signedScale;
+    const magDisplay = state.fieldNormalized
+      ? { ...magScale, min: 0, max: 1, signedMax: 1, log: false }
+      : magScale;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    const gap = 28;
+    const labelH = 16;
+    const barH = Math.max(72, Math.floor((h - gap - 2 * labelH - 8) / 2));
+    const x = 4;
+    const firstY = 2;
+    const secondY = firstY + labelH + barH + gap;
+
+    ctx.fillText(state.fieldNormalized ? 'norm Re/Im' : 'Re/Im E', x, firstY);
+    drawFieldColorbar(ctx, x, firstY + labelH, barH, 'signed', signedDisplay, ct.textMuted);
+    ctx.fillText(state.fieldNormalized ? 'norm |E|' : (magScale.log ? 'log10 |E|' : '|E|'), x, secondY);
+    drawFieldColorbar(ctx, x, secondY + labelH, barH, 'mag', magDisplay, ct.textMuted);
+  }
+
+  function drawFieldTile(canvas: HTMLCanvasElement, values: number[], n: number, limNm: number, mode: 'signed' | 'mag', scale: FieldTileScale): void {
+    const { ctx, size } = setupFieldCanvas(canvas);
+    const ct = chartTheme();
+    const pad = { left: 24, right: 12, top: 10, bottom: 26 };
+    const plotSize = Math.max(80, Math.min(size - pad.left - pad.right, size - pad.top - pad.bottom));
+    const px = pad.left + Math.max(0, size - pad.left - pad.right - plotSize) / 2;
+    const py = pad.top;
+    const img = ctx.createImageData(n, n);
+    const span = Math.max(1e-18, scale.max - scale.min);
+    for (let i = 0; i < values.length; i++) {
+      const val = mode === 'mag' && scale.log ? Math.log10(Math.max(values[i], scale.tiny)) : values[i];
+      const rgb = mode === 'signed'
+        ? signedRgb(val / scale.signedMax)
+        : heatRgb((val - scale.min) / span);
+      const j = i * 4;
+      img.data[j] = rgb[0];
+      img.data[j + 1] = rgb[1];
+      img.data[j + 2] = rgb[2];
+      img.data[j + 3] = 255;
+    }
+    const tmp = document.createElement('canvas');
+    tmp.width = n;
+    tmp.height = n;
+    tmp.getContext('2d')!.putImageData(img, 0, 0);
+
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, size, size);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(tmp, px, py, plotSize, plotSize);
+    ctx.strokeStyle = hexToRgba(ct.text, 0.35);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px, py, plotSize, plotSize);
+    const r = plotSize / 4;
+    ctx.strokeStyle = hexToRgba(ct.text, 0.78);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(px + plotSize / 2, py + plotSize / 2, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`x: ${(-limNm).toFixed(0)} ... ${limNm.toFixed(0)} nm`, px + plotSize / 2, py + plotSize + 6);
+    ctx.save();
+    ctx.translate(8, py + plotSize / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`y: ${(-limNm).toFixed(0)} ... ${limNm.toFixed(0)} nm`, 0, 0);
+    ctx.restore();
+  }
+
+  function fieldPartLabel(part: FieldPart): string {
+    return part === 're' ? 'Re' : 'Im';
+  }
+
+  function syncFieldComponentControls(): void {
+    fieldExLabel.innerHTML = `${fieldPartLabel(state.fieldParts.ex)} E<sub>x</sub>`;
+    fieldEyLabel.innerHTML = `${fieldPartLabel(state.fieldParts.ey)} E<sub>y</sub>`;
+    fieldEzLabel.innerHTML = `${fieldPartLabel(state.fieldParts.ez)} E<sub>z</sub>`;
+    document.querySelectorAll<HTMLButtonElement>('.field-mode-btn').forEach(btn => {
+      const component = btn.dataset.fieldComponent as FieldComponent | undefined;
+      const part = btn.dataset.fieldPart as FieldPart | undefined;
+      const active = !!component && !!part && state.fieldParts[component] === part;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+  }
+
+  function drawFieldProfile(): void {
+    if (!fieldProfilePanel || fieldProfilePanel.style.display === 'none') return;
+    const title = fieldProfileTitle;
+    const meta = fieldProfileMeta;
+    fieldLogToggle.classList.toggle('active', state.fieldLogMag);
+    fieldNormalizedToggle.classList.toggle('active', state.fieldNormalized);
+    syncFieldComponentControls();
+    fieldMagLabel.innerHTML = state.fieldLogMag ? 'log<sub>10</sub>|E|' : '|E|';
+    fieldProfileBody.classList.remove('is-normalized');
+    fieldColorbarRail.style.display = '';
+    if (!selectedFieldPoint) {
+      title.textContent = 'Mode field profile';
+      meta.textContent = 'Select a point in the dispersion map';
+      setFieldExportEnabled(false);
+      fieldProfileBody.classList.add('is-normalized');
+      fieldColorbarRail.style.display = 'none';
+      clearFieldCanvases('No selected mode');
+      return;
+    }
+    title.textContent = `${selectedFieldPoint.modeLabel} field profile`;
+    const epsNote = state.materialId === 'custom' && Math.abs(state.eps1_im) > 1e-9 ? ' | using Re(\u03B5\u2081)' : '';
+    meta.textContent = `\u210F\u03C9 = ${selectedFieldPoint.w.toFixed(3)} eV | q_z = ${selectedFieldPoint.q.toFixed(5)} nm^-1 | m = ${selectedFieldPoint.m}${epsNote}`;
+    if (state.materialId !== 'custom') {
+      setFieldExportEnabled(false);
+      fieldProfileBody.classList.add('is-normalized');
+      fieldColorbarRail.style.display = 'none';
+      clearFieldCanvases('Custom dielectric only');
+      return;
+    }
+    const profile = computeSelectedFieldProfile();
+    if (!profile) {
+      setFieldExportEnabled(false);
+      fieldProfileBody.classList.add('is-normalized');
+      fieldColorbarRail.style.display = 'none';
+      clearFieldCanvases('No guided field at this point');
+      return;
+    }
+    setFieldExportEnabled(true);
+    fieldProfileBody.classList.remove('is-normalized');
+    fieldColorbarRail.style.display = '';
+    const ex = profile.components.ex[state.fieldParts.ex];
+    const ey = profile.components.ey[state.fieldParts.ey];
+    const ez = profile.components.ez[state.fieldParts.ez];
+    const sharedSignedMax = state.fieldNormalized
+      ? null
+      : Math.max(1e-18, percentile([...ex, ...ey, ...ez].map(v => Math.abs(v)), 0.995));
+    const signedRailScale = makeSignedScale([...ex, ...ey, ...ez], sharedSignedMax, false);
+    const magScale = makeMagScale(profile.mag, false);
+    drawFieldTile(fieldExCanvas, ex, profile.n, profile.limNm, 'signed', makeSignedScale(ex, sharedSignedMax, false));
+    drawFieldTile(fieldEyCanvas, ey, profile.n, profile.limNm, 'signed', makeSignedScale(ey, sharedSignedMax, false));
+    drawFieldTile(fieldEzCanvas, ez, profile.n, profile.limNm, 'signed', makeSignedScale(ez, sharedSignedMax, false));
+    drawFieldTile(fieldMagCanvas, profile.mag, profile.n, profile.limNm, 'mag', magScale);
+    drawFieldColorbarRail(signedRailScale, magScale);
+  }
+
+  function nearestDispersionPointHit(x: number, y: number, radius = 8): DispersionPointHit | null {
+    let best: DispersionPointHit | null = null;
+    let bestD2 = radius * radius;
+    for (const hit of dispersionPointHits) {
+      const dx = hit.x - x;
+      const dy = hit.y - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= bestD2) {
+        best = hit;
+        bestD2 = d2;
+      }
+    }
+    return best;
+  }
+
+  function nearestGroupVelocityPointHit(x: number, y: number, radius = 8): GroupVelocityPointHit | null {
+    let best: GroupVelocityPointHit | null = null;
+    let bestD2 = radius * radius;
+    for (const hit of groupVelocityPointHits) {
+      const dx = hit.x - x;
+      const dy = hit.y - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= bestD2) {
+        best = hit;
+        bestD2 = d2;
+      }
+    }
+    return best;
+  }
+
   function drawMapInset(ax: Axes, minVal: number, maxVal: number) {
     const { ctx } = ax;
     const x = ax.m.left + ax.pw - 148;
@@ -1824,9 +2967,11 @@ import Layout from '../../layouts/Layout.astro';
     const { ctx } = ax;
     ctx.fillStyle = color;
     ctx.font = '9px Inter, system-ui, sans-serif';
-    const lx = ax.xTo(qLineMax), ly = ax.yTo(state.w_max);
+    const labelEnergy = state.w_min + (state.w_max - state.w_min) * 0.72;
+    const qAtLabel = qLineMax * labelEnergy / Math.max(1e-12, state.w_max);
+    const lx = ax.xTo(qAtLabel), ly = ax.yTo(labelEnergy);
     ctx.save();
-    ctx.translate(lx - 4, ly + 8);
+    ctx.translate(lx - 4, ly + 10);
     const angle = Math.atan2(ax.yTo(state.w_max) - ax.yTo(0), ax.xTo(qLineMax) - ax.xTo(0));
     ctx.rotate(angle);
     ctx.textAlign = 'right';
@@ -1952,6 +3097,11 @@ import Layout from '../../layouts/Layout.astro';
   const angularPolWrap = $('angular-pol-wrap');
   const computeStatus = $('compute-status');
   const chartWrap = $('chart-wrap');
+  const dispersionPlotToolbar = $('dispersion-plot-toolbar');
+  const chartCanvasBox = $('chart-canvas-box');
+  const phasePlotPanel = $('phase-plot-panel');
+  const phaseCanvas = $<HTMLCanvasElement>('phase-chart');
+  const phaseTooltip = $('phase-tooltip');
   const overlay = $<HTMLCanvasElement>('chart-overlay');
   const tooltip = $('chart-tooltip');
   const configCheckEl = $<HTMLButtonElement>('config-check');
@@ -1974,6 +3124,30 @@ import Layout from '../../layouts/Layout.astro';
   const kevInput = $<HTMLInputElement>('kev-num');
   const radiusImpactMarker = $('radius-impact-marker');
   const impactRadiusMarker = $('impact-radius-marker');
+  const fieldProfilePanel = $('field-profile-panel');
+  const fieldProfileBody = $('field-profile-body');
+  const fieldProfileTitle = $('field-profile-title');
+  const fieldProfileMeta = $('field-profile-meta');
+  const fieldNormalizedToggle = $<HTMLButtonElement>('field-normalized-toggle');
+  const fieldLogToggle = $<HTMLButtonElement>('field-log-toggle');
+  const fieldExLabel = $('field-ex-label');
+  const fieldEyLabel = $('field-ey-label');
+  const fieldEzLabel = $('field-ez-label');
+  const fieldMagLabel = $('field-mag-label');
+  const fieldExCanvas = $<HTMLCanvasElement>('field-ex-canvas');
+  const fieldEyCanvas = $<HTMLCanvasElement>('field-ey-canvas');
+  const fieldEzCanvas = $<HTMLCanvasElement>('field-ez-canvas');
+  const fieldMagCanvas = $<HTMLCanvasElement>('field-mag-canvas');
+  const fieldColorbarRail = $('field-colorbar-rail');
+  const fieldColorbarCanvas = $<HTMLCanvasElement>('field-colorbar-canvas');
+  const fieldPngBtn = $<HTMLButtonElement>('field-dl-png');
+  const fieldCsvBtn = $<HTMLButtonElement>('field-dl-csv');
+  const fieldShareBtn = $<HTMLButtonElement>('field-share-btn');
+
+  function setFieldExportEnabled(enabled: boolean): void {
+    fieldPngBtn.disabled = !enabled;
+    fieldCsvBtn.disabled = !enabled;
+  }
 
   function sizeOverlay(): CanvasRenderingContext2D {
     const dpr = window.devicePixelRatio || 1;
@@ -2052,6 +3226,7 @@ import Layout from '../../layouts/Layout.astro';
     const isElectron = state.excitation === 'electron';
     const isParallel = isElectron && state.view === 'eels-par';
     const isPerp = isElectron && state.view === 'eels-perp';
+    const isDispWQ = isElectron && state.view === 'disp-wq';
     spectrumControls.style.display = isSpectrum ? '' : 'none';
     logToggle.style.display = (isSpectrum || isParallel || isPerp) ? '' : 'none';
     perpComputeBtn.style.display = isPerp ? '' : 'none';
@@ -2062,6 +3237,10 @@ import Layout from '../../layouts/Layout.astro';
     parallelGeometryParam.style.display = isParallel ? '' : 'none';
     perpGridControl.style.display = isPerp ? '' : 'none';
     perpMapPanel.style.display = isPerp ? '' : 'none';
+    fieldProfilePanel.style.display = isDispWQ ? '' : 'none';
+    phasePlotPanel.style.display = isDispWQ ? '' : 'none';
+    dispersionPlotToolbar.style.display = isDispWQ ? '' : 'none';
+    chartWrap.classList.toggle('is-dispersion-split', isDispWQ);
     angularControls.style.marginLeft = isAngular ? 'auto' : '';
     computeStatus.style.marginLeft = isAngular ? '0' : 'auto';
     logToggle.classList.toggle('active', state.logY);
@@ -2070,6 +3249,8 @@ import Layout from '../../layouts/Layout.astro';
     mapElectronToggle.classList.toggle('active', state.mapShowElectron);
     mapCustomToggle.classList.toggle('active', state.mapShowCustom);
     mapPngBtn.disabled = !perpMap;
+    fieldLogToggle.classList.toggle('active', state.fieldLogMag);
+    fieldNormalizedToggle.classList.toggle('active', state.fieldNormalized);
   }
 
   logToggle.addEventListener('click', () => {
@@ -2077,6 +3258,29 @@ import Layout from '../../layouts/Layout.astro';
     logToggle.classList.toggle('active', state.logY);
     drawChart();
     drawLegend();
+  });
+
+  fieldNormalizedToggle.addEventListener('click', () => {
+    state.fieldNormalized = !state.fieldNormalized;
+    updateChartControls();
+    drawFieldProfile();
+  });
+
+  fieldLogToggle.addEventListener('click', () => {
+    state.fieldLogMag = !state.fieldLogMag;
+    updateChartControls();
+    drawFieldProfile();
+  });
+
+  fieldProfilePanel.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest('.field-mode-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const component = btn.dataset.fieldComponent as FieldComponent | undefined;
+    const part = btn.dataset.fieldPart as FieldPart | undefined;
+    if (!component || !part) return;
+    state.fieldParts[component] = part;
+    syncFieldComponentControls();
+    drawFieldProfile();
   });
 
   perpComputeBtn.addEventListener('click', () => recompute(true));
@@ -2102,6 +3306,9 @@ import Layout from '../../layouts/Layout.astro';
   bindTabs<AxisMode>('axis-tabs', 'axis', () => state.axisMode, value => { state.axisMode = value; }, () => {
     drawChart();
     drawLegend();
+  });
+  bindTabs<PhaseAxis>('phase-axis-tabs', 'phaseAxis', () => state.phaseAxis, value => { state.phaseAxis = value; }, () => {
+    drawPhaseVelocityPlot();
   });
   bindTabs<AngularPolMode>('pol-tabs', 'pol', () => state.angularPol, value => { state.angularPol = value; }, () => {
     drawChart();
@@ -2154,10 +3361,67 @@ import Layout from '../../layouts/Layout.astro';
     perpMapCanvas.toBlob(b => { if (b) downloadBlob(b, 'cylinder_momentum_resolved_eels.png'); }, 'image/png');
   });
 
-  chartWrap.addEventListener('mousemove', (e: MouseEvent) => {
+  phaseCanvas.addEventListener('mousemove', (e: MouseEvent) => {
+    if (state.view !== 'disp-wq') return;
+    const hit = nearestGroupVelocityPointHit(e.offsetX, e.offsetY);
+    phaseCanvas.style.cursor = hit ? 'pointer' : 'crosshair';
+    if (!hit) {
+      phaseTooltip.classList.remove('visible');
+      return;
+    }
+    phaseTooltip.innerHTML = `${hit.modeLabel}<br>\u210F\u03C9 = ${hit.w.toFixed(3)} eV<br>q_z = ${hit.q.toFixed(5)} nm^-1<br>v_g/c = ${hit.vg.toFixed(3)}`;
+    phaseTooltip.classList.add('visible');
+    const panelRect = phasePlotPanel.getBoundingClientRect();
+    let tL = e.offsetX + 12;
+    let tT = e.offsetY - 30 + phaseCanvas.offsetTop;
+    if (tL + phaseTooltip.offsetWidth > panelRect.width - 4) tL = e.offsetX - phaseTooltip.offsetWidth - 12;
+    if (tT < 4) tT = e.offsetY + 12 + phaseCanvas.offsetTop;
+    phaseTooltip.style.left = `${Math.max(4, Math.min(tL, panelRect.width - phaseTooltip.offsetWidth - 4))}px`;
+    phaseTooltip.style.top = `${Math.max(4, Math.min(tT, panelRect.height - phaseTooltip.offsetHeight - 4))}px`;
+  });
+
+  phaseCanvas.addEventListener('mouseleave', () => {
+    phaseCanvas.style.cursor = '';
+    phaseTooltip.classList.remove('visible');
+  });
+
+  phaseCanvas.addEventListener('click', (e: MouseEvent) => {
+    if (state.view !== 'disp-wq') return;
+    const hit = nearestGroupVelocityPointHit(e.offsetX, e.offsetY);
+    if (!hit) return;
+    selectedFieldPoint = makeFieldSelection(hit.m, hit.w, hit.q);
+    phaseTooltip.classList.remove('visible');
+    drawChart();
+  });
+
+  chartCanvasBox.addEventListener('mousemove', (e: MouseEvent) => {
     if (state.view === 'disp-wq' || state.view === 'disp-bV') {
       const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
-      chartWrap.style.cursor = hit ? 'pointer' : 'crosshair';
+      const pointHit = state.view === 'disp-wq' ? nearestDispersionPointHit(e.offsetX, e.offsetY) : null;
+      chartCanvasBox.style.cursor = hit || pointHit ? 'pointer' : 'crosshair';
+      if (pointHit) {
+        const hover = makeFieldSelection(pointHit.m, pointHit.w, pointHit.q);
+        const ctx = sizeOverlay();
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.strokeStyle = 'rgba(17,24,39,0.85)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(pointHit.x, pointHit.y, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        const vg = groupVelocityForPoint(pointHit);
+        const vgLine = Number.isFinite(vg) ? `<br>v_g/c = ${vg.toFixed(3)}` : '';
+        tooltip.innerHTML = `${hover.modeLabel}<br>\u210F\u03C9 = ${pointHit.w.toFixed(3)} eV<br>q_z = ${pointHit.q.toFixed(5)} nm^-1${vgLine}`;
+        tooltip.classList.add('visible');
+        const wrapRect = chartCanvasBox.getBoundingClientRect();
+        let tL = pointHit.x + 12;
+        let tT = pointHit.y - 30;
+        if (tL + tooltip.offsetWidth > wrapRect.width - 4) tL = pointHit.x - tooltip.offsetWidth - 12;
+        if (tT < 4) tT = pointHit.y + 12;
+        tooltip.style.left = `${Math.max(4, Math.min(tL, wrapRect.width - tooltip.offsetWidth - 4))}px`;
+        tooltip.style.top = `${Math.max(4, Math.min(tT, wrapRect.height - tooltip.offsetHeight - 4))}px`;
+      } else {
+        clearOverlay();
+      }
       return;
     }
     const supportsHover = state.view === 'cross-section' || state.view === 'eels-par' || state.view === 'eels-perp';
@@ -2166,11 +3430,11 @@ import Layout from '../../layouts/Layout.astro';
     const mx = e.offsetX;
     const my = e.offsetY;
     if (mx < m.left || mx > m.left + pw || my < m.top || my > m.top + ph) {
-      chartWrap.style.cursor = '';
+      chartCanvasBox.style.cursor = '';
       clearOverlay();
       return;
     }
-    chartWrap.style.cursor = 'crosshair';
+    chartCanvasBox.style.cursor = 'crosshair';
     const idx = nearestIdx(currentXArr, invTx(mx));
     const xVal = currentXArr[idx];
     const px = xTo(xVal);
@@ -2213,7 +3477,7 @@ import Layout from '../../layouts/Layout.astro';
     const topPy = Math.min(...currentSeries.map(s => yTo(s.y[idx])).filter(Number.isFinite));
     let tL = px + 12;
     let tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) - 36;
-    const wrapRect = chartWrap.getBoundingClientRect();
+    const wrapRect = chartCanvasBox.getBoundingClientRect();
     if (currentLegendBox) {
       const proposed = { x: tL, y: tT, w: tooltip.offsetWidth, h: tooltip.offsetHeight };
       const overlaps = proposed.x < currentLegendBox.x + currentLegendBox.w
@@ -2230,13 +3494,22 @@ import Layout from '../../layouts/Layout.astro';
     tooltip.style.top = `${tT}px`;
   });
 
-  chartWrap.addEventListener('mouseleave', () => {
-    chartWrap.style.cursor = '';
+  chartCanvasBox.addEventListener('mouseleave', () => {
+    chartCanvasBox.style.cursor = '';
     clearOverlay();
   });
 
-  chartWrap.addEventListener('click', (e: MouseEvent) => {
+  chartCanvasBox.addEventListener('click', (e: MouseEvent) => {
     if (state.view !== 'disp-wq' && state.view !== 'disp-bV') return;
+    if (state.view === 'disp-wq') {
+      const pointHit = nearestDispersionPointHit(e.offsetX, e.offsetY);
+      if (pointHit) {
+        selectedFieldPoint = makeFieldSelection(pointHit.m, pointHit.w, pointHit.q);
+        clearOverlay();
+        drawChart();
+        return;
+      }
+    }
     const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
     if (!hit) return;
     if (state.m_active.has(hit.m)) state.m_active.delete(hit.m);
@@ -2569,6 +3842,10 @@ import Layout from '../../layouts/Layout.astro';
     state.mapShowElectron = true;
     state.mapShowCustom = false;
     state.mapCustomSlope = 0.3;
+    state.phaseAxis = 'q';
+    state.fieldLogMag = false;
+    state.fieldNormalized = false;
+    state.fieldParts = { ex: 're', ey: 're', ez: 're' };
     state.perpGridQuality = 'standard';
     state.drude = { epsB: 1, wpEv: 5, gammaEv: 0.05 };
     $<HTMLInputElement>('r-num').value = '15';
@@ -2601,7 +3878,11 @@ import Layout from '../../layouts/Layout.astro';
     syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
     syncTabs('pol-tabs', 'pol', state.angularPol);
     syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
+    syncTabs('phase-axis-tabs', 'phaseAxis', state.phaseAxis);
     logToggle.classList.remove('active');
+    fieldNormalizedToggle.classList.remove('active');
+    fieldLogToggle.classList.remove('active');
+    syncFieldComponentControls();
     document.querySelectorAll<HTMLButtonElement>('#excitation-tabs .view-tab').forEach(b => {
       const active = b.dataset.excitation === 'plane';
       b.classList.toggle('active', active);
@@ -2619,13 +3900,16 @@ import Layout from '../../layouts/Layout.astro';
   syncKeVFromBeta();
   updateBNote();
 
-  new ResizeObserver(drawChart).observe($('chart-wrap'));
+  new ResizeObserver(drawChart).observe(chartWrap);
+  new ResizeObserver(drawPhaseVelocityPlot).observe(phasePlotPanel);
   new ResizeObserver(drawPerpMap).observe($('perp-map-wrap'));
+  new ResizeObserver(drawFieldProfile).observe(fieldProfilePanel);
 
   onThemeChange(() => {
     updateConfigCheck();
     drawChart();
     drawPerpMap();
+    drawFieldProfile();
   });
 
   // ===== Export / Share =====
@@ -2637,9 +3921,101 @@ import Layout from '../../layouts/Layout.astro';
     URL.revokeObjectURL(u);
   }
 
+  function selectedFieldProfileForExport(): FieldProfile | null {
+    if (!selectedFieldPoint || state.materialId !== 'custom') return null;
+    return computeSelectedFieldProfile();
+  }
+
+  function exportFieldProfilePng(): void {
+    if (!selectedFieldPoint) return;
+    const fieldCanvases = [fieldExCanvas, fieldEyCanvas, fieldEzCanvas, fieldMagCanvas];
+    const labels = [
+      fieldExLabel.textContent || 'E_x',
+      fieldEyLabel.textContent || 'E_y',
+      fieldEzLabel.textContent || 'E_z',
+      fieldMagLabel.textContent || '|E|',
+    ];
+    const tileW = Math.max(...fieldCanvases.map(c => c.width));
+    const tileH = Math.max(...fieldCanvases.map(c => c.height));
+    if (!tileW || !tileH) return;
+    const dpr = window.devicePixelRatio || 1;
+    const gap = Math.round(20 * dpr);
+    const titleH = Math.round(82 * dpr);
+    const labelH = Math.round(26 * dpr);
+    const legendW = fieldColorbarCanvas.width > 0
+      ? fieldColorbarCanvas.width + Math.round(16 * dpr)
+      : 0;
+    const out = document.createElement('canvas');
+    out.width = tileW * 2 + gap + legendW;
+    out.height = titleH + labelH * 2 + tileH * 2 + gap;
+    const ctx = out.getContext('2d')!;
+    const ct = chartTheme();
+    ctx.fillStyle = ct.bg;
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.fillStyle = ct.text;
+    ctx.font = `${18 * dpr}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(fieldProfileTitle.textContent || 'Mode field profile', 0, 0);
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = `${12 * dpr}px Inter, system-ui, sans-serif`;
+    ctx.fillText(fieldProfileMeta.textContent || '', 0, Math.round(28 * dpr));
+
+    for (let i = 0; i < fieldCanvases.length; i++) {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = col * (tileW + gap);
+      const y = titleH + row * (tileH + labelH + gap);
+      ctx.fillStyle = ct.textSoft;
+      ctx.font = `${12 * dpr}px Inter, system-ui, sans-serif`;
+      ctx.fillText(labels[i], x, y);
+      ctx.drawImage(fieldCanvases[i], x, y + labelH, tileW, tileH);
+    }
+    if (legendW > 0) {
+      const x = tileW * 2 + gap + Math.round(8 * dpr);
+      ctx.drawImage(fieldColorbarCanvas, x, titleH + labelH, fieldColorbarCanvas.width, fieldColorbarCanvas.height);
+    }
+    out.toBlob(b => { if (b) downloadBlob(b, `cylinder_${selectedFieldPoint!.modeLabel}_fields.png`); }, 'image/png');
+  }
+
+  function exportFieldProfileCsv(): void {
+    const profile = selectedFieldProfileForExport();
+    if (!profile || !selectedFieldPoint) return;
+    const header = [
+      `# Cylinder field profile`,
+      `# mode=${selectedFieldPoint.modeLabel}, omega_eV=${selectedFieldPoint.w}, q_nm-1=${selectedFieldPoint.q}, m=${selectedFieldPoint.m}`,
+      `# radius_nm=${state.a_nm}, eps_h=${state.eps_h}, eps1_re=${state.eps1_re}, eps1_im=${state.eps1_im}`,
+      'x_nm,y_nm,ex_re,ex_im,ey_re,ey_im,ez_re,ez_im,e_abs',
+    ];
+    const rows: string[] = [];
+    for (let iy = 0; iy < profile.n; iy++) {
+      const y = profile.limNm - (2 * profile.limNm * iy) / (profile.n - 1);
+      for (let ix = 0; ix < profile.n; ix++) {
+        const x = -profile.limNm + (2 * profile.limNm * ix) / (profile.n - 1);
+        const idx = iy * profile.n + ix;
+        rows.push([
+          x.toFixed(6),
+          y.toFixed(6),
+          profile.components.ex.re[idx].toExponential(8),
+          profile.components.ex.im[idx].toExponential(8),
+          profile.components.ey.re[idx].toExponential(8),
+          profile.components.ey.im[idx].toExponential(8),
+          profile.components.ez.re[idx].toExponential(8),
+          profile.components.ez.im[idx].toExponential(8),
+          profile.mag[idx].toExponential(8),
+        ].join(','));
+      }
+    }
+    downloadBlob(new Blob([[...header, ...rows].join('\n') + '\n'], { type: 'text/csv' }),
+                 `cylinder_${selectedFieldPoint.modeLabel}_fields.csv`);
+  }
+
   document.getElementById('dl-png')!.addEventListener('click', () => {
     canvas.toBlob(b => { if (b) downloadBlob(b, `cylinder_${state.view}.png`); }, 'image/png');
   });
+
+  fieldPngBtn.addEventListener('click', exportFieldProfilePng);
+  fieldCsvBtn.addEventListener('click', exportFieldProfileCsv);
 
   document.getElementById('dl-csv')!.addEventListener('click', () => {
     const header = [
@@ -2716,6 +4092,9 @@ import Layout from '../../layouts/Layout.astro';
     if (!state.mapShowElectron) p.set('eline', '0');
     if (state.mapShowCustom) p.set('custom', '1');
     p.set('cslope', String(state.mapCustomSlope));
+    p.set('pvx', state.phaseAxis);
+    if (state.fieldNormalized) p.set('fnorm', '1');
+    if (state.fieldLogMag) p.set('flog', '1');
     p.set('pgrid', state.perpGridQuality);
     if (state.materialId === 'drude') {
       p.set('depsb', String(state.drude.epsB));
@@ -2724,15 +4103,18 @@ import Layout from '../../layouts/Layout.astro';
     }
     return p.toString();
   }
-  shareBtn.addEventListener('click', () => {
+  const shareButtonHtml = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+  function copyShareUrl(button: HTMLElement): void {
     const url = location.origin + location.pathname + '#' + serializeState();
     navigator.clipboard.writeText(url).then(() => {
-      shareBtn.textContent = 'Copied!';
+      button.textContent = 'Copied!';
       setTimeout(() => {
-        shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+        button.innerHTML = shareButtonHtml;
       }, 1500);
     });
-  });
+  }
+  shareBtn.addEventListener('click', () => copyShareUrl(shareBtn));
+  fieldShareBtn.addEventListener('click', () => copyShareUrl(fieldShareBtn));
 
   function restoreState() {
     const hash = location.hash.slice(1);
@@ -2779,6 +4161,9 @@ import Layout from '../../layouts/Layout.astro';
     if (p.get('eline') === '0') state.mapShowElectron = false;
     if (p.get('custom') === '1') state.mapShowCustom = true;
     if (p.has('cslope')) { state.mapCustomSlope = parseFloat(p.get('cslope')!); customSlopeNum.value = String(state.mapCustomSlope); }
+    if (p.get('pvx') === 'q' || p.get('pvx') === 'energy') state.phaseAxis = p.get('pvx') as PhaseAxis;
+    if (p.get('fnorm') === '1') state.fieldNormalized = true;
+    if (p.get('flog') === '1') state.fieldLogMag = true;
     if (p.get('pgrid') === 'standard' || p.get('pgrid') === 'fine' || p.get('pgrid') === 'high') {
       state.perpGridQuality = p.get('pgrid') as PerpGridQuality;
       perpGridSelect.value = state.perpGridQuality;
@@ -2791,6 +4176,7 @@ import Layout from '../../layouts/Layout.astro';
     syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
     syncTabs('pol-tabs', 'pol', state.angularPol);
     syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
+    syncTabs('phase-axis-tabs', 'phaseAxis', state.phaseAxis);
     logToggle.classList.toggle('active', state.logY);
     syncKeVFromBeta();
     updateGeometryMarkers();
