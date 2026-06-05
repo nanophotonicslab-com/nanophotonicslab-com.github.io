@@ -28,7 +28,7 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
 </div>
 
 <script>
-  document.addEventListener('astro:page-load', () => {
+  document.addEventListener('DOMContentLoaded', () => {
     const widget = document.querySelector('.feedback-widget');
     if (!widget) return;
 
