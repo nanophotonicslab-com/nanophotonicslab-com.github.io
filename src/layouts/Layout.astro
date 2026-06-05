@@ -2,6 +2,7 @@
 import Navbar from '../components/Navbar.astro';
 import LabToolsBar from '../components/LabToolsBar.astro';
 import Footer from '../components/Footer.astro';
+import FeedbackButton from '../components/FeedbackButton.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -110,6 +111,7 @@ const jsonLd = isHome
       <slot />
     </main>
     <Footer />
+    <FeedbackButton />
     <script is:inline>
       if ('serviceWorker' in navigator) {
         const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
