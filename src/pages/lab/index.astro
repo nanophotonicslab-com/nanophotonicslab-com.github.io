@@ -2,123 +2,64 @@
 import Layout from '../../layouts/Layout.astro';
 const base = import.meta.env.BASE_URL;
 
-const widgets = [
+type Widget = { title: string; description: string; color: string; icon: string; status: string; url: string };
+type Category = { name: string; widgets: Widget[] };
+
+const categories: Category[] = [
   {
-    title: 'Mie Scattering Calculator',
-    description: 'Compute scattering, extinction, and absorption cross-sections for spherical nanoparticles. Supports real materials (Au, Ag, Si, Al, TiO\u2082) and custom dielectrics.',
-    color: '#F59E0B',
-    icon: 'bolt',
-    status: 'Live',
-    url: `${base}lab/mie-scattering/`,
+    name: 'Scattering & nanoparticles',
+    widgets: [
+      { title: 'Mie Scattering Calculator', description: 'Compute scattering, extinction, and absorption cross-sections for spherical nanoparticles. Supports real materials (Au, Ag, Si, Al, TiO\u2082) and custom dielectrics.', color: '#F59E0B', icon: 'bolt', status: 'Live', url: `${base}lab/mie-scattering/` },
+      { title: 'Plasmonic Nanoparticles', description: 'Analytical spectra for rods, cages, disks, rings, bipyramids, and related plasmonic shapes using geometry-only modal parameters and tabulated n,k data.', color: '#10B981', icon: 'plasmon', status: 'Live', url: `${base}lab/plasmonic-nanoparticles/` },
+      { title: 'Cylinder Dispersion', description: 'Guided-mode dispersion \u03c9(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.', color: '#6366F1', icon: 'cylinder', status: 'Live', url: `${base}lab/cylinder/` },
+      { title: 'BEM Solver', description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.', color: '#F97316', icon: 'cube', status: 'Live', url: `${base}lab/bem-solver/` },
+      { title: 'Photothermal Calculator', description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.', color: '#EF4444', icon: 'flame', status: 'Live', url: `${base}lab/photothermal/` },
+    ],
   },
   {
-    title: 'Plasmonic Nanoparticles',
-    description: 'Analytical spectra for rods, cages, disks, rings, bipyramids, and related plasmonic shapes using geometry-only modal parameters and tabulated n,k data.',
-    color: '#10B981',
-    icon: 'plasmon',
-    status: 'Live',
-    url: `${base}lab/plasmonic-nanoparticles/`,
+    name: 'Wave optics & periodic structures',
+    widgets: [
+      { title: 'Beam Propagation Method', description: 'Simulate light propagation in step-index waveguides using the Crank\u2013Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap.', color: '#8B5CF6', icon: 'wave', status: 'Live', url: `${base}lab/bpm/` },
+      { title: 'RCWA \u2014 1D Grating', description: 'Rigorous Coupled Wave Analysis (Fourier modal method) for 1D periodic gratings. Computes R/T spectra for arbitrary materials. Runs in-browser via Pyodide + inkstone.', color: '#0EA5E9', icon: 'grating', status: 'Live', url: `${base}lab/rcwa/` },
+    ],
   },
   {
-    title: 'Relativistic Electron Calculator',
-    description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.',
-    color: '#7C3AED',
-    icon: 'electron',
-    status: 'Live',
-    url: `${base}lab/electron/`,
+    name: 'Lab calculators',
+    widgets: [
+      { title: 'Photon Calculator', description: 'Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons. Live spectrum chart with common laser lines.', color: '#10B981', icon: 'photon', status: 'Live', url: `${base}lab/photon/` },
+      { title: 'Relativistic Electron Calculator', description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.', color: '#7C3AED', icon: 'electron', status: 'Live', url: `${base}lab/electron/` },
+      { title: 'Laser Pulse Calculator', description: 'Pulse duration \u2194 bandwidth, peak power from average power, and GDD pulse broadening through dispersive media. For ultrafast laser labs.', color: '#EC4899', icon: 'laser', status: 'Live', url: `${base}lab/laser/` },
+      { title: 'Scientific Unit Converter', description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.', color: '#06B6D4', icon: 'ruler', status: 'Live', url: `${base}lab/units/` },
+    ],
   },
   {
-    title: 'Photon Calculator',
-    description: 'Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons. Live spectrum chart with common laser lines.',
-    color: '#10B981',
-    icon: 'photon',
-    status: 'Live',
-    url: `${base}lab/photon/`,
-  },
-  {
-    title: 'Cylinder Dispersion',
-    description: 'Guided-mode dispersion ω(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.',
-    color: '#6366F1',
-    icon: 'cylinder',
-    status: 'Live',
-    url: `${base}lab/cylinder/`,
-  },
-  {
-    title: 'Photothermal Calculator',
-    description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.',
-    color: '#EF4444',
-    icon: 'flame',
-    status: 'Live',
-    url: `${base}lab/photothermal/`,
-  },
-  {
-    title: 'Scientific Unit Converter',
-    description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.',
-    color: '#06B6D4',
-    icon: 'ruler',
-    status: 'Live',
-    url: `${base}lab/units/`,
-  },
-  {
-    title: 'Beam Propagation Method',
-    description: 'Simulate light propagation in step-index waveguides using the Crank\u2013Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap.',
-    color: '#8B5CF6',
-    icon: 'wave',
-    status: 'Live',
-    url: `${base}lab/bpm/`,
-  },
-  {
-    title: 'Laser Pulse Calculator',
-    description: 'Pulse duration \u2194 bandwidth, peak power from average power, and GDD pulse broadening through dispersive media. For ultrafast laser labs.',
-    color: '#EC4899',
-    icon: 'laser',
-    status: 'Live',
-    url: `${base}lab/laser/`,
-  },
-  {
-    title: 'BEM Solver',
-    description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.',
-    color: '#F97316',
-    icon: 'cube',
-    status: 'Live',
-    url: `${base}lab/bem-solver/`,
-  },
-  {
-    title: 'RCWA — 1D Grating',
-    description: 'Rigorous Coupled Wave Analysis (Fourier modal method) for 1D periodic gratings. Computes R/T spectra for arbitrary materials. Runs in-browser via Pyodide + inkstone.',
-    color: '#0EA5E9',
-    icon: 'grating',
-    status: 'Live',
-    url: `${base}lab/rcwa/`,
-  },
-  {
-    title: 'Methods Assistant',
-    description: 'Given a computational photonics problem, find the right numerical method. Semantic search over course notes, with optional Claude AI synthesis.',
-    color: '#64748B',
-    icon: 'chat',
-    status: 'Live',
-    url: `${base}lab/assistant/`,
+    name: 'Method selection',
+    widgets: [
+      { title: 'Methods Assistant', description: 'Given a computational photonics problem, find the right numerical method. Semantic search over course notes, with optional Claude AI synthesis.', color: '#64748B', icon: 'chat', status: 'Live', url: `${base}lab/assistant/` },
+    ],
   },
 ];
 ---
 
-<Layout title="Lab" description="Interactive simulation tools for nanophotonics — explore, learn, and play.">
+<Layout title="Lab" description="Interactive nanophotonics simulation tools running entirely in your browser — Mie, BEM, RCWA, BPM, plasmonics, electron and laser calculators.">
   <section class="page-hero">
     <div class="container">
       <h1>
-        Simulation
-        <span class="hero__gradient-text">playground</span>
+        Nanophotonics Simulation
+        <span class="hero__gradient-text">Toolkit</span>
       </h1>
       <p class="page-hero__subtitle">
-        Interactive nanophotonics tools running entirely in your browser — no installation required.
+        Interactive tools running entirely in your browser — no installation required.
       </p>
     </div>
   </section>
 
+  {categories.map(cat => (
   <section class="section">
     <div class="container">
+      <h2 class="cat-heading">{cat.name}</h2>
       <div class="widgets-grid">
-        {widgets.map(widget => (
+        {cat.widgets.map(widget => (
           <a href={widget.url} class="widget-card card" data-status={widget.status}>
             <div class="widget-card__header">
               <div class="widget-card__icon" style={`background: ${widget.color}15; color: ${widget.color}`}>
@@ -215,6 +156,7 @@ const widgets = [
       </div>
     </div>
   </section>
+  ))}
 </Layout>
 
 <style>
@@ -237,6 +179,15 @@ const widgets = [
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+
+  .cat-heading {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--space-lg);
   }
 
   .widgets-grid {
