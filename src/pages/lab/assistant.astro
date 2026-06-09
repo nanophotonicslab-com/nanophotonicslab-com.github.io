@@ -98,12 +98,15 @@ import Layout from '../../layouts/Layout.astro';
       <!-- API key modal -->
       <dialog id="key-dialog" class="key-dialog">
         <h3>Anthropic API Key</h3>
-        <p>Enter your key to enable AI-powered answers. It is stored only in your browser's localStorage and sent directly to <code>api.anthropic.com</code>.</p>
+        <p>Your key is sent directly to <code>api.anthropic.com</code> — it never touches any NanophotonicsLab server. By default, it is kept only for this session. <a href="/privacy/">Privacy policy</a></p>
         <div class="key-field">
           <input type="password" id="key-input" class="field-input" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
         </div>
+        <label class="key-remember">
+          <input type="checkbox" id="key-persist"> Remember this key in this browser
+        </label>
         <div class="key-actions">
-          <button id="key-remove" class="btn-outline">Remove key</button>
+          <button id="key-remove" class="btn-outline">Clear stored key</button>
           <button id="key-save" class="btn-primary">Save</button>
         </div>
       </dialog>
@@ -173,7 +176,13 @@ import Layout from '../../layouts/Layout.astro';
     background: var(--bg); color: var(--text); font-family: 'SF Mono', Menlo, Consolas, monospace;
   }
   .key-field .field-input:focus { outline: none; border-color: #8B5CF6; box-shadow: 0 0 0 2px rgba(139,92,246,0.15); }
-  .key-actions { display: flex; justify-content: flex-end; gap: var(--space-sm); }
+  .key-remember {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.8125rem; color: var(--text-soft); cursor: pointer;
+    margin-top: var(--space-sm);
+  }
+  .key-remember input { margin: 0; }
+  .key-actions { display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-md); }
   .btn-outline {
     padding: 0.4rem 0.9rem; font-size: 0.8125rem; font-weight: 500;
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
@@ -613,9 +622,26 @@ import Layout from '../../layouts/Layout.astro';
   // ===== API key management =====
 
   const KEY_STORAGE = 'anthropic-api-key';
-  function getApiKey(): string | null { return localStorage.getItem(KEY_STORAGE); }
-  function setApiKey(k: string) { localStorage.setItem(KEY_STORAGE, k); updateMode(); }
-  function removeApiKey() { localStorage.removeItem(KEY_STORAGE); updateMode(); }
+  let sessionKey: string | null = null;
+
+  function getApiKey(): string | null {
+    return sessionKey || localStorage.getItem(KEY_STORAGE);
+  }
+  function setApiKey(k: string, persist: boolean) {
+    if (persist) {
+      localStorage.setItem(KEY_STORAGE, k);
+      sessionKey = null;
+    } else {
+      localStorage.removeItem(KEY_STORAGE);
+      sessionKey = k;
+    }
+    updateMode();
+  }
+  function removeApiKey() {
+    localStorage.removeItem(KEY_STORAGE);
+    sessionKey = null;
+    updateMode();
+  }
 
   function updateMode() {
     const hasKey = !!getApiKey();
@@ -854,15 +880,19 @@ You will receive RETRIEVED PASSAGES from a computational photonics course textbo
 
   function openKeyDialog() {
     keyInput.value = getApiKey() || '';
+    const persistCheckbox = document.getElementById('key-persist') as HTMLInputElement;
+    persistCheckbox.checked = !!localStorage.getItem(KEY_STORAGE);
     keyDialog.showModal();
   }
 
   keyBtn.addEventListener('click', openKeyDialog);
   bannerAddKey?.addEventListener('click', openKeyDialog);
 
+  const keyPersistCheckbox = document.getElementById('key-persist') as HTMLInputElement;
+
   document.getElementById('key-save')!.addEventListener('click', () => {
     const val = keyInput.value.trim();
-    if (val) setApiKey(val);
+    if (val) setApiKey(val, keyPersistCheckbox.checked);
     keyDialog.close();
   });
 
