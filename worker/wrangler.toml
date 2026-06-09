@@ -9,4 +9,4 @@ custom_domain = true
 
 [[send_email]]
 name = "SEND_EMAIL"
-destination_address = "info@nanophotonicslab.com"
+destination_address = "joseramasa+nplab@gmail.com"

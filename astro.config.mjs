@@ -8,9 +8,9 @@ export default defineConfig({
   site: 'https://nanophotonicslab.com',
 
   redirects: {
-    '/research/': '/',
-    '/publications/': '/',
-    '/team/': '/',
+    '/research/': '/lab/',
+    '/publications/': '/about/',
+    '/team/': '/about/',
   },
 
   integrations: [sitemap()],
