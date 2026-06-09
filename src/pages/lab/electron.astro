@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Relativistic Electron Calculator" description="Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons — with live chart and microscope references.">
@@ -14,6 +15,17 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Stable">
+    <dl>
+      <dt>Model</dt>
+      <dd>Special-relativistic kinematics: K = (&gamma; &minus; 1)m<sub>e</sub>c&sup2;, &gamma; = (1 &minus; v&sup2;/c&sup2;)<sup>&minus;1/2</sup>, &lambda;<sub>e</sub> = h/p.</dd>
+      <dt>Assumptions</dt>
+      <dd>Free electron in vacuum. Constants from CODATA 2018.</dd>
+      <dt>Limitations</dt>
+      <dd>No potential energy or interaction effects. The de Broglie wavelength is the free-space value — inside a material, effective wavelength differs.</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

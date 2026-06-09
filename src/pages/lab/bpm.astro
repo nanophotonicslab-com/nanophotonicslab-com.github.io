@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Beam Propagation Method" description="Simulate light propagation in waveguides using the Crank-Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap with preset demo tasks.">
@@ -14,6 +15,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Paraxial scalar beam propagation method (BPM). The paraxial Helmholtz equation is solved with a Crank&ndash;Nicolson finite-difference scheme — unconditionally stable and second-order accurate.</dd>
+      <dt>Assumptions</dt>
+      <dd>Paraxial approximation (small angles relative to the propagation axis), scalar field (no polarization), 2D cross-section (x&ndash;z plane), step-index waveguide profiles.</dd>
+      <dt>Validity</dt>
+      <dd>Accurate for weakly guiding structures and beam propagation angles below ~15&deg;. Not valid for high-contrast waveguides, backward reflections, or resonant cavities.</dd>
+      <dt>Limitations</dt>
+      <dd>No vectorial effects, no backward-propagating waves, no nonlinear media. Absorbing boundary conditions (quadratic imaginary-n ramp) may introduce small artifacts near the window edges.</dd>
+      <dt>References</dt>
+      <dd>K. Okamoto, <em>Fundamentals of Optical Waveguides</em>, 2nd ed. (Academic Press, 2006), Chapter 7.</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">
