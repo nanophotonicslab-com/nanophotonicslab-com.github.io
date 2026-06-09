@@ -11,7 +11,9 @@ interface Props {
 }
 
 const { title, description = 'Interactive browser-based tools for nanophotonics, optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.' } = Astro.props;
-const siteTitle = `${title} | NanophotonicsLab`;
+const siteTitle = title === 'Home'
+  ? 'NanophotonicsLab \u2014 Browser-Based Nanophotonics Tools'
+  : `${title} \u2014 NanophotonicsLab`;
 const siteOrigin = Astro.site?.href ?? 'https://nanophotonicslab.com';
 const canonicalURL = new URL(Astro.url.pathname, siteOrigin);
 const path = Astro.url.pathname;
