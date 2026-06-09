@@ -10,7 +10,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Nanophotonics research lab — exploring light-matter interactions at the nanoscale.' } = Astro.props;
+const { title, description = 'Interactive browser-based tools for nanophotonics, optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.' } = Astro.props;
 const siteTitle = `${title} | NanophotonicsLab`;
 const siteOrigin = Astro.site?.href ?? 'https://nanophotonicslab.com';
 const canonicalURL = new URL(Astro.url.pathname, siteOrigin);
