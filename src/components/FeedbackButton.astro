@@ -1,8 +1,8 @@
 ---
-const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%94%20NanophotonicsLab';
+const feedbackUrl = import.meta.env.PUBLIC_FEEDBACK_URL || '';
 ---
 
-<div class="feedback-widget" data-open="false">
+<div class="feedback-widget" data-open="false" data-state="idle" data-api={feedbackUrl}>
   <button class="feedback-pill" type="button" aria-label="Send feedback">
     <svg class="feedback-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -18,12 +18,28 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     </button>
     <p class="feedback-card__title">Got a photon out of place?</p>
     <p class="feedback-card__subtitle">Bug, suggestion, or just want to say hi — we'd love to hear from you.</p>
-    <a class="feedback-cta" href={mailtoHref}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,7 12,13 2,7"/>
+
+    <form class="feedback-form">
+      <textarea name="message" placeholder="What's on your mind?" required rows="4"></textarea>
+      <input type="email" name="email" placeholder="Your email (optional)">
+      <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
+      <button class="feedback-submit" type="submit">
+        <span class="feedback-submit__text">Send</span>
+        <span class="feedback-submit__sending">Sending...</span>
+      </button>
+    </form>
+
+    <div class="feedback-sent">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="9 12 11.5 14.5 16 9.5"/>
       </svg>
-      Send us a message
-    </a>
+      <p>Thanks! We got your message.</p>
+    </div>
+
+    <div class="feedback-error">
+      <p>Something went wrong.</p>
+      <button class="feedback-retry" type="button">Try again</button>
+    </div>
   </div>
 </div>
 
@@ -34,14 +50,52 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
 
     const pill = widget.querySelector('.feedback-pill');
     const close = widget.querySelector('.feedback-close');
+    const form = widget.querySelector('.feedback-form') as HTMLFormElement;
+    const retry = widget.querySelector('.feedback-retry');
+    const apiUrl = widget.getAttribute('data-api');
 
     function toggle() {
       const open = widget.getAttribute('data-open') === 'true';
       widget.setAttribute('data-open', String(!open));
+      if (open) widget.setAttribute('data-state', 'idle');
     }
 
     pill?.addEventListener('click', toggle);
     close?.addEventListener('click', toggle);
+    retry?.addEventListener('click', () => widget.setAttribute('data-state', 'idle'));
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!apiUrl) return;
+
+      widget.setAttribute('data-state', 'sending');
+
+      const data = {
+        message: (form.querySelector('[name="message"]') as HTMLTextAreaElement).value,
+        email: (form.querySelector('[name="email"]') as HTMLInputElement).value,
+        page: window.location.href,
+        _hp: (form.querySelector('[name="_hp"]') as HTMLInputElement).value,
+      };
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (!res.ok) throw new Error();
+
+        widget.setAttribute('data-state', 'sent');
+        form.reset();
+        setTimeout(() => {
+          widget.setAttribute('data-open', 'false');
+          widget.setAttribute('data-state', 'idle');
+        }, 3000);
+      } catch {
+        widget.setAttribute('data-state', 'error');
+      }
+    });
   });
 </script>
 
@@ -82,7 +136,6 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     flex-shrink: 0;
   }
 
-  /* Hide pill when card is open */
   .feedback-widget[data-open="true"] .feedback-pill {
     opacity: 0;
     pointer-events: none;
@@ -95,7 +148,7 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 280px;
+    width: 300px;
     padding: 1.25rem;
     background: var(--bg);
     border: 1px solid var(--bg-muted);
@@ -113,7 +166,6 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     transform: translateY(0) scale(1);
   }
 
-  /* Spectrum accent line at top */
   .feedback-card::before {
     content: '';
     position: absolute;
@@ -161,30 +213,142 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     font-size: 0.8125rem;
     color: var(--text-soft);
     line-height: 1.5;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
-  /* --- CTA mailto link --- */
-  .feedback-cta {
-    display: inline-flex;
+  /* --- Form --- */
+  .feedback-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .feedback-form textarea,
+  .feedback-form input[type="email"] {
+    width: 100%;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem;
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .feedback-form textarea {
+    resize: vertical;
+    min-height: 4.5rem;
+  }
+
+  .feedback-form textarea::placeholder,
+  .feedback-form input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .feedback-form textarea:focus,
+  .feedback-form input[type="email"]:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  }
+
+  /* --- Submit button --- */
+  .feedback-submit {
+    display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.55rem 1.1rem;
+    justify-content: center;
+    width: 100%;
+    padding: 0.55rem 1rem;
+    border: none;
     border-radius: var(--radius-full);
     background: var(--primary);
     color: white;
+    font-family: var(--font);
     font-size: 0.8125rem;
     font-weight: 600;
-    text-decoration: none;
+    cursor: pointer;
     transition: background 0.2s, box-shadow 0.2s;
-    width: 100%;
-    justify-content: center;
   }
 
-  .feedback-cta:hover {
+  .feedback-submit:hover {
     background: var(--primary-dark);
-    color: white;
     box-shadow: var(--shadow-glow);
+  }
+
+  .feedback-submit__sending {
+    display: none;
+  }
+
+  [data-state="sending"] .feedback-submit {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  [data-state="sending"] .feedback-submit__text {
+    display: none;
+  }
+
+  [data-state="sending"] .feedback-submit__sending {
+    display: inline;
+  }
+
+  /* --- State visibility --- */
+  .feedback-sent,
+  .feedback-error {
+    display: none;
+  }
+
+  [data-state="sent"] .feedback-form,
+  [data-state="error"] .feedback-form {
+    display: none;
+  }
+
+  [data-state="sent"] .feedback-sent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    text-align: center;
+  }
+
+  [data-state="sent"] .feedback-sent p {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  [data-state="error"] .feedback-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    text-align: center;
+  }
+
+  [data-state="error"] .feedback-error p {
+    font-size: 0.875rem;
+    color: var(--text-soft);
+  }
+
+  .feedback-retry {
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--primary);
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .feedback-retry:hover {
+    background: var(--bg-soft);
+    border-color: var(--primary-light);
   }
 
   /* --- Mobile --- */
@@ -195,7 +359,7 @@ const mailtoHref = 'mailto:info@nanophotonicslab.com?subject=Feedback%20%E2%80%9
     }
 
     .feedback-card {
-      width: min(280px, calc(100vw - 2rem));
+      width: min(300px, calc(100vw - 2rem));
     }
 
     .feedback-pill__label {
