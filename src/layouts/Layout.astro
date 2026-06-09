@@ -20,14 +20,20 @@ const path = Astro.url.pathname;
 const isHome = path === '/' || path === '';
 const isLabTool = path.startsWith('/lab/') && path !== '/lab/' && path !== '/lab';
 
+const author = {
+  '@type': 'Person',
+  name: 'José Ramón Martínez Saavedra',
+  url: `${siteOrigin}/about/`,
+};
+
 const jsonLd = isHome
   ? JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': 'ResearchOrganization',
-      name: 'Nanophotonics Lab',
+      '@type': 'WebSite',
+      name: 'NanophotonicsLab',
       url: siteOrigin,
-      description: 'Open nanophotonic simulation tools for researchers — Mie scattering, BEM solver, laser calculators, and more.',
-      sameAs: ['https://github.com/nanophotonicslab-com'],
+      description: 'Browser-based nanophotonics simulation tools for optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.',
+      author,
     })
   : isLabTool
     ? JSON.stringify({
@@ -39,7 +45,7 @@ const jsonLd = isHome
         applicationCategory: 'ScienceApplication',
         operatingSystem: 'Any',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-        creator: { '@type': 'Organization', name: 'Nanophotonics Lab', url: siteOrigin },
+        creator: author,
       })
     : null;
 ---
