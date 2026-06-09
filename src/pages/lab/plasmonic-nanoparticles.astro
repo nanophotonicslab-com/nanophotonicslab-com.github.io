@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 import { MATERIALS } from '../../lib/materials';
 import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
 
@@ -25,6 +26,21 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Electrostatic (quasi-static) approximation with geometry-only modal polarizabilities. Retardation is added perturbatively via a radiative-reaction correction.</dd>
+      <dt>Assumptions</dt>
+      <dd>Particle much smaller than the wavelength (quasi-static limit). Isotropic, local dielectric response. Modal parameters are geometry-only fits from numerical simulations.</dd>
+      <dt>Validity</dt>
+      <dd>Best for particles below ~100 nm. Retardation and phase effects are approximate for larger sizes. Spectral positions are reliable; absolute cross-section magnitudes are less accurate than full-wave solvers.</dd>
+      <dt>Limitations</dt>
+      <dd>No inter-particle coupling, no substrate effects, no non-local corrections. Modal fits are available for a fixed set of geometries — custom shapes not supported.</dd>
+      <dt>References</dt>
+      <dd>C. Tserkezis et al., Part. Part. Syst. Charact. <strong>31</strong>, 152 (2014); tabulated optical constants from Johnson &amp; Christy, Palik, and others.</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

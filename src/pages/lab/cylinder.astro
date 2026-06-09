@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Cylinder Scattering" description="Plane-wave scattering and electron-loss spectroscopy for infinite cylinders, solved in the browser.">
@@ -14,6 +15,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Exact electromagnetic boundary matching for an infinite circular cylinder. Plane-wave scattering uses the classical Mie-type series; EELS uses the non-retarded dielectric formalism.</dd>
+      <dt>Assumptions</dt>
+      <dd>Infinite cylinder length, circular cross-section, isotropic and local dielectric functions, homogeneous host medium.</dd>
+      <dt>Validity</dt>
+      <dd>Exact for plane-wave scattering at any cylinder radius. EELS results are non-retarded — accurate for sub-wavelength cylinders and moderate electron energies.</dd>
+      <dt>Limitations</dt>
+      <dd>No finite-length effects, no substrate, no non-local corrections. Tabulated optical constants limit the spectral range to available data.</dd>
+      <dt>References</dt>
+      <dd>Bohren &amp; Huffman (1983), Chapter 8; F. J. García de Abajo, Rev. Mod. Phys. <strong>82</strong>, 209 (2010).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">
