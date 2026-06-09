@@ -9,33 +9,33 @@ const categories: Category[] = [
   {
     name: 'Scattering & nanoparticles',
     widgets: [
-      { title: 'Mie Scattering Calculator', description: 'Compute scattering, extinction, and absorption cross-sections for spherical nanoparticles. Supports real materials (Au, Ag, Si, Al, TiO\u2082) and custom dielectrics.', color: '#F59E0B', icon: 'bolt', status: 'Live', url: `${base}lab/mie-scattering/` },
-      { title: 'Plasmonic Nanoparticles', description: 'Analytical spectra for rods, cages, disks, rings, bipyramids, and related plasmonic shapes using geometry-only modal parameters and tabulated n,k data.', color: '#10B981', icon: 'plasmon', status: 'Live', url: `${base}lab/plasmonic-nanoparticles/` },
-      { title: 'Cylinder Dispersion', description: 'Guided-mode dispersion \u03c9(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.', color: '#6366F1', icon: 'cylinder', status: 'Live', url: `${base}lab/cylinder/` },
-      { title: 'BEM Solver', description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.', color: '#F97316', icon: 'cube', status: 'Live', url: `${base}lab/bem-solver/` },
-      { title: 'Photothermal Calculator', description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.', color: '#EF4444', icon: 'flame', status: 'Live', url: `${base}lab/photothermal/` },
+      { title: 'Mie Scattering Calculator', description: 'Compute scattering, extinction, and absorption cross-sections for spherical nanoparticles. Supports real materials (Au, Ag, Si, Al, TiO\u2082) and custom dielectrics.', color: '#F59E0B', icon: 'bolt', status: 'Stable', url: `${base}lab/mie-scattering/` },
+      { title: 'Plasmonic Nanoparticles', description: 'Analytical spectra for rods, cages, disks, rings, bipyramids, and related plasmonic shapes using geometry-only modal parameters and tabulated n,k data.', color: '#10B981', icon: 'plasmon', status: 'Beta', url: `${base}lab/plasmonic-nanoparticles/` },
+      { title: 'Cylinder Dispersion', description: 'Guided-mode dispersion \u03c9(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.', color: '#6366F1', icon: 'cylinder', status: 'Beta', url: `${base}lab/cylinder/` },
+      { title: 'BEM Solver', description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.', color: '#F97316', icon: 'cube', status: 'Experimental', url: `${base}lab/bem-solver/` },
+      { title: 'Photothermal Calculator', description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.', color: '#EF4444', icon: 'flame', status: 'Beta', url: `${base}lab/photothermal/` },
     ],
   },
   {
     name: 'Wave optics & periodic structures',
     widgets: [
-      { title: 'Beam Propagation Method', description: 'Simulate light propagation in step-index waveguides using the Crank\u2013Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap.', color: '#8B5CF6', icon: 'wave', status: 'Live', url: `${base}lab/bpm/` },
-      { title: 'RCWA \u2014 1D Grating', description: 'Rigorous Coupled Wave Analysis (Fourier modal method) for 1D periodic gratings. Computes R/T spectra for arbitrary materials. Runs in-browser via Pyodide + inkstone.', color: '#0EA5E9', icon: 'grating', status: 'Live', url: `${base}lab/rcwa/` },
+      { title: 'Beam Propagation Method', description: 'Simulate light propagation in step-index waveguides using the Crank\u2013Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap.', color: '#8B5CF6', icon: 'wave', status: 'Beta', url: `${base}lab/bpm/` },
+      { title: 'RCWA \u2014 1D Grating', description: 'Rigorous Coupled Wave Analysis (Fourier modal method) for 1D periodic gratings. Computes R/T spectra for arbitrary materials. Runs in-browser via Pyodide + inkstone.', color: '#0EA5E9', icon: 'grating', status: 'Experimental', url: `${base}lab/rcwa/` },
     ],
   },
   {
     name: 'Lab calculators',
     widgets: [
-      { title: 'Photon Calculator', description: 'Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons. Live spectrum chart with common laser lines.', color: '#10B981', icon: 'photon', status: 'Live', url: `${base}lab/photon/` },
-      { title: 'Relativistic Electron Calculator', description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.', color: '#7C3AED', icon: 'electron', status: 'Live', url: `${base}lab/electron/` },
-      { title: 'Laser Pulse Calculator', description: 'Pulse duration \u2194 bandwidth, peak power from average power, and GDD pulse broadening through dispersive media. For ultrafast laser labs.', color: '#EC4899', icon: 'laser', status: 'Live', url: `${base}lab/laser/` },
-      { title: 'Scientific Unit Converter', description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.', color: '#06B6D4', icon: 'ruler', status: 'Live', url: `${base}lab/units/` },
+      { title: 'Photon Calculator', description: 'Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons. Live spectrum chart with common laser lines.', color: '#10B981', icon: 'photon', status: 'Stable', url: `${base}lab/photon/` },
+      { title: 'Relativistic Electron Calculator', description: 'Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons. Live chart with SEM/TEM references.', color: '#7C3AED', icon: 'electron', status: 'Stable', url: `${base}lab/electron/` },
+      { title: 'Laser Pulse Calculator', description: 'Pulse duration \u2194 bandwidth, peak power from average power, and GDD pulse broadening through dispersive media. For ultrafast laser labs.', color: '#EC4899', icon: 'laser', status: 'Stable', url: `${base}lab/laser/` },
+      { title: 'Scientific Unit Converter', description: 'Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics, quantum mechanics, and electromagnetism.', color: '#06B6D4', icon: 'ruler', status: 'Stable', url: `${base}lab/units/` },
     ],
   },
   {
     name: 'Method selection',
     widgets: [
-      { title: 'Methods Assistant', description: 'Given a computational photonics problem, find the right numerical method. Semantic search over course notes, with optional Claude AI synthesis.', color: '#64748B', icon: 'chat', status: 'Live', url: `${base}lab/assistant/` },
+      { title: 'Methods Assistant', description: 'Given a computational photonics problem, find the right numerical method. Semantic search over course notes, with optional Claude AI synthesis.', color: '#64748B', icon: 'chat', status: 'Experimental', url: `${base}lab/assistant/` },
     ],
   },
 ];
@@ -140,13 +140,17 @@ const categories: Category[] = [
                   </svg>
                 )}
               </div>
-              <span class:list={['widget-status', { 'widget-status--live': widget.status === 'Live' }]}>
+              <span class:list={['widget-status', {
+                'widget-status--stable': widget.status === 'Stable',
+                'widget-status--beta': widget.status === 'Beta',
+                'widget-status--experimental': widget.status === 'Experimental',
+              }]}>
                 {widget.status}
               </span>
             </div>
             <h3>{widget.title}</h3>
             <p>{widget.description}</p>
-            {widget.status === 'Live' && (
+            {widget.status !== 'Coming soon' && (
               <span class="widget-cta">
                 Launch simulator &rarr;
               </span>
@@ -241,9 +245,19 @@ const categories: Category[] = [
     color: var(--text-muted);
   }
 
-  .widget-status--live {
+  .widget-status--stable {
     background: #ECFDF5;
     color: #059669;
+  }
+
+  .widget-status--beta {
+    background: #FEF3C7;
+    color: #D97706;
+  }
+
+  .widget-status--experimental {
+    background: #FEE2E2;
+    color: #DC2626;
   }
 
   .widget-card h3 {
