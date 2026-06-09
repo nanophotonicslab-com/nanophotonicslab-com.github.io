@@ -62,7 +62,7 @@ export default {
     try {
       const msg = new EmailMessage(
         "noreply@nanophotonicslab.com",
-        "info@nanophotonicslab.com",
+        "joseramasa+nplab@gmail.com",
         new Response(rawEmail).body,
       );
       await env.SEND_EMAIL.send(msg);
