@@ -1,0 +1,12 @@
+name = "nanophotonicslab-feedback"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = false
+
+[[routes]]
+pattern = "feedback.nanophotonicslab.com"
+custom_domain = true
+
+[[send_email]]
+name = "SEND_EMAIL"
+destination_address = "info@nanophotonicslab.com"
