@@ -1,8 +1,9 @@
 ---
 interface Props {
   presets: { label: string; values: Record<string, string | number> }[];
+  canvasId?: string;
 }
-const { presets } = Astro.props;
+const { presets, canvasId } = Astro.props;
 ---
 
 <div class="preset-strip">
@@ -12,6 +13,14 @@ const { presets } = Astro.props;
       {p.label}
     </button>
   ))}
+  {canvasId && (
+    <button class="preset-strip__export" type="button" data-export-png={canvasId} title="Save chart as PNG">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span>Save PNG</span>
+    </button>
+  )}
   <button class="preset-strip__copy" type="button" data-copy-link title="Copy shareable link">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -41,6 +50,7 @@ const { presets } = Astro.props;
     margin-right: 0.25rem;
   }
 
+  .preset-strip__export,
   .preset-strip__copy {
     display: inline-flex;
     align-items: center;
@@ -59,6 +69,7 @@ const { presets } = Astro.props;
     transition: border-color 0.15s, color 0.15s;
   }
 
+  .preset-strip__export:hover,
   .preset-strip__copy:hover {
     border-color: var(--primary);
     color: var(--primary);
@@ -126,6 +137,19 @@ const { presets } = Astro.props;
           el.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
+    });
+  });
+
+  // PNG export
+  document.querySelectorAll('[data-export-png]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const canvasId = (btn as HTMLElement).dataset.exportPng;
+      const canvas = document.getElementById(canvasId || '') as HTMLCanvasElement | null;
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = `${canvasId}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     });
   });
 </script>
