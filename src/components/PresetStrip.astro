@@ -12,6 +12,13 @@ const { presets } = Astro.props;
       {p.label}
     </button>
   ))}
+  <button class="preset-strip__copy" type="button" data-copy-link title="Copy shareable link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+    <span>Copy link</span>
+  </button>
 </div>
 
 <style>
@@ -32,6 +39,29 @@ const { presets } = Astro.props;
     letter-spacing: 0.06em;
     color: var(--text-muted);
     margin-right: 0.25rem;
+  }
+
+  .preset-strip__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .preset-strip__copy:hover {
+    border-color: var(--primary);
+    color: var(--primary);
   }
 
   .preset-strip__btn {
