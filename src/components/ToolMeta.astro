@@ -1,0 +1,72 @@
+---
+import { TOOL_VERSIONS, formatCitation } from '../lib/tool-versions';
+
+interface Props {
+  slug: string;
+  name: string;
+}
+const { slug, name } = Astro.props;
+const v = TOOL_VERSIONS[slug];
+const citation = formatCitation(name, slug);
+---
+
+{v && (
+  <div class="tool-meta">
+    <span class="tool-meta__version">v{v.version}</span>
+    <span class="tool-meta__sep">&middot;</span>
+    <span class="tool-meta__date">Updated {v.updated}</span>
+    <button class="tool-meta__cite" type="button" data-citation={citation} title="Copy citation to clipboard">
+      Cite this tool
+    </button>
+  </div>
+)}
+
+<style>
+  .tool-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--space-sm);
+  }
+
+  .tool-meta__sep {
+    opacity: 0.4;
+  }
+
+  .tool-meta__cite {
+    margin-left: auto;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.6875rem;
+    font-family: inherit;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .tool-meta__cite:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.tool-meta__cite').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const citation = (btn as HTMLElement).dataset.citation || '';
+      navigator.clipboard.writeText(citation).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    });
+  });
+</script>

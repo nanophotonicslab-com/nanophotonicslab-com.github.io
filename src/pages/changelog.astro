@@ -1,0 +1,91 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Changelog" description="Release history and updates for NanophotonicsLab tools.">
+  <section class="page-hero">
+    <div class="container">
+      <h1>Changelog</h1>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container changelog">
+
+      <article class="changelog__entry">
+        <h2>2026-06-10</h2>
+        <ul>
+          <li><strong>Presets:</strong> Added example presets to Mie, Cylinder, BEM, Photothermal, and Laser tools.</li>
+          <li><strong>Permalinks:</strong> Tool parameters now sync to the URL — share a link to reproduce any configuration.</li>
+          <li><strong>Export:</strong> Save PNG button for chart export on Mie, Cylinder, BEM, Photothermal, Laser.</li>
+          <li><strong>Cite:</strong> "Cite this tool" button on every tool page copies a formatted citation with version and access date.</li>
+          <li><strong>Versioning:</strong> All tools now display version number and last-updated date.</li>
+          <li><strong>Model info:</strong> Collapsible "Model &amp; Assumptions" block on all 12 tool pages — model, assumptions, validity, limitations, references.</li>
+          <li><strong>Maturity badges:</strong> Tools classified as Stable, Beta, or Experimental (replacing generic "Live" badge).</li>
+          <li><strong>Navigation:</strong> LabToolsBar redesigned with category dropdowns (Calculators, Photonics Lab, Toolkit) and search.</li>
+        </ul>
+      </article>
+
+      <article class="changelog__entry">
+        <h2>2026-06-09</h2>
+        <ul>
+          <li><strong>Identity overhaul:</strong> Replaced fictional research-group framing with honest toolkit identity.</li>
+          <li><strong>About page:</strong> Real author identities — Dr. Álvaro Rodríguez Echarri and Dr. José Ramón Martínez Saavedra.</li>
+          <li><strong>Privacy page:</strong> Documents client-side computation, API key handling, analytics, localStorage.</li>
+          <li><strong>Home page:</strong> Rewritten hero, value proposition, tool categories, author attribution.</li>
+          <li><strong>Lab page:</strong> Renamed to "Nanophotonics Simulation Toolkit", tools grouped into 4 categories.</li>
+          <li><strong>SEO:</strong> Descriptive titles with em-dash separator, specific meta descriptions.</li>
+          <li><strong>Cleanup:</strong> Removed placeholder pages (research, team, publications) with fake academic content.</li>
+          <li><strong>JSON-LD:</strong> Fixed schema — WebSite + Person instead of ResearchOrganization.</li>
+          <li><strong>Redirects:</strong> /research/ → /lab/, /team/ → /about/, /publications/ → /about/.</li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .changelog {
+    max-width: 720px;
+  }
+
+  .changelog__entry {
+    padding-bottom: var(--space-xl);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--bg-muted);
+  }
+
+  .changelog__entry:last-child {
+    border-bottom: none;
+  }
+
+  .changelog__entry h2 {
+    font-size: 1.125rem;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--space-md);
+  }
+
+  .changelog__entry ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .changelog__entry li {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-soft);
+  }
+
+  .changelog__entry strong {
+    color: var(--text);
+  }
+</style>

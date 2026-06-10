@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 
 const bemPresets = [
   { label: 'Au sphere in water', values: { 'shape-select': 'sphere', 'material-select': 'au', 'radius-input': 25, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 800, 'wl-npoints-input': 20 } },
@@ -20,6 +21,7 @@ const bemPresets = [
         Raviart-Thomas elements. Compute cross-sections, near-field enhancement, and more
         — all in your browser.
       </p>
+      <ToolMeta slug="bem-solver" name="BEM Solver" />
     </div>
   </section>
 

@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 ---
 
 <Layout title="RCWA — 1D Grating" description="Rigorous Coupled Wave Analysis for 1D periodic gratings. Compute reflection and transmission spectra via Fourier modal method.">
@@ -14,6 +15,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
         via Pyodide + <a href="https://github.com/alexysong/inkstone" target="_blank" rel="noopener">inkstone</a>.
         <br/><strong>First load downloads ~35 MB (Pyodide + numpy + scipy + inkstone) — cached after.</strong>
       </p>
+      <ToolMeta slug="rcwa" name="RCWA — 1D Grating" />
     </div>
   </section>
 
