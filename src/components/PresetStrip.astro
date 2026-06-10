@@ -1,0 +1,101 @@
+---
+interface Props {
+  presets: { label: string; values: Record<string, string | number> }[];
+}
+const { presets } = Astro.props;
+---
+
+<div class="preset-strip">
+  <span class="preset-strip__label">Examples</span>
+  {presets.map(p => (
+    <button class="preset-strip__btn" type="button" data-preset={JSON.stringify(p.values)}>
+      {p.label}
+    </button>
+  ))}
+</div>
+
+<style>
+  .preset-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding-bottom: var(--space-md);
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--bg-muted);
+  }
+
+  .preset-strip__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+  }
+
+  .preset-strip__btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-soft);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  .preset-strip__btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.06);
+  }
+
+  .preset-strip__btn.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+    font-weight: 600;
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.preset-strip__btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Visual feedback
+      btn.closest('.preset-strip')
+        ?.querySelectorAll('.preset-strip__btn')
+        .forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const data: Record<string, string | number> = JSON.parse(
+        (btn as HTMLElement).dataset.preset || '{}'
+      );
+      // Set selects first (they may show/hide dependent fields)
+      const selects: [string, string | number][] = [];
+      const inputs: [string, string | number][] = [];
+      for (const [key, value] of Object.entries(data)) {
+        const el = document.getElementById(key);
+        if (el instanceof HTMLSelectElement) selects.push([key, value]);
+        else inputs.push([key, value]);
+      }
+      for (const [key, value] of selects) {
+        const el = document.getElementById(key) as HTMLSelectElement;
+        el.value = String(value);
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Small delay to let select handlers run (show/hide fields, load data)
+      requestAnimationFrame(() => {
+        for (const [key, value] of inputs) {
+          const el = document.getElementById(key) as HTMLInputElement | null;
+          if (!el) continue;
+          el.value = String(value);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+    });
+  });
+</script>

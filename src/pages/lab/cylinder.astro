@@ -1,6 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import PresetStrip from '../../components/PresetStrip.astro';
+
+const cylPresets = [
+  { label: 'Ag in air', values: { 'material-select': 'ag', 'r-num': 15, 'r-slider': 15, 'eh-num': 1.00, 'eh-slider': 1.00, 'w-min': 0.2, 'w-max': 4 } },
+  { label: 'Au in water', values: { 'material-select': 'au', 'r-num': 25, 'r-slider': 25, 'eh-num': 1.77, 'eh-slider': 1.77, 'w-min': 0.5, 'w-max': 4 } },
+  { label: 'Si in air', values: { 'material-select': 'si', 'r-num': 50, 'r-slider': 50, 'eh-num': 1.00, 'eh-slider': 1.00, 'w-min': 1, 'w-max': 5 } },
+];
 ---
 
 <Layout title="Cylinder Scattering" description="Plane-wave scattering and electron-loss spectroscopy for infinite cylinders, solved in the browser.">
@@ -36,6 +43,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
+          <PresetStrip presets={cylPresets} />
           <div class="param excitation-param">
             <div class="param-header"><label>Excitation</label></div>
             <div class="view-tabs" id="excitation-tabs" role="radiogroup">
