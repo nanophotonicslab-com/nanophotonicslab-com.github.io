@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 
 const miePresets = [
   { label: 'Au in water', values: { 'material-select': 'au', 'r-num': 50, 'r-slider': 50, 'nh-num': 1.33, 'nh-slider': 1.33, 'lam-min': 300, 'lam-max': 900 } },
@@ -19,6 +20,7 @@ const miePresets = [
         Compute scattering, extinction, and absorption cross-sections for spherical
         nanoparticles using exact Mie theory. Adjust parameters and see results in real time.
       </p>
+      <ToolMeta slug="mie-scattering" name="Mie Scattering Calculator" />
     </div>
   </section>
 
