@@ -1,6 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import PresetStrip from '../../components/PresetStrip.astro';
+
+const thermalPresets = [
+  { label: 'Au NP, green laser', values: { 'material-select': 'au', 'r-num': 50, 'r-slider': 50, 'nh-num': 1.33, 'nh-slider': 1.33, 'lam-num': 532, 'lam-slider': 532, 'pow-num': 1, 'pow-slider': 1, 'w0-num': 1, 'w0-slider': 1, 'k-num': 0.606 } },
+  { label: 'Au NP, NIR laser', values: { 'material-select': 'au', 'r-num': 25, 'r-slider': 25, 'nh-num': 1.33, 'nh-slider': 1.33, 'lam-num': 780, 'lam-slider': 780, 'pow-num': 10, 'pow-slider': 10, 'w0-num': 2, 'w0-slider': 2, 'k-num': 0.606 } },
+  { label: 'Ag NP, blue laser, air', values: { 'material-select': 'ag', 'r-num': 40, 'r-slider': 40, 'nh-num': 1.00, 'nh-slider': 1.00, 'lam-num': 405, 'lam-slider': 405, 'pow-num': 5, 'pow-slider': 5, 'w0-num': 0.5, 'w0-slider': 0.5, 'k-num': 0.026 } },
+];
 ---
 
 <Layout title="Photothermal Calculator" description="Laser-driven nanoparticle heating: absorbed power, scattering albedo, and steady-state temperature rise from Mie theory.">
@@ -36,6 +43,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
+          <PresetStrip presets={thermalPresets} />
           <h3>Parameters</h3>
 
           <div class="param">
