@@ -1,6 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import PresetStrip from '../../components/PresetStrip.astro';
+
+const bemPresets = [
+  { label: 'Au sphere in water', values: { 'shape-select': 'sphere', 'material-select': 'au', 'radius-input': 25, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 800, 'wl-npoints-input': 20 } },
+  { label: 'Ag nanorod in air', values: { 'shape-select': 'rod', 'material-select': 'ag', 'radius-input': 15, 'length-input': 100, 'eps-medium-input': 1.00, 'wl-min-input': 300, 'wl-max-input': 600, 'wl-npoints-input': 20 } },
+  { label: 'Au nanorod in water', values: { 'shape-select': 'rod', 'material-select': 'au', 'radius-input': 20, 'length-input': 80, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 900, 'wl-npoints-input': 25 } },
+];
 ---
 
 <Layout title="BEM Solver" description="Full-wave electromagnetic solver for nanoparticles — retarded BEM with 3D visualization, powered by Pyodide.">
@@ -37,6 +44,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 
         <!-- Left: Controls -->
         <div class="controls card">
+          <PresetStrip presets={bemPresets} />
           <h3>Geometry</h3>
           <div class="param">
             <div class="param-header"><label>Shape</label></div>
@@ -150,6 +158,18 @@ import ModelInfo from '../../components/ModelInfo.astro';
       </div>
     </div>
   </section>
+<script>
+import { initPermalinks } from '../../lib/permalink';
+initPermalinks({
+  shape: 'shape-select',
+  material: 'material-select',
+  radius: 'radius-input',
+  length: 'length-input',
+  eps: 'eps-medium-input',
+  wl_min: 'wl-min-input',
+  wl_max: 'wl-max-input',
+});
+</script>
 </Layout>
 
 <script>

@@ -1,6 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import PresetStrip from '../../components/PresetStrip.astro';
+
+const laserPresets = [
+  { label: 'Ti:sapphire (100 fs)', values: { 'tbp-lam': 800, 'tbp-dt': 100, 'peak-pavg': 1, 'peak-frep': 80, 'peak-dt': 100, 'gdd-wl': 800, 'gdd-dt': 100 } },
+  { label: 'Er:fiber (200 fs)', values: { 'tbp-lam': 1550, 'tbp-dt': 200, 'peak-pavg': 0.1, 'peak-frep': 100, 'peak-dt': 200, 'gdd-wl': 1550, 'gdd-dt': 200 } },
+  { label: 'Nd:YAG (10 ps)', values: { 'tbp-lam': 1064, 'tbp-dt': 10000, 'peak-pavg': 0.5, 'peak-frep': 10, 'peak-dt': 10000, 'gdd-wl': 1064, 'gdd-dt': 10000 } },
+];
 ---
 
 <Layout title="Laser Pulse Calculator" description="Pulse duration, bandwidth, peak power, and dispersion for ultrafast laser pulses. Time-bandwidth product, GDD broadening, and peak power from average power.">
@@ -28,6 +35,9 @@ import ModelInfo from '../../components/ModelInfo.astro';
 
   <section class="section">
     <div class="container">
+      <div class="card" style="margin-bottom: var(--space-lg);">
+        <PresetStrip presets={laserPresets} />
+      </div>
       <!-- Tabs -->
       <div class="calc-tabs-row">
         <div class="calc-tabs" id="calc-tabs">
@@ -838,6 +848,13 @@ import ModelInfo from '../../components/ModelInfo.astro';
       </div>
     </div>
   </section>
+<script>
+import { initPermalinks } from '../../lib/permalink';
+initPermalinks({
+  lam: 'tbp-lam',
+  dt: 'tbp-dt',
+});
+</script>
 </Layout>
 
 <style>
