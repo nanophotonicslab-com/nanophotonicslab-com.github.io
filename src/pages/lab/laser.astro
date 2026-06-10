@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 
 const laserPresets = [
   { label: 'Ti:sapphire (100 fs)', values: { 'tbp-lam': 800, 'tbp-dt': 100, 'peak-pavg': 1, 'peak-frep': 80, 'peak-dt': 100, 'gdd-wl': 800, 'gdd-dt': 100 } },
@@ -19,6 +20,7 @@ const laserPresets = [
         Essential calculations for ultrafast laser labs: time-bandwidth product,
         peak power from average power, and pulse broadening through dispersive media.
       </p>
+      <ToolMeta slug="laser" name="Laser Pulse Calculator" />
     </div>
   </section>
 

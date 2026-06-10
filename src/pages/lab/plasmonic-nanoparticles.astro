@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 import { MATERIALS } from '../../lib/materials';
 import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
 
@@ -24,6 +25,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
         (quasi-static) approximation with geometry-only modal polarizabilities. It is not
         a fully retarded electrodynamic solution, so retardation and phase effects are approximate, especially for larger particles.
       </p>
+      <ToolMeta slug="plasmonic-nanoparticles" name="Plasmonic Nanoparticles" />
     </div>
   </section>
 
