@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="BEM Solver" description="Full-wave electromagnetic solver for nanoparticles — retarded BEM with 3D visualization, powered by Pyodide.">
@@ -14,6 +15,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Experimental">
+    <dl>
+      <dt>Model</dt>
+      <dd>Full-wave retarded boundary element method (BEM). Surface currents are expanded in Raviart&ndash;Thomas basis functions on a triangular mesh; Maxwell's equations are solved via surface integral equations.</dd>
+      <dt>Assumptions</dt>
+      <dd>Piecewise-homogeneous media (sharp interfaces), local and isotropic dielectric response, no spatial dispersion.</dd>
+      <dt>Validity</dt>
+      <dd>Applicable to arbitrary particle shapes and sizes. Accuracy depends on mesh quality — finer meshes improve convergence but increase computation time (runs in-browser via Pyodide).</dd>
+      <dt>Limitations</dt>
+      <dd>Browser memory limits mesh resolution (~1000 triangles practical). No periodic boundaries, no substrate, no non-local corrections. First load downloads ~35 MB (Pyodide + dependencies).</dd>
+      <dt>References</dt>
+      <dd>F. J. García de Abajo &amp; A. Howie, Phys. Rev. B <strong>65</strong>, 115418 (2002); U. Hohenester &amp; A. Trügler, Comp. Phys. Comm. <strong>183</strong>, 370 (2012).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

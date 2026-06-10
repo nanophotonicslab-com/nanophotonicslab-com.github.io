@@ -1,6 +1,41 @@
 ---
 import Layout from '../layouts/Layout.astro';
 const base = import.meta.env.BASE_URL;
+
+const categories = [
+  {
+    title: 'Scattering & nanoparticles',
+    tools: [
+      { label: 'Mie Scattering', href: `${base}lab/mie-scattering/` },
+      { label: 'Plasmonic Nanoparticles', href: `${base}lab/plasmonic-nanoparticles/` },
+      { label: 'Cylinder Dispersion', href: `${base}lab/cylinder/` },
+      { label: 'BEM Solver', href: `${base}lab/bem-solver/` },
+      { label: 'Photothermal', href: `${base}lab/photothermal/` },
+    ],
+  },
+  {
+    title: 'Wave optics & periodic structures',
+    tools: [
+      { label: 'Beam Propagation (BPM)', href: `${base}lab/bpm/` },
+      { label: 'RCWA — 1D Grating', href: `${base}lab/rcwa/` },
+    ],
+  },
+  {
+    title: 'Lab calculators',
+    tools: [
+      { label: 'Photon Calculator', href: `${base}lab/photon/` },
+      { label: 'Electron Calculator', href: `${base}lab/electron/` },
+      { label: 'Laser Pulse Calculator', href: `${base}lab/laser/` },
+      { label: 'Unit Converter', href: `${base}lab/units/` },
+    ],
+  },
+  {
+    title: 'Method selection',
+    tools: [
+      { label: 'Methods Assistant', href: `${base}lab/assistant/` },
+    ],
+  },
+];
 ---
 
 <Layout title="Home">
@@ -14,17 +49,71 @@ const base = import.meta.env.BASE_URL;
     </div>
     <div class="container hero__content">
       <h1>
-        Light at the
-        <span class="hero__gradient-text">nanoscale</span>
+        Browser-based nanophotonics
+        <span class="hero__gradient-text">tools</span>
       </h1>
       <p class="hero__subtitle">
-        We investigate light-matter interactions in nanostructures — from
-        plasmonics and photonic crystals to quantum optics. Building the tools
-        and knowledge to control photons at their smallest scale.
+        Run scattering, plasmonics, wave-optics, electron and laser calculators
+        directly in your browser — no installation, no notebooks, no setup.
       </p>
       <div class="hero__actions">
-        <a href={`${base}lab/`} class="btn btn--primary">Try our simulators</a>
+        <a href={`${base}lab/`} class="btn btn--primary">Browse tools</a>
+        <a href={`${base}lab/assistant/`} class="btn btn--outline">Find the right method</a>
       </div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">What's available</h2>
+      <div class="cat-grid">
+        {categories.map(cat => (
+          <div class="cat-card card">
+            <h3>{cat.title}</h3>
+            <ul>
+              {cat.tools.map(t => (
+                <li><a href={t.href}>{t.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Purpose -->
+  <section class="section">
+    <div class="container purpose-grid">
+      <div class="purpose-block">
+        <h2>Built for quick scientific checks</h2>
+        <p>
+          NanophotonicsLab focuses on interactive, transparent tools for researchers,
+          students and engineers who need fast estimates, visual intuition and
+          exportable numerical results.
+        </p>
+      </div>
+      <div class="purpose-block">
+        <h2>Transparent assumptions</h2>
+        <p>
+          Each tool documents its numerical model, validity range, limitations and
+          references. Where approximations are used, they are stated explicitly.
+          Some tools are exact within their model; others are intended for
+          exploration and intuition.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Author -->
+  <section class="section section--subtle">
+    <div class="container author-block">
+      <p>
+        Created by
+        <a href="https://scholar.google.com/citations?user=Q_EZls8AAAAJ" target="_blank" rel="noopener">Dr. Álvaro Rodríguez Echarri</a> and
+        <a href="https://scholar.google.com/citations?user=wyZ69W0AAAAJ" target="_blank" rel="noopener">Dr. José Ramón Martínez Saavedra</a>,
+        physicists specializing in theoretical nanophotonics.
+      </p>
     </div>
   </section>
 </Layout>
@@ -35,7 +124,6 @@ const base = import.meta.env.BASE_URL;
     position: relative;
     padding: calc(var(--nav-height) + var(--space-3xl) - var(--lab-bar-height)) 0 var(--space-3xl);
     overflow: hidden;
-    min-height: 80vh;
     display: flex;
     align-items: center;
   }
@@ -127,6 +215,83 @@ const base = import.meta.env.BASE_URL;
     display: flex;
     gap: var(--space-md);
     flex-wrap: wrap;
+  }
+
+  /* Categories */
+  .section__title {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-xl);
+  }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .cat-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+    color: var(--text);
+  }
+
+  .cat-card ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .cat-card a {
+    font-size: 0.9375rem;
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .cat-card a:hover {
+    color: var(--primary);
+  }
+
+  /* Purpose */
+  .purpose-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-xl);
+  }
+
+  .purpose-block h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-md);
+  }
+
+  .purpose-block p {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    color: var(--text-soft);
+  }
+
+  /* Author */
+  .section--subtle {
+    background: var(--bg-soft);
+  }
+
+  .author-block p {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    color: var(--text-soft);
+    max-width: 600px;
+  }
+
+  .author-block a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .author-block a:hover {
+    text-decoration: underline;
   }
 
   @media (max-width: 768px) {

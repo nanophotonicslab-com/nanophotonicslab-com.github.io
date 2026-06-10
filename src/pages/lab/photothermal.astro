@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Photothermal Calculator" description="Laser-driven nanoparticle heating: absorbed power, scattering albedo, and steady-state temperature rise from Mie theory.">
@@ -14,6 +15,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Exact Mie theory for absorption and scattering cross-sections, combined with the steady-state heat equation for a point source in a homogeneous medium: &Delta;T(R) = P<sub>abs</sub> / (4&pi;&kappa;R).</dd>
+      <dt>Assumptions</dt>
+      <dd>CW (continuous-wave) illumination, Gaussian beam profile (peak irradiance I = 2P/&pi;w<sub>0</sub>&sup2;), uniform and infinite host medium, temperature-independent thermal conductivity.</dd>
+      <dt>Validity</dt>
+      <dd>Accurate for single isolated nanoparticles in a uniform medium with moderate temperature rises (linear thermal regime).</dd>
+      <dt>Limitations</dt>
+      <dd>No collective heating, no substrate, no pulsed illumination, no temperature-dependent material properties. The point-source thermal model breaks down very close to the particle surface.</dd>
+      <dt>References</dt>
+      <dd>G. Baffou &amp; R. Quidant, Laser Photonics Rev. <strong>7</strong>, 171 (2013); Bohren &amp; Huffman (1983).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

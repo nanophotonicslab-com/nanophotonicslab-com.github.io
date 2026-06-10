@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Mie Scattering Calculator" description="Interactive Mie scattering calculator for spherical nanoparticles — exact solutions in your browser.">
@@ -13,6 +14,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Stable">
+    <dl>
+      <dt>Model</dt>
+      <dd>Exact Mie theory — analytical solution to Maxwell's equations for a homogeneous sphere in a uniform host medium.</dd>
+      <dt>Assumptions</dt>
+      <dd>Spherical geometry, isotropic and local dielectric functions, plane-wave or electron-beam excitation, no substrate or inter-particle coupling.</dd>
+      <dt>Validity</dt>
+      <dd>Valid for any sphere size relative to wavelength. Optical constants from tabulated experimental data (Johnson &amp; Christy, Palik, etc.) via cubic-spline interpolation.</dd>
+      <dt>Limitations</dt>
+      <dd>No non-local or quantum-size corrections. EELS uses the non-retarded analytical model for the homogeneous sphere (retardation effects missing for large particles or high energies).</dd>
+      <dt>References</dt>
+      <dd>Bohren &amp; Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983); F. J. García de Abajo, Rev. Mod. Phys. <strong>82</strong>, 209 (2010).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

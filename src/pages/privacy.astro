@@ -1,0 +1,180 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Privacy" description="Privacy policy for NanophotonicsLab — how data is handled across simulation tools and the Methods Assistant.">
+  <section class="page-hero">
+    <div class="container">
+      <h1>Privacy</h1>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container privacy-content">
+
+      <div class="privacy-block">
+        <h2>Simulation tools</h2>
+        <p>
+          All numerical simulation tools (Mie, BEM, RCWA, BPM, plasmonic nanoparticles,
+          cylinder dispersion, photothermal, and all calculators) run <strong>entirely
+          in your browser</strong>. No input data, parameters or results are sent to
+          any server. Your data never leaves your device.
+        </p>
+        <p>
+          Tools that use <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>
+          (BEM Solver, RCWA) download Python packages on first use (~35 MB). These
+          packages are fetched from public CDNs and cached locally by your browser.
+          No user data is included in these requests.
+        </p>
+      </div>
+
+      <div class="privacy-block">
+        <h2>Methods Assistant</h2>
+        <p>
+          The Methods Assistant has two modes:
+        </p>
+        <ul>
+          <li>
+            <strong>Semantic search</strong> (default): runs locally in your browser
+            using an embedded language model. No data leaves your device.
+          </li>
+          <li>
+            <strong>AI synthesis</strong> (optional): requires an Anthropic API key
+            provided by you. When enabled, your query and the retrieved context are
+            sent directly to <code>api.anthropic.com</code>. NanophotonicsLab does
+            not operate any backend or proxy — the request goes straight from your
+            browser to Anthropic's API.
+          </li>
+        </ul>
+
+        <h3>API key handling</h3>
+        <ul>
+          <li>The key is stored in your browser's <code>localStorage</code> only if you choose to save it.</li>
+          <li>It is never sent anywhere other than <code>api.anthropic.com</code>.</li>
+          <li>You can delete it at any time using the "Clear key" button in the Assistant, or by clearing your browser's site data.</li>
+          <li><strong>Recommendation:</strong> use a restricted or non-production API key. Do not use keys with billing access beyond what you're comfortable with.</li>
+        </ul>
+      </div>
+
+      <div class="privacy-block">
+        <h2>Analytics</h2>
+        <p>
+          NanophotonicsLab uses <a href="https://umami.is" target="_blank" rel="noopener">Umami</a>
+          for anonymous, aggregated usage analytics. Umami is privacy-friendly:
+        </p>
+        <ul>
+          <li>No cookies</li>
+          <li>No personal data collected</li>
+          <li>No cross-site tracking</li>
+          <li>GDPR compliant</li>
+        </ul>
+        <p>
+          Analytics data includes page views, referrer, browser type and country
+          (derived from IP, which is not stored). No individual user profiles are created.
+        </p>
+      </div>
+
+      <div class="privacy-block">
+        <h2>Cookies and local storage</h2>
+        <p>
+          NanophotonicsLab does not use cookies. The following data may be stored
+          in your browser's <code>localStorage</code>:
+        </p>
+        <ul>
+          <li><strong>Theme preference</strong> (light/dark) — stored as <code>theme</code></li>
+          <li><strong>Anthropic API key</strong> (Methods Assistant only, if you choose to save it) — stored as <code>anthropic-api-key</code></li>
+        </ul>
+        <p>
+          You can clear all stored data at any time through your browser settings
+          or by using the controls provided in the relevant tool.
+        </p>
+      </div>
+
+      <div class="privacy-block">
+        <h2>Third-party services</h2>
+        <ul>
+          <li><strong>Google Fonts</strong> — the Inter typeface is loaded from <code>fonts.googleapis.com</code>. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
+          <li><strong>Anthropic API</strong> — only when you explicitly use AI synthesis in the Methods Assistant. See <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic's privacy policy</a>.</li>
+          <li><strong>Pyodide CDN</strong> — Python WebAssembly packages loaded on demand for BEM and RCWA tools.</li>
+          <li><strong>Umami Cloud</strong> — anonymous analytics. See <a href="https://umami.is/privacy" target="_blank" rel="noopener">Umami's privacy policy</a>.</li>
+        </ul>
+      </div>
+
+      <div class="privacy-block">
+        <h2>Contact</h2>
+        <p>
+          Questions about privacy or data handling:
+          <a href="mailto:info@nanophotonicslab.com">info@nanophotonicslab.com</a>
+        </p>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero h1 {
+    margin-bottom: var(--space-md);
+  }
+
+  .privacy-content {
+    max-width: 720px;
+  }
+
+  .privacy-block {
+    margin-bottom: var(--space-xl);
+  }
+
+  .privacy-block h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-md);
+  }
+
+  .privacy-block h3 {
+    font-size: 1.0625rem;
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-sm);
+  }
+
+  .privacy-block p {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    margin-bottom: var(--space-md);
+  }
+
+  .privacy-block p:last-child {
+    margin-bottom: 0;
+  }
+
+  .privacy-block ul {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    padding-left: var(--space-lg);
+    margin-bottom: var(--space-md);
+  }
+
+  .privacy-block li {
+    margin-bottom: var(--space-sm);
+  }
+
+  .privacy-block a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .privacy-block a:hover {
+    text-decoration: underline;
+  }
+
+  .privacy-block code {
+    font-size: 0.85em;
+    background: var(--bg-muted);
+    padding: 0.15em 0.4em;
+    border-radius: var(--radius-sm, 4px);
+  }
+</style>

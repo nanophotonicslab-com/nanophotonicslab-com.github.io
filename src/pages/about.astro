@@ -1,0 +1,135 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="About" description="About NanophotonicsLab — browser-based nanophotonics simulation tools by Dr. José Ramón Martínez Saavedra and Dr. Álvaro Rodríguez Echarri.">
+  <section class="page-hero">
+    <div class="container">
+      <h1>About</h1>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container about-content">
+
+      <div class="about-block">
+        <h2>What is NanophotonicsLab</h2>
+        <p>
+          NanophotonicsLab is a collection of browser-based tools for nanophotonics,
+          optical scattering, plasmonics, electron microscopy, wave optics and ultrafast
+          laser calculations.
+        </p>
+        <p>
+          All numerical tools run entirely in your browser. There is no server-side
+          computation — your data never leaves your device. Some tools use
+          <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>
+          to run Python scientific libraries (NumPy, SciPy) client-side via WebAssembly.
+        </p>
+      </div>
+
+      <div class="about-block">
+        <h2>Who made this</h2>
+        <p>
+          NanophotonicsLab is created and maintained by
+          <strong><a href="https://scholar.google.com/citations?user=Q_EZls8AAAAJ" target="_blank" rel="noopener">Dr. Álvaro Rodríguez Echarri</a></strong>,
+          postdoctoral researcher in theoretical nanophotonics, and
+          <strong><a href="https://scholar.google.com/citations?user=wyZ69W0AAAAJ" target="_blank" rel="noopener">Dr. José Ramón Martínez Saavedra</a></strong>,
+          physicist working in scientific software and deep-tech product development.
+        </p>
+        <p>
+          Both are former PhD students of
+          <a href="https://www.nanophotonics.org" target="_blank" rel="noopener">Prof. Javier García de Abajo</a>
+          at ICFO — The Institute of Photonic Sciences (Barcelona).
+          The tools in this project draw on the theoretical and computational
+          background developed during that training.
+        </p>
+      </div>
+
+      <div class="about-block">
+        <h2>Intent and limitations</h2>
+        <p>
+          The tools are intended for exploration, teaching, rapid estimation and
+          reproducible numerical checks. They are <strong>not</strong> a substitute
+          for full electromagnetic simulation workflows or peer-reviewed validation
+          in critical designs.
+        </p>
+        <p>
+          Each tool documents its numerical model, assumptions and references.
+          Where approximations are used, they are stated explicitly.
+        </p>
+      </div>
+
+      <div class="about-block">
+        <h2>Technical details</h2>
+        <ul>
+          <li>Built with <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>, vanilla TypeScript and Pyodide</li>
+          <li>All computation is client-side — no backend, no accounts, no tracking cookies</li>
+          <li>Analytics via <a href="https://umami.is" target="_blank" rel="noopener">Umami</a> (privacy-friendly, no cookies, no personal data)</li>
+          <li>Source code: <a href="https://github.com/nanophotonicslab-com" target="_blank" rel="noopener">github.com/nanophotonicslab-com</a></li>
+        </ul>
+      </div>
+
+      <div class="about-block">
+        <h2>Contact</h2>
+        <p>
+          For bug reports, feature requests or questions:
+          <a href="mailto:info@nanophotonicslab.com">info@nanophotonicslab.com</a>
+        </p>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero h1 {
+    margin-bottom: var(--space-md);
+  }
+
+  .about-content {
+    max-width: 720px;
+  }
+
+  .about-block {
+    margin-bottom: var(--space-xl);
+  }
+
+  .about-block h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-md);
+  }
+
+  .about-block p {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    margin-bottom: var(--space-md);
+  }
+
+  .about-block p:last-child {
+    margin-bottom: 0;
+  }
+
+  .about-block ul {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    padding-left: var(--space-lg);
+  }
+
+  .about-block li {
+    margin-bottom: var(--space-sm);
+  }
+
+  .about-block a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .about-block a:hover {
+    text-decoration: underline;
+  }
+</style>

@@ -10,8 +10,10 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Nanophotonics research lab — exploring light-matter interactions at the nanoscale.' } = Astro.props;
-const siteTitle = `${title} | NanophotonicsLab`;
+const { title, description = 'Interactive browser-based tools for nanophotonics, optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.' } = Astro.props;
+const siteTitle = title === 'Home'
+  ? 'NanophotonicsLab \u2014 Browser-Based Nanophotonics Tools'
+  : `${title} \u2014 NanophotonicsLab`;
 const siteOrigin = Astro.site?.href ?? 'https://nanophotonicslab.com';
 const canonicalURL = new URL(Astro.url.pathname, siteOrigin);
 const path = Astro.url.pathname;
@@ -20,14 +22,19 @@ const path = Astro.url.pathname;
 const isHome = path === '/' || path === '';
 const isLabTool = path.startsWith('/lab/') && path !== '/lab/' && path !== '/lab';
 
+const authors = [
+  { '@type': 'Person', name: 'Dr. Álvaro Rodríguez Echarri', url: 'https://scholar.google.com/citations?user=Q_EZls8AAAAJ' },
+  { '@type': 'Person', name: 'Dr. José Ramón Martínez Saavedra', url: 'https://scholar.google.com/citations?user=wyZ69W0AAAAJ' },
+];
+
 const jsonLd = isHome
   ? JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': 'ResearchOrganization',
-      name: 'Nanophotonics Lab',
+      '@type': 'WebSite',
+      name: 'NanophotonicsLab',
       url: siteOrigin,
-      description: 'Open nanophotonic simulation tools for researchers — Mie scattering, BEM solver, laser calculators, and more.',
-      sameAs: ['https://github.com/nanophotonicslab-com'],
+      description: 'Browser-based nanophotonics simulation tools for optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.',
+      author: authors,
     })
   : isLabTool
     ? JSON.stringify({
@@ -39,7 +46,7 @@ const jsonLd = isHome
         applicationCategory: 'ScienceApplication',
         operatingSystem: 'Any',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-        creator: { '@type': 'Organization', name: 'Nanophotonics Lab', url: siteOrigin },
+        creator: authors,
       })
     : null;
 ---
