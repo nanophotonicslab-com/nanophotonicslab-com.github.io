@@ -1,0 +1,210 @@
+---
+import Layout from '../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+
+const methods = [
+  {
+    name: 'Mie theory',
+    geometry: 'Spheres (and core-shell)',
+    physics: 'Exact EM solution for homogeneous spheres. All multipolar orders, retardation included.',
+    bestFor: 'Spherical nanoparticles of any size. Quick spectral checks, material screening.',
+    failsWhen: 'Non-spherical geometries, substrates, inter-particle coupling, non-local effects.',
+    cost: 'Instant',
+    tool: { label: 'Mie Scattering', href: `${base}lab/mie-scattering/` },
+  },
+  {
+    name: 'Quasistatic plasmonics',
+    geometry: 'Rods, disks, cages, bipyramids, rings',
+    physics: 'Electrostatic modal polarizabilities with radiative-reaction correction. Geometry-only fits.',
+    bestFor: 'Sub-100 nm plasmonic shapes. Fast spectral estimates, shape/material exploration.',
+    failsWhen: 'Particles approaching or larger than the wavelength. High-order multipoles needed.',
+    cost: 'Instant',
+    tool: { label: 'Plasmonic NPs', href: `${base}lab/plasmonic-nanoparticles/` },
+  },
+  {
+    name: 'Cylinder scattering',
+    geometry: 'Infinite circular cylinders',
+    physics: 'Exact Mie-type series for plane-wave scattering. Non-retarded dielectric formalism for EELS.',
+    bestFor: 'Nanowires, nanotubes, cylindrical waveguides. Guided-mode dispersion.',
+    failsWhen: 'Finite-length cylinders, non-circular cross-sections, substrates.',
+    cost: 'Instant',
+    tool: { label: 'Cylinder', href: `${base}lab/cylinder/` },
+  },
+  {
+    name: 'BEM (Boundary Element Method)',
+    geometry: 'Arbitrary 3D shapes',
+    physics: 'Full-wave retarded solution via surface integral equations. Raviart-Thomas basis on triangular mesh.',
+    bestFor: 'Arbitrary particle shapes, near-field maps, when Mie/quasistatic are insufficient.',
+    failsWhen: 'Very large particles (mesh resolution limited by browser memory). Periodic structures, substrates.',
+    cost: 'Seconds to minutes (in-browser via Pyodide)',
+    tool: { label: 'BEM Solver', href: `${base}lab/bem-solver/` },
+  },
+  {
+    name: 'BPM (Beam Propagation Method)',
+    geometry: '2D waveguide cross-sections',
+    physics: 'Paraxial scalar wave equation, Crank-Nicolson scheme. Unconditionally stable.',
+    bestFor: 'Weakly guiding waveguides, directional couplers, mode propagation visualization.',
+    failsWhen: 'High-contrast waveguides, backward reflections, resonant cavities, vectorial effects.',
+    cost: 'Sub-second',
+    tool: { label: 'BPM', href: `${base}lab/bpm/` },
+  },
+  {
+    name: 'RCWA (Rigorous Coupled Wave Analysis)',
+    geometry: '1D periodic gratings',
+    physics: 'Fourier modal method. Plane-wave expansion, eigenvalue solve per layer.',
+    bestFor: 'Diffraction gratings, photonic crystals (1D), thin-film stacks with periodicity.',
+    failsWhen: '2D periodicity, very thick metallic gratings (slow convergence), aperiodic structures.',
+    cost: 'Seconds (in-browser via Pyodide + inkstone)',
+    tool: { label: 'RCWA', href: `${base}lab/rcwa/` },
+  },
+  {
+    name: 'Photothermal (Mie + heat)',
+    geometry: 'Spheres in uniform host',
+    physics: 'Exact Mie for absorption + steady-state point-source heat equation.',
+    bestFor: 'CW laser heating of isolated nanoparticles. Biomedical, photothermal therapy estimates.',
+    failsWhen: 'Pulsed illumination, collective heating, temperature-dependent properties, substrates.',
+    cost: 'Instant',
+    tool: { label: 'Photothermal', href: `${base}lab/photothermal/` },
+  },
+];
+---
+
+<Layout title="Method Guide" description="Which numerical method should you use? A comparison of Mie theory, BEM, RCWA, BPM, and quasistatic plasmonics for nanophotonics problems.">
+  <section class="page-hero">
+    <div class="container">
+      <h1>Which method should I use?</h1>
+      <p class="page-hero__subtitle">
+        Compare the numerical methods available in NanophotonicsLab.
+        Each row links to the corresponding tool.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="table-wrap">
+        <table class="method-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Geometry</th>
+              <th>Physics</th>
+              <th>Best for</th>
+              <th>Fails when</th>
+              <th>Cost</th>
+              <th>Tool</th>
+            </tr>
+          </thead>
+          <tbody>
+            {methods.map(m => (
+              <tr>
+                <td class="method-table__name">{m.name}</td>
+                <td>{m.geometry}</td>
+                <td>{m.physics}</td>
+                <td>{m.bestFor}</td>
+                <td>{m.failsWhen}</td>
+                <td>{m.cost}</td>
+                <td><a href={m.tool.href} class="method-table__link">{m.tool.label} &rarr;</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container guide-cta">
+      <p>
+        Not sure which method fits your problem?
+        The <a href={`${base}lab/assistant/`}>Methods Assistant</a> can help — describe your geometry and physics, and get a recommendation.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .page-hero__subtitle {
+    font-size: 1.25rem;
+    max-width: 600px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .method-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .method-table th,
+  .method-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--bg-muted);
+  }
+
+  .method-table th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: var(--bg-soft);
+    position: sticky;
+    top: 0;
+  }
+
+  .method-table__name {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text);
+  }
+
+  .method-table td {
+    color: var(--text-soft);
+  }
+
+  .method-table__link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .method-table__link:hover {
+    text-decoration: underline;
+  }
+
+  .method-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.03);
+  }
+
+  .guide-cta {
+    max-width: 600px;
+  }
+
+  .guide-cta p {
+    font-size: 0.9375rem;
+    line-height: 1.8;
+    color: var(--text-soft);
+  }
+
+  .guide-cta a {
+    color: var(--primary);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+</style>
