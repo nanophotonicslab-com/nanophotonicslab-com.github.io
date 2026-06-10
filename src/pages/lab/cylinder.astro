@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
 
 const cylPresets = [
   { label: 'Ag in air', values: { 'material-select': 'ag', 'r-num': 15, 'r-slider': 15, 'eh-num': 1.00, 'eh-slider': 1.00, 'w-min': 0.2, 'w-max': 4 } },
@@ -20,6 +21,7 @@ const cylPresets = [
         spectra for an infinite cylinder in a homogeneous host. Materials use the
         same optical-constants pipeline as the Mie lab.
       </p>
+      <ToolMeta slug="cylinder" name="Cylinder Scattering" />
     </div>
   </section>
 
