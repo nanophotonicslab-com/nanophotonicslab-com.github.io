@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="RCWA — 1D Grating" description="Rigorous Coupled Wave Analysis for 1D periodic gratings. Compute reflection and transmission spectra via Fourier modal method.">
@@ -15,6 +16,21 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Experimental">
+    <dl>
+      <dt>Model</dt>
+      <dd>Rigorous Coupled Wave Analysis (Fourier modal method). Fields are expanded in plane-wave harmonics of the grating period; an eigenvalue problem is solved in each layer. Powered by <a href="https://github.com/alexysong/inkstone" target="_blank" rel="noopener">inkstone</a> via Pyodide.</dd>
+      <dt>Assumptions</dt>
+      <dd>1D periodicity, infinite lateral extent, plane-wave illumination, isotropic materials in each layer.</dd>
+      <dt>Validity</dt>
+      <dd>Exact in the limit of sufficient Fourier orders. Convergence should be checked by increasing the truncation order — especially for metallic gratings where convergence can be slow.</dd>
+      <dt>Limitations</dt>
+      <dd>1D gratings only (no 2D periodicity). Browser memory limits the practical number of Fourier orders. First load downloads ~35 MB (Pyodide + numpy + scipy + inkstone).</dd>
+      <dt>References</dt>
+      <dd>M. G. Moharam &amp; T. K. Gaylord, J. Opt. Soc. Am. <strong>71</strong>, 811 (1981); L. Li, J. Opt. Soc. Am. A <strong>14</strong>, 2758 (1997).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Laser Pulse Calculator" description="Pulse duration, bandwidth, peak power, and dispersion for ultrafast laser pulses. Time-bandwidth product, GDD broadening, and peak power from average power.">
@@ -13,6 +14,17 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Stable">
+    <dl>
+      <dt>Model</dt>
+      <dd>Standard ultrafast-optics relations: time&ndash;bandwidth product (&Delta;t&middot;&Delta;&nu; &ge; TBP), peak power from average power and duty cycle, GDD-induced pulse broadening for transform-limited input pulses.</dd>
+      <dt>Assumptions</dt>
+      <dd>Transform-limited input pulses (Gaussian, sech&sup2;, or Lorentzian). Second-order dispersion only (GDD); higher-order dispersion neglected. Linear propagation — no self-phase modulation or nonlinear effects.</dd>
+      <dt>Limitations</dt>
+      <dd>No higher-order dispersion (TOD, FOD). No chirped input pulses. Gaussian-beam calculator assumes TEM<sub>00</sub> mode only.</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">

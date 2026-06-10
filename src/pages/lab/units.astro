@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
 ---
 
 <Layout title="Unit Converter" description="Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics and quantum mechanics.">
@@ -13,6 +14,17 @@ import Layout from '../../layouts/Layout.astro';
       </p>
     </div>
   </section>
+
+  <ModelInfo status="Stable">
+    <dl>
+      <dt>Model</dt>
+      <dd>Exact unit-conversion factors between SI, Gaussian CGS/ESU, and Hartree atomic units for 11 electromagnetic and mechanical quantities.</dd>
+      <dt>Assumptions</dt>
+      <dd>Conversion factors follow CODATA 2018 recommended values. CGS/ESU uses the Gaussian convention (unrationalized, &epsilon;<sub>0</sub> = 1/4&pi;).</dd>
+      <dt>Limitations</dt>
+      <dd>Conversions are exact within floating-point precision. Does not cover Heaviside&ndash;Lorentz or natural units.</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">
