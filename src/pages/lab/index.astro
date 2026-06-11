@@ -14,6 +14,7 @@ const categories: Category[] = [
       { title: 'Cylinder Dispersion', description: 'Guided-mode dispersion \u03c9(q_z) of an infinite dielectric cylinder from exact electromagnetic matching. Multiple angular orders, light and material lines, in-browser complex Bessel.', color: '#6366F1', icon: 'cylinder', status: 'Beta', url: `${base}lab/cylinder/` },
       { title: 'BEM Solver', description: 'Galerkin boundary element method for plasmonic nanoparticles. Spheres and nanorods with 3D visualization, cross-section spectra, and near-field enhancement. Runs in-browser via Pyodide.', color: '#F97316', icon: 'cube', status: 'Experimental', url: `${base}lab/bem-solver/` },
       { title: 'Photothermal Calculator', description: 'Laser-driven nanoparticle heating: cross-sections, albedo, and steady-state temperature rise from exact Mie theory. For plasmonic and biomedical applications.', color: '#EF4444', icon: 'flame', status: 'Beta', url: `${base}lab/photothermal/` },
+      { title: 'Heterostructures', description: 'Layered planar-media modules for surface plasmons and thin films. Starts with single-interface Drude dispersion in normalized Economou variables.', color: '#0EA5E9', icon: 'layers', status: 'Beta', url: `${base}lab/heterostructures/` },
     ],
   },
   {
@@ -137,6 +138,13 @@ const categories: Category[] = [
                 {widget.icon === 'grating' && (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 4v16"/><path d="M8 4v16"/><path d="M12 4v16"/><path d="M16 4v16"/><path d="M20 4v16"/>
+                  </svg>
+                )}
+                {widget.icon === 'layers' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
                   </svg>
                 )}
               </div>

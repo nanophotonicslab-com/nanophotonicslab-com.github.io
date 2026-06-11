@@ -1,0 +1,149 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+
+const modules = [
+  {
+    title: 'Surface Plasmons',
+    description: 'Single-interface TM surface-plasmon dispersion with Drude layers, normalized Economou axes, light lines, and stack controls prepared for thin-film extensions.',
+    status: 'Live',
+    url: `${base}lab/heterostructures/surface-plasmons/`,
+  },
+];
+---
+
+<Layout title="Heterostructures Lab" description="Planar heterostructure modules for surface plasmons, thin films, and layered nanophotonic media.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Heterostructures</h1>
+      <p class="widget-hero__subtitle">
+        Planar layered-media tools for interface modes and thin-film plasmonic
+        structures, starting from the Economou surface-plasmon normalization.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="modules-grid">
+        {modules.map(module => (
+          <a href={module.url} class="module-card card" data-status={module.status}>
+            <div class="module-card__header">
+              <span class="module-card__icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 8h20"/>
+                  <path d="M4 14h20"/>
+                  <path d="M4 20h20"/>
+                  <path d="M8 5c2.8 5 9.2 13 12 18"/>
+                  <path d="M20 5c-2.8 5-9.2 13-12 18"/>
+                </svg>
+              </span>
+              <span class:list={['module-status', { 'module-status--live': module.status === 'Live' }]}>
+                {module.status}
+              </span>
+            </div>
+            <h2>{module.title}</h2>
+            <p>{module.description}</p>
+            <span class="module-cta">Launch module &rarr;</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .widget-hero {
+    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+    background: var(--bg-soft);
+  }
+
+  .widget-hero h1 {
+    margin-bottom: var(--space-sm);
+  }
+
+  .widget-hero__subtitle {
+    font-size: 1.125rem;
+    max-width: 760px;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-bottom: var(--space-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-soft);
+  }
+
+  .back-link:hover {
+    color: var(--primary);
+  }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .module-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .module-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .module-card__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0EA5E9;
+    background: rgba(14, 165, 233, 0.1);
+  }
+
+  .module-status {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    background: var(--bg-muted);
+    color: var(--text-muted);
+  }
+
+  .module-status--live {
+    background: #ECFDF5;
+    color: #059669;
+  }
+
+  .module-card h2 {
+    font-size: 1.25rem;
+  }
+
+  .module-card p {
+    flex-grow: 1;
+    font-size: 0.9375rem;
+  }
+
+  .module-cta {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .module-card:hover .module-cta {
+    color: var(--primary-dark);
+  }
+</style>
