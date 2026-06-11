@@ -24,9 +24,9 @@ import Layout from '../../../layouts/Layout.astro';
             <span class="module-card__name">Surface plasmons</span>
             <span class="module-card__desc">Planar Drude interfaces &amp; thin films</span>
           </button>
-          <button type="button" class="module-card" id="module-layered-structure" role="radio" aria-checked="false" aria-disabled="true" disabled>
+          <button type="button" class="module-card" id="module-layered-structure" role="radio" aria-checked="false">
             <span class="module-card__name">Layered structure</span>
-            <span class="module-card__badge">Soon</span>
+            <span class="module-card__desc">Transfer-matrix R/T spectra &amp; field profiles</span>
           </button>
           <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false" aria-disabled="true" disabled>
             <span class="module-card__name">Graphene</span>
@@ -35,7 +35,7 @@ import Layout from '../../../layouts/Layout.astro';
         </div>
       </div>
 
-      <div class="widget-layout">
+      <div class="widget-layout" id="module-panel-surface-plasmons">
         <aside class="controls card">
           <div class="panel-title-row">
             <h3>Parameters</h3>
@@ -207,6 +207,180 @@ import Layout from '../../../layouts/Layout.astro';
           </section>
         </main>
       </div>
+
+      <!-- ===== Layered structure (Transfer Matrix Method) module ===== -->
+      <div class="widget-layout" id="module-panel-layered-structure" hidden>
+        <aside class="controls card">
+          <div class="panel-title-row">
+            <h3>Stack</h3>
+            <div class="preset-actions" aria-label="Quick stack presets">
+              <button type="button" class="preset-chip" id="tmm-preset-bragg" title="Quarter-wave Bragg mirror">Bragg</button>
+              <button type="button" class="preset-chip" id="tmm-preset-fp" title="Fabry-Perot cavity (half-wave defect)">Fabry&ndash;P&eacute;rot</button>
+              <button type="button" class="preset-chip" id="tmm-preset-ar" title="Single quarter-wave antireflection film">AR film</button>
+            </div>
+          </div>
+
+          <div class="tmm-ends">
+            <label class="layer-field">
+              <span>Substrate n<sub>s</sub> (inc)</span>
+              <input type="number" class="param-number" id="tmm-n-sub" step="0.01" min="0.05" value="1">
+            </label>
+            <label class="layer-field">
+              <span>Cladding n<sub>c</sub> (out)</span>
+              <input type="number" class="param-number" id="tmm-n-clad" step="0.01" min="0.05" value="1.5">
+            </label>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Layers</label>
+              <span class="param-readout" id="tmm-layer-count">2</span>
+            </div>
+            <div class="stepper-row">
+              <button type="button" class="icon-btn" id="tmm-remove-layer" title="Remove layer" aria-label="Remove layer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+              </button>
+              <button type="button" class="icon-btn" id="tmm-add-layer" title="Add layer" aria-label="Add layer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="tmm-stack" id="tmm-stack-preview" aria-label="Layer stack preview"></div>
+          <div class="layer-editor" id="tmm-layer-editor"></div>
+
+          <h3>Illumination</h3>
+          <div class="param">
+            <div class="axis-control-row">
+              <span>Polarization</span>
+              <div class="segmented segmented--compact" id="tmm-pol-tabs" role="radiogroup" aria-label="Polarization">
+                <button type="button" class="seg-btn active" data-pol="TE" role="radio" aria-checked="true">TE (s)</button>
+                <button type="button" class="seg-btn" data-pol="TM" role="radio" aria-checked="false">TM (p)</button>
+              </div>
+            </div>
+            <div class="param" id="tmm-angle-control">
+              <span class="axis-section-label" id="tmm-angle-label">Angle of incidence (&deg;)</span>
+              <div class="tmm-slider-row">
+                <input type="range" class="slope-slider" id="tmm-angle-slider" min="0" max="90" step="0.5" value="0">
+                <input type="number" class="param-number param-number--sm" id="tmm-angle" step="1" min="0" max="90" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="param" id="tmm-spectrum-controls">
+            <span class="axis-section-label">Horizontal axis</span>
+            <div class="segmented segmented--compact" id="tmm-xunit-tabs" role="radiogroup" aria-label="Horizontal axis quantity">
+              <button type="button" class="seg-btn active" data-xunit="nm" role="radio" aria-checked="true">Wavelength</button>
+              <button type="button" class="seg-btn" data-xunit="ev" role="radio" aria-checked="false">Photon energy</button>
+            </div>
+            <span class="axis-section-label" id="tmm-range-label">Wavelength (nm)</span>
+            <div class="range-grid range-grid--compact">
+              <label><span>Min</span><input type="number" class="param-number" id="tmm-lam-min" step="10" min="10" value="400"></label>
+              <label><span>Max</span><input type="number" class="param-number" id="tmm-lam-max" step="10" min="10" value="800"></label>
+            </div>
+          </div>
+
+          <div class="param" id="tmm-wavelength-control" hidden>
+            <span class="axis-section-label">Wavelength (nm)</span>
+            <div class="tmm-slider-row">
+              <input type="range" class="slope-slider" id="tmm-lam-slider" min="200" max="1200" step="1" value="600">
+              <input type="number" class="param-number param-number--sm" id="tmm-field-lam" step="5" min="10" value="600">
+            </div>
+          </div>
+
+          <div class="param" id="tmm-field-margins" hidden>
+            <span class="axis-section-label">Sampling margin (nm)</span>
+            <div class="range-grid range-grid--compact">
+              <label><span>Substrate</span><input type="number" class="param-number" id="tmm-margin-sub" step="50" min="0" value="300"></label>
+              <label><span>Cladding</span><input type="number" class="param-number" id="tmm-margin-clad" step="50" min="0" value="300"></label>
+            </div>
+          </div>
+
+          <button type="button" class="reset-btn" id="tmm-reset">Reset</button>
+        </aside>
+
+        <main class="lab-main">
+          <section class="chart-panel card">
+            <div class="chart-header">
+              <div class="segmented segmented--compact tmm-mode-tabs" id="tmm-mode-tabs" role="radiogroup" aria-label="Chart mode">
+                <button type="button" class="seg-btn active" data-mode="spectrum" role="radio" aria-checked="true">Spectrum</button>
+                <button type="button" class="seg-btn" data-mode="angles" role="radio" aria-checked="false">Angles</button>
+                <button type="button" class="seg-btn" data-mode="fields" role="radio" aria-checked="false">Fields</button>
+                <button type="button" class="seg-btn" data-mode="structure" role="radio" aria-checked="false">Structure</button>
+              </div>
+              <div class="toolbar-actions">
+                <button type="button" id="tmm-dl-png" class="tool-btn" title="Download plot as PNG">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  PNG
+                </button>
+                <button type="button" id="tmm-dl-csv" class="tool-btn" title="Download current curve as CSV">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  CSV
+                </button>
+              </div>
+            </div>
+            <div class="chart-options" id="tmm-spectrum-options">
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-r" checked><span>Reflectance &rho;</span></label>
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-t" checked><span>Transmittance &tau;</span></label>
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-log"><span>Log scale</span></label>
+            </div>
+            <div class="chart-options" id="tmm-field-options" hidden>
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-abs" checked><span>|F(z)|</span></label>
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-re"><span>Re[F(z)]</span></label>
+              <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-index" checked><span>Index profile</span></label>
+            </div>
+            <div class="chart-options" id="tmm-structure-options" hidden>
+              <span class="axis-section-label">Quantity</span>
+              <div class="segmented segmented--compact" id="tmm-quantity-tabs" role="radiogroup" aria-label="Profile quantity">
+                <button type="button" class="seg-btn active" data-quantity="nk" role="radio" aria-checked="true">n, &kappa;</button>
+                <button type="button" class="seg-btn" data-quantity="eps" role="radio" aria-checked="false">&epsilon;</button>
+              </div>
+            </div>
+            <div class="chart-wrap" id="tmm-chart-wrap">
+              <canvas id="tmm-chart" aria-label="Transfer-matrix chart"></canvas>
+              <div class="chart-tooltip" id="tmm-chart-tooltip" hidden></div>
+            </div>
+            <div class="chart-legend" id="tmm-chart-legend"></div>
+          </section>
+
+          <section class="model-note card">
+            <div class="model-note__header">
+              <span>Notes</span>
+              <span id="tmm-model-summary">Bragg mirror</span>
+            </div>
+            <p id="tmm-note-text">
+              Build a stack of homogeneous layers between a semi-infinite substrate
+              (incidence side) and cladding (exit side). The spectrum shows reflectance
+              and transmittance versus wavelength; the field view reconstructs the
+              standing-wave amplitude through the structure at a single wavelength.
+            </p>
+            <p class="tmm-theory">
+              <strong>Method.</strong> The transfer-matrix method propagates the
+              tangential field through each homogeneous layer. The scalar field
+              <em>F</em> is the in-plane field component that stays continuous across
+              interfaces: <em>F</em> = E<sub>y</sub> for <strong>TE</strong> (s)
+              polarization and <em>F</em> = H<sub>y</sub> for <strong>TM</strong> (p).
+              Each layer uses &epsilon; = (n + i&kappa;)<sup>2</sup> and a normal
+              wavevector k<sub>z</sub> = &radic;(k<sub>0</sub><sup>2</sup>&epsilon; &minus; k<sub>x</sub><sup>2</sup>),
+              with k<sub>0</sub> = 2&pi;/&lambda; and the transverse wavevector
+              k<sub>x</sub> = k<sub>0</sub> sin&theta; conserved across the stack.
+              The 2&times;2 stack matrix M = m<sub>N</sub>&middot;&middot;&middot;m<sub>1</sub>
+              yields the amplitude coefficients R, T and the powers
+              &rho; = |R|<sup>2</sup> and &tau;. For a lossless stack &tau; + &rho; = 1.
+            </p>
+          </section>
+
+          <section class="references-card card">
+            <div class="references-card__header">
+              <h3>References</h3>
+            </div>
+            <p>
+              Transfer-matrix method (optics),
+              <a href="https://en.wikipedia.org/wiki/Transfer-matrix_method_(optics)" target="_blank" rel="noopener">Wikipedia</a>.
+            </p>
+          </section>
+        </main>
+      </div>
     </div>
   </section>
 </Layout>
@@ -251,6 +425,10 @@ import Layout from '../../../layouts/Layout.astro';
     gap: var(--space-lg);
     align-items: start;
     min-width: 0;
+  }
+
+  .widget-layout[hidden] {
+    display: none;
   }
 
   .controls {
@@ -375,6 +553,12 @@ import Layout from '../../../layouts/Layout.astro';
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
+  }
+
+  .param[hidden],
+  .chart-options[hidden],
+  .segmented[hidden] {
+    display: none;
   }
 
   .param-header {
@@ -963,6 +1147,136 @@ import Layout from '../../../layouts/Layout.astro';
     line-height: 1.55;
     border-top: 1px solid var(--bg-muted);
     padding-top: var(--space-md);
+  }
+
+  /* ===== Layered structure (TMM) module ===== */
+  .tmm-ends {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    gap: 0.4rem;
+  }
+
+  .tmm-ends .layer-field span {
+    min-height: 1.5em;
+  }
+
+  .tmm-slider-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tmm-slider-row .slope-slider {
+    width: 100%;
+  }
+
+  #tmm-angle-control.is-disabled {
+    opacity: 0.45;
+  }
+
+  :global(.tmm-layer-fields) {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    align-items: end;
+    gap: 0.4rem;
+  }
+
+  :global(.tmm-layer-fields .layer-field span) {
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
+
+  /* nudge the single-letter n / κ headers a touch off the left edge */
+  :global(.tmm-layer-fields .layer-field:nth-child(n + 2) span) {
+    padding-left: 0.3rem;
+  }
+
+  :global(.tmm-layer-remove) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  :global(.tmm-layer-remove:hover:not(:disabled)) {
+    border-color: #EF4444;
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  :global(.tmm-layer-remove:disabled) {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .tmm-mode-tabs {
+    flex: 0 1 auto;
+  }
+
+  .tmm-theory {
+    margin: 0;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-muted);
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.6;
+  }
+
+  :global(.tmm-theory em) {
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .tmm-stack {
+    display: flex;
+    min-height: 64px;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+
+  :global(.tmm-stack__end) {
+    display: grid;
+    place-items: center;
+    flex: 0 0 30px;
+    min-width: 30px;
+    padding: 0.2rem;
+    font-size: 0.5625rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    color: var(--text-soft);
+    background: var(--bg-muted);
+  }
+
+  :global(.tmm-stack__layer) {
+    display: grid;
+    place-items: center;
+    min-width: 2px;
+    padding: 0.15rem 0.05rem;
+    overflow: hidden;
+    color: white;
+    font-size: 0.5625rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.45);
+  }
+
+  :global(.tmm-stack__layer + .tmm-stack__layer) {
+    border-left: 1px solid rgba(255, 255, 255, 0.4);
   }
 
   .lab-main {
@@ -3733,5 +4047,1245 @@ import Layout from '../../../layouts/Layout.astro';
   new ResizeObserver(() => drawChart()).observe(chartWrap);
   onThemeChange(() => drawChart());
 
+  // Allow the module switcher to force a redraw when this panel is revealed
+  // (the canvas may have been sized while hidden / the window resized).
+  window.addEventListener('heterostructures:show-surface-plasmons', () => drawChart());
+
   renderAll(true);
+</script>
+
+<script>
+  // ===========================================================================
+  // Layered structure module -- Transfer Matrix Method (TMM) for stratified media
+  //
+  // Faithful port of the Computational Photonics (Abbe School of Photonics,
+  // FSU Jena, T. Pertsch 2015) MATLAB m-files / Python `tmm.py`:
+  //   transfermatrix.m -> transferMatrix()   2x2 stack matrix M
+  //   spectrum.m       -> spectrum()         rho, tau vs wavelength
+  //   field.m          -> computeField()     complex field F(z) and n(z)
+  //
+  // Conventions: all lengths in nm; wavevectors in 1/nm; k0 = 2*pi/lambda.
+  // exp(-i*omega*t) time convention; epsilon = (n + i*kappa)^2. The generalized
+  // field pair (F, G): TE -> alpha = 1; TM -> alpha = 1/epsilon. The layer matrix
+  //   m = [[ cos(kz d),            sin(kz d)/(kz alpha) ],
+  //        [-kz alpha sin(kz d),   cos(kz d)            ]]
+  // and M = m_N ... m_1 (each new layer multiplies on the LEFT).
+  // ===========================================================================
+  import { chartTheme, onThemeChange } from '../../../lib/chart-theme';
+
+  type Cx = { re: number; im: number };
+  const cx = (re: number, im = 0): Cx => ({ re, im });
+  const cAdd = (a: Cx, b: Cx): Cx => ({ re: a.re + b.re, im: a.im + b.im });
+  const cSub = (a: Cx, b: Cx): Cx => ({ re: a.re - b.re, im: a.im - b.im });
+  const cMul = (a: Cx, b: Cx): Cx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+  const cScale = (a: Cx, s: number): Cx => ({ re: a.re * s, im: a.im * s });
+  const cDiv = (a: Cx, b: Cx): Cx => {
+    const d = b.re * b.re + b.im * b.im;
+    return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
+  };
+  const cAbs = (a: Cx): number => Math.hypot(a.re, a.im);
+  const cAbs2 = (a: Cx): number => a.re * a.re + a.im * a.im;
+  const cMulI = (z: Cx): Cx => ({ re: -z.im, im: z.re });          //  i * z
+  const cMulNegI = (z: Cx): Cx => ({ re: z.im, im: -z.re });       // -i * z
+  // principal complex square root
+  const cSqrt = (z: Cx): Cx => {
+    const r = Math.hypot(z.re, z.im);
+    const re = Math.sqrt(Math.max(0, (r + z.re) / 2));
+    let im = Math.sqrt(Math.max(0, (r - z.re) / 2));
+    if (z.im < 0) im = -im;
+    return { re, im };
+  };
+  const cCos = (z: Cx): Cx => ({ re: Math.cos(z.re) * Math.cosh(z.im), im: -Math.sin(z.re) * Math.sinh(z.im) });
+  const cSin = (z: Cx): Cx => ({ re: Math.sin(z.re) * Math.cosh(z.im), im: Math.cos(z.re) * Math.sinh(z.im) });
+
+  type Mat = [Cx, Cx, Cx, Cx];           // [m00, m01, m10, m11]
+  const matMul = (a: Mat, b: Mat): Mat => [
+    cAdd(cMul(a[0], b[0]), cMul(a[1], b[2])),
+    cAdd(cMul(a[0], b[1]), cMul(a[1], b[3])),
+    cAdd(cMul(a[2], b[0]), cMul(a[3], b[2])),
+    cAdd(cMul(a[2], b[1]), cMul(a[3], b[3])),
+  ];
+  const matVec = (a: Mat, v: [Cx, Cx]): [Cx, Cx] => [
+    cAdd(cMul(a[0], v[0]), cMul(a[1], v[1])),
+    cAdd(cMul(a[2], v[0]), cMul(a[3], v[1])),
+  ];
+
+  type Pol = 'TE' | 'TM';
+  type Mode = 'spectrum' | 'angles' | 'fields' | 'structure';
+  type XUnit = 'nm' | 'ev';
+  type StructQuantity = 'nk' | 'eps';
+
+  const HC_EV_NM = 1239.8419843320026;   // h*c in eV*nm: E(eV) = HC_EV_NM / lambda(nm)
+
+  type TmmLayer = { n: number; kappa: number; thicknessNm: number; color: string };
+
+  const TMM_MIN_LAYERS = 1;
+  const TMM_MAX_LAYERS = 60;
+  const palette = ['#38BDF8', '#F59E0B', '#10B981', '#7C3AED', '#EF4444', '#0EA5E9', '#64748B'];
+  const R_COLOR = '#6366F1';
+  const T_COLOR = '#F97316';
+  const FIELD_COLOR = '#0EA5E9';
+  const RE_COLOR = '#EF4444';
+  const INDEX_COLOR = '#64748B';
+  const STRUCT_REAL_COLOR = '#6366F1';
+  const STRUCT_IMAG_COLOR = '#F59E0B';
+
+  const layerEps = (layer: { n: number; kappa: number }): Cx => {
+    const nc = cx(layer.n, layer.kappa);
+    return cMul(nc, nc);
+  };
+
+  // ---- core TMM -----------------------------------------------------------
+  function transferMatrix(epsArr: Cx[], dArr: number[], pol: Pol, lam: number, kx: number): Mat {
+    let M: Mat = [cx(1), cx(0), cx(0), cx(1)];
+    const k0 = (2 * Math.PI) / lam;
+    for (let i = 0; i < epsArr.length; i++) {
+      const eps = epsArr[i];
+      const alpha = pol === 'TE' ? cx(1) : cDiv(cx(1), eps);
+      // kz = sqrt(k0^2 eps - kx^2)
+      const kz = cSqrt(cSub(cScale(eps, k0 * k0), cx(kx * kx)));
+      const kzd = cScale(kz, dArr[i]);
+      const cosv = cCos(kzd);
+      const sinv = cSin(kzd);
+      const kza = cMul(kz, alpha);
+      const m: Mat = [cosv, cDiv(sinv, kza), cScale(cMul(kza, sinv), -1), cosv];
+      M = matMul(m, M);
+    }
+    return M;
+  }
+
+  type RT = { rho: number; tau: number; absR: number; absT: number };
+
+  // Single-point reflection / transmission at one wavelength and angle.
+  function rtAt(
+    epsArr: Cx[], dArr: number[], pol: Pol, lam: number,
+    angleDeg: number, nSub: number, nClad: number,
+  ): RT {
+    const epsS = nSub * nSub;
+    const epsC = nClad * nClad;
+    const alphaS = pol === 'TE' ? 1 : 1 / epsS;
+    const alphaC = pol === 'TE' ? 1 : 1 / epsC;
+    const EPS = Number.EPSILON;
+    const k0 = (2 * Math.PI) / lam;
+    const kx = k0 * Math.sin((Math.PI * angleDeg) / 180);
+    const M = transferMatrix(epsArr, dArr, pol, lam, kx);
+    const kzS = cSqrt(cx(epsS * k0 * k0 - kx * kx));
+    const kzC = cSqrt(cx(epsC * k0 * k0 - kx * kx));
+    const aS = cScale(kzS, alphaS);
+    const aC = cScale(kzC, alphaC);
+    const aSaC = cMul(aS, aC);
+    // N = aS*M22 + aC*M11 + i*(M21 - aS*aC*M12)
+    const N = cAdd(
+      cAdd(cMul(aS, M[3]), cMul(aC, M[0])),
+      cMulI(cSub(M[2], cMul(aSaC, M[1]))),
+    );
+    // R = (aS*M22 - aC*M11 - i*(M21 + aS*aC*M12)) / N
+    const R = cDiv(
+      cSub(
+        cSub(cMul(aS, M[3]), cMul(aC, M[0])),
+        cMulI(cAdd(M[2], cMul(aSaC, M[1]))),
+      ),
+      N,
+    );
+    // T = 2*alphaS*kzS / N = 2*aS / N
+    const T = cDiv(cScale(aS, 2), N);
+    const rho = cAbs2(R);
+    const tau = (alphaC / alphaS) * (kzC.re / (kzS.re + EPS)) * cAbs2(T);
+    return { rho, tau, absR: cAbs(R), absT: cAbs(T) };
+  }
+
+  type SpectrumPoint = RT & { lam: number };
+  function spectrum(
+    epsArr: Cx[], dArr: number[], pol: Pol, lambdas: number[],
+    angleDeg: number, nSub: number, nClad: number,
+  ): SpectrumPoint[] {
+    return lambdas.map(lam => ({ lam, ...rtAt(epsArr, dArr, pol, lam, angleDeg, nSub, nClad) }));
+  }
+
+  type AnglePoint = RT & { angleDeg: number };
+  function angleScan(
+    epsArr: Cx[], dArr: number[], pol: Pol, lam: number,
+    angles: number[], nSub: number, nClad: number,
+  ): AnglePoint[] {
+    return angles.map(a => ({ angleDeg: a, ...rtAt(epsArr, dArr, pol, lam, a, nSub, nClad) }));
+  }
+
+  type FieldResult = { z: number[]; absF: number[]; reF: number[]; imF: number[]; index: number[]; total: number };
+
+  function computeField(
+    epsArr: Cx[], dArr: number[], pol: Pol, lam: number, angleDeg: number,
+    nSub: number, nClad: number, Nz: number, lS: number, lC: number,
+  ): FieldResult {
+    const epsS = cx(nSub * nSub);
+    const epsC = cx(nClad * nClad);
+    // extend with substrate (front) and cladding (back) slabs
+    let eps = [epsS, ...epsArr, epsC];
+    let thick = [lS, ...dArr, lC];
+
+    const alphaC = pol === 'TE' ? cx(1) : cDiv(cx(1), epsC);
+    const k0 = (2 * Math.PI) / lam;
+    const kx = k0 * Math.sin((Math.PI * angleDeg) / 180);
+    const kzC = cSqrt(cSub(cScale(epsC, k0 * k0), cx(kx * kx)));
+    // known transmitted vector (unit transmitted amplitude): [1, -i alphaC kzC]
+    const incident: [Cx, Cx] = [cx(1), cMulNegI(cMul(alphaC, kzC))];
+
+    // reverse: propagate from cladding back toward substrate
+    eps = eps.slice().reverse();
+    thick = thick.slice().reverse();
+
+    const total = thick.reduce((s, t) => s + t, 0);
+    const dz = total / (Nz - 1);
+    const position: number[] = [];
+    let acc = 0;
+    for (const t of thick) { acc += t; position.push(acc); }
+
+    const fAbs = new Array<number>(Nz);
+    const fRe = new Array<number>(Nz);
+    const fIm = new Array<number>(Nz);
+    const index = new Array<number>(Nz);
+    let counter = 0;
+    for (let n = 0; n < Nz; n++) {
+      const zn = n * dz;
+      while (counter < thick.length - 1 && zn > position[counter]) counter++;
+      const d = counter > 0
+        ? [...thick.slice(0, counter), zn - position[counter - 1]]
+        : [zn];
+      const epsSlice = eps.slice(0, counter + 1);
+      const M = transferMatrix(epsSlice, d, pol, lam, kx);
+      const vec = matVec(M, incident);
+      fAbs[n] = cAbs(vec[0]);
+      fRe[n] = vec[0].re;
+      fIm[n] = vec[0].im;
+      const nLocal = cSqrt(eps[counter]);
+      index[n] = nLocal.re;
+    }
+
+    // flip back to physical orientation (substrate at z = 0)
+    fAbs.reverse(); fRe.reverse(); fIm.reverse(); index.reverse();
+    const z = Array.from({ length: Nz }, (_, i) => i * dz);
+    return { z, absF: fAbs, reF: fRe, imF: fIm, index, total };
+  }
+
+  // ---- state --------------------------------------------------------------
+  function makeBraggLayers(): TmmLayer[] {
+    // Quarter-wave Bragg mirror at lambda0 = 600 nm: n1 d1 = n2 d2 = lambda0/4.
+    const layers: TmmLayer[] = [];
+    for (let i = 0; i < 15; i++) {
+      layers.push({ n: 1.5, kappa: 0, thicknessNm: 100, color: palette[0] });
+      layers.push({ n: 2.0, kappa: 0, thicknessNm: 75, color: palette[1] });
+    }
+    return layers;
+  }
+
+  function makeFabryPerotLayers(): TmmLayer[] {
+    const layers = makeBraggLayers();
+    layers[14] = { ...layers[14], thicknessNm: layers[14].thicknessNm * 2, color: palette[3] }; // half-wave defect
+    return layers;
+  }
+
+  function makeArLayers(): TmmLayer[] {
+    // Single quarter-wave MgF2 antireflection film (n=1.38) at 550 nm on glass.
+    return [{ n: 1.38, kappa: 0, thicknessNm: 550 / (4 * 1.38), color: palette[2] }];
+  }
+
+  type Preset = 'bragg' | 'fp' | 'ar' | 'custom';
+
+  const tmm = {
+    layers: makeBraggLayers(),
+    nSub: 1.0,
+    nClad: 1.5,
+    pol: 'TE' as Pol,
+    angleDeg: 0,
+    mode: 'spectrum' as Mode,
+    xUnit: 'nm' as XUnit,
+    lamMin: 400,
+    lamMax: 800,
+    fieldLam: 600,
+    marginSub: 300,
+    marginClad: 300,
+    showR: true,
+    showT: true,
+    logScale: false,
+    showAbs: true,
+    showRe: false,
+    showIndex: true,
+    structQuantity: 'nk' as StructQuantity,
+    preset: 'bragg' as Preset,
+  };
+
+  const $t = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const tStackPreview = $t('tmm-stack-preview');
+  const tLayerEditor = $t('tmm-layer-editor');
+  const tChartWrap = $t('tmm-chart-wrap');
+  const tChartLegend = $t('tmm-chart-legend');
+  const tTooltip = $t('tmm-chart-tooltip');
+  const tCanvas = $t('tmm-chart') as HTMLCanvasElement;
+
+  function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }
+  function finiteOr(v: number, fb: number): number { return Number.isFinite(v) ? v : fb; }
+  function tfmt(v: number, digits = 4): string {
+    if (!Number.isFinite(v)) return '--';
+    const a = Math.abs(v);
+    if (a > 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(2);
+    return Number.parseFloat(v.toPrecision(digits)).toString();
+  }
+
+  function isMetalLike(layer: TmmLayer): boolean { return layer.kappa > 0.05; }
+  function layerLabel(layer: TmmLayer): string { return `n=${tfmt(layer.n, 3)}`; }
+
+  // ---- rendering ----------------------------------------------------------
+  function renderTmmStack() {
+    const total = tmm.layers.reduce((s, l) => s + Math.max(1e-6, l.thicknessNm), 0) || 1;
+    const inner = tmm.layers.map(layer => {
+      const pct = (Math.max(1e-6, layer.thicknessNm) / total) * 100;
+      const safe = `${layer.n}+${layer.kappa}i, ${tfmt(layer.thicknessNm, 4)} nm`;
+      const label = pct > 7 ? `${tfmt(layer.thicknessNm, 3)}` : '';
+      return `<div class="tmm-stack__layer" style="flex:${pct} 1 0;background:${layer.color}" title="${safe}">${label}</div>`;
+    }).join('');
+    tStackPreview.innerHTML =
+      `<div class="tmm-stack__end" title="Substrate (incidence)">n<sub>s</sub><br>${tfmt(tmm.nSub, 3)}</div>` +
+      inner +
+      `<div class="tmm-stack__end" title="Cladding (exit)">n<sub>c</sub><br>${tfmt(tmm.nClad, 3)}</div>`;
+
+    $t('tmm-layer-count').textContent = `${tmm.layers.length}`;
+    ($t('tmm-remove-layer') as HTMLButtonElement).disabled = tmm.layers.length <= TMM_MIN_LAYERS;
+    ($t('tmm-add-layer') as HTMLButtonElement).disabled = tmm.layers.length >= TMM_MAX_LAYERS;
+  }
+
+  function renderTmmLayerEditor() {
+    const removable = tmm.layers.length > TMM_MIN_LAYERS;
+    tLayerEditor.innerHTML = tmm.layers.map((layer, index) => `
+      <div class="layer-row" data-tmm-row="${index}">
+        <div class="layer-row__header">
+          <span class="layer-chip"><span class="layer-swatch" style="background:${layer.color}"></span>Layer ${index + 1}</span>
+          <button type="button" class="tmm-layer-remove" data-tmm-remove="${index}" title="Remove layer" aria-label="Remove layer ${index + 1}"${removable ? '' : ' disabled'}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="tmm-layer-fields">
+          <label class="layer-field">
+            <span>Thickness (nm)</span>
+            <input type="number" class="layer-input" data-tmm-layer="${index}" data-key="thicknessNm" value="${tfmt(layer.thicknessNm, 6)}" step="5" min="0">
+          </label>
+          <label class="layer-field">
+            <span>n</span>
+            <input type="number" class="layer-input" data-tmm-layer="${index}" data-key="n" value="${tfmt(layer.n, 6)}" step="0.05" min="0.05">
+          </label>
+          <label class="layer-field">
+            <span>&kappa;</span>
+            <input type="number" class="layer-input" data-tmm-layer="${index}" data-key="kappa" value="${tfmt(layer.kappa, 6)}" step="0.01" min="0">
+          </label>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function syncTmmControls() {
+    ($t('tmm-n-sub') as HTMLInputElement).value = tfmt(tmm.nSub, 6);
+    ($t('tmm-n-clad') as HTMLInputElement).value = tfmt(tmm.nClad, 6);
+    ($t('tmm-angle') as HTMLInputElement).value = tfmt(tmm.angleDeg, 4);
+    ($t('tmm-angle-slider') as HTMLInputElement).value = `${clamp(tmm.angleDeg, 0, 90)}`;
+    const lamMinInput = $t('tmm-lam-min') as HTMLInputElement;
+    const lamMaxInput = $t('tmm-lam-max') as HTMLInputElement;
+    if (tmm.xUnit === 'ev') {
+      // min/max of the axis quantity: min energy <-> max wavelength, and vice versa
+      lamMinInput.value = tfmt(HC_EV_NM / tmm.lamMax, 6);
+      lamMaxInput.value = tfmt(HC_EV_NM / tmm.lamMin, 6);
+      lamMinInput.step = '0.05'; lamMaxInput.step = '0.05'; lamMinInput.min = '0.05'; lamMaxInput.min = '0.05';
+      $t('tmm-range-label').textContent = 'Photon energy (eV)';
+    } else {
+      lamMinInput.value = tfmt(tmm.lamMin, 6);
+      lamMaxInput.value = tfmt(tmm.lamMax, 6);
+      lamMinInput.step = '10'; lamMaxInput.step = '10'; lamMinInput.min = '10'; lamMaxInput.min = '10';
+      $t('tmm-range-label').textContent = 'Wavelength (nm)';
+    }
+    ($t('tmm-field-lam') as HTMLInputElement).value = tfmt(tmm.fieldLam, 6);
+    ($t('tmm-lam-slider') as HTMLInputElement).value = `${clamp(tmm.fieldLam, 200, 1200)}`;
+    ($t('tmm-margin-sub') as HTMLInputElement).value = tfmt(tmm.marginSub, 6);
+    ($t('tmm-margin-clad') as HTMLInputElement).value = tfmt(tmm.marginClad, 6);
+    ($t('tmm-show-r') as HTMLInputElement).checked = tmm.showR;
+    ($t('tmm-show-t') as HTMLInputElement).checked = tmm.showT;
+    ($t('tmm-log') as HTMLInputElement).checked = tmm.logScale;
+    ($t('tmm-show-abs') as HTMLInputElement).checked = tmm.showAbs;
+    ($t('tmm-show-re') as HTMLInputElement).checked = tmm.showRe;
+    ($t('tmm-show-index') as HTMLInputElement).checked = tmm.showIndex;
+
+    document.querySelectorAll<HTMLButtonElement>('#tmm-pol-tabs [data-pol]').forEach(btn => {
+      const active = btn.dataset.pol === tmm.pol;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+    document.querySelectorAll<HTMLButtonElement>('#tmm-mode-tabs [data-mode]').forEach(btn => {
+      const active = btn.dataset.mode === tmm.mode;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+    document.querySelectorAll<HTMLButtonElement>('#tmm-xunit-tabs [data-xunit]').forEach(btn => {
+      const active = btn.dataset.xunit === tmm.xUnit;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+    document.querySelectorAll<HTMLButtonElement>('#tmm-quantity-tabs [data-quantity]').forEach(btn => {
+      const active = btn.dataset.quantity === tmm.structQuantity;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+
+    const isSpectrum = tmm.mode === 'spectrum';
+    const isAngles = tmm.mode === 'angles';
+    const isFields = tmm.mode === 'fields';
+    const isStructure = tmm.mode === 'structure';
+
+    // sidebar controls: wavelength range (spectrum) vs single wavelength (angles/fields);
+    // sampling margin sets how much substrate/cladding to draw (fields + structure)
+    $t('tmm-spectrum-controls').hidden = !isSpectrum;
+    $t('tmm-wavelength-control').hidden = !(isAngles || isFields);
+    $t('tmm-field-margins').hidden = !(isFields || isStructure);
+
+    // in Angles mode the angle is the scan variable -> lock its inputs
+    ($t('tmm-angle') as HTMLInputElement).disabled = isAngles;
+    ($t('tmm-angle-slider') as HTMLInputElement).disabled = isAngles;
+    $t('tmm-angle-control').classList.toggle('is-disabled', isAngles);
+    $t('tmm-angle-label').innerHTML = isAngles
+      ? 'Angle of incidence (&deg;) &mdash; scanned 0&ndash;90'
+      : 'Angle of incidence (&deg;)';
+
+    // chart option rows: R/T/log shared by spectrum + angles (eV toggle lives in the sidebar Stack panel)
+    $t('tmm-spectrum-options').hidden = !(isSpectrum || isAngles);
+    $t('tmm-field-options').hidden = !isFields;
+    $t('tmm-structure-options').hidden = !isStructure;
+  }
+
+  function markActiveTmmPreset() {
+    const map: Record<Preset, string> = { bragg: 'tmm-preset-bragg', fp: 'tmm-preset-fp', ar: 'tmm-preset-ar', custom: '' };
+    ['tmm-preset-bragg', 'tmm-preset-fp', 'tmm-preset-ar'].forEach(id => {
+      $t(id).classList.toggle('is-active', id === map[tmm.preset]);
+    });
+  }
+
+  // ---- ticks / axes -------------------------------------------------------
+  function niceTicks(min: number, max: number, count = 6): number[] {
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [];
+    const span = max - min;
+    const raw = span / Math.max(1, count);
+    const power = Math.pow(10, Math.floor(Math.log10(raw)));
+    const scaled = raw / power;
+    const step = (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power;
+    const start = Math.ceil(min / step) * step;
+    const ticks: number[] = [];
+    // keep ticks inside [min, max] (a small float-epsilon tolerance, not a quarter
+    // step) so a tick is never drawn beyond the plot frame on non-round ranges
+    for (let v = start; v <= max + step * 1e-3; v += step) {
+      if (v >= min - step * 1e-3) ticks.push(Math.abs(v) < step * 1e-9 ? 0 : v);
+    }
+    return ticks.slice(0, 12);
+  }
+
+  const LOG_FLOOR = 1e-12;
+
+  type DrawnCurve = { label: string; color: string; dash?: number[]; pts: Array<{ dx: number; dy: number }> };
+  let tLastPlot: { left: number; top: number; width: number; height: number; xMin: number; xMax: number; yMin: number; yMax: number; log: boolean } | null = null;
+  let tDrawnCurves: DrawnCurve[] = [];
+  let tHover: { color: string; label: string; px: number; py: number; dx: number; dy: number; xUnit: string; yUnit: string } | null = null;
+  let tCsvRows: string[][] = [];
+  let tCsvHeader: string[] = [];
+
+  function setupCanvas(theme: ReturnType<typeof chartTheme>) {
+    const rect = tChartWrap.getBoundingClientRect();
+    const width = Math.max(320, rect.width || 760);
+    const height = Math.max(320, tCanvas.clientHeight || 430);
+    const dpr = window.devicePixelRatio || 1;
+    tCanvas.width = width * dpr;
+    tCanvas.height = height * dpr;
+    tCanvas.style.height = `${height}px`;
+    const ctx = tCanvas.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, width, height);
+    return { ctx, width, height };
+  }
+
+  function drawAxes(
+    ctx: CanvasRenderingContext2D, theme: ReturnType<typeof chartTheme>,
+    plot: NonNullable<typeof tLastPlot>, xLabel: string, yLabel: string,
+    width: number, height: number,
+  ) {
+    const xToPx = (x: number) => plot.left + (x - plot.xMin) / (plot.xMax - plot.xMin) * plot.width;
+    const yToPx = (y: number) => plot.top + plot.height - (y - plot.yMin) / (plot.yMax - plot.yMin) * plot.height;
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(plot.left, plot.top, plot.width, plot.height);
+
+    const xTicks = niceTicks(plot.xMin, plot.xMax, 6);
+    ctx.strokeStyle = theme.grid;
+    ctx.lineWidth = 1;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillStyle = theme.textSoft;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const tick of xTicks) {
+      const x = xToPx(tick);
+      ctx.beginPath();
+      ctx.moveTo(x, plot.top);
+      ctx.lineTo(x, plot.top + plot.height);
+      ctx.stroke();
+      ctx.fillText(tfmt(tick, 4), x, plot.top + plot.height + 8);
+    }
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    if (plot.log) {
+      for (let e = Math.ceil(Math.log10(plot.yMin)); e <= Math.log10(plot.yMax) + 1e-9; e++) {
+        const y = yToPx(e);
+        ctx.beginPath();
+        ctx.moveTo(plot.left, y);
+        ctx.lineTo(plot.left + plot.width, y);
+        ctx.stroke();
+        ctx.fillText(`10^${e}`, plot.left - 10, y);
+      }
+    } else {
+      const yTicks = niceTicks(plot.yMin, plot.yMax, 6);
+      for (const tick of yTicks) {
+        const y = yToPx(tick);
+        ctx.beginPath();
+        ctx.moveTo(plot.left, y);
+        ctx.lineTo(plot.left + plot.width, y);
+        ctx.stroke();
+        ctx.fillText(tfmt(tick, 4), plot.left - 10, y);
+      }
+    }
+
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(plot.left, plot.top, plot.width, plot.height);
+
+    ctx.fillStyle = theme.text;
+    ctx.font = '700 12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(xLabel, plot.left + plot.width / 2, height - 10);
+    ctx.save();
+    ctx.translate(18, plot.top + plot.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+  }
+
+  function strokeCurve(
+    ctx: CanvasRenderingContext2D, plot: NonNullable<typeof tLastPlot>,
+    curve: DrawnCurve,
+  ) {
+    const xToPx = (x: number) => plot.left + (x - plot.xMin) / (plot.xMax - plot.xMin) * plot.width;
+    const yToPxLin = (y: number) => plot.top + plot.height - (y - plot.yMin) / (plot.yMax - plot.yMin) * plot.height;
+    const yToPx = (y: number) => plot.log
+      ? plot.top + plot.height - (Math.log10(Math.max(LOG_FLOOR, y)) - plot.yMin) / (plot.yMax - plot.yMin) * plot.height
+      : yToPxLin(y);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plot.left, plot.top, plot.width, plot.height);
+    ctx.clip();
+    ctx.strokeStyle = curve.color;
+    ctx.lineWidth = 2.4;
+    ctx.setLineDash(curve.dash ?? []);
+    ctx.beginPath();
+    let started = false;
+    for (const p of curve.pts) {
+      if (!Number.isFinite(p.dx) || !Number.isFinite(p.dy)) { started = false; continue; }
+      const px = xToPx(p.dx);
+      const py = yToPx(p.dy);
+      if (!started) { ctx.moveTo(px, py); started = true; } else { ctx.lineTo(px, py); }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function renderLegend(entries: Array<{ label: string; color: string; dash?: number[] }>) {
+    tChartLegend.innerHTML = entries.map(e => {
+      const lineClass = e.dash ? 'legend-line legend-line--dash' : 'legend-line';
+      return `<span class="legend-item" style="color:${e.color}"><span class="${lineClass}"></span>${e.label.replace(/[<>&"]/g, '')}</span>`;
+    }).join('');
+  }
+
+  // ---- main draw ----------------------------------------------------------
+  function buildEpsArrays(): { eps: Cx[]; d: number[] } {
+    return { eps: tmm.layers.map(layerEps), d: tmm.layers.map(l => Math.max(0, l.thicknessNm)) };
+  }
+
+  function drawTmm() {
+    syncTmmControls();
+    renderTmmStack();
+    if (tmm.mode === 'spectrum') drawSpectrum();
+    else if (tmm.mode === 'angles') drawAngles();
+    else if (tmm.mode === 'fields') drawFieldView();
+    else drawStructure();
+  }
+
+  // Refractive-index / permittivity profile of the stack, drawn to scale vs z.
+  // Left axis = real part (n or Re ε), right axis = imaginary part (κ or Im ε).
+  function drawStructure() {
+    const theme = chartTheme();
+    const { ctx, width, height } = setupCanvas(theme);
+    const mSub = Math.max(0, tmm.marginSub);
+    const mClad = Math.max(0, tmm.marginClad);
+
+    type Region = { z0: number; z1: number; n: number; k: number; color: string | null };
+    const regions: Region[] = [];
+    let z = 0;
+    regions.push({ z0: 0, z1: mSub, n: tmm.nSub, k: 0, color: null });
+    z = mSub;
+    for (const L of tmm.layers) {
+      const t = Math.max(1e-6, L.thicknessNm);
+      regions.push({ z0: z, z1: z + t, n: L.n, k: L.kappa, color: L.color });
+      z += t;
+    }
+    regions.push({ z0: z, z1: z + mClad, n: tmm.nClad, k: 0, color: null });
+    z += mClad;
+    const total = z || 1;
+
+    const useEps = tmm.structQuantity === 'eps';
+    const realOf = (n: number, k: number) => useEps ? n * n - k * k : n;
+    const imagOf = (n: number, k: number) => useEps ? 2 * n * k : k;
+
+    const reals = regions.map(r => realOf(r.n, r.k));
+    const imags = regions.map(r => imagOf(r.n, r.k));
+    let lMin = Math.min(...reals);
+    let lMax = Math.max(...reals);
+    if (lMin >= 0) lMin = 0;
+    if (lMax - lMin < 1e-6) lMax = lMin + 1;
+    const lpad = (lMax - lMin) * 0.12;
+    lMax += lpad;
+    if (lMin < 0) lMin -= lpad;
+    const rMin = 0;
+    let rMax = Math.max(...imags, 0);
+    rMax = rMax < 1e-9 ? 1 : rMax * 1.15;
+
+    const margin = { top: 26, right: 66, bottom: 58, left: 66 };
+    const plot = {
+      left: margin.left, top: margin.top,
+      width: width - margin.left - margin.right,
+      height: height - margin.top - margin.bottom,
+      xMin: 0, xMax: total, yMin: lMin, yMax: lMax, log: false,
+    };
+    tLastPlot = plot;
+
+    const xToPx = (x: number) => plot.left + (x - plot.xMin) / (plot.xMax - plot.xMin) * plot.width;
+    const lYToPx = (v: number) => plot.top + plot.height - (v - lMin) / (lMax - lMin) * plot.height;
+    const rYToPx = (v: number) => plot.top + plot.height - (v - rMin) / (rMax - rMin) * plot.height;
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(plot.left, plot.top, plot.width, plot.height);
+
+    // layer region shading (shows the stack to scale)
+    for (const r of regions) {
+      if (!r.color) continue;
+      ctx.fillStyle = r.color;
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(xToPx(r.z0), plot.top, Math.max(0.5, xToPx(r.z1) - xToPx(r.z0)), plot.height);
+      ctx.globalAlpha = 1;
+    }
+
+    // x grid + ticks
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillStyle = theme.textSoft;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const t of niceTicks(0, total, 6)) {
+      const x = xToPx(t);
+      ctx.strokeStyle = theme.grid; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, plot.top); ctx.lineTo(x, plot.top + plot.height); ctx.stroke();
+      ctx.fillText(tfmt(t, 4), x, plot.top + plot.height + 8);
+    }
+
+    // left axis (gridlines + labels) in the real-part colour
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (const t of niceTicks(lMin, lMax, 6)) {
+      const y = lYToPx(t);
+      ctx.strokeStyle = theme.grid; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(plot.left, y); ctx.lineTo(plot.left + plot.width, y); ctx.stroke();
+      ctx.fillStyle = STRUCT_REAL_COLOR;
+      ctx.fillText(tfmt(t, 4), plot.left - 10, y);
+    }
+
+    // right axis (labels only) in the imaginary-part colour
+    ctx.textAlign = 'left';
+    ctx.fillStyle = STRUCT_IMAG_COLOR;
+    for (const t of niceTicks(rMin, rMax, 6)) {
+      ctx.fillText(tfmt(t, 4), plot.left + plot.width + 10, rYToPx(t));
+    }
+
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(plot.left, plot.top, plot.width, plot.height);
+
+    // axis titles
+    ctx.font = '700 12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = theme.text;
+    ctx.fillText('Position z (nm)', plot.left + plot.width / 2, height - 10);
+    ctx.save();
+    ctx.translate(16, plot.top + plot.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = STRUCT_REAL_COLOR;
+    ctx.fillText(useEps ? 'Re(ε)' : 'Refractive index n', 0, 0);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(width - 14, plot.top + plot.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = STRUCT_IMAG_COLOR;
+    ctx.fillText(useEps ? 'Im(ε)' : 'Extinction κ', 0, 0);
+    ctx.restore();
+
+    // step curves
+    const drawStep = (mapY: (v: number) => number, valueOf: (r: Region) => number, color: string, dash: number[]) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(plot.left, plot.top, plot.width, plot.height);
+      ctx.clip();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.4;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      let started = false;
+      for (const r of regions) {
+        const y = mapY(valueOf(r));
+        const x0 = xToPx(r.z0);
+        const x1 = xToPx(r.z1);
+        if (!started) { ctx.moveTo(x0, y); started = true; } else { ctx.lineTo(x0, y); }
+        ctx.lineTo(x1, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    };
+    drawStep(lYToPx, r => realOf(r.n, r.k), STRUCT_REAL_COLOR, []);
+    drawStep(rYToPx, r => imagOf(r.n, r.k), STRUCT_IMAG_COLOR, [6, 4]);
+
+    renderLegend([
+      { label: useEps ? 'Re(ε) — left axis' : 'n (real index) — left axis', color: STRUCT_REAL_COLOR },
+      { label: useEps ? 'Im(ε) — right axis' : 'κ (extinction) — right axis', color: STRUCT_IMAG_COLOR, dash: [6, 4] },
+    ]);
+
+    tDrawnCurves = [];   // dual-axis plot: hover disabled
+
+    $t('tmm-model-summary').textContent = `${tmm.layers.length} layers · index profile`;
+    $t('tmm-note-text').innerHTML =
+      `Refractive-index profile of the stack drawn to scale versus position z. `
+      + `The left axis is the ${useEps ? 'real part of the permittivity Re(&epsilon;)' : 'refractive index n'} `
+      + `and the right axis the ${useEps ? 'imaginary part Im(&epsilon;)' : 'extinction coefficient &kappa;'}, with `
+      + `&epsilon; = (n + i&kappa;)<sup>2</sup>. Shaded bands mark the finite layers; the flanking regions are the `
+      + `semi-infinite substrate (n<sub>s</sub> = ${tfmt(tmm.nSub, 3)}) and cladding (n<sub>c</sub> = ${tfmt(tmm.nClad, 3)}).`;
+
+    tCsvHeader = ['z_nm', 'n', 'kappa', 'eps_real', 'eps_imag'];
+    tCsvRows = [];
+    for (const r of regions) {
+      const er = r.n * r.n - r.k * r.k;
+      const ei = 2 * r.n * r.k;
+      tCsvRows.push([r.z0, r.n, r.k, er, ei].map(v => Number(v).toPrecision(9)));
+      tCsvRows.push([r.z1, r.n, r.k, er, ei].map(v => Number(v).toPrecision(9)));
+    }
+  }
+
+  function drawSpectrum() {
+    const theme = chartTheme();
+    const { ctx, width, height } = setupCanvas(theme);
+    const { eps, d } = buildEpsArrays();
+    const lamMin = Math.min(tmm.lamMin, tmm.lamMax);
+    const lamMax = Math.max(tmm.lamMin, tmm.lamMax);
+    const samples = 600;
+    const lambdas = Array.from({ length: samples }, (_, i) => lamMin + (lamMax - lamMin) * i / (samples - 1));
+    const data = spectrum(eps, d, tmm.pol, lambdas, tmm.angleDeg, tmm.nSub, tmm.nClad);
+
+    const useEv = tmm.xUnit === 'ev';
+    const toX = (lam: number) => useEv ? HC_EV_NM / lam : lam;          // photon energy in eV, or wavelength in nm
+    const xLo = Math.min(toX(lamMin), toX(lamMax));
+    const xHi = Math.max(toX(lamMin), toX(lamMax));
+
+    const margin = { top: 26, right: 28, bottom: 58, left: 72 };
+    const log = tmm.logScale;
+    const plot = {
+      left: margin.left, top: margin.top,
+      width: width - margin.left - margin.right,
+      height: height - margin.top - margin.bottom,
+      xMin: xLo, xMax: xHi,
+      yMin: log ? Math.log10(LOG_FLOOR) : 0,
+      yMax: log ? 0 : 1.02,
+      log,
+    };
+    tLastPlot = plot;
+    const xLabel = useEv ? 'Photon energy E (eV)' : 'Wavelength λ (nm)';
+    drawAxes(ctx, theme, plot, xLabel, log ? 'Reflectance / transmittance (log)' : 'Reflectance / transmittance', width, height);
+
+    tDrawnCurves = [];
+    const legend: Array<{ label: string; color: string; dash?: number[] }> = [];
+    if (tmm.showR) {
+      const curve: DrawnCurve = { label: 'Reflectance ρ', color: R_COLOR, pts: data.map(p => ({ dx: toX(p.lam), dy: p.rho })) };
+      tDrawnCurves.push(curve); strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Reflectance ρ = |R|²', color: R_COLOR });
+    }
+    if (tmm.showT) {
+      const curve: DrawnCurve = { label: 'Transmittance τ', color: T_COLOR, dash: [7, 5], pts: data.map(p => ({ dx: toX(p.lam), dy: p.tau })) };
+      tDrawnCurves.push(curve); strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Transmittance τ', color: T_COLOR, dash: [7, 5] });
+    }
+    renderLegend(legend);
+
+    const maxDev = data.reduce((m, p) => Math.max(m, Math.abs(p.tau + p.rho - 1)), 0);
+    const minTau = data.reduce((m, p) => Math.min(m, p.tau), Infinity);
+    $t('tmm-model-summary').textContent = `${tmm.layers.length} layers · ${tmm.pol} · ${tfmt(tmm.angleDeg, 3)}°`;
+    $t('tmm-note-text').innerHTML =
+      `Reflectance &rho; and transmittance &tau; versus ${useEv ? 'photon energy' : 'wavelength'} for the ${tmm.layers.length}-layer stack `
+      + `between n<sub>s</sub> = ${tfmt(tmm.nSub, 3)} and n<sub>c</sub> = ${tfmt(tmm.nClad, 3)} at ${tfmt(tmm.angleDeg, 3)}&deg; (${tmm.pol}). `
+      + `Energy conservation: max|&tau; + &rho; &minus; 1| = ${maxDev.toExponential(2)}. `
+      + `Minimum transmittance in range: &tau;<sub>min</sub> = ${minTau.toExponential(2)}.`;
+
+    tCsvHeader = ['lambda_nm', 'energy_eV', 'reflectance_rho', 'transmittance_tau', 'abs_R', 'abs_T'];
+    tCsvRows = data.map(p => [p.lam, HC_EV_NM / p.lam, p.rho, p.tau, p.absR, p.absT].map(v => Number(v).toPrecision(9)));
+
+    if (tHover) drawHoverOverlay(ctx, plot);
+  }
+
+  function drawAngles() {
+    const theme = chartTheme();
+    const { ctx, width, height } = setupCanvas(theme);
+    const { eps, d } = buildEpsArrays();
+    const lam = Math.max(1, tmm.fieldLam);
+    const samples = 600;
+    const angles = Array.from({ length: samples }, (_, i) => 90 * i / (samples - 1));
+    const data = angleScan(eps, d, tmm.pol, lam, angles, tmm.nSub, tmm.nClad);
+
+    const margin = { top: 26, right: 28, bottom: 58, left: 72 };
+    const log = tmm.logScale;
+    const plot = {
+      left: margin.left, top: margin.top,
+      width: width - margin.left - margin.right,
+      height: height - margin.top - margin.bottom,
+      xMin: 0, xMax: 90,
+      yMin: log ? Math.log10(LOG_FLOOR) : 0,
+      yMax: log ? 0 : 1.02,
+      log,
+    };
+    tLastPlot = plot;
+    drawAxes(ctx, theme, plot, 'Angle of incidence θ (°)', log ? 'Reflectance / transmittance (log)' : 'Reflectance / transmittance', width, height);
+
+    tDrawnCurves = [];
+    const legend: Array<{ label: string; color: string; dash?: number[] }> = [];
+    if (tmm.showR) {
+      const curve: DrawnCurve = { label: 'Reflectance ρ', color: R_COLOR, pts: data.map(p => ({ dx: p.angleDeg, dy: p.rho })) };
+      tDrawnCurves.push(curve); strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Reflectance ρ = |R|²', color: R_COLOR });
+    }
+    if (tmm.showT) {
+      const curve: DrawnCurve = { label: 'Transmittance τ', color: T_COLOR, dash: [7, 5], pts: data.map(p => ({ dx: p.angleDeg, dy: p.tau })) };
+      tDrawnCurves.push(curve); strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Transmittance τ', color: T_COLOR, dash: [7, 5] });
+    }
+    renderLegend(legend);
+
+    const maxDev = data.reduce((m, p) => Math.max(m, Math.abs(p.tau + p.rho - 1)), 0);
+    $t('tmm-model-summary').textContent = `${tmm.layers.length} layers · ${tmm.pol} · λ = ${tfmt(lam, 4)} nm`;
+    $t('tmm-note-text').innerHTML =
+      `Reflectance &rho; and transmittance &tau; versus angle of incidence (0&ndash;90&deg;) at fixed &lambda; = ${tfmt(lam, 4)} nm `
+      + `for the ${tmm.layers.length}-layer stack between n<sub>s</sub> = ${tfmt(tmm.nSub, 3)} and n<sub>c</sub> = ${tfmt(tmm.nClad, 3)} (${tmm.pol}). `
+      + `For TM, watch for the Brewster condition (&rho; &rarr; 0). `
+      + `Energy conservation: max|&tau; + &rho; &minus; 1| = ${maxDev.toExponential(2)}.`;
+
+    tCsvHeader = ['angle_deg', 'reflectance_rho', 'transmittance_tau', 'abs_R', 'abs_T'];
+    tCsvRows = data.map(p => [p.angleDeg, p.rho, p.tau, p.absR, p.absT].map(v => Number(v).toPrecision(9)));
+
+    if (tHover) drawHoverOverlay(ctx, plot);
+  }
+
+  function drawFieldView() {
+    const theme = chartTheme();
+    const { ctx, width, height } = setupCanvas(theme);
+    const { eps, d } = buildEpsArrays();
+    const Nz = 600;
+    const res = computeField(eps, d, tmm.pol, tmm.fieldLam, tmm.angleDeg, tmm.nSub, tmm.nClad, Nz, Math.max(0, tmm.marginSub), Math.max(0, tmm.marginClad));
+
+    const maxIndex = Math.max(...res.index, 1e-6);
+    const maxAbs = Math.max(...res.absF, 1e-12);
+    const scale = maxIndex / maxAbs;             // scale field into the index range
+    const absScaled = res.absF.map(v => v * scale);
+    const reScaled = res.reF.map(v => v * scale);
+
+    const showRe = tmm.showRe;
+    const margin = { top: 26, right: 28, bottom: 58, left: 72 };
+    const yMax = 1.15 * maxIndex;
+    const yMin = showRe ? -1.15 * maxIndex : 0;
+    const plot = {
+      left: margin.left, top: margin.top,
+      width: width - margin.left - margin.right,
+      height: height - margin.top - margin.bottom,
+      xMin: 0, xMax: res.total,
+      yMin, yMax, log: false,
+    };
+    tLastPlot = plot;
+    drawAxes(ctx, theme, plot, 'Position z (nm)', 'Field amplitude / refractive index', width, height);
+
+    tDrawnCurves = [];
+    const legend: Array<{ label: string; color: string; dash?: number[] }> = [];
+
+    if (tmm.showIndex) {
+      const curve: DrawnCurve = { label: 'Refractive index n(z)', color: INDEX_COLOR, dash: [4, 4], pts: res.z.map((z, i) => ({ dx: z, dy: res.index[i] })) };
+      strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Refractive index n(z)', color: INDEX_COLOR, dash: [4, 4] });
+    }
+    if (showRe) {
+      const curve: DrawnCurve = { label: 'Re[F(z)]', color: RE_COLOR, pts: res.z.map((z, i) => ({ dx: z, dy: reScaled[i] })) };
+      strokeCurve(ctx, plot, curve);
+      legend.push({ label: 'Re[F(z)] (scaled)', color: RE_COLOR });
+    }
+    if (tmm.showAbs) {
+      const curve: DrawnCurve = { label: '|F(z)|', color: FIELD_COLOR, pts: res.z.map((z, i) => ({ dx: z, dy: absScaled[i] })) };
+      tDrawnCurves.push(curve); strokeCurve(ctx, plot, curve);
+      legend.push({ label: '|F(z)| (scaled to nₘₐₓ)', color: FIELD_COLOR });
+    }
+    renderLegend(legend);
+
+    const enhancement = maxAbs / (res.absF.reduce((s, v) => s + v, 0) / res.absF.length);
+    $t('tmm-model-summary').textContent = `field · ${tmm.pol} · λ = ${tfmt(tmm.fieldLam, 4)} nm`;
+    $t('tmm-note-text').innerHTML =
+      `Complex field F(z) at &lambda; = ${tfmt(tmm.fieldLam, 4)} nm, reconstructed by normalising the transmitted wave to unity and `
+      + `propagating from the cladding back through the stack. |F(z)| is scaled so its peak matches the maximum refractive index. `
+      + `Peak / mean |F| enhancement &asymp; ${tfmt(enhancement, 3)}.`;
+
+    tCsvHeader = ['z_nm', 'abs_F', 'Re_F', 'Im_F', 'index_n'];
+    tCsvRows = res.z.map((z, i) => [z, res.absF[i], res.reF[i], res.imF[i], res.index[i]].map(v => Number(v).toPrecision(9)));
+
+    if (tHover) drawHoverOverlay(ctx, plot);
+  }
+
+  function drawHoverOverlay(ctx: CanvasRenderingContext2D, plot: NonNullable<typeof tLastPlot>) {
+    if (!tHover) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plot.left, plot.top, plot.width, plot.height);
+    ctx.clip();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = tHover.color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tHover.px, plot.top);
+    ctx.lineTo(tHover.px, plot.top + plot.height);
+    ctx.moveTo(plot.left, tHover.py);
+    ctx.lineTo(plot.left + plot.width, tHover.py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = tHover.color;
+    ctx.strokeStyle = chartTheme().bg;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(tHover.px, tHover.py, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- hover --------------------------------------------------------------
+  function handleTmmHover(event: MouseEvent) {
+    if (!tLastPlot || !tDrawnCurves.length) return;
+    const plot = tLastPlot;
+    const rect = tCanvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
+    if (mx < plot.left || mx > plot.left + plot.width || my < plot.top || my > plot.top + plot.height) {
+      if (tHover) { tHover = null; tTooltip.hidden = true; drawTmm(); }
+      return;
+    }
+    const xToPx = (x: number) => plot.left + (x - plot.xMin) / (plot.xMax - plot.xMin) * plot.width;
+    const yToPx = (y: number) => plot.log
+      ? plot.top + plot.height - (Math.log10(Math.max(LOG_FLOOR, y)) - plot.yMin) / (plot.yMax - plot.yMin) * plot.height
+      : plot.top + plot.height - (y - plot.yMin) / (plot.yMax - plot.yMin) * plot.height;
+
+    let best: { color: string; label: string; px: number; py: number; dx: number; dy: number } | null = null;
+    let bestDist = Infinity;
+    for (const curve of tDrawnCurves) {
+      for (const p of curve.pts) {
+        if (!Number.isFinite(p.dx) || !Number.isFinite(p.dy)) continue;
+        const px = xToPx(p.dx);
+        const py = yToPx(p.dy);
+        const dist = (px - mx) ** 2 + (py - my) ** 2;
+        if (dist < bestDist) { bestDist = dist; best = { color: curve.color, label: curve.label, px, py, dx: p.dx, dy: p.dy }; }
+      }
+    }
+    if (!best || bestDist > 26 ** 2) {
+      if (tHover) { tHover = null; tTooltip.hidden = true; drawTmm(); }
+      return;
+    }
+    const xUnitLabel = tmm.mode === 'spectrum' ? (tmm.xUnit === 'ev' ? 'E (eV)' : 'λ (nm)')
+      : tmm.mode === 'angles' ? 'θ (°)' : 'z (nm)';
+    const yUnitLabel = tmm.mode === 'fields' ? 'amplitude' : 'value';
+    tHover = { ...best, xUnit: xUnitLabel, yUnit: yUnitLabel };
+    tTooltip.hidden = false;
+    tTooltip.innerHTML =
+      `<span><strong>${best.label}</strong></span>`
+      + `<span>${tHover.xUnit} = ${tfmt(best.dx, 5)}</span>`
+      + `<span>${tHover.yUnit} = ${tfmt(best.dy, 5)}</span>`;
+    const ww = tChartWrap.clientWidth;
+    const wh = tChartWrap.clientHeight;
+    const tw = tTooltip.offsetWidth || 200;
+    const th = tTooltip.offsetHeight || 80;
+    tTooltip.style.left = `${clamp(mx + 14, 8, Math.max(8, ww - tw - 8))}px`;
+    tTooltip.style.top = `${clamp(my - th - 12, 8, Math.max(8, wh - th - 8))}px`;
+    drawTmm();
+  }
+
+  // ---- mutations ----------------------------------------------------------
+  function tmmAddLayer() {
+    if (tmm.layers.length >= TMM_MAX_LAYERS) return;
+    const idx = tmm.layers.length;
+    tmm.layers.push({ n: 2.0, kappa: 0, thicknessNm: 75, color: palette[idx % palette.length] });
+    tmm.preset = 'custom';
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  function tmmRemoveLayer() {
+    if (tmm.layers.length <= TMM_MIN_LAYERS) return;
+    tmm.layers.pop();
+    tmm.preset = 'custom';
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  function tmmRemoveLayerAt(index: number) {
+    if (tmm.layers.length <= TMM_MIN_LAYERS) return;
+    if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length) return;
+    tmm.layers.splice(index, 1);          // re-enumeration is automatic on re-render
+    tmm.preset = 'custom';
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  function setTmmLayerValue(input: HTMLInputElement) {
+    const index = Number.parseInt(input.dataset.tmmLayer ?? '-1', 10);
+    const key = input.dataset.key as 'n' | 'kappa' | 'thicknessNm' | undefined;
+    if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length || !key) return;
+    const value = Number.parseFloat(input.value);
+    if (!Number.isFinite(value)) return;
+    if (key === 'n') tmm.layers[index].n = Math.max(0.05, value);
+    else if (key === 'kappa') tmm.layers[index].kappa = Math.max(0, value);
+    else tmm.layers[index].thicknessNm = Math.max(0, value);
+    tmm.preset = 'custom';
+    markActiveTmmPreset();
+    renderTmmStack();
+    drawTmm();
+  }
+
+  function applyTmmPreset(preset: Preset) {
+    tmm.preset = preset;
+    tmm.mode = 'spectrum';
+    tmm.xUnit = 'nm';
+    if (preset === 'bragg') {
+      tmm.layers = makeBraggLayers();
+      tmm.nSub = 1.0; tmm.nClad = 1.5; tmm.pol = 'TE'; tmm.angleDeg = 0;
+      tmm.lamMin = 400; tmm.lamMax = 800; tmm.fieldLam = 600; tmm.logScale = false;
+      tmm.marginSub = 300; tmm.marginClad = 300;
+    } else if (preset === 'fp') {
+      tmm.layers = makeFabryPerotLayers();
+      tmm.nSub = 1.0; tmm.nClad = 1.5; tmm.pol = 'TE'; tmm.angleDeg = 0;
+      tmm.lamMin = 400; tmm.lamMax = 800; tmm.fieldLam = 600; tmm.logScale = false;
+      tmm.marginSub = 300; tmm.marginClad = 300;
+    } else if (preset === 'ar') {
+      tmm.layers = makeArLayers();
+      tmm.nSub = 1.0; tmm.nClad = 1.5; tmm.pol = 'TE'; tmm.angleDeg = 0;
+      tmm.lamMin = 380; tmm.lamMax = 780; tmm.fieldLam = 550; tmm.logScale = false;
+      tmm.marginSub = 300; tmm.marginClad = 300;
+    }
+    tHover = null; tTooltip.hidden = true;
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  // ---- CSV / PNG ----------------------------------------------------------
+  function tmmCsv(): string {
+    let head: string[];
+    if (tmm.mode === 'spectrum') {
+      head = ['# Layered structure (TMM) -- spectrum', `# pol=${tmm.pol}, angle_deg=${tmm.angleDeg}, n_s=${tmm.nSub}, n_c=${tmm.nClad}`];
+    } else if (tmm.mode === 'angles') {
+      head = ['# Layered structure (TMM) -- angle scan', `# pol=${tmm.pol}, lambda_nm=${tmm.fieldLam}, n_s=${tmm.nSub}, n_c=${tmm.nClad}`];
+    } else if (tmm.mode === 'structure') {
+      head = ['# Layered structure (TMM) -- index profile', `# n_s=${tmm.nSub}, n_c=${tmm.nClad}, margin_sub_nm=${tmm.marginSub}, margin_clad_nm=${tmm.marginClad}`];
+    } else {
+      head = ['# Layered structure (TMM) -- field', `# pol=${tmm.pol}, lambda_nm=${tmm.fieldLam}, angle_deg=${tmm.angleDeg}, n_s=${tmm.nSub}, n_c=${tmm.nClad}`];
+    }
+    return [...head, tCsvHeader.join(','), ...tCsvRows.map(r => r.join(','))].join('\n') + '\n';
+  }
+
+  function downloadBlobTmm(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---- events -------------------------------------------------------------
+  $t('tmm-add-layer').addEventListener('click', tmmAddLayer);
+  $t('tmm-remove-layer').addEventListener('click', tmmRemoveLayer);
+  $t('tmm-preset-bragg').addEventListener('click', () => applyTmmPreset('bragg'));
+  $t('tmm-preset-fp').addEventListener('click', () => applyTmmPreset('fp'));
+  $t('tmm-preset-ar').addEventListener('click', () => applyTmmPreset('ar'));
+  $t('tmm-reset').addEventListener('click', () => applyTmmPreset('bragg'));
+
+  tLayerEditor.addEventListener('change', event => {
+    const input = event.target as HTMLInputElement;
+    if (input?.dataset?.tmmLayer) setTmmLayerValue(input);
+  });
+
+  tLayerEditor.addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-tmm-remove]');
+    if (!btn) return;
+    tmmRemoveLayerAt(Number.parseInt(btn.dataset.tmmRemove ?? '-1', 10));
+  });
+
+  $t('tmm-pol-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-pol]');
+    if (!btn) return;
+    tmm.pol = btn.dataset.pol as Pol;
+    drawTmm();
+  });
+
+  $t('tmm-mode-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-mode]');
+    if (!btn) return;
+    tmm.mode = btn.dataset.mode as Mode;
+    tHover = null; tTooltip.hidden = true;
+    drawTmm();
+  });
+
+  $t('tmm-xunit-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-xunit]');
+    if (!btn) return;
+    tmm.xUnit = btn.dataset.xunit as XUnit;
+    tHover = null; tTooltip.hidden = true;
+    drawTmm();
+  });
+
+  $t('tmm-quantity-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-quantity]');
+    if (!btn) return;
+    tmm.structQuantity = btn.dataset.quantity as StructQuantity;
+    drawTmm();
+  });
+
+  function bindNumber(id: string, apply: (v: number) => void) {
+    const el = $t(id) as HTMLInputElement;
+    const commit = () => {
+      const v = Number.parseFloat(el.value);
+      if (Number.isFinite(v)) { apply(v); tmm.preset = 'custom'; markActiveTmmPreset(); drawTmm(); }
+    };
+    el.addEventListener('change', commit);
+    el.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Enter') { e.preventDefault(); commit(); } });
+  }
+  bindNumber('tmm-n-sub', v => { tmm.nSub = Math.max(0.05, v); });
+  bindNumber('tmm-n-clad', v => { tmm.nClad = Math.max(0.05, v); });
+  bindNumber('tmm-angle', v => { tmm.angleDeg = clamp(v, 0, 90); });
+
+  // Range Min/Max are unit-aware: in eV mode the entered value is a photon energy,
+  // so min energy maps to the max wavelength and vice versa (E = HC / lambda).
+  function commitRange(which: 'min' | 'max', raw: number) {
+    if (!Number.isFinite(raw)) return;
+    if (tmm.xUnit === 'ev') {
+      const e = Math.max(1e-3, raw);
+      if (which === 'min') tmm.lamMax = HC_EV_NM / e; else tmm.lamMin = HC_EV_NM / e;
+    } else {
+      const lam = Math.max(1, raw);
+      if (which === 'min') tmm.lamMin = lam; else tmm.lamMax = lam;
+    }
+    tmm.preset = 'custom'; markActiveTmmPreset(); drawTmm();
+  }
+  (['min', 'max'] as const).forEach(which => {
+    const el = $t(which === 'min' ? 'tmm-lam-min' : 'tmm-lam-max') as HTMLInputElement;
+    const run = () => commitRange(which, Number.parseFloat(el.value));
+    el.addEventListener('change', run);
+    el.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Enter') { e.preventDefault(); run(); } });
+  });
+
+  bindNumber('tmm-field-lam', v => { tmm.fieldLam = Math.max(1, v); });
+  bindNumber('tmm-margin-sub', v => { tmm.marginSub = Math.max(0, v); });
+  bindNumber('tmm-margin-clad', v => { tmm.marginClad = Math.max(0, v); });
+
+  function bindSlider(id: string, apply: (v: number) => void) {
+    $t(id).addEventListener('input', event => {
+      const v = Number.parseFloat((event.target as HTMLInputElement).value);
+      if (Number.isFinite(v)) { apply(v); tmm.preset = 'custom'; markActiveTmmPreset(); drawTmm(); }
+    });
+  }
+  bindSlider('tmm-angle-slider', v => { tmm.angleDeg = clamp(v, 0, 90); });
+  bindSlider('tmm-lam-slider', v => { tmm.fieldLam = Math.max(1, v); });
+
+  function bindCheck(id: string, apply: (checked: boolean) => void) {
+    $t(id).addEventListener('change', event => { apply((event.target as HTMLInputElement).checked); drawTmm(); });
+  }
+  bindCheck('tmm-show-r', c => { tmm.showR = c; });
+  bindCheck('tmm-show-t', c => { tmm.showT = c; });
+  bindCheck('tmm-log', c => { tmm.logScale = c; });
+  bindCheck('tmm-show-abs', c => { tmm.showAbs = c; });
+  bindCheck('tmm-show-re', c => { tmm.showRe = c; });
+  bindCheck('tmm-show-index', c => { tmm.showIndex = c; });
+
+  $t('tmm-dl-png').addEventListener('click', () => {
+    tCanvas.toBlob(blob => { if (blob) downloadBlobTmm(blob, `heterostructures_tmm_${tmm.mode}.png`); }, 'image/png');
+  });
+  $t('tmm-dl-csv').addEventListener('click', () => {
+    downloadBlobTmm(new Blob([tmmCsv()], { type: 'text/csv' }), `heterostructures_tmm_${tmm.mode}.csv`);
+  });
+
+  tCanvas.addEventListener('mousemove', handleTmmHover);
+  tCanvas.addEventListener('mouseleave', () => { if (tHover) { tHover = null; tTooltip.hidden = true; drawTmm(); } });
+
+  new ResizeObserver(() => { if (!$t('module-panel-layered-structure').hidden) drawTmm(); }).observe(tChartWrap);
+  onThemeChange(() => { if (!$t('module-panel-layered-structure').hidden) drawTmm(); });
+  window.addEventListener('heterostructures:show-layered-structure', () => drawTmm());
+
+  // initial render (panel may be hidden; canvas is min-sized, redrawn on reveal)
+  renderTmmLayerEditor();
+  renderTmmStack();
+  syncTmmControls();
+  markActiveTmmPreset();
+  drawTmm();
+</script>
+
+<script>
+  // ===== Module switcher: toggle between the two heterostructure modules =====
+  (() => {
+    const panels: Record<string, string> = {
+      'module-surface-plasmons': 'module-panel-surface-plasmons',
+      'module-layered-structure': 'module-panel-layered-structure',
+    };
+    const revealEvents: Record<string, string> = {
+      'module-surface-plasmons': 'heterostructures:show-surface-plasmons',
+      'module-layered-structure': 'heterostructures:show-layered-structure',
+    };
+    const buttons = Object.keys(panels).map(id => document.getElementById(id)).filter(Boolean) as HTMLButtonElement[];
+
+    function activate(buttonId: string) {
+      buttons.forEach(btn => {
+        const active = btn.id === buttonId;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
+      Object.entries(panels).forEach(([id, panelId]) => {
+        const panel = document.getElementById(panelId);
+        if (panel) panel.hidden = id !== buttonId;
+      });
+      window.dispatchEvent(new CustomEvent(revealEvents[buttonId]));
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => { if (!btn.disabled) activate(btn.id); });
+    });
+  })();
 </script>
