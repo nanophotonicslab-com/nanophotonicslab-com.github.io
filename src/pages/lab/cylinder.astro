@@ -42,18 +42,18 @@ const cylPresets = [
 
   <section class="section">
     <div class="container">
+      <div class="excitation-bar">
+        <div class="param excitation-param excitation-above">
+          <div class="param-header"><label>Excitation</label></div>
+          <div class="view-tabs" id="excitation-tabs" role="radiogroup">
+            <button class="view-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
+            <button class="view-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
+          </div>
+        </div>
+      </div>
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
-          <PresetStrip presets={cylPresets} canvasId="cyl-chart" />
-          <div class="param excitation-param">
-            <div class="param-header"><label>Excitation</label></div>
-            <div class="view-tabs" id="excitation-tabs" role="radiogroup">
-              <button class="view-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
-              <button class="view-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
-            </div>
-          </div>
-
           <h3>Parameters</h3>
 
           <div class="param">
@@ -184,15 +184,10 @@ const cylPresets = [
           <button id="reset-btn" class="reset-btn" title="Reset all parameters">Reset defaults</button>
 
           <button type="button" class="config-check" id="config-check" aria-haspopup="dialog" aria-controls="structure-dialog" title="Open structure drawing"></button>
-
-          <p class="theory-note" id="theory-note">
-            <strong>Plane wave.</strong>
-            Normal-incidence cylinder scattering uses the Bohren-Huffman
-            infinite-cylinder series. Efficiencies are normalized by the
-            geometrical width 2a and converted to cross-section per unit length.
-          </p>
         </div>
 
+        <!-- ===== Results ===== -->
+        <div class="results-col">
         <!-- ===== Chart ===== -->
         <div class="chart-panel card">
           <div class="chart-toolbar">
@@ -246,9 +241,13 @@ const cylPresets = [
               </div>
             </div>
             <span id="angular-controls" class="angular-controls" style="display:none">
-              <label class="angular-label">E =</label>
+              <button type="button" class="angle-axis-switch" id="angle-axis-switch" role="switch" aria-checked="false" title="Switch between energy and wavelength">
+                <span class="angle-axis-switch__opt active" data-opt="energy">E</span>
+                <span class="angle-axis-switch__opt" data-opt="lambda">&lambda;</span>
+              </button>
+              <label class="angular-label" id="angle-axis-label">E =</label>
               <input type="number" class="param-number param-number--sm" id="angle-energy-num" value="2.4" step="0.1" min="0.1">
-              <span class="angular-label">eV</span>
+              <span class="angular-label" id="angle-axis-unit">eV</span>
             </span>
             <span id="compute-status" class="compute-status"></span>
           </div>
@@ -262,7 +261,10 @@ const cylPresets = [
           <div class="chart-wrap" id="chart-wrap">
             <div class="dispersion-plot-panel" id="dispersion-plot-panel">
               <div class="plot-panel-toolbar" id="dispersion-plot-toolbar" style="display:none">
-                <span class="plot-panel-title">Dispersion relation</span>
+                <button type="button" class="plot-panel-title plot-panel-title--btn" id="disp-expand-btn" title="Open full-width view of the dispersion relation and group velocity">
+                  Dispersion relation
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                </button>
               </div>
               <div class="chart-canvas-box" id="chart-canvas-box">
                 <canvas id="cyl-chart" aria-label="Cylinder dispersion or EELS chart"></canvas>
@@ -329,7 +331,7 @@ const cylPresets = [
           <div class="field-profile-panel" id="field-profile-panel" style="display:none">
             <div class="field-profile-toolbar">
               <div>
-                <span class="field-profile-title" id="field-profile-title">Mode field profile</span>
+                <button type="button" class="field-profile-title field-profile-title--btn" id="field-profile-title" title="Open full-width view of all field profiles">Mode field profile</button>
                 <span class="field-profile-meta" id="field-profile-meta">Select a point in the dispersion map</span>
               </div>
               <div class="field-profile-actions">
@@ -397,6 +399,18 @@ const cylPresets = [
             </div>
           </div>
         </div>
+
+          <div class="notes-card card" id="notes-card">
+            <h4>Notes</h4>
+            <p class="theory-note" id="theory-note">
+              <strong>Plane wave.</strong>
+              Normal-incidence cylinder scattering uses the Bohren-Huffman
+              infinite-cylinder series. Efficiencies are normalized by the
+              geometrical width 2a and converted to cross-section per unit length.
+            </p>
+            <PresetStrip presets={cylPresets} showCopy={false} />
+          </div>
+        </div>
       </div>
 
       <dialog class="structure-dialog" id="structure-dialog" aria-labelledby="structure-dialog-title">
@@ -409,6 +423,99 @@ const cylPresets = [
             </div>
           </div>
           <div class="structure-dialog__art" id="structure-dialog-art"></div>
+        </div>
+      </dialog>
+
+      <dialog class="disp-dialog" id="disp-dialog" aria-labelledby="disp-dialog-title">
+        <div class="disp-dialog__panel">
+          <div class="disp-dialog__header">
+            <h3 id="disp-dialog-title">Dispersion relation &amp; group velocity</h3>
+            <button type="button" class="structure-dialog__close" id="disp-dialog-close" aria-label="Close full-width view">&times;</button>
+          </div>
+          <div class="disp-dialog__controls">
+            <label class="disp-dialog__check" title="Overlay a custom v/c line on both plots">
+              <input type="checkbox" id="disp-custom-toggle">
+              Custom v/c line
+            </label>
+            <input type="range" id="disp-custom-slope" class="disp-dialog__slope-slider" min="0" max="2" step="0.01" value="0.5" disabled aria-label="Custom v/c slider">
+            <span class="disp-dialog__slope-label">v/c =</span>
+            <input type="number" id="disp-custom-slope-num" class="param-number param-number--sm" min="0" max="2" step="0.01" value="0.50" disabled aria-label="Custom v/c value">
+          </div>
+          <div class="disp-dialog__grid">
+            <div class="disp-dialog__cell">
+              <div class="plot-panel-toolbar"><span class="plot-panel-title">Dispersion relation</span></div>
+              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-chart" aria-label="Dispersion relation, enlarged"></canvas></div>
+            </div>
+            <div class="disp-dialog__cell">
+              <div class="plot-panel-toolbar">
+                <span class="plot-panel-title">Group velocity</span>
+                <div class="view-tabs view-tabs--toolbar" id="disp-modal-phase-axis" role="radiogroup" aria-label="Group velocity vertical axis">
+                  <button class="view-tab active" data-phase-axis="q" role="radio" aria-checked="true">q<sub>z</sub></button>
+                  <button class="view-tab" data-phase-axis="energy" role="radio" aria-checked="false">&hbar;&omega;</button>
+                </div>
+              </div>
+              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-phase" aria-label="Group velocity, enlarged"></canvas></div>
+            </div>
+          </div>
+          <div class="download-bar">
+            <span class="download-label">Export</span>
+            <button id="disp-modal-dl-png" class="dl-btn" title="Download dispersion relation as PNG">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button id="disp-modal-dl-csv" class="dl-btn" title="Download data as CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              CSV
+            </button>
+            <button id="disp-modal-share" class="dl-btn" title="Copy shareable link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Share
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="disp-dialog field-dialog" id="field-dialog" aria-labelledby="field-dialog-title">
+        <div class="disp-dialog__panel">
+          <div class="disp-dialog__header">
+            <div>
+              <h3 id="field-dialog-title">Mode field profiles</h3>
+              <span class="field-profile-meta" id="field-modal-meta"></span>
+            </div>
+            <div class="field-dialog__head-actions">
+              <button type="button" class="chart-tool-btn" id="field-modal-normalized" title="Normalize each panel to its own range">Normalized</button>
+              <button type="button" class="chart-tool-btn" id="field-modal-log" title="Toggle log10 scale for |E|">Log10 |E|</button>
+              <button type="button" class="structure-dialog__close" id="field-dialog-close" aria-label="Close full-width view">&times;</button>
+            </div>
+          </div>
+          <div class="field-dialog__body">
+            <div class="field-dialog__grid">
+              <div class="field-tile" style="grid-area:rex"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>x</sub></span></div><canvas id="mfield-re-ex" aria-label="Re Ex field"></canvas></div>
+              <div class="field-tile" style="grid-area:rey"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>y</sub></span></div><canvas id="mfield-re-ey" aria-label="Re Ey field"></canvas></div>
+              <div class="field-tile" style="grid-area:rez"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>z</sub></span></div><canvas id="mfield-re-ez" aria-label="Re Ez field"></canvas></div>
+              <div class="field-tile" style="grid-area:imx"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>x</sub></span></div><canvas id="mfield-im-ex" aria-label="Im Ex field"></canvas></div>
+              <div class="field-tile" style="grid-area:imy"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>y</sub></span></div><canvas id="mfield-im-ey" aria-label="Im Ey field"></canvas></div>
+              <div class="field-tile" style="grid-area:imz"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>z</sub></span></div><canvas id="mfield-im-ez" aria-label="Im Ez field"></canvas></div>
+              <div class="field-tile" style="grid-area:mag"><div class="field-tile__header"><span class="field-tile__label" id="mfield-mag-label">|E|</span></div><canvas id="mfield-mag" aria-label="Field magnitude"></canvas></div>
+              <canvas id="mfield-colorbar" class="mfield-bar" style="grid-area:sbar" aria-label="Re/Im field color scale"></canvas>
+              <canvas id="mfield-mag-colorbar" class="mfield-bar" style="grid-area:mbar" aria-label="Field magnitude color scale"></canvas>
+            </div>
+          </div>
+          <div class="download-bar">
+            <span class="download-label">Export</span>
+            <button id="field-modal-dl-png" class="dl-btn" title="Download all field profiles as PNG">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button id="field-modal-dl-csv" class="dl-btn" title="Download field data as CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              CSV
+            </button>
+            <button id="field-modal-share" class="dl-btn" title="Copy shareable link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Share
+            </button>
+          </div>
         </div>
       </dialog>
 
@@ -442,6 +549,13 @@ initPermalinks({
   .back-link:hover { color: var(--primary); }
 
   .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
+  .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
+  .excitation-above { gap: 0.4rem; }
+  .results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .notes-card { padding: var(--space-md); }
+  .notes-card h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .notes-card .theory-note { border-top: none; padding-top: 0; }
+  .notes-card :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; padding-top: var(--space-md); margin-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
   .controls {
     display: flex; flex-direction: column; gap: var(--space-md);
     position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg));
@@ -560,6 +674,10 @@ initPermalinks({
   .view-tabs--toolbar .view-tab { flex: 0 0 auto; padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .view-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .view-tab:hover:not(.active) { color: var(--text); }
+  .view-tab:disabled,
+  .view-tab[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+  .view-tab:disabled:hover,
+  .view-tab[aria-disabled="true"]:hover { color: var(--text-soft); }
 
   .theory-note {
     font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55;
@@ -642,6 +760,18 @@ initPermalinks({
   .compute-status { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
   .angular-controls { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
   .angular-label { font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  /* Fixed widths so the switch never shifts when units/values change size */
+  #angle-axis-label { display: inline-block; width: 2.1rem; text-align: right; }
+  #angle-axis-unit { display: inline-block; width: 1.4rem; text-align: left; }
+  .angle-axis-switch {
+    display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: none;
+    background: var(--bg-muted); border-radius: var(--radius-full); cursor: pointer; font-family: var(--font);
+  }
+  .angle-axis-switch__opt {
+    width: 1.25rem; padding: 0.15rem 0; text-align: center; font-size: 0.72rem; font-weight: 600;
+    color: var(--text-soft); border-radius: var(--radius-full); transition: background 0.15s, color 0.15s;
+  }
+  .angle-axis-switch__opt.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .angular-pol-wrap { display: flex; justify-content: flex-start; margin-bottom: var(--space-sm); }
   .angular-pol-wrap .view-tabs { width: fit-content; }
   .angular-slider { width: 220px; max-width: 100%; margin: -0.15rem 0 var(--space-sm); }
@@ -680,6 +810,67 @@ initPermalinks({
     font-size: 0.8rem;
     font-weight: 750;
     color: var(--text);
+  }
+  .plot-panel-title--btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    border: none; background: none; font-family: var(--font); cursor: pointer;
+    padding: 0; border-radius: var(--radius-sm); transition: color 0.15s;
+  }
+  .plot-panel-title--btn svg { opacity: 0.55; transition: opacity 0.15s; }
+  .plot-panel-title--btn:hover { color: var(--primary); }
+  .plot-panel-title--btn:hover svg { opacity: 1; }
+
+  .disp-dialog {
+    border: none; border-radius: var(--radius-lg); padding: 0;
+    width: 96vw; max-width: 1700px; max-height: 94vh;
+    background: var(--bg); color: var(--text); box-shadow: var(--shadow-lg);
+  }
+  .disp-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
+  .disp-dialog__panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); }
+  .disp-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .disp-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .disp-dialog__controls { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .disp-dialog__check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; color: var(--text); cursor: pointer; }
+  .disp-dialog__check input { width: 15px; height: 15px; accent-color: #DC2626; cursor: pointer; }
+  .disp-dialog__slope-slider { width: 220px; max-width: 55vw; accent-color: #DC2626; }
+  .disp-dialog__slope-slider:disabled { opacity: 0.4; }
+  .disp-dialog__slope-label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
+  #disp-custom-slope-num:disabled { opacity: 0.4; }
+  .disp-dialog__grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--space-md); align-items: start; }
+  .disp-dialog__cell { display: flex; flex-direction: column; min-width: 0; }
+  .disp-dialog__canvas-box { position: relative; width: 100%; }
+  .disp-dialog__canvas-box canvas { width: 100%; height: 64vh; display: block; border-radius: var(--radius-sm); cursor: default; }
+  @media (max-width: 820px) {
+    .disp-dialog__grid { grid-template-columns: 1fr; }
+    .disp-dialog__canvas-box canvas { height: 42vh; }
+  }
+  .field-dialog .disp-dialog__panel { max-height: 94vh; overflow-y: auto; }
+  .field-dialog__head-actions { display: inline-flex; align-items: center; gap: var(--space-xs); }
+  .field-dialog__body { display: block; }
+  .field-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 96px;
+    grid-template-areas:
+      "rex rey rez sbar"
+      "imx imy imz ."
+      ".   .   mag mbar";
+    gap: var(--space-md);
+    align-items: start;
+  }
+  .field-dialog__grid .field-tile canvas { width: 100%; aspect-ratio: 1 / 1; height: auto; display: block; }
+  .field-dialog__grid .mfield-bar { width: 100%; height: 100%; align-self: stretch; min-height: 0; display: block; }
+  @media (max-width: 820px) {
+    .field-dialog__grid {
+      grid-template-columns: 1fr 96px;
+      grid-template-areas:
+        "rex sbar"
+        "rey sbar"
+        "rez ."
+        "imx mbar"
+        "imy mbar"
+        "imz ."
+        "mag .";
+    }
   }
   .axis-overlay {
     position: absolute;
@@ -780,6 +971,13 @@ initPermalinks({
     font-weight: 750;
     color: var(--text);
   }
+  .field-profile-title--btn {
+    border: none; background: none; padding: 0; font-family: var(--font);
+    cursor: pointer; text-align: left; transition: color 0.15s;
+  }
+  .field-profile-title--btn::after { content: ' \2922'; font-weight: 600; opacity: 0.5; }
+  .field-profile-title--btn:hover { color: var(--primary); }
+  .field-profile-title--btn:hover::after { opacity: 1; }
   .field-profile-meta {
     display: block;
     margin-top: 0.15rem;
@@ -899,6 +1097,7 @@ initPermalinks({
 
   @media (max-width: 900px) {
     .widget-layout { grid-template-columns: 1fr; }
+    .excitation-bar { max-width: none; }
     .controls { position: static; }
     .chart-wrap.is-dispersion-split { grid-template-columns: 1fr; }
     .chart-canvas-box canvas,
@@ -936,6 +1135,7 @@ initPermalinks({
   type ExcitationMode = 'plane' | 'electron';
   type ViewMode = 'cross-section' | 'angular' | 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
   type AxisMode = 'energy' | 'lambda';
+  type AngleAxisMode = 'energy' | 'lambda';
   type SpectrumQuantity = 'csca' | 'cext' | 'cabs' | 'qsca' | 'all';
   type SpectrumDecomp = 'total' | 'em';
   type AngularPolMode = 'total' | 'perp' | 'par';
@@ -956,6 +1156,7 @@ initPermalinks({
     w_min: 0.2,
     w_max: 4,
     angleEnergyEv: 2.4,
+    angleAxisMode: 'energy' as AngleAxisMode,
     axisMode: 'lambda' as AxisMode,
     spectrumQuantity: 'csca' as SpectrumQuantity,
     spectrumDecomp: 'total' as SpectrumDecomp,
@@ -974,6 +1175,8 @@ initPermalinks({
     mapShowElectron: true,
     mapShowCustom: false,
     mapCustomSlope: 0.3,
+    dispCustomSlopeOn: false,
+    dispCustomSlope: 0.5,
     phaseAxis: 'q' as PhaseAxis,
     fieldLogMag: false,
     fieldNormalized: false,
@@ -1026,6 +1229,11 @@ initPermalinks({
     qextPer: number;
   }
 
+  // Fractional band below the material line whose roots are treated as
+  // artifacts (spurious sign-changes), not guided modes, and discarded.
+  const MAT_LINE_MARGIN = 0.02;
+  let dispModalOpen = false;
+  let fieldModalOpen = false;
   let branches: MBranch[] = [];
   let planeSpectrum: PlaneWavePoint[] = [];
   let angularRows: ReturnType<typeof cylinderScatteringMatrix> = [];
@@ -1502,7 +1710,14 @@ initPermalinks({
       });
       const pts: { w: number; q: number }[] = [];
       for (let i = 0; i < res.energies_eV.length; i++) {
-        for (const q of res.roots_nm[i]) pts.push({ w: res.energies_eV[i], q });
+        // Roots sitting on the material line q = √(Re ε₁)·k₀ are not guided
+        // modes — they are spurious Re(det) sign-changes (from the lossy ε)
+        // bunched against the line. Drop them so they show in neither plot.
+        const qMat = res.q_mat_nm[i];
+        for (const q of res.roots_nm[i]) {
+          if (qMat > 0 && q > qMat * (1 - MAT_LINE_MARGIN)) continue;
+          pts.push({ w: res.energies_eV[i], q });
+        }
       }
       branches.push({ m, points: pts });
     }
@@ -1608,8 +1823,8 @@ initPermalinks({
     logY: boolean;
   }
 
-  function setupCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
-    const canvas = document.getElementById('cyl-chart') as HTMLCanvasElement;
+  function setupCanvas(target?: HTMLCanvasElement): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const canvas = target ?? (document.getElementById('cyl-chart') as HTMLCanvasElement);
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -1618,8 +1833,8 @@ initPermalinks({
     return { canvas, ctx, w, h };
   }
 
-  function setupPhaseCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
-    const canvas = phaseCanvas;
+  function setupPhaseCanvas(target?: HTMLCanvasElement): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const canvas = target ?? phaseCanvas;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -1743,6 +1958,7 @@ initPermalinks({
     }
     drawPerpMap();
     drawFieldProfile();
+    if (dispModalOpen) renderDispModal();
   }
 
   function strokeSeries(ax: Axes, xs: number[], ys: number[], color: string, width = 2, dash: number[] = []) {
@@ -1926,9 +2142,9 @@ initPermalinks({
     return { x: lx, y: ly, w: legendW, h: legendH };
   }
 
-  function drawDispersionModeLegend(ax: Axes): void {
+  function drawDispersionModeLegend(ax: Axes, interactive = true): void {
     const orders = mOrders();
-    dispersionLegendHits = [];
+    if (interactive) dispersionLegendHits = [];
     if (orders.length === 0) return;
     const { ctx, m, pw, ph } = ax;
     const ct = chartTheme();
@@ -1965,7 +2181,7 @@ initPermalinks({
       ctx.fillStyle = ct.text;
       ctx.fillText(`m = ${order}`, lx + 8 + lineW + gap, iy);
       ctx.globalAlpha = 1;
-      dispersionLegendHits.push({ m: order, rect: { x: lx, y: ly + 5 + i * rowH, w: legendW, h: rowH } });
+      if (interactive) dispersionLegendHits.push({ m: order, rect: { x: lx, y: ly + 5 + i * rowH, w: legendW, h: rowH } });
     }
     ctx.restore();
   }
@@ -2204,11 +2420,12 @@ initPermalinks({
     return lineGroupVelocityAtEnergy(energyEv, energy => materialEpsilonAtEnergy(energy)[0]);
   }
 
-  function drawPhaseVelocityPlot() {
-    if (state.view !== 'disp-wq' || phasePlotPanel.style.display === 'none') return;
-    const { ctx, w, h } = setupPhaseCanvas();
+  function drawPhaseVelocityPlot(target?: HTMLCanvasElement) {
+    if (state.view !== 'disp-wq') return;
+    if (!target && phasePlotPanel.style.display === 'none') return;
+    const { ctx, w, h } = setupPhaseCanvas(target);
     const points = computeGroupVelocityPoints();
-    groupVelocityPointHits = [];
+    const velHits: GroupVelocityPointHit[] = [];
 
     const yIsQ = state.phaseAxis === 'q';
     const referenceEnergy = selectedFieldPoint?.w ?? 0.5 * (state.w_min + state.w_max);
@@ -2221,6 +2438,7 @@ initPermalinks({
       Number.isFinite(hostVg) ? hostVg : 0,
       Number.isFinite(materialVg) ? materialVg : 0,
       points.length ? Math.max(...points.map(p => p.vg)) : 0,
+      target && state.dispCustomSlopeOn ? state.dispCustomSlope : 0,
     ) * 1.08;
     const yMin = yIsQ ? 0 : state.w_min;
     const yMax = yIsQ ? Math.max(0.01, qMaxAuto) : state.w_max;
@@ -2266,13 +2484,14 @@ initPermalinks({
 
     drawReferenceVelocity(hostVg, '#94A3B8', 'host group speed');
     drawReferenceVelocity(materialVg, '#CBD5E1', 'material Re(eps)');
+    if (target && state.dispCustomSlopeOn) drawReferenceVelocity(state.dispCustomSlope, '#DC2626', `v/c = ${state.dispCustomSlope.toFixed(2)}`);
     ctx.setLineDash([]);
 
     for (const p of points) {
       const color = colorForM(p.m);
       const x = ax.xTo(p.vg);
       const y = ax.yTo(yIsQ ? p.q : p.w);
-      groupVelocityPointHits.push({ ...p, x, y });
+      velHits.push({ ...p, x, y });
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x, y, 2.2, 0, Math.PI * 2);
@@ -2298,14 +2517,15 @@ initPermalinks({
     }
 
     ctx.restore();
+    if (!target) groupVelocityPointHits = velHits;
   }
 
-  function drawDispersionWQ() {
-    const { ctx, w, h } = setupCanvas();
+  function drawDispersionWQ(target?: HTMLCanvasElement) {
+    const { ctx, w, h } = setupCanvas(target);
     const ax = makeAxes(ctx, w, h, 0, qMaxAuto, state.w_min, state.w_max,
                          'q_z (nm^-1)', '\u210F\u03C9 (eV)');
     drawAxesFrame(ax, 6, 6, v => v.toFixed(3), v => v.toFixed(1));
-    dispersionPointHits = [];
+    const pointHits: DispersionPointHit[] = [];
 
     ctx.save();
     ctx.beginPath();
@@ -2341,6 +2561,20 @@ initPermalinks({
     ctx.closePath();
     ctx.fill();
 
+    // Custom slope (v/c) line — q = k₀ / (v/c); magnified view only
+    if (target && state.dispCustomSlopeOn) {
+      const slope = Math.max(1e-6, state.dispCustomSlope);
+      const qCustomMax = k0_at(state.w_max) / slope;
+      ctx.strokeStyle = '#DC2626';
+      ctx.setLineDash([4, 3]);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(ax.xTo(0), ax.yTo(0));
+      ctx.lineTo(ax.xTo(qCustomMax), ax.yTo(state.w_max));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     // Dispersion points
     for (const br of branches) {
       const color = colorForM(br.m);
@@ -2348,7 +2582,7 @@ initPermalinks({
       for (const p of br.points) {
         const x = ax.xTo(p.q);
         const y = ax.yTo(p.w);
-        dispersionPointHits.push({ m: br.m, w: p.w, q: p.q, x, y });
+        pointHits.push({ m: br.m, w: p.w, q: p.q, x, y });
         ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
       }
     }
@@ -2369,11 +2603,15 @@ initPermalinks({
       }
     }
     ctx.restore();
+    if (!target) dispersionPointHits = pointHits;
 
     // Line labels
     drawLineLabel(ax, 'light line', qLightMax, '#94A3B8');
     drawLineLabel(ax, 'material line', qMatMax, '#94A3B8');
-    drawDispersionModeLegend(ax);
+    if (target && state.dispCustomSlopeOn) {
+      drawLineLabel(ax, `v/c = ${state.dispCustomSlope.toFixed(2)}`, k0_at(state.w_max) / Math.max(1e-6, state.dispCustomSlope), '#DC2626');
+    }
+    drawDispersionModeLegend(ax, !target);
   }
 
   function drawDispersionBV() {
@@ -2692,13 +2930,14 @@ initPermalinks({
     ctx.fillText(formatFieldTick(scale.min, scale.log), x + barW + 4, y + h - 5);
   }
 
-  function setupFieldColorbarCanvas(): { ctx: CanvasRenderingContext2D; w: number; h: number } {
+  function setupFieldColorbarCanvas(target?: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; w: number; h: number } {
+    const canvas = target ?? fieldColorbarCanvas;
     const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(48, Math.round(fieldColorbarCanvas.clientWidth || 58));
-    const h = Math.max(220, Math.round(fieldColorbarCanvas.clientHeight || 320));
-    fieldColorbarCanvas.width = w * dpr;
-    fieldColorbarCanvas.height = h * dpr;
-    const ctx = fieldColorbarCanvas.getContext('2d')!;
+    const w = Math.max(48, Math.round(canvas.clientWidth || 58));
+    const h = Math.max(220, Math.round(canvas.clientHeight || 320));
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
     return { ctx, w, h };
   }
@@ -2709,8 +2948,8 @@ initPermalinks({
     ctx.clearRect(0, 0, w, h);
   }
 
-  function drawFieldColorbarRail(signedScale: FieldTileScale, magScale: FieldTileScale): void {
-    const { ctx, w, h } = setupFieldColorbarCanvas();
+  function drawFieldColorbarRail(signedScale: FieldTileScale, magScale: FieldTileScale, target?: HTMLCanvasElement): void {
+    const { ctx, w, h } = setupFieldColorbarCanvas(target);
     const ct = chartTheme();
     const signedDisplay = state.fieldNormalized
       ? { ...signedScale, min: -1, max: 1, signedMax: 1, log: false }
@@ -2857,6 +3096,7 @@ initPermalinks({
     drawFieldTile(fieldEzCanvas, ez, profile.n, profile.limNm, 'signed', makeSignedScale(ez, sharedSignedMax, false));
     drawFieldTile(fieldMagCanvas, profile.mag, profile.n, profile.limNm, 'mag', magScale);
     drawFieldColorbarRail(signedRailScale, magScale);
+    if (fieldModalOpen) renderFieldModal();
   }
 
   function nearestDispersionPointHit(x: number, y: number, radius = 8): DispersionPointHit | null {
@@ -3083,12 +3323,81 @@ initPermalinks({
     $(containerId).addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
       if (!btn) return;
+      if ((btn as HTMLButtonElement).disabled || btn.getAttribute('aria-disabled') === 'true') return;
       const value = btn.dataset[dataKey] as T | undefined;
       if (!value || value === read()) return;
       write(value);
       syncTabs(containerId, dataKey, value);
       afterChange();
     });
+  }
+
+  // The E/M breakdown has no meaning when all quantities are plotted together,
+  // so fade and disable that tab while "All" is selected.
+  function updateDecompAvailability() {
+    const disable = state.spectrumQuantity === 'all';
+    if (disable && state.spectrumDecomp === 'em') {
+      state.spectrumDecomp = 'total' as SpectrumDecomp;
+      syncTabs('decomp-tabs', 'decomp', 'total');
+    }
+    const emBtn = document.querySelector<HTMLButtonElement>('#decomp-tabs [data-decomp="em"]');
+    if (emBtn) {
+      emBtn.disabled = disable;
+      emBtn.setAttribute('aria-disabled', disable ? 'true' : 'false');
+    }
+  }
+
+  // Angular cut selector: the user picks a single photon energy / wavelength.
+  // The canonical value is always stored in eV (state.angleEnergyEv); the input
+  // can display either E (eV) or λ (nm). λ = hc/E and E = hc/λ, so the same
+  // lambdaNmFromEnergy() converts both directions.
+  const ANGLE_EV_MIN = 0.5;
+  const ANGLE_EV_MAX = 6;
+  function applyAngleAxisMode() {
+    const num = $<HTMLInputElement>('angle-energy-num');
+    const slider = $<HTMLInputElement>('angle-energy-slider');
+    const label = $('angle-axis-label');
+    const unit = $('angle-axis-unit');
+    const sw = $('angle-axis-switch');
+    sw.querySelectorAll<HTMLElement>('.angle-axis-switch__opt').forEach(o => o.classList.toggle('active', o.dataset.opt === state.angleAxisMode));
+    sw.setAttribute('aria-checked', state.angleAxisMode === 'lambda' ? 'true' : 'false');
+    if (state.angleAxisMode === 'lambda') {
+      const lamMin = Math.round(lambdaNmFromEnergy(ANGLE_EV_MAX));
+      const lamMax = Math.round(lambdaNmFromEnergy(ANGLE_EV_MIN));
+      const lam = Math.round(lambdaNmFromEnergy(state.angleEnergyEv));
+      label.textContent = 'λ =';
+      unit.textContent = 'nm';
+      slider.min = String(lamMin); slider.max = String(lamMax); slider.step = '1';
+      slider.value = String(lam);
+      num.min = String(lamMin); num.max = String(lamMax); num.step = '1';
+      num.value = String(lam);
+    } else {
+      label.textContent = 'E =';
+      unit.textContent = 'eV';
+      slider.min = String(ANGLE_EV_MIN); slider.max = String(ANGLE_EV_MAX); slider.step = '0.05';
+      slider.value = String(state.angleEnergyEv);
+      num.min = '0.1'; num.removeAttribute('max'); num.step = '0.1';
+      num.value = state.angleEnergyEv.toFixed(2);
+    }
+  }
+  function setupAngleAxis() {
+    const num = $<HTMLInputElement>('angle-energy-num');
+    const slider = $<HTMLInputElement>('angle-energy-slider');
+    const onInput = (src: 'num' | 'slider') => {
+      const raw = src === 'num' ? num.value : slider.value;
+      const v = parseFloat(raw);
+      if (!isFinite(v) || v <= 0) return;
+      if (src === 'num') slider.value = raw; else num.value = raw;
+      state.angleEnergyEv = state.angleAxisMode === 'lambda' ? lambdaNmFromEnergy(v) : v;
+      scheduleRecompute();
+    };
+    num.addEventListener('input', () => onInput('num'));
+    slider.addEventListener('input', () => onInput('slider'));
+    $('angle-axis-switch').addEventListener('click', () => {
+      state.angleAxisMode = state.angleAxisMode === 'energy' ? 'lambda' : 'energy';
+      applyAngleAxisMode();
+    });
+    applyAngleAxisMode();
   }
 
   function syncPair(numId: string, sliderId: string, key: keyof typeof state) {
@@ -3113,7 +3422,7 @@ initPermalinks({
   syncPair('e1i-num', 'e1i-slider', 'eps1_im');
   syncPair('b-num', 'b-slider', 'b_nm');
   syncPair('v-num', 'v-slider', 'vFrac');
-  syncPair('angle-energy-num', 'angle-energy-slider', 'angleEnergyEv');
+  setupAngleAxis();
 
   const materialSelect = $<HTMLSelectElement>('material-select');
   const materialRef = $('material-ref');
@@ -3332,6 +3641,7 @@ initPermalinks({
   $<HTMLInputElement>('v-slider').addEventListener('input', syncKeVFromBeta);
 
   bindTabs<SpectrumQuantity>('quantity-tabs', 'qty', () => state.spectrumQuantity, value => { state.spectrumQuantity = value; }, () => {
+    updateDecompAvailability();
     drawChart();
     drawLegend();
   });
@@ -3345,6 +3655,7 @@ initPermalinks({
   });
   bindTabs<PhaseAxis>('phase-axis-tabs', 'phaseAxis', () => state.phaseAxis, value => { state.phaseAxis = value; }, () => {
     drawPhaseVelocityPlot();
+    if (dispModalOpen) { syncTabs('disp-modal-phase-axis', 'phaseAxis', state.phaseAxis); renderDispModal(); }
   });
   bindTabs<AngularPolMode>('pol-tabs', 'pol', () => state.angularPol, value => { state.angularPol = value; }, () => {
     drawChart();
@@ -3628,14 +3939,20 @@ initPermalinks({
     s += `<line x1="${cx}" y1="${cy + r + 6}" x2="${cx}" y2="${cy + r + 14}" stroke="${ct.textMuted}" stroke-width="0.8"/>`;
     s += `<text x="${cx + r / 2}" y="${cy + r + 24}" text-anchor="middle" fill="${ct.textMuted}" font-size="8" font-family="Inter,system-ui">a=${state.a_nm.toFixed(0)} nm</text>`;
     if (state.excitation === 'plane') {
-      const kY = cy - 18;
-      const eX = 31;
-      s += `<line x1="14" y1="${kY}" x2="${cx - r - 9}" y2="${kY}" stroke="#6366F1" stroke-width="2" stroke-linecap="round"/>`;
-      s += `<path d="M${cx - r - 9},${kY} l-7,-4 v8 z" fill="#6366F1"/>`;
-      s += `<text x="16" y="${kY - 10}" fill="#6366F1" font-size="9" font-weight="700" font-family="Inter,system-ui">k</text>`;
-      s += `<line x1="${eX}" y1="${cy + 27}" x2="${eX}" y2="${cy - 4}" stroke="#06B6D4" stroke-width="2" stroke-linecap="round"/>`;
-      s += `<path d="M${eX},${cy - 4} l-4,7 h8 z" fill="#06B6D4"/>`;
-      s += `<text x="${eX + 7}" y="${cy + 18}" fill="#06B6D4" font-size="9" font-weight="700" font-family="Inter,system-ui">E</text>`;
+      // k (propagation) and E (polarization) share a common origin, with the
+      // k arrow aligned to the cylinder's cross-section center (y = cy).
+      const ox = 17;             // shared origin x
+      const oy = cy;             // shared origin y — center of the cross section
+      const kEndX = cx - r - 9;  // stop just left of the cylinder
+      const eEndY = oy - 30;     // E points up
+      // k: horizontal toward the cylinder, label below
+      s += `<line x1="${ox}" y1="${oy}" x2="${kEndX}" y2="${oy}" stroke="#6366F1" stroke-width="2" stroke-linecap="round"/>`;
+      s += `<path d="M${kEndX},${oy} l-7,-4 v8 z" fill="#6366F1"/>`;
+      s += `<text x="${(ox + kEndX) / 2}" y="${oy + 13}" text-anchor="middle" fill="#6366F1" font-size="9" font-weight="700" font-family="Inter,system-ui">k</text>`;
+      // E: vertical from the same origin, label to the right
+      s += `<line x1="${ox}" y1="${oy}" x2="${ox}" y2="${eEndY}" stroke="#06B6D4" stroke-width="2" stroke-linecap="round"/>`;
+      s += `<path d="M${ox},${eEndY} l-4,7 h8 z" fill="#06B6D4"/>`;
+      s += `<text x="${ox + 6}" y="${(oy + eEndY) / 2 + 3}" fill="#06B6D4" font-size="9" font-weight="700" font-family="Inter,system-ui">E</text>`;
     } else {
       const ratio = state.b_nm / Math.max(state.a_nm, 1);
       const capped = Math.min(1.45, Math.max(0, ratio));
@@ -3707,6 +4024,219 @@ initPermalinks({
     };
     img.src = url;
   });
+
+  // ===== Full-width dispersion / group-velocity dialog =====
+  function renderDispModal() {
+    const dchart = document.getElementById('disp-modal-chart') as HTMLCanvasElement | null;
+    const pchart = document.getElementById('disp-modal-phase') as HTMLCanvasElement | null;
+    if (dchart) drawDispersionWQ(dchart);
+    if (pchart) drawPhaseVelocityPlot(pchart);
+  }
+  const dispDialog = $<HTMLDialogElement>('disp-dialog');
+  function closeDispDialog() {
+    dispModalOpen = false;
+    if (dispDialog.open) dispDialog.close();
+  }
+  $('disp-expand-btn').addEventListener('click', () => {
+    if (state.view !== 'disp-wq') return;
+    dispModalOpen = true;
+    syncTabs('disp-modal-phase-axis', 'phaseAxis', state.phaseAxis);
+    syncDispCustomUI();
+    if (typeof dispDialog.showModal === 'function') dispDialog.showModal();
+    else dispDialog.setAttribute('open', '');
+    requestAnimationFrame(() => renderDispModal());
+  });
+  $('disp-dialog-close').addEventListener('click', closeDispDialog);
+  dispDialog.addEventListener('close', () => { dispModalOpen = false; });
+  dispDialog.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === dispDialog) closeDispDialog();
+  });
+  $('disp-modal-phase-axis').addEventListener('click', (e: MouseEvent) => {
+    const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
+    if (!btn) return;
+    const v = btn.dataset.phaseAxis as PhaseAxis | undefined;
+    if (!v || v === state.phaseAxis) return;
+    state.phaseAxis = v;
+    syncTabs('disp-modal-phase-axis', 'phaseAxis', v);
+    syncTabs('phase-axis-tabs', 'phaseAxis', v);
+    drawPhaseVelocityPlot();
+    renderDispModal();
+  });
+  const dispCustomToggle = $<HTMLInputElement>('disp-custom-toggle');
+  const dispCustomSlider = $<HTMLInputElement>('disp-custom-slope');
+  const dispCustomNum = $<HTMLInputElement>('disp-custom-slope-num');
+  function syncDispCustomUI() {
+    dispCustomToggle.checked = state.dispCustomSlopeOn;
+    dispCustomSlider.disabled = !state.dispCustomSlopeOn;
+    dispCustomNum.disabled = !state.dispCustomSlopeOn;
+    dispCustomSlider.value = String(state.dispCustomSlope);
+    dispCustomNum.value = state.dispCustomSlope.toFixed(2);
+  }
+  dispCustomToggle.addEventListener('change', () => {
+    state.dispCustomSlopeOn = dispCustomToggle.checked;
+    syncDispCustomUI();
+    renderDispModal();
+  });
+  function setDispCustomSlope(raw: string, echoNum: boolean) {
+    let v = parseFloat(raw);
+    if (!Number.isFinite(v)) return;
+    v = Math.min(2, Math.max(0, v));
+    state.dispCustomSlope = v;
+    dispCustomSlider.value = String(v);
+    if (echoNum) dispCustomNum.value = v.toFixed(2);
+    if (state.dispCustomSlopeOn) renderDispModal();
+  }
+  dispCustomSlider.addEventListener('input', () => setDispCustomSlope(dispCustomSlider.value, true));
+  dispCustomNum.addEventListener('input', () => setDispCustomSlope(dispCustomNum.value, false));
+  dispCustomNum.addEventListener('change', () => { dispCustomNum.value = state.dispCustomSlope.toFixed(2); });
+
+  $('disp-modal-dl-png').addEventListener('click', () => {
+    const c = document.getElementById('disp-modal-chart') as HTMLCanvasElement;
+    c.toBlob(b => { if (b) downloadBlob(b, `cylinder_dispersion_${state.view}.png`); }, 'image/png');
+  });
+  $('disp-modal-dl-csv').addEventListener('click', () => $('dl-csv').click());
+  $('disp-modal-share').addEventListener('click', () => $('share-btn').click());
+
+  // ===== Full-width field-profile dialog =====
+  const fieldDialog = $<HTMLDialogElement>('field-dialog');
+  const mfieldMeta = $('field-modal-meta');
+  const mfieldCanvases = {
+    reEx: $<HTMLCanvasElement>('mfield-re-ex'), reEy: $<HTMLCanvasElement>('mfield-re-ey'), reEz: $<HTMLCanvasElement>('mfield-re-ez'),
+    imEx: $<HTMLCanvasElement>('mfield-im-ex'), imEy: $<HTMLCanvasElement>('mfield-im-ey'), imEz: $<HTMLCanvasElement>('mfield-im-ez'),
+    mag: $<HTMLCanvasElement>('mfield-mag'),
+  };
+  const mfieldColorbar = $<HTMLCanvasElement>('mfield-colorbar');
+  const mfieldMagColorbar = $<HTMLCanvasElement>('mfield-mag-colorbar');
+  function drawColorbar(target: HTMLCanvasElement, mode: 'signed' | 'mag', scale: FieldTileScale, label: string) {
+    const { ctx, w, h } = setupFieldColorbarCanvas(target);
+    const ct = chartTheme();
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = ct.textSoft;
+    ctx.font = '600 11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(label, 2, 2);
+    const titleH = 20;
+    const barW = 14;
+    const barX = 4;
+    const barY = titleH;
+    const barH = Math.max(40, h - titleH - 6);
+    for (let i = 0; i < barH; i++) {
+      const t = 1 - i / Math.max(1, barH - 1);
+      const rgb = mode === 'signed' ? signedRgb(2 * t - 1) : heatRgb(t);
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      ctx.fillRect(barX, barY + i, barW, 1);
+    }
+    ctx.strokeStyle = hexToRgba(ct.text, 0.35);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = ct.textMuted;
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const tx = barX + barW + 5;
+    if (mode === 'signed') {
+      ctx.fillText(formatFieldTick(scale.signedMax), tx, barY + 6);
+      ctx.fillText('0', tx, barY + barH / 2);
+      ctx.fillText(formatFieldTick(-scale.signedMax), tx, barY + barH - 6);
+    } else {
+      ctx.fillText(formatFieldTick(scale.max, scale.log), tx, barY + 6);
+      ctx.fillText(formatFieldTick(scale.min, scale.log), tx, barY + barH - 6);
+    }
+  }
+  function clearFieldModal(message: string) {
+    const ct = chartTheme();
+    for (const c of Object.values(mfieldCanvases)) {
+      const { ctx, size } = setupFieldCanvas(c);
+      ctx.fillStyle = ct.bg; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = ct.textMuted; ctx.font = '12px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(message, size / 2, size / 2, size - 24);
+    }
+    for (const cb of [mfieldColorbar, mfieldMagColorbar]) {
+      const { ctx, w, h } = setupFieldColorbarCanvas(cb);
+      ctx.clearRect(0, 0, w, h);
+    }
+  }
+  function renderFieldModal() {
+    $('field-modal-normalized').classList.toggle('active', state.fieldNormalized);
+    $('field-modal-log').classList.toggle('active', state.fieldLogMag);
+    $('mfield-mag-label').innerHTML = state.fieldLogMag ? 'log<sub>10</sub>|E|' : '|E|';
+    if (!selectedFieldPoint) { mfieldMeta.textContent = 'Select a point in the dispersion map'; clearFieldModal('No selected mode'); return; }
+    const epsNote = state.materialId === 'custom' && Math.abs(state.eps1_im) > 1e-9 ? ' | using Re(ε₁)' : '';
+    mfieldMeta.textContent = `${selectedFieldPoint.modeLabel} · ℏω = ${selectedFieldPoint.w.toFixed(3)} eV | q_z = ${selectedFieldPoint.q.toFixed(5)} nm^-1 | m = ${selectedFieldPoint.m}${epsNote}`;
+    if (state.materialId !== 'custom') { clearFieldModal('Custom dielectric only'); return; }
+    const profile = computeSelectedFieldProfile();
+    if (!profile) { clearFieldModal('No guided field at this point'); return; }
+    const { ex, ey, ez } = profile.components;
+    const allSigned = [...ex.re, ...ex.im, ...ey.re, ...ey.im, ...ez.re, ...ez.im];
+    const sharedMax = state.fieldNormalized ? null : Math.max(1e-18, percentile(allSigned.map(v => Math.abs(v)), 0.995));
+    const signedRailScale = makeSignedScale(allSigned, sharedMax, false);
+    const magScale = makeMagScale(profile.mag, false);
+    const tile = (canvas: HTMLCanvasElement, arr: number[]) => drawFieldTile(canvas, arr, profile.n, profile.limNm, 'signed', makeSignedScale(arr, sharedMax, false));
+    tile(mfieldCanvases.reEx, ex.re); tile(mfieldCanvases.reEy, ey.re); tile(mfieldCanvases.reEz, ez.re);
+    tile(mfieldCanvases.imEx, ex.im); tile(mfieldCanvases.imEy, ey.im); tile(mfieldCanvases.imEz, ez.im);
+    drawFieldTile(mfieldCanvases.mag, profile.mag, profile.n, profile.limNm, 'mag', magScale);
+    const signedDisplay = state.fieldNormalized ? { ...signedRailScale, min: -1, max: 1, signedMax: 1, log: false } : signedRailScale;
+    const magDisplay = state.fieldNormalized ? { ...magScale, min: 0, max: 1, signedMax: 1, log: false } : magScale;
+    drawColorbar(mfieldColorbar, 'signed', signedDisplay, state.fieldNormalized ? 'norm Re/Im' : 'Re/Im E');
+    drawColorbar(mfieldMagColorbar, 'mag', magDisplay, state.fieldNormalized ? 'norm |E|' : (magScale.log ? 'log10 |E|' : '|E|'));
+  }
+  function closeFieldDialog() { fieldModalOpen = false; if (fieldDialog.open) fieldDialog.close(); }
+  fieldProfileTitle.addEventListener('click', () => {
+    fieldModalOpen = true;
+    if (typeof fieldDialog.showModal === 'function') fieldDialog.showModal();
+    else fieldDialog.setAttribute('open', '');
+    requestAnimationFrame(() => renderFieldModal());
+  });
+  $('field-dialog-close').addEventListener('click', closeFieldDialog);
+  fieldDialog.addEventListener('close', () => { fieldModalOpen = false; });
+  fieldDialog.addEventListener('click', (e: MouseEvent) => { if (e.target === fieldDialog) closeFieldDialog(); });
+  $('field-modal-normalized').addEventListener('click', () => {
+    state.fieldNormalized = !state.fieldNormalized;
+    drawFieldProfile();
+    renderFieldModal();
+  });
+  $('field-modal-log').addEventListener('click', () => {
+    state.fieldLogMag = !state.fieldLogMag;
+    drawFieldProfile();
+    renderFieldModal();
+  });
+  function exportFieldModalPng() {
+    if (!selectedFieldPoint) return;
+    const grid = document.querySelector('.field-dialog__grid') as HTMLElement;
+    const gr = grid.getBoundingClientRect();
+    const scale = 2;
+    const headerH = 64;
+    const out = document.createElement('canvas');
+    out.width = Math.round(gr.width * scale);
+    out.height = Math.round((gr.height + headerH) * scale);
+    const ctx = out.getContext('2d')!;
+    const ct = chartTheme();
+    ctx.fillStyle = ct.bg; ctx.fillRect(0, 0, out.width, out.height);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = ct.text; ctx.font = `${17 * scale}px Inter, system-ui, sans-serif`;
+    ctx.fillText('Mode field profiles', 0, 4 * scale);
+    ctx.fillStyle = ct.textMuted; ctx.font = `${12 * scale}px Inter, system-ui, sans-serif`;
+    ctx.fillText(mfieldMeta.textContent || '', 0, 30 * scale);
+    grid.querySelectorAll<HTMLElement>('.field-tile').forEach(tile => {
+      const cv = tile.querySelector('canvas');
+      if (!cv) return;
+      const r = cv.getBoundingClientRect();
+      const x = (r.left - gr.left) * scale;
+      const y = (r.top - gr.top + headerH) * scale;
+      const label = tile.querySelector('.field-tile__label');
+      if (label) { ctx.fillStyle = ct.textSoft; ctx.font = `${11 * scale}px Inter, system-ui, sans-serif`; ctx.fillText(label.textContent || '', x, y - 15 * scale); }
+      ctx.drawImage(cv, x, y, r.width * scale, r.height * scale);
+    });
+    for (const cv of [mfieldColorbar, mfieldMagColorbar]) {
+      const r = cv.getBoundingClientRect();
+      ctx.drawImage(cv, (r.left - gr.left) * scale, (r.top - gr.top + headerH) * scale, r.width * scale, r.height * scale);
+    }
+    out.toBlob(b => { if (b) downloadBlob(b, `cylinder_${selectedFieldPoint!.modeLabel}_all_fields.png`); }, 'image/png');
+  }
+  $('field-modal-dl-png').addEventListener('click', exportFieldModalPng);
+  $('field-modal-dl-csv').addEventListener('click', () => $('field-dl-csv').click());
+  $('field-modal-share').addEventListener('click', () => $('field-share-btn').click());
 
   materialSelect.addEventListener('change', () => {
     updateMaterialUI();
@@ -3852,26 +4382,37 @@ initPermalinks({
   });
 
   $('reset-btn').addEventListener('click', () => {
+    // When viewing the electron ℏω–q_z dispersion relation, reset to a
+    // configuration tailored to it; otherwise restore the plane-wave defaults.
+    const disp = state.excitation === 'electron' && state.view === 'disp-wq';
+    const matId = disp ? 'custom' : 'ag';
+    const wMin = disp ? 1 : 0.2;
+    const wMax = disp ? 30 : 4;
+    const mMax = disp ? 3 : 4;
+    const exc: ExcitationMode = disp ? 'electron' : 'plane';
+    const viewMode: ViewMode = disp ? 'disp-wq' : 'cross-section';
+    const vFracReset = disp ? kineticKeVToBeta(30) : 0.3;
     state.a_nm = 15;
     state.eps_h = 1.0;
-    state.materialId = 'ag';
+    state.materialId = matId;
     state.eps1_re = 10.0;
     state.eps1_im = 0.1;
-    state.w_min = 0.2;
-    state.w_max = 4;
+    state.w_min = wMin;
+    state.w_max = wMax;
     state.angleEnergyEv = 2.4;
+    state.angleAxisMode = 'energy';
     state.axisMode = 'lambda';
     state.spectrumQuantity = 'csca';
     state.spectrumDecomp = 'total';
     state.angularPol = 'total';
     state.logY = false;
-    state.excitation = 'plane';
-    state.view = 'cross-section';
+    state.excitation = exc;
+    state.view = viewMode;
     state.parallelGeometry = 'outside';
     state.m_active = new Set([0, 1, 2, 3, 4]);
     state.b_nm = 25;
-    state.vFrac = 0.3;
-    state.maxOrderEels = 4;
+    state.vFrac = vFracReset;
+    state.maxOrderEels = mMax;
     state.qzMaxNm = 0.1;
     state.mapLogColor = false;
     state.mapShowLight = true;
@@ -3892,20 +4433,20 @@ initPermalinks({
     $<HTMLInputElement>('e1r-slider').value = '10';
     $<HTMLInputElement>('e1i-num').value = '0.10';
     $<HTMLInputElement>('e1i-slider').value = '0.1';
-    $<HTMLInputElement>('w-min').value = '0.2';
-    $<HTMLInputElement>('w-max').value = '4';
+    $<HTMLInputElement>('w-min').value = String(wMin);
+    $<HTMLInputElement>('w-max').value = String(wMax);
     $<HTMLInputElement>('angle-energy-num').value = '2.4';
     $<HTMLInputElement>('angle-energy-slider').value = '2.4';
     $<HTMLInputElement>('b-num').value = '25';
     $<HTMLInputElement>('b-slider').value = '25';
-    $<HTMLInputElement>('v-num').value = '0.3';
-    $<HTMLInputElement>('v-slider').value = '0.3';
+    $<HTMLInputElement>('v-num').value = state.vFrac.toFixed(3);
+    $<HTMLInputElement>('v-slider').value = String(state.vFrac);
     syncKeVFromBeta();
-    $<HTMLInputElement>('Mmax-num').value = '4';
+    $<HTMLInputElement>('Mmax-num').value = String(mMax);
     qzMaxNum.value = '0.1';
     customSlopeNum.value = '0.30';
     perpGridSelect.value = 'standard';
-    materialSelect.value = 'ag';
+    materialSelect.value = matId;
     drudeInputs.epsB.value = '1';
     drudeInputs.wpEv.value = '5';
     drudeInputs.gammaEv.value = '0.05';
@@ -3915,12 +4456,14 @@ initPermalinks({
     syncTabs('pol-tabs', 'pol', state.angularPol);
     syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
     syncTabs('phase-axis-tabs', 'phaseAxis', state.phaseAxis);
+    updateDecompAvailability();
+    applyAngleAxisMode();
     logToggle.classList.remove('active');
     fieldNormalizedToggle.classList.remove('active');
     fieldLogToggle.classList.remove('active');
     syncFieldComponentControls();
     document.querySelectorAll<HTMLButtonElement>('#excitation-tabs .view-tab').forEach(b => {
-      const active = b.dataset.excitation === 'plane';
+      const active = b.dataset.excitation === exc;
       b.classList.toggle('active', active);
       b.setAttribute('aria-checked', String(active));
     });
@@ -4110,6 +4653,7 @@ initPermalinks({
     p.set('wmin', String(state.w_min));
     p.set('wmax', String(state.w_max));
     p.set('angle', String(state.angleEnergyEv));
+    p.set('angleax', state.angleAxisMode);
     p.set('axis', state.axisMode);
     p.set('qty', state.spectrumQuantity);
     p.set('decomp', state.spectrumDecomp);
@@ -4164,6 +4708,7 @@ initPermalinks({
     if (p.has('wmin')) { state.w_min = parseFloat(p.get('wmin')!); ($('w-min') as HTMLInputElement).value = String(state.w_min); }
     if (p.has('wmax')) { state.w_max = parseFloat(p.get('wmax')!); ($('w-max') as HTMLInputElement).value = String(state.w_max); }
     if (p.has('angle')) { state.angleEnergyEv = parseFloat(p.get('angle')!); ($('angle-energy-num') as HTMLInputElement).value = String(state.angleEnergyEv); ($('angle-energy-slider') as HTMLInputElement).value = String(state.angleEnergyEv); }
+    if (p.get('angleax') === 'energy' || p.get('angleax') === 'lambda') state.angleAxisMode = p.get('angleax') as AngleAxisMode;
     if (p.get('axis') === 'energy' || p.get('axis') === 'lambda') state.axisMode = p.get('axis') as AxisMode;
     if (['csca', 'cext', 'cabs', 'qsca', 'all'].includes(p.get('qty') ?? '')) state.spectrumQuantity = p.get('qty') as SpectrumQuantity;
     if (p.get('decomp') === 'total' || p.get('decomp') === 'em') state.spectrumDecomp = p.get('decomp') as SpectrumDecomp;
@@ -4213,6 +4758,7 @@ initPermalinks({
     syncTabs('pol-tabs', 'pol', state.angularPol);
     syncTabs('parallel-geometry-tabs', 'parallelGeometry', state.parallelGeometry);
     syncTabs('phase-axis-tabs', 'phaseAxis', state.phaseAxis);
+    applyAngleAxisMode();
     logToggle.classList.toggle('active', state.logY);
     syncKeVFromBeta();
     updateGeometryMarkers();
@@ -4222,6 +4768,7 @@ initPermalinks({
 
   restoreState();
   updateBNote();
+  updateDecompAvailability();
 
   // Initial
   recompute();
