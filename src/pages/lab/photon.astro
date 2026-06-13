@@ -115,6 +115,17 @@ import ToolMeta from '../../components/ToolMeta.astro';
             <span class="ref-tag ref-tag--swir">SWIR</span>
             <span class="ref-tag ref-tag--mir">MIR / LWIR</span>
           </div>
+          <div class="export-bar">
+            <span class="export-label">Export</span>
+            <button id="dl-png" class="export-btn" type="button" title="Download the spectrum chart as PNG">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button id="dl-csv" class="export-btn" type="button" title="Download the selected photon parameters as CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              CSV
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -207,6 +218,15 @@ initPermalinks({ lam: 'lam' });
   .ref-tag--nir  { background: #FEE2E2; color: #B91C1C; }
   .ref-tag--swir { background: #FEF3C7; color: #92400E; }
   .ref-tag--mir  { background: #E7E5E4; color: #44403C; }
+  .export-bar { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .export-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.7rem;
+    font-size: 0.8rem; font-weight: 600; font-family: var(--font);
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.12s, color 0.12s;
+  }
+  .export-btn:hover { border-color: var(--primary); color: var(--primary); }
 
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
@@ -299,6 +319,8 @@ initPermalinks({ lam: 'lam' });
 
   let activeField: string | null = null;
   let currentLambda = NaN; // meters
+  // Geometry of the spectrum bar, refreshed each draw, for the draggable marker.
+  let chartGeom: { left: number; pw: number; barTop: number; barBot: number } | null = null;
 
   // ===== Update logic =====
 
@@ -386,7 +408,7 @@ initPermalinks({ lam: 'lam' });
   const CHART = {
     lamMin: 100,     // nm
     lamMax: 100000,  // nm (100 µm)
-    margin: { top: 26, right: 24, bottom: 60, left: 24 },
+    margin: { top: 28, right: 24, bottom: 74, left: 24 },
     lasers: [
       { nm: 405,  label: '405' },
       { nm: 532,  label: '532' },
@@ -432,6 +454,7 @@ initPermalinks({ lam: 'lam' });
     const barHeight = Math.round(ph * 0.45);
     const barY0 = m.top + Math.round(ph * 0.22);
     const barY1 = barY0 + barHeight;
+    chartGeom = { left: m.left, pw, barTop: barY0, barBot: barY1 };
 
     // Background
     ctx.fillStyle = ct.bg;
@@ -496,25 +519,29 @@ initPermalinks({ lam: 'lam' });
 
     // ===== Top axis: wavelength =====
     ctx.fillStyle = ct.textSoft;
-    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.font = '13px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     const lamTicks = [
       { nm: 100,    lbl: '100 nm' },
-      { nm: 300,    lbl: '300' },
+      { nm: 300,    lbl: '300 nm' },
       { nm: 1000,   lbl: '1 µm' },
-      { nm: 3000,   lbl: '3' },
-      { nm: 10000,  lbl: '10' },
-      { nm: 30000,  lbl: '30' },
+      { nm: 3000,   lbl: '3 µm' },
+      { nm: 10000,  lbl: '10 µm' },
+      { nm: 30000,  lbl: '30 µm' },
       { nm: 100000, lbl: '100 µm' },
     ];
-    for (const t of lamTicks) {
+    for (let i = 0; i < lamTicks.length; i++) {
+      const t = lamTicks[i];
       const x = nmToX(t.nm);
-      ctx.fillText(t.lbl, x, barY0 - 4);
+      // keep the edge labels fully on-canvas
+      ctx.textAlign = i === 0 ? 'left' : i === lamTicks.length - 1 ? 'right' : 'center';
+      ctx.fillText(t.lbl, x, barY0 - 5);
       ctx.strokeStyle = ct.text;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, barY0); ctx.lineTo(x, barY0 - 3); ctx.stroke();
     }
+    ctx.textAlign = 'center';
 
     // ===== Bottom axis: energy =====
     ctx.fillStyle = ct.textSoft;
@@ -528,14 +555,18 @@ initPermalinks({ lam: 'lam' });
       { eV: 0.0413, nm: HC_EV_NM / 0.0413, lbl: '0.04' },
       { eV: 0.0124, nm: HC_EV_NM / 0.0124, lbl: '0.012 eV' },
     ];
-    for (const t of evTicks) {
+    for (let i = 0; i < evTicks.length; i++) {
+      const t = evTicks[i];
       if (t.nm < CHART.lamMin || t.nm > CHART.lamMax) continue;
       const x = nmToX(t.nm);
+      // keep the edge labels fully on-canvas
+      ctx.textAlign = i === 0 ? 'left' : i === evTicks.length - 1 ? 'right' : 'center';
       ctx.fillText(t.lbl, x, barY1 + 4);
       ctx.strokeStyle = ct.text;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, barY1); ctx.lineTo(x, barY1 + 3); ctx.stroke();
     }
+    ctx.textAlign = 'center';
 
     // Axis titles
     ctx.fillStyle = ct.text;
@@ -547,15 +578,16 @@ initPermalinks({ lam: 'lam' });
     ctx.fillText('E', m.left, barY1 + 18);
 
     // ===== Laser markers (below bar) =====
-    const laserY = barY1 + 22;
+    const laserTop = barY1 + 24;     // start below the energy-axis labels
+    const laserY = barY1 + 38;
     for (const ls of CHART.lasers) {
       const x = nmToX(ls.nm);
 
-      // Dashed vertical line down from bar
+      // Dashed vertical line, kept clear of the energy-axis labels
       ctx.setLineDash([2, 3]);
       ctx.strokeStyle = '#6366F160';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x, barY1); ctx.lineTo(x, laserY + 14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, laserTop); ctx.lineTo(x, laserY + 14); ctx.stroke();
       ctx.setLineDash([]);
 
       // Marker dot at top of bar
@@ -567,7 +599,7 @@ initPermalinks({ lam: 'lam' });
       // Label (vertical)
       ctx.save();
       ctx.fillStyle = ct.textSoft;
-      ctx.font = '9px Inter, system-ui, sans-serif';
+      ctx.font = '10.5px Inter, system-ui, sans-serif';
       ctx.translate(x + 3, laserY + 14);
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = 'right';
@@ -596,11 +628,11 @@ initPermalinks({ lam: 'lam' });
         ctx.fillStyle = gr;
         ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 16, 0, Math.PI * 2); ctx.fill();
 
-        // Marker
+        // Marker (draggable handle)
         ctx.fillStyle = '#F43F5E';
         ctx.strokeStyle = ct.bg;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(x, (barY0 + barY1) / 2, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
         // Value label
         const E_eV = HC_EV_NM / nm;
@@ -620,6 +652,81 @@ initPermalinks({ lam: 'lam' });
   new ResizeObserver(drawChart).observe(document.getElementById('chart-wrap')!);
 
   onThemeChange(drawChart);
+
+  // ===== Draggable operating point =====
+  const chartCanvas = document.getElementById('photon-chart') as HTMLCanvasElement;
+  chartCanvas.style.touchAction = 'none';
+  let dragging = false;
+
+  function pointerToNm(ev: PointerEvent): number | null {
+    if (!chartGeom) return null;
+    const rect = chartCanvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const t = Math.max(0, Math.min(1, (x - chartGeom.left) / chartGeom.pw));
+    return Math.pow(10, logLMin + t * (logLMax - logLMin));
+  }
+  function overBar(ev: PointerEvent): boolean {
+    if (!chartGeom) return false;
+    const rect = chartCanvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    return x >= chartGeom.left - 6 && x <= chartGeom.left + chartGeom.pw + 6
+        && y >= chartGeom.barTop - 12 && y <= chartGeom.barBot + 12;
+  }
+
+  chartCanvas.addEventListener('pointerdown', (ev) => {
+    if (!overBar(ev)) return;
+    dragging = true;
+    chartCanvas.setPointerCapture(ev.pointerId);
+    chartCanvas.style.cursor = 'grabbing';
+    const nm = pointerToNm(ev);
+    if (nm) updateFrom(nm * 1e-9, 'chart');
+    ev.preventDefault();
+  });
+  chartCanvas.addEventListener('pointermove', (ev) => {
+    if (dragging) {
+      const nm = pointerToNm(ev);
+      if (nm) updateFrom(nm * 1e-9, 'chart');
+      ev.preventDefault();
+    } else {
+      chartCanvas.style.cursor = overBar(ev) ? 'grab' : 'default';
+    }
+  });
+  const endDrag = (ev: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    try { chartCanvas.releasePointerCapture(ev.pointerId); } catch { /* ignore */ }
+    chartCanvas.style.cursor = overBar(ev) ? 'grab' : 'default';
+  };
+  chartCanvas.addEventListener('pointerup', endDrag);
+  chartCanvas.addEventListener('pointercancel', endDrag);
+
+  // ===== Export =====
+  document.getElementById('dl-png')?.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.download = 'photon_spectrum.png';
+    a.href = chartCanvas.toDataURL('image/png');
+    a.click();
+  });
+  document.getElementById('dl-csv')?.addEventListener('click', () => {
+    const q = isFinite(currentLambda) && currentLambda > 0 ? fromLam(currentLambda) : null;
+    const v = (x: number) => (q ? String(x) : '');
+    const rows: (string | number)[][] = [
+      ['Quantity', 'Symbol', 'Value', 'Unit'],
+      ['Wavelength', 'lambda', q ? v(q.lam_nm) : '', 'nm'],
+      ['Energy', 'E', q ? v(q.E_eV) : '', 'eV'],
+      ['Frequency', 'nu', q ? v(q.nu_THz) : '', 'THz'],
+      ['Angular frequency', 'omega', q ? v(q.omega_radFs) : '', 'rad/fs'],
+      ['Wavenumber', 'nu_tilde', q ? v(q.wvnum_cm1) : '', 'cm^-1'],
+      ['Period', 'T', q ? v(q.T_fs) : '', 'fs'],
+    ];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'photon_parameters.csv'; a.click();
+    URL.revokeObjectURL(url);
+  });
 
   // Initial draw
   drawChart();
