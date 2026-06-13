@@ -24,6 +24,9 @@ pnpm-debug.log*
 .idea/
 MieShells/
 
+# local Claude Code harness config
+.claude/
+
 # python venv for scripts/
 scripts/.venv/
 scripts/out/

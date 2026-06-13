@@ -41,19 +41,19 @@ const miePresets = [
 
   <section class="section">
     <div class="container">
+      <div class="excitation-bar">
+        <div class="param excitation-param excitation-above">
+          <div class="param-header"><label>Excitation</label></div>
+          <div class="plot-tabs" id="excitation-tabs" role="radiogroup">
+            <button class="plot-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
+            <button class="plot-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
+            <button class="plot-tab" data-excitation="dipole" role="radio" aria-checked="false" aria-disabled="true" disabled>Dipoles</button>
+          </div>
+        </div>
+      </div>
       <div class="widget-layout">
         <div class="widget-column widget-column--controls">
           <div class="controls card">
-          <PresetStrip presets={miePresets} canvasId="mie-chart" />
-          <div class="param excitation-param">
-            <div class="param-header"><label>Excitation</label></div>
-            <div class="plot-tabs" id="excitation-tabs" role="radiogroup">
-              <button class="plot-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
-              <button class="plot-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
-              <button class="plot-tab" data-excitation="dipole" role="radio" aria-checked="false" aria-disabled="true" disabled>Dipoles</button>
-            </div>
-          </div>
-
           <h3>Parameters</h3>
 
           <!-- Geometry type -->
@@ -459,6 +459,7 @@ const miePresets = [
           <div class="notes-card card" id="notes-card">
             <h4>Notes</h4>
             <div id="notes-body"></div>
+            <PresetStrip presets={miePresets} showCopy={false} />
           </div>
         </div>
       </div>
@@ -559,6 +560,9 @@ initPermalinks({
   .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
   .param { display: flex; flex-direction: column; gap: 0.28rem; }
   .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
+  .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
+  .excitation-above { padding-bottom: 0; border-bottom: none; gap: 0.4rem; }
+  .notes-card :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; padding-top: var(--space-md); margin-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
   .param-header { display: flex; justify-content: space-between; align-items: center; }
   .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .param-number {
@@ -912,6 +916,7 @@ initPermalinks({
   .layer-details .layer-body { display: flex; flex-direction: column; gap: 0.32rem; padding-top: 0.32rem; }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
+    .excitation-bar { max-width: none; }
     .widget-column { gap: var(--space-md); }
     .controls { gap: var(--space-md); }
     .param-limits { display: none; }
@@ -2607,12 +2612,48 @@ initPermalinks({
   lamMinInput.addEventListener('change', resetAndUpdate);
   lamMaxInput.addEventListener('change', resetAndUpdate);
 
-  const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; render(); });
+  const qtyTabs = setupTabs('qty-tabs', 'qty', 'csca', () => { zoomBounds = null; updateDecompAvailability(); render(); });
   const decompTabs = setupTabs('decomp-tabs', 'decomp', 'total', () => { zoomBounds = null; render(); });
+
+  // Decomposition (E/M, Multipoles) has no meaning when all quantities are shown
+  // together, so fade and disable those tabs while "All" is selected.
+  const decompDecomposeBtns = [...document.querySelectorAll<HTMLButtonElement>(
+    '#decomp-tabs [data-decomp="em"], #decomp-tabs [data-decomp="multipole"]'
+  )];
+  function updateDecompAvailability() {
+    const disable = qtyTabs.value === 'all';
+    if (disable && (decompTabs.value === 'em' || decompTabs.value === 'multipole')) {
+      decompTabs.select('total', true);
+    }
+    for (const b of decompDecomposeBtns) {
+      b.disabled = disable;
+      b.setAttribute('aria-disabled', disable ? 'true' : 'false');
+    }
+  }
   const axisTabs = setupTabs('axis-tabs', 'axis', 'lambda', () => { zoomBounds = null; render(); });
   const materialPropTabs = setupTabs('material-prop-tabs', 'materialProp', 'epsilon', () => { zoomBounds = null; render(); });
-  const electronSignalTabs = setupTabs('electron-signal-tabs', 'electronSignal', 'eels', () => { zoomBounds = null; render(); });
+  const electronSignalTabs = setupTabs('electron-signal-tabs', 'electronSignal', 'eels', () => { zoomBounds = null; updateElectronDecompAvailability(); render(); });
   const electronDecompTabs = setupTabs('electron-decomp-tabs', 'electronDecomp', 'total', () => { zoomBounds = null; render(); });
+
+  // Electron decomposition availability depends on the signal:
+  //   Both -> only Total makes sense (Terms/E-M/Multipoles all disabled)
+  //   CL   -> no surface/bulk "Terms" split exists, so Terms is disabled
+  const elDecompBtn = (v: string) =>
+    document.querySelector<HTMLButtonElement>(`#electron-decomp-tabs [data-electron-decomp="${v}"]`)!;
+  function updateElectronDecompAvailability() {
+    const signal = electronSignalTabs.value;
+    const disabled: Record<string, boolean> = {
+      terms: signal === 'both' || signal === 'cl',
+      em: signal === 'both',
+      multipole: signal === 'both',
+    };
+    if (disabled[electronDecompTabs.value]) electronDecompTabs.select('total', true);
+    for (const v of ['terms', 'em', 'multipole']) {
+      const b = elDecompBtn(v);
+      b.disabled = disabled[v];
+      b.setAttribute('aria-disabled', disabled[v] ? 'true' : 'false');
+    }
+  }
 
   const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
     const isSpectrum = v === 'spectrum';
@@ -4183,6 +4224,8 @@ initPermalinks({
   });
 
   if (location.hash.slice(1)) restoreState();
+  updateDecompAvailability();
+  updateElectronDecompAvailability();
   updateExcitationUI();
   updateElectronRadiusMarker();
   new ResizeObserver(() => render()).observe(canvas);
