@@ -328,6 +328,18 @@ function isActive(href: string): boolean {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
+  }
+  /* Invisible bridge covering the gap between the button and the menu so the
+     pointer stays within the category while moving down to the dropdown. */
+  .lab-bar__dropdown::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -0.45rem;
+    height: 0.45rem;
+  }
+  .lab-bar__dropdown {
     min-width: 190px;
     background: var(--bg);
     border: 1px solid var(--bg-muted);
@@ -443,13 +455,17 @@ function isActive(href: string): boolean {
   // ── Category hover (desktop) + click (mobile) ──
   const allCats = document.querySelectorAll('.lab-bar__cat');
 
+  let closeTimer: number | undefined;
   allCats.forEach(cat => {
     cat.addEventListener('mouseenter', () => {
+      clearTimeout(closeTimer);
       allCats.forEach(c => { if (c !== cat) c.classList.remove('open'); });
       cat.classList.add('open');
     });
+    // Delay closing so there's time to move the pointer onto the menu.
     cat.addEventListener('mouseleave', () => {
-      cat.classList.remove('open');
+      clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(() => cat.classList.remove('open'), 400);
     });
   });
 
