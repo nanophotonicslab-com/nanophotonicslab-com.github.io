@@ -3371,9 +3371,46 @@ initPermalinks({
     resetAndUpdate();
   }
 
-  // Reset button
+  function applyPlaneDefaultState(): void {
+    // Remove extra shells
+    while (extraShells.length > 0) removeShellSection(extraShells[0]);
+    // Plane-wave defaults: a gold sphere in air, spectrum view.
+    excitationTabs.select('plane');
+    document.querySelector<HTMLButtonElement>('#view-tabs [data-view="spectrum"]')?.click();
+    geoTabs.select('sphere');
+    materialSelect.value = 'au';
+    epsGroup.classList.add('hidden');
+    drudeGroup.style.display = 'none';
+    fileUploadGroup.style.display = 'none';
+    riiSearchGroup.style.display = 'none';
+    uploadedMaterial = null;
+    materialRefEl.textContent = MATERIALS.au.ref;
+    setDrude(drudeHandle);
+    epsParam.setValue(10);
+    rParam.setValue(50);
+    nhParam.setValue(1.0);
+    coreMaterialSelect.value = 'au';
+    coreMaterialRefEl.textContent = '';
+    coreDrudeGroup.style.display = 'none';
+    setDrude(coreDrudeHandle);
+    coreEpsParam.setValue(10);
+    coreRParam.setValue(60);
+    (document.getElementById('lam-min') as HTMLInputElement).value = '300';
+    (document.getElementById('lam-max') as HTMLInputElement).value = '1200';
+    // Reset plot options
+    logY = false; logToggle.classList.remove('active');
+    document.querySelector<HTMLButtonElement>('#qty-tabs [data-qty="csca"]')?.click();
+    document.querySelector<HTMLButtonElement>('#decomp-tabs [data-decomp="total"]')?.click();
+    document.querySelector<HTMLButtonElement>('#axis-tabs [data-axis="lambda"]')?.click();
+    document.querySelector<HTMLButtonElement>('#material-prop-tabs [data-material-prop="epsilon"]')?.click();
+    syncPresets();
+    resetAndUpdate();
+  }
+
+  // Reset button — reset within the active excitation mode (plane or electron).
   document.getElementById('reset-btn')!.addEventListener('click', () => {
-    applyElectronDefaultState();
+    if (excitation === 'electron') applyElectronDefaultState();
+    else applyPlaneDefaultState();
   });
 
   function getDielectric(lambdaNm: number): [number, number] {
