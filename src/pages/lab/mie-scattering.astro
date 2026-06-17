@@ -292,6 +292,20 @@ const miePresets = [
             </div>
           </div>
 
+          <div id="thermal-params" style="display:none">
+            <div class="param">
+              <div class="param-header"><label>Environment</label></div>
+              <div class="param-dual-row">
+                <label><span>T<sub>0</sub> (&deg;C)</span><input type="number" class="param-number" id="thermal-t0" value="25" step="1"></label>
+                <label><span>host &kappa; (W/mK)</span><input type="number" class="param-number" id="thermal-kappa-med" value="0.6" step="0.05" min="0.01"></label>
+              </div>
+            </div>
+            <div class="param">
+              <div class="param-header"><label>Layer thermal properties</label></div>
+              <div class="thermal-layers" id="thermal-layers"></div>
+            </div>
+          </div>
+
           <details class="layer-details electron-only" id="electron-numerics" style="display:none">
             <summary>Electron numerics</summary>
             <div class="layer-body">
@@ -354,6 +368,7 @@ const miePresets = [
               <button class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
               <button class="plot-tab" data-view="angular" role="radio" aria-checked="false">Angular</button>
               <button class="plot-tab" data-view="nearfield" role="radio" aria-checked="false">Near-field</button>
+              <button class="plot-tab" data-view="thermal" role="radio" aria-checked="false">Thermal</button>
               <button class="plot-tab" data-view="material" role="radio" aria-checked="false">Material</button>
             </div>
             <button id="log-toggle" class="chart-tool-btn" title="Toggle logarithmic Y axis">Log Y</button>
@@ -417,6 +432,15 @@ const miePresets = [
               <button class="plot-tab" data-pol="par" role="radio" aria-checked="false">&#x2016; (S&#x2082;)</button>
             </div>
           </div>
+          <div class="thermal-result-header" id="thermal-result-header" style="display:none">
+            <span class="thermal-spectrum-title">Temperature profile T(r)</span>
+            <div class="thermal-lambda-control">
+              <label for="thermal-i0-slider">Intensity I<sub>0</sub></label>
+              <input type="range" class="param-slider" id="thermal-i0-slider" min="0" max="20" step="0.1" value="1">
+              <input type="number" class="param-number param-number--sm" id="thermal-i0-num" value="1" step="0.1" min="0">
+              <span class="thermal-lambda-unit">GW/m&sup2;</span>
+            </div>
+          </div>
           <div class="chart-wrap" id="chart-wrap">
             <canvas id="mie-chart" aria-label="Mie scattering cross-section spectrum"></canvas>
             <canvas id="chart-overlay" aria-hidden="true"></canvas>
@@ -427,6 +451,30 @@ const miePresets = [
               </div>
             </div>
             <div class="chart-tooltip" id="chart-tooltip"></div>
+          </div>
+          <div class="thermal-result-footer" id="thermal-result-footer" style="display:none">
+            <label for="thermal-rmax">max r</label>
+            <input type="number" class="param-number param-number--sm" id="thermal-rmax" step="5" min="1">
+            <span class="thermal-lambda-unit">nm</span>
+          </div>
+          <div class="thermal-spectrum-wrap" id="thermal-spectrum-wrap" style="display:none">
+            <div class="thermal-spectrum-header">
+              <span class="thermal-spectrum-title">Absorption cross-section &sigma;<sub>abs</sub>(&lambda;)</span>
+              <div class="thermal-lambda-control">
+                <label for="thermal-lambda-slider">Illumination &lambda;</label>
+                <input type="range" class="param-slider" id="thermal-lambda-slider" min="300" max="1200" step="5" value="550">
+                <input type="number" class="param-number param-number--sm" id="thermal-lambda-num" value="550" step="5" min="100">
+                <span class="thermal-lambda-unit">nm</span>
+              </div>
+            </div>
+            <canvas id="thermal-spectrum-canvas" aria-label="Absorption cross-section spectrum"></canvas>
+            <div class="thermal-range-control">
+              <label>&lambda; range</label>
+              <input type="number" class="param-number param-number--sm" id="thermal-range-min" value="300" step="10" min="100">
+              <span class="thermal-lambda-unit">&ndash;</span>
+              <input type="number" class="param-number param-number--sm" id="thermal-range-max" value="1200" step="10" min="100">
+              <span class="thermal-lambda-unit">nm</span>
+            </div>
           </div>
           <div class="color-swatches" id="color-swatches">
             <span class="swatch-label">Apparent color</span>
@@ -471,6 +519,7 @@ const miePresets = [
           <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, <em>Relativistic energy loss and induced photon emission in the interaction of a dielectric sphere with an external electron beam</em>, Phys. Rev. B <strong>59</strong>, 3095 (1999), <a href="https://doi.org/10.1103/PhysRevB.59.3095" target="_blank" rel="noopener">doi:10.1103/PhysRevB.59.3095</a>.</span></li>
           <li><span class="ref-index">[3]</span><span>P. E. Stamatopoulou, W. Zhao, A. Rodr&iacute;guez Echarri, N. A. Mortensen, K. Busch, C. Tserkezis &amp; C. Wolff, <em>Electron beams traversing spherical nanoparticles: analytic and numerical treatment</em>, Phys. Rev. Research <strong>6</strong>, 013239 (2024), <a href="https://doi.org/10.1103/PhysRevResearch.6.013239" target="_blank" rel="noopener">doi:10.1103/PhysRevResearch.6.013239</a>.</span></li>
           <li><span class="ref-index">[4]</span><span>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Au, Ag: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1995); TiO<sub>2</sub>: Sarkar et al. (2019).</span></li>
+          <li><span class="ref-index">[5]</span><span>L. Meng, R. Yu, M. Qiu &amp; F. J. Garc&iacute;a de Abajo, <em>Plasmonic nano-oven by concatenation of multishell photothermal enhancement</em> (Thermal view), ACS Nano <strong>11</strong>, 7915&ndash;7924 (2017), <a href="https://doi.org/10.1021/acsnano.7b02426" target="_blank" rel="noopener">doi:10.1021/acsnano.7b02426</a>.</span></li>
         </ul>
       </div>
 
@@ -849,6 +898,44 @@ initPermalinks({
     color: var(--text-soft);
   }
   .notes-card :global(strong) { color: var(--text); }
+  .thermal-spectrum-wrap { margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .thermal-spectrum-title { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+  .thermal-spectrum-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; margin-bottom: 0.25rem; }
+  .thermal-spectrum-header .thermal-lambda-control { margin-top: 0; flex: 0 1 auto; }
+  .thermal-spectrum-header .thermal-lambda-control input[type="range"] { flex: 0 0 110px; width: 110px; }
+  .thermal-result-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; margin-bottom: 0.4rem; }
+  .thermal-result-header .thermal-lambda-control { margin-top: 0; flex: 0 1 auto; }
+  .thermal-result-header .thermal-lambda-control input[type="range"] { flex: 0 0 110px; width: 110px; }
+  .thermal-result-footer { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-xs); margin-top: var(--space-xs); }
+  .thermal-result-footer label { font-size: 0.78rem; font-weight: 600; color: var(--text-soft); }
+  .thermal-result-footer .param-number { width: 4.5rem; }
+  .thermal-spectrum-wrap canvas { width: 100%; height: 170px; display: block; }
+  .thermal-lambda-control { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-xs); }
+  .thermal-lambda-control label { font-size: 0.78rem; font-weight: 600; color: var(--text-soft); white-space: nowrap; }
+  .thermal-lambda-control input[type="range"] { flex: 1 1 auto; }
+  .thermal-lambda-control .param-number { width: 4.5rem; }
+  .thermal-lambda-unit { font-size: 0.78rem; color: var(--text-muted); }
+  .thermal-range-control { display: flex; align-items: center; gap: var(--space-xs); margin-top: var(--space-xs); }
+  .thermal-range-control label { font-size: 0.78rem; font-weight: 600; color: var(--text-soft); margin-right: var(--space-xs); }
+  .thermal-range-control .param-number { width: 4.2rem; }
+  /* runtime-generated via innerHTML -> rules must be :global to apply */
+  :global(.thermal-layers) { display: flex; flex-direction: column; gap: 0.5rem; }
+  :global(.thermal-layer-row) { border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); padding: 0.5rem 0.55rem; background: var(--bg-soft); }
+  :global(.thermal-layer-name) { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--text); margin-bottom: 0.45rem; }
+  :global(.thermal-layer-swatch) { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15); flex: 0 0 auto; }
+  :global(.thermal-layer-inputs) { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  :global(.thermal-layer-inputs label) { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+  :global(.thermal-layer-inputs label > span) { display: flex; flex-direction: column; align-items: center; line-height: 1.15; min-height: 2.1em; justify-content: center; }
+  :global(.thermal-layer-inputs label small) { font-weight: 400; font-size: 0.6rem; color: var(--text-muted); }
+  :global(.thermal-layer-inputs label.is-disabled) { opacity: 0.4; }
+  :global(.thermal-layer-inputs input) { width: 100%; min-width: 0; text-align: center; padding: 0.16rem 0.2rem; }
+  .thermal-layers-hint { font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; margin: 0.35rem 0 0; }
+  :global(.thermal-presets) { margin-top: 0.6rem; margin-left: 2.35rem; }
+  :global(.thermal-presets-label) { font-size: 0.7rem; font-weight: 700; color: var(--text-soft); margin-bottom: 0.35rem; }
+  :global(.thermal-preset-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  :global(.thermal-preset-btn) { font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.22rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  :global(.thermal-preset-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  :global(.thermal-preset-btn.active) { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
   .references { width: 100%; margin-top: var(--space-lg); padding: var(--space-md); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li {
@@ -1979,7 +2066,7 @@ initPermalinks({
   }
 
   interface PlotSeries { y: Float64Array; color: string; label: string; dash?: number[]; hidden?: boolean; }
-  interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; fontScale?: number; }
+  interface ChartOpts { xRange?: [number, number]; yRange?: [number, number]; logY?: boolean; fontScale?: number; bands?: { x0: number; x1: number; color: string; label?: string }[]; }
   interface ChartLegendItem { x: number; y: number; w: number; h: number; label: string; }
   interface ChartRect { x: number; y: number; w: number; h: number; }
   interface ChartXforms { tx: (v: number) => number; ty: (v: number) => number; invTx: (px: number) => number; invTy: (py: number) => number; pL: number; pT: number; pW: number; pH: number; legendItems: ChartLegendItem[]; legendBox: ChartRect | null; }
@@ -2031,6 +2118,18 @@ initPermalinks({
     ctx.fillStyle = ct.text; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
     ctx.save(); ctx.translate(14 * fs, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
+    if (opts.bands) {
+      for (const band of opts.bands) {
+        const bx0 = tx(band.x0), bx1 = tx(band.x1);
+        ctx.fillStyle = band.color;
+        ctx.fillRect(bx0, PAD.top, bx1 - bx0, ph);
+        if (band.label) {
+          ctx.fillStyle = ct.textMuted; ctx.font = `${Math.round(10 * fs)}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          ctx.fillText(band.label, (bx0 + bx1) / 2, PAD.top + 4);
+        }
+      }
+    }
     if (visibleSeries.length === 1) {
       const fillSeries = visibleSeries[0];
       ctx.beginPath(); let first = true;
@@ -2039,7 +2138,7 @@ initPermalinks({
     }
     for (const s of visibleSeries) {
       ctx.beginPath(); let first = true;
-      for (let i = 0; i < xArr.length; i++) { const v = s.y[i]; if (opts.logY && v <= 0) continue; const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
+      for (let i = 0; i < xArr.length; i++) { const v = s.y[i]; if (opts.logY && v <= 0) continue; if (!Number.isFinite(v)) { first = true; continue; } const px = tx(xArr[i]), py = ty(v); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); }
       ctx.setLineDash((s.dash ?? []).map(v => v * fs));
       ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
       ctx.setLineDash([]);
@@ -2464,6 +2563,8 @@ initPermalinks({
   let geometry: 'sphere' | 'coreshell' = 'sphere';
   let rafPending = false, updateTimer: number | null = null;
   let radiusOrderNormalizing = false;
+  let activeThermalPreset: string | null = null;   // highlighted figure button
+  let applyingThermalPreset = false;               // suppress highlight-clearing while a preset loads
   const RADIUS_GAP_NM = 5;
   function runScheduledUpdate() {
     if (rafPending) return;
@@ -2521,7 +2622,7 @@ initPermalinks({
       radiusOrderNormalizing = false;
     }
   }
-  function resetAndUpdate() { zoomBounds = null; normalizeRadiusOrder(); updateElectronRadiusMarker(); scheduleUpdate(); }
+  function resetAndUpdate() { if (!applyingThermalPreset) activeThermalPreset = null; zoomBounds = null; normalizeRadiusOrder(); updateElectronRadiusMarker(); scheduleUpdate(); }
   function radiusChanged(layerIndex: number) { zoomBounds = null; normalizeRadiusOrder(layerIndex); updateElectronRadiusMarker(); scheduleUpdate(); }
 
   function drudeHandleFromIds(groupId: string, epsBId: string, wpId: string, gammaId: string): DrudeHandle {
@@ -2655,10 +2756,15 @@ initPermalinks({
     }
   }
 
+  const thermalParams = document.getElementById('thermal-params')!;
+  const thermalSpectrumWrap = document.getElementById('thermal-spectrum-wrap')!;
+  const thermalResultHeader = document.getElementById('thermal-result-header')!;
+  const thermalResultFooter = document.getElementById('thermal-result-footer')!;
   const viewTabs = setupTabs('view-tabs', 'view', 'spectrum', (v: string) => {
     const isSpectrum = v === 'spectrum';
     const isAxisBased = v === 'spectrum' || v === 'material';
     const isSpatial = v === 'angular' || v === 'nearfield';
+    const isThermal = v === 'thermal';
     logToggle.style.display = isSpectrum ? '' : 'none';
     spectrumControls.style.display = isSpectrum && excitation === 'plane' ? '' : 'none';
     electronControls.style.display = isSpectrum && excitation === 'electron' ? '' : 'none';
@@ -2668,9 +2774,217 @@ initPermalinks({
     angularControls.style.display = isSpatial && excitation === 'plane' ? '' : 'none';
     angularPolWrap.style.display = v === 'angular' && excitation === 'plane' ? '' : 'none';
     colorSwatches.style.display = isSpectrum && excitation === 'plane' ? '' : 'none';
+    thermalParams.style.display = isThermal && excitation === 'plane' ? '' : 'none';
+    thermalSpectrumWrap.style.display = isThermal && excitation === 'plane' ? '' : 'none';
+    thermalResultHeader.style.display = isThermal && excitation === 'plane' ? '' : 'none';
+    thermalResultFooter.style.display = isThermal && excitation === 'plane' ? '' : 'none';
     zoomBounds = null;
     render();
   });
+
+  // Thermal-view inputs (single illumination wavelength via slider)
+  const thermalLambdaSlider = document.getElementById('thermal-lambda-slider') as HTMLInputElement;
+  const thermalLambdaNum = document.getElementById('thermal-lambda-num') as HTMLInputElement;
+  const thermalI0Num = document.getElementById('thermal-i0-num') as HTMLInputElement;
+  const thermalI0Slider = document.getElementById('thermal-i0-slider') as HTMLInputElement;
+  const thermalT0Input = document.getElementById('thermal-t0') as HTMLInputElement;
+  const thermalKappaMed = document.getElementById('thermal-kappa-med') as HTMLInputElement;
+  const thermalLayersEl = document.getElementById('thermal-layers')!;
+  const thermalSpectrumCanvas = document.getElementById('thermal-spectrum-canvas') as HTMLCanvasElement;
+  const thermalRmax = document.getElementById('thermal-rmax') as HTMLInputElement;
+  const renderIfThermal = () => { if (viewTabs.value === 'thermal') render(); };
+  thermalRmax.addEventListener('input', renderIfThermal);
+  thermalLambdaSlider.addEventListener('input', () => { thermalLambdaNum.value = thermalLambdaSlider.value; renderIfThermal(); });
+  thermalLambdaNum.addEventListener('input', () => {
+    const v = parseFloat(thermalLambdaNum.value);
+    if (Number.isFinite(v)) {
+      const lo = parseFloat(thermalLambdaSlider.min), hi = parseFloat(thermalLambdaSlider.max);
+      thermalLambdaSlider.value = String(Math.max(lo, Math.min(hi, v)));
+    }
+    renderIfThermal();
+  });
+  thermalLambdaNum.addEventListener('change', () => { thermalLambdaNum.value = thermalLambdaSlider.value; });
+  thermalI0Slider.addEventListener('input', () => { thermalI0Num.value = thermalI0Slider.value; renderIfThermal(); });
+  thermalI0Num.addEventListener('input', () => { const v = parseFloat(thermalI0Num.value); if (Number.isFinite(v)) thermalI0Slider.value = String(v); renderIfThermal(); });
+  [thermalT0Input, thermalKappaMed].forEach(el => el.addEventListener('input', renderIfThermal));
+  thermalLayersEl.addEventListener('input', renderIfThermal);
+
+  // λ sweep range, controlled from the bottom of the σabs box (mirrors lam-min/max)
+  const thermalRangeMin = document.getElementById('thermal-range-min') as HTMLInputElement;
+  const thermalRangeMax = document.getElementById('thermal-range-max') as HTMLInputElement;
+  const applyThermalRange = () => {
+    const lo = parseFloat(thermalRangeMin.value), hi = parseFloat(thermalRangeMax.value);
+    if (Number.isFinite(lo) && Number.isFinite(hi) && lo < hi) {
+      lamMinInput.value = String(lo); lamMaxInput.value = String(hi);
+      resetAndUpdate();
+    }
+  };
+  thermalRangeMin.addEventListener('change', applyThermalRange);
+  thermalRangeMax.addEventListener('change', applyThermalRange);
+
+  // Default thermal properties per material (κ W/mK, g 10¹⁶ W/m³K, G MW/m²K).
+  const THERMAL_MAT: Record<string, { kappa: number; g: number; G: number; metal: boolean }> = {
+    au:    { kappa: 314, g: 3,  G: 105, metal: true },
+    ag:    { kappa: 429, g: 2.8, G: 100, metal: true },
+    al:    { kappa: 237, g: 30, G: 753, metal: true },
+    drude: { kappa: 100, g: 3,  G: 105, metal: true },
+    si:    { kappa: 150, g: 0,  G: 100, metal: false },
+    tio2:  { kappa: 8,   g: 0,  G: 60,  metal: false },
+    custom:{ kappa: 1.0, g: 0,  G: 100, metal: false },
+    file:  { kappa: 1.0, g: 0,  G: 100, metal: false },
+    rii:   { kappa: 1.0, g: 0,  G: 100, metal: false },
+  };
+  function thermalLayerMaterials(): string[] {
+    if (geometry === 'coreshell') {
+      return [
+        { mat: coreMaterialSelect.value, r: coreRParam.value },
+        { mat: materialSelect.value, r: rParam.value },
+        ...extraShells.map(sh => ({ mat: sh.material.value, r: sh.rParam.value })),
+      ].sort((a, b) => a.r - b.r).map(x => x.mat);
+    }
+    return [materialSelect.value];
+  }
+  let thermalLayerSig = '';
+  let thermalSplitCache: { sig: string; split: number[] | null } | null = null;   // memoised per-shell field split
+  function rebuildThermalLayers() {
+    const mats = thermalLayerMaterials();
+    const sig = geometry + '|' + mats.join(',');
+    if (sig === thermalLayerSig) return;   // only rebuild when the layer stack changes
+    thermalLayerSig = sig;
+    thermalLayersEl.innerHTML = mats.map((mat, i) => {
+      const d = THERMAL_MAT[mat] ?? THERMAL_MAT.custom;
+      const color = MAT_COLORS[mat] ?? '#CBD5E1';
+      const isOuter = i === mats.length - 1;
+      const name = mats.length === 1 ? 'Particle' : i === 0 ? 'Core' : isOuter ? 'Outer shell' : `Shell ${i}`;
+      return `<div class="thermal-layer-row">
+        <span class="thermal-layer-name"><span class="thermal-layer-swatch" style="background:${color}"></span>${name} · ${matBandLabel(mat)}</span>
+        <div class="thermal-layer-inputs">
+          <label><span>κ<small>W/mK</small></span><input type="number" class="param-number" data-tl="${i}" data-tlk="kappa" value="${d.kappa}" step="1" min="0.01"></label>
+          <label class="${d.metal ? '' : 'is-disabled'}"><span>g<small>10¹⁶ W/m³K</small></span><input type="number" class="param-number" data-tl="${i}" data-tlk="g" value="${d.g}" step="0.5" min="0" ${d.metal ? '' : 'disabled'}></label>
+          <label><span>${isOuter ? 'G→med' : 'G'}<small>MW/m²K</small></span><input type="number" class="param-number" data-tl="${i}" data-tlk="G" value="${d.G}" step="5" min="1"></label>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const tlVal = (i: number, key: string, def: number): number => {
+    const el = thermalLayersEl.querySelector(`input[data-tl="${i}"][data-tlk="${key}"]`) as HTMLInputElement | null;
+    const v = el ? parseFloat(el.value) : NaN;
+    return Number.isFinite(v) ? v : def;
+  };
+
+  // ── Paper-figure presets (Meng et al., ACS Nano 2017), all at I₀ = 2 GW/m² ──
+  interface ThermalPreset {
+    label: string; tip: string;
+    geometry: 'sphere' | 'coreshell';
+    metal: 'au' | 'al';
+    layers: { mat: string; r: number }[];   // core → outermost
+    lambda: number; lamMin: number; lamMax: number;
+  }
+  const SILICA_EPS = 2.10;   // SiO₂, n ≈ 1.45 (lossless dielectric spacer)
+  const THERMAL_PRESETS: Record<string, ThermalPreset> = {
+    fig2:  { label: 'Fig. 2',  tip: 'Gold sphere R = 5 nm in water (small-sphere limit)', geometry: 'sphere',    metal: 'au', layers: [{ mat: 'au', r: 5 }], lambda: 522, lamMin: 400, lamMax: 750 },
+    fig4a: { label: 'Fig. 4a', tip: 'Au nano-oven N=1 @ 690 nm — SiO₂(23)/Au(28)',        geometry: 'coreshell', metal: 'au', layers: [{ mat: 'custom', r: 23 }, { mat: 'au', r: 28 }], lambda: 690, lamMin: 450, lamMax: 950 },
+    fig4b: { label: 'Fig. 4b', tip: 'Au nano-oven N=2 @ 690 nm — SiO₂/Au ×2',             geometry: 'coreshell', metal: 'au', layers: [{ mat: 'custom', r: 10 }, { mat: 'au', r: 13 }, { mat: 'custom', r: 36 }, { mat: 'au', r: 48 }], lambda: 690, lamMin: 450, lamMax: 950 },
+    fig4c: { label: 'Fig. 4c', tip: 'Au nano-oven N=3 @ 690 nm — SiO₂/Au ×3',             geometry: 'coreshell', metal: 'au', layers: [{ mat: 'custom', r: 4 }, { mat: 'au', r: 7 }, { mat: 'custom', r: 10 }, { mat: 'au', r: 16 }, { mat: 'custom', r: 34 }, { mat: 'au', r: 42 }], lambda: 690, lamMin: 450, lamMax: 950 },
+    fig4d: { label: 'Fig. 4d', tip: 'Al nano-oven N=1 @ 300 nm — SiO₂(13)/Al(17)',        geometry: 'coreshell', metal: 'al', layers: [{ mat: 'custom', r: 13 }, { mat: 'al', r: 17 }], lambda: 300, lamMin: 250, lamMax: 500 },
+    fig4e: { label: 'Fig. 4e', tip: 'Al nano-oven N=2 @ 300 nm — SiO₂/Al ×2',             geometry: 'coreshell', metal: 'al', layers: [{ mat: 'custom', r: 8 }, { mat: 'al', r: 11 }, { mat: 'custom', r: 35 }, { mat: 'al', r: 41 }], lambda: 300, lamMin: 250, lamMax: 500 },
+    fig4f: { label: 'Fig. 4f', tip: 'Al nano-oven N=3 @ 300 nm — SiO₂/Al ×3',             geometry: 'coreshell', metal: 'al', layers: [{ mat: 'custom', r: 7 }, { mat: 'al', r: 10 }, { mat: 'custom', r: 18 }, { mat: 'al', r: 21 }, { mat: 'custom', r: 42 }, { mat: 'al', r: 49 }], lambda: 300, lamMin: 250, lamMax: 500 },
+  };
+
+  function setSelectValue(sel: HTMLSelectElement, val: string) {
+    sel.value = val;
+    sel.dispatchEvent(new Event('change'));
+  }
+  function relaxRadiusSlider(slider: HTMLInputElement | null) {
+    if (slider) { slider.min = '1'; slider.step = '1'; if (parseFloat(slider.max) < 520) slider.max = '520'; }
+  }
+  function relaxStepSlider(slider: HTMLInputElement | null) {   // allow fine values (e.g. SiO₂ ε = 2.10)
+    if (slider) slider.step = '0.01';
+  }
+  function setTLInput(i: number, key: string, val: number) {
+    const el = thermalLayersEl.querySelector(`input[data-tl="${i}"][data-tlk="${key}"]`) as HTMLInputElement | null;
+    if (el) el.value = String(val);
+  }
+  // Heat-transport values from the paper for the active metal/dielectric stack.
+  function applyThermalLayerParams(metal: 'au' | 'al') {
+    const mats = thermalLayerMaterials();   // core → outer
+    const L = mats.length;
+    const isMetalMat = (m: string) => m === 'au' || m === 'al' || m === 'ag' || m === 'drude';
+    const gMetal = metal === 'al' ? 30 : 3;          // ×10¹⁶ W/m³K  (Au 3e16, Al 3e17)
+    const kMetal = metal === 'al' ? 237 : 314;       // W/mK (κ_metal ≫ ⇒ isothermal)
+    const Gwater = metal === 'al' ? 753 : 105;       // MW/m²K  metal/water (outer interface)
+    const Gsilica = metal === 'al' ? 750 : 141.5;    // MW/m²K  metal/SiO₂ lattice TBC (inner)
+    for (let i = 0; i < L; i++) {
+      const met = isMetalMat(mats[i]);
+      setTLInput(i, 'kappa', met ? kMetal : 1.0);    // SiO₂ κ = 1.0
+      setTLInput(i, 'g', met ? gMetal : 0);
+      setTLInput(i, 'G', i === L - 1 ? Gwater : Gsilica);
+    }
+  }
+
+  function applyThermalPreset(key: string) {
+    const p = THERMAL_PRESETS[key];
+    if (!p) return;
+    activeThermalPreset = key;        // highlight this figure button
+    applyingThermalPreset = true;     // keep it highlighted through the internal re-renders
+    radiusOrderNormalizing = true;   // honour the paper's sub-5-nm shells / small gaps
+    try {
+      // environment: water, 300 K (= 26.85 °C), I₀ = 2 GW/m²
+      nhParam.setValue(1.33);
+      thermalKappaMed.value = '0.6';
+      thermalT0Input.value = '26.85';
+      thermalI0Num.value = '2'; thermalI0Slider.value = '2';
+      thermalRmax.value = '';   // reset plotting range to this geometry's default
+      // σabs sweep + illumination wavelength
+      lamMinInput.value = String(p.lamMin); lamMaxInput.value = String(p.lamMax);
+      thermalRangeMin.value = String(p.lamMin); thermalRangeMax.value = String(p.lamMax);
+      thermalLambdaSlider.min = String(p.lamMin); thermalLambdaSlider.max = String(p.lamMax); thermalLambdaSlider.step = '1';
+      thermalLambdaSlider.value = String(p.lambda); thermalLambdaNum.value = String(p.lambda);
+      // geometry + materials
+      while (extraShells.length > 0) removeShellSection(extraShells[0]);
+      if (p.geometry === 'sphere') {
+        geoTabs.select('sphere');
+        setSelectValue(materialSelect, p.layers[0].mat);
+        relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
+        rParam.setValue(p.layers[0].r);
+      } else {
+        geoTabs.select('coreshell');
+        setSelectValue(coreMaterialSelect, p.layers[0].mat);
+        if (p.layers[0].mat === 'custom') { relaxStepSlider(document.getElementById('core-eps-slider') as HTMLInputElement); coreEpsParam.setValue(SILICA_EPS); }
+        relaxRadiusSlider(document.getElementById('core-r-slider') as HTMLInputElement);
+        coreRParam.setValue(p.layers[0].r);
+        setSelectValue(materialSelect, p.layers[1].mat);
+        if (p.layers[1].mat === 'custom') { relaxStepSlider(document.getElementById('eps-slider') as HTMLInputElement); epsParam.setValue(SILICA_EPS); }
+        relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
+        rParam.setValue(p.layers[1].r);
+        for (let i = 2; i < p.layers.length; i++) {
+          const h = createShellSection(p.layers[i].r);
+          setSelectValue(h.material, p.layers[i].mat);
+          if (p.layers[i].mat === 'custom') { relaxStepSlider(h.el.querySelector('.sh-eps-slider') as HTMLInputElement); h.epsParam.setValue(SILICA_EPS); }
+          relaxRadiusSlider(h.el.querySelector('.sh-r-slider') as HTMLInputElement);
+          h.rParam.setValue(p.layers[i].r);
+        }
+      }
+      viewTabs.select('thermal');
+      updateExcitationUI();
+      thermalLayerSig = '';   // force the per-layer panel to rebuild for the new stack
+      resetAndUpdate();       // schedules rAF: recompute σabs sweep + rebuild layers w/ defaults
+    } finally {
+      radiusOrderNormalizing = false;
+    }
+    // The rebuild happens in a deferred rAF; override the heat-transport values after it.
+    requestAnimationFrame(() => {
+      applyThermalLayerParams(p.metal);
+      render();
+      applyingThermalPreset = false;
+    });
+  }
+
+  notesBody.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.thermal-preset-btn') as HTMLElement | null;
+    if (btn && btn.dataset.preset) applyThermalPreset(btn.dataset.preset);
+  });
+
   const polTabs = setupTabs('pol-tabs', 'pol', 'total', () => render());
   const excitationTabs = setupTabs('excitation-tabs', 'excitation', 'plane', (v: string) => {
     excitation = v as 'plane' | 'electron' | 'dipole';
@@ -2739,24 +3053,28 @@ initPermalinks({
   function updateExcitationUI() {
     const electronMode = excitation === 'electron';
     document.querySelectorAll<HTMLElement>('.electron-only').forEach(el => { el.style.display = electronMode ? '' : 'none'; });
-    planeRangeGroup.style.display = electronMode ? 'none' : '';
+    planeRangeGroup.style.display = (electronMode || viewTabs.value === 'thermal') ? 'none' : '';
     const coreShellBtn = document.querySelector<HTMLButtonElement>('#geo-tabs [data-geo="coreshell"]');
     if (coreShellBtn) {
       coreShellBtn.disabled = electronMode;
       coreShellBtn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
       coreShellBtn.title = electronMode ? 'Electron EELS/CL currently supports homogeneous spheres.' : '';
     }
-    document.querySelectorAll<HTMLButtonElement>('#view-tabs [data-view="angular"], #view-tabs [data-view="nearfield"]').forEach(btn => {
+    document.querySelectorAll<HTMLButtonElement>('#view-tabs [data-view="angular"], #view-tabs [data-view="nearfield"], #view-tabs [data-view="thermal"]').forEach(btn => {
       btn.disabled = electronMode;
       btn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
     });
-    if (electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield')) viewTabs.select('spectrum', true);
+    if (electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield' || viewTabs.value === 'thermal')) viewTabs.select('spectrum', true);
     spectrumControls.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
     electronControls.style.display = viewTabs.value === 'spectrum' && electronMode ? '' : 'none';
     colorSwatches.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
     axisOverlay.style.display = (viewTabs.value === 'spectrum' || viewTabs.value === 'material') ? '' : 'none';
     angularControls.style.display = !electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield') ? '' : 'none';
     angularPolWrap.style.display = !electronMode && viewTabs.value === 'angular' ? '' : 'none';
+    thermalParams.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalSpectrumWrap.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalResultHeader.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalResultFooter.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
     updateTheoryNote();
     updateNotes();
   }
@@ -3642,6 +3960,7 @@ initPermalinks({
     updateExcitationUI();
     if (viewTabs.value === 'angular') { renderAngular(); return; }
     if (viewTabs.value === 'nearfield') { renderNearField(); return; }
+    if (viewTabs.value === 'thermal') { renderThermal(); return; }
     if (viewTabs.value === 'material') { renderMaterial(); return; }
     if (excitation === 'electron') { renderElectron(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
@@ -3707,6 +4026,505 @@ initPermalinks({
     clearOverlay();
   }
 
+  // Absorption cross section (m²) from NPLab's Mie coefficients at one wavelength.
+  // Cabs = Cext − Csca = (2π/k0²) Σ (2n+1)[Re(aₙ+bₙ) − (|aₙ|²+|bₙ|²)]
+  function cabsFromCoeffs(coeffs: MieCoeffs, k0: number): number {
+    let s = 0;
+    for (let i = 0; i < coeffs.nmax; i++) {
+      const n = i + 1;
+      const aR = coeffs.aRe[i], aI = coeffs.aIm[i], bR = coeffs.bRe[i], bI = coeffs.bIm[i];
+      s += (2 * n + 1) * ((aR + bR) - (aR * aR + aI * aI + bR * bR + bI * bI));
+    }
+    return (2 * Math.PI / (k0 * k0)) * Math.max(0, s);
+  }
+
+  function matBandLabel(mat: string): string {
+    return mat === 'tio2' ? 'TiO₂'
+      : mat === 'drude' ? 'Drude'
+      : mat === 'custom' ? 'Custom'
+      : (mat === 'file' || mat === 'rii') ? 'File'
+      : mat.charAt(0).toUpperCase() + mat.slice(1);
+  }
+
+  // Dense linear solve A·x = b (Gaussian elimination with partial pivoting).
+  function solveLinearSystem(A: number[][], b: number[]): number[] {
+    const n = b.length;
+    const M = A.map((row, i) => [...row, b[i]]);
+    for (let col = 0; col < n; col++) {
+      let piv = col;
+      for (let r = col + 1; r < n; r++) if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+      if (Math.abs(M[piv][col]) < 1e-300) continue;
+      [M[col], M[piv]] = [M[piv], M[col]];
+      const d = M[col][col];
+      for (let c = col; c <= n; c++) M[col][c] /= d;
+      for (let r = 0; r < n; r++) {
+        if (r === col) continue;
+        const f = M[r][col];
+        if (f === 0) continue;
+        for (let c = col; c <= n; c++) M[r][c] -= f * M[col][c];
+      }
+    }
+    return M.map(row => row[n]);
+  }
+
+  // ── Multilayer internal-field solver (continuity-matching), ported from the
+  // reproduction package (multishell_mie.field_coefficients + nearfield.py).
+  // Yields the per-shell absorbed-power split ∫Im(ε)|E|² that the scattering
+  // coefficients alone cannot provide — needed for the nano-oven cascade.
+  type Cx = [number, number];
+  const cAdd = (a: Cx, b: Cx): Cx => [a[0] + b[0], a[1] + b[1]];
+  const cSub = (a: Cx, b: Cx): Cx => [a[0] - b[0], a[1] - b[1]];
+  const cMul = (a: Cx, b: Cx): Cx => cmul(a[0], a[1], b[0], b[1]);
+  const cDiv = (a: Cx, b: Cx): Cx => cdiv(a[0], a[1], b[0], b[1]);
+  const cNeg = (a: Cx): Cx => [-a[0], -a[1]];
+
+  function riccatiDeriv(z: Cx, nstop: number) {
+    const psi: Cx[] = [], chi: Cx[] = [];
+    const s = csin(z[0], z[1]), c = ccos(z[0], z[1]);
+    psi[0] = s; chi[0] = c;
+    if (nstop >= 1) { psi[1] = cSub(cDiv(s, z), c); chi[1] = cAdd(cDiv(c, z), s); }
+    for (let k = 1; k < nstop; k++) {
+      const f = cdivN(2 * k + 1, z[0], z[1]);
+      psi[k + 1] = cSub(cMul(f, psi[k]), psi[k - 1]);
+      chi[k + 1] = cSub(cMul(f, chi[k]), chi[k - 1]);
+    }
+    const xi: Cx[] = psi.map((p, i) => [p[0] + chi[i][1], p[1] - chi[i][0]]);   // ψ − iχ
+    const jn: Cx[] = psi.map(p => cDiv(p, z));
+    const hn: Cx[] = xi.map(x => cDiv(x, z));
+    const dpsi: Cx[] = [], dxi: Cx[] = [];
+    dpsi[0] = c;                                  // cos z
+    dxi[0] = [c[0] - s[1], c[1] + s[0]];          // cos z + i sin z
+    for (let k = 1; k <= nstop; k++) {
+      const koz = cdivN(k, z[0], z[1]);
+      dpsi[k] = cSub(psi[k - 1], cMul(koz, psi[k]));
+      dxi[k] = cSub(xi[k - 1], cMul(koz, xi[k]));
+    }
+    return { jn, hn, psi, xi, dpsi, dxi };
+  }
+
+  function piTau(theta: number, nstop: number) {
+    const mu = Math.cos(theta);
+    const pin = new Array<number>(nstop + 1).fill(0), taun = new Array<number>(nstop + 1).fill(0);
+    if (nstop >= 1) pin[1] = 1;
+    for (let n = 2; n <= nstop; n++) pin[n] = ((2 * n - 1) / (n - 1)) * mu * pin[n - 1] - (n / (n - 1)) * pin[n - 2];
+    for (let n = 1; n <= nstop; n++) taun[n] = n * mu * pin[n] - (n + 1) * pin[n - 1];
+    return { pin, taun };
+  }
+
+  function solveComplexSystem(A: Cx[][], b: Cx[]): Cx[] {
+    const n = b.length;
+    const M: Cx[][] = A.map((row, i) => [...row.map(c => [c[0], c[1]] as Cx), [b[i][0], b[i][1]] as Cx]);
+    for (let col = 0; col < n; col++) {
+      let piv = col, best = Math.hypot(M[col][col][0], M[col][col][1]);
+      for (let r = col + 1; r < n; r++) { const m = Math.hypot(M[r][col][0], M[r][col][1]); if (m > best) { best = m; piv = r; } }
+      if (best < 1e-300) continue;
+      [M[col], M[piv]] = [M[piv], M[col]];
+      const d = M[col][col];
+      for (let cc = col; cc <= n; cc++) M[col][cc] = cDiv(M[col][cc], d);
+      for (let r = 0; r < n; r++) {
+        if (r === col) continue;
+        const f = M[r][col];
+        if (f[0] === 0 && f[1] === 0) continue;
+        for (let cc = col; cc <= n; cc++) M[r][cc] = cSub(M[r][cc], cMul(f, M[col][cc]));
+      }
+    }
+    return M.map(row => row[n]);
+  }
+
+  interface FieldCoeffs { c: Cx[][]; d: Cx[][]; a: Cx[][]; b: Cx[][]; k: Cx[]; nstop: number; }
+  function fieldCoefficients(lam0nm: number, nHost: number, radiiNm: number[], idx: Cx[]): FieldCoeffs {
+    const L = radiiNm.length, k0 = 2 * Math.PI / lam0nm;
+    const k: Cx[] = [];
+    for (let l = 0; l < L; l++) k[l] = [k0 * idx[l][0], k0 * idx[l][1]];
+    k[L] = [k0 * nHost, 0];
+    const xL = k0 * nHost * radiiNm[L - 1];
+    const nstop = Math.max(1, Math.round(xL + 4 * Math.cbrt(xL) + 2));
+    const fnsIn: ReturnType<typeof riccatiDeriv>[] = [], fnsOut: ReturnType<typeof riccatiDeriv>[] = [];
+    for (let p = 0; p < L; p++) {
+      fnsIn[p] = riccatiDeriv([k[p][0] * radiiNm[p], k[p][1] * radiiNm[p]], nstop);
+      fnsOut[p] = riccatiDeriv([k[p + 1][0] * radiiNm[p], k[p + 1][1] * radiiNm[p]], nstop);
+    }
+    const c: Cx[][] = [], d: Cx[][] = [], a: Cx[][] = [], b: Cx[][] = [];
+    for (let reg = 0; reg <= L; reg++) { c[reg] = []; d[reg] = []; a[reg] = []; b[reg] = []; }
+    const nun = 2 * L + 1;
+    for (let n = 1; n <= nstop; n++) {
+      // TE: unknowns [c_0..c_{L-1}, a_0..a_{L-1}, a_host]
+      {
+        const A: Cx[][] = Array.from({ length: nun }, () => Array.from({ length: nun }, () => [0, 0] as Cx));
+        const rhs: Cx[] = Array.from({ length: nun }, () => [0, 0] as Cx);
+        let row = 0;
+        for (let p = 0; p < L; p++) {
+          const fi = fnsIn[p], fo = fnsOut[p];
+          const put = (rw: number, reg: number, cval: Cx, aval: Cx) => {
+            if (reg < L) { A[rw][reg] = cAdd(A[rw][reg], cval); A[rw][L + reg] = cAdd(A[rw][L + reg], aval); }
+            else { rhs[rw] = cSub(rhs[rw], cval); A[rw][2 * L] = cAdd(A[rw][2 * L], aval); }
+          };
+          put(row, p, fi.jn[n], fi.hn[n]); put(row, p + 1, cNeg(fo.jn[n]), cNeg(fo.hn[n])); row++;
+          put(row, p, fi.dpsi[n], fi.dxi[n]); put(row, p + 1, cNeg(fo.dpsi[n]), cNeg(fo.dxi[n])); row++;
+        }
+        A[row][L] = [1, 0];                       // a_0 = 0 (regular at origin)
+        const x = solveComplexSystem(A, rhs);
+        for (let l = 0; l < L; l++) { c[l][n] = x[l]; a[l][n] = x[L + l]; }
+        c[L][n] = [1, 0]; a[L][n] = x[2 * L];
+      }
+      // TM: unknowns [d_0..d_{L-1}, b_0..b_{L-1}, b_host]
+      {
+        const A: Cx[][] = Array.from({ length: nun }, () => Array.from({ length: nun }, () => [0, 0] as Cx));
+        const rhs: Cx[] = Array.from({ length: nun }, () => [0, 0] as Cx);
+        let row = 0;
+        for (let p = 0; p < L; p++) {
+          const fi = fnsIn[p], fo = fnsOut[p], kin = k[p], kout = k[p + 1];
+          const putd = (rw: number, reg: number, dval: Cx, bval: Cx) => {
+            if (reg < L) { A[rw][reg] = cAdd(A[rw][reg], dval); A[rw][L + reg] = cAdd(A[rw][L + reg], bval); }
+            else { rhs[rw] = cSub(rhs[rw], dval); A[rw][2 * L] = cAdd(A[rw][2 * L], bval); }
+          };
+          putd(row, p, cDiv(fi.dpsi[n], kin), cDiv(fi.dxi[n], kin));
+          putd(row, p + 1, cNeg(cDiv(fo.dpsi[n], kout)), cNeg(cDiv(fo.dxi[n], kout))); row++;
+          putd(row, p, fi.psi[n], fi.xi[n]);
+          putd(row, p + 1, cNeg(fo.psi[n]), cNeg(fo.xi[n])); row++;
+        }
+        A[row][L] = [1, 0];                       // b_0 = 0
+        const x = solveComplexSystem(A, rhs);
+        for (let l = 0; l < L; l++) { d[l][n] = x[l]; b[l][n] = x[L + l]; }
+        d[L][n] = [1, 0]; b[L][n] = x[2 * L];
+      }
+    }
+    return { c, d, a, b, k, nstop };
+  }
+
+  const IPOW: Cx[] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  function fieldAmplitudeSq(co: FieldCoeffs, layer: number, rNm: number, theta: number, pt: { pin: number[]; taun: number[] }): number {
+    const z: Cx = [co.k[layer][0] * rNm, co.k[layer][1] * rNm];
+    const f = riccatiDeriv(z, co.nstop), zz = cMul(z, z), sinT = Math.sin(theta);
+    const { pin, taun } = pt;
+    let Er: Cx = [0, 0], Eth: Cx = [0, 0], Eph: Cx = [0, 0];
+    for (let n = 1; n <= co.nstop; n++) {
+      const s = (2 * n + 1) / (n * (n + 1)), ip = IPOW[n % 4];
+      const En: Cx = [s * ip[0], s * ip[1]];
+      const cN = co.c[layer][n], dN = co.d[layer][n], aN = co.a[layer][n], bN = co.b[layer][n];
+      const Mc = cAdd(cMul(cN, f.jn[n]), cMul(aN, f.hn[n]));
+      const inn = cAdd(cMul(dN, cDiv(f.dpsi[n], z)), cMul(bN, cDiv(f.dxi[n], z)));
+      const Nd: Cx = [inn[1], -inn[0]];                                  // −i·inn
+      const nn1 = n * (n + 1);
+      const in2 = cAdd(cMul(dN, cDiv(f.psi[n], zz)), cMul(bN, cDiv(f.xi[n], zz)));
+      const Nr: Cx = [in2[1] * nn1, -in2[0] * nn1];                      // −i·(…)·n(n+1)
+      const er = cMul(En, Nr); Er = cAdd(Er, [er[0] * pin[n] * sinT, er[1] * pin[n] * sinT]);
+      Eth = cAdd(Eth, cMul(En, [Mc[0] * pin[n] + Nd[0] * taun[n], Mc[1] * pin[n] + Nd[1] * taun[n]]));
+      Eph = cAdd(Eph, cMul(En, [-Mc[0] * taun[n] - Nd[0] * pin[n], -Mc[1] * taun[n] - Nd[1] * pin[n]]));
+    }
+    return Er[0] * Er[0] + Er[1] * Er[1] + Eth[0] * Eth[0] + Eth[1] * Eth[1] + Eph[0] * Eph[0] + Eph[1] * Eph[1];
+  }
+
+  // Per-layer absorbed-power weights (∫Im(ε)|E|²), normalised over metal layers;
+  // 0 for non-metal layers. Returns null on any numerical failure.
+  function perShellAbsorbedSplit(lam0nm: number, nHost: number, radiiNm: number[], idx: Cx[], metalMask: boolean[], nr = 18, ntheta = 36): number[] | null {
+    try {
+      const L = radiiNm.length;
+      const co = fieldCoefficients(lam0nm, nHost, radiiNm, idx);
+      const innerR = radiiNm.map((_, l) => l === 0 ? 0 : radiiNm[l - 1]);
+      const theta: number[] = [], wth: number[] = [];
+      for (let j = 0; j < ntheta; j++) { const t = 1e-4 + (Math.PI - 2e-4) * j / (ntheta - 1); theta.push(t); wth.push(Math.sin(t)); }
+      const pts = theta.map(t => piTau(t, co.nstop));
+      const trapz = (y: number[], x: number[]) => { let s = 0; for (let i = 1; i < y.length; i++) s += (x[i] - x[i - 1]) * (y[i] + y[i - 1]) / 2; return s; };
+      const P = new Array<number>(L).fill(0);
+      for (let l = 0; l < L; l++) {
+        if (!metalMask[l]) continue;
+        const r0 = innerR[l], rs: number[] = [];
+        for (let i = 0; i < nr; i++) rs.push(r0 + (radiiNm[l] - r0) * (i + 1) / nr);
+        const rad = new Array<number>(ntheta);
+        for (let j = 0; j < ntheta; j++) {
+          const col = rs.map(rr => fieldAmplitudeSq(co, l, rr, theta[j], pts[j]) * rr * rr);
+          rad[j] = trapz(col, rs);
+        }
+        P[l] = 2 * idx[l][0] * idx[l][1] * Math.PI * trapz(rad.map((v, j) => v * wth[j]), theta);
+      }
+      let tot = 0; for (let l = 0; l < L; l++) tot += P[l];
+      if (!(tot > 0) || !Number.isFinite(tot)) return null;
+      return P.map(p => p / tot);
+    } catch { return null; }
+  }
+
+  function renderThermal() {
+    chartXforms = null;
+    rebuildThermalLayers();
+    // sync the slider range to the current spectrum sweep so the marker stays on it
+    if (data && data.lambda.length) {
+      const lo = Math.min(data.lambda[0], data.lambda[data.lambda.length - 1]);
+      const hi = Math.max(data.lambda[0], data.lambda[data.lambda.length - 1]);
+      thermalLambdaSlider.min = String(Math.round(lo));
+      thermalLambdaSlider.max = String(Math.round(hi));
+      let cur = parseFloat(thermalLambdaSlider.value);
+      if (!Number.isFinite(cur) || cur < lo || cur > hi) {
+        cur = Math.max(lo, Math.min(hi, Number.isFinite(cur) ? cur : (lo + hi) / 2));
+        thermalLambdaSlider.value = String(Math.round(cur));
+        thermalLambdaNum.value = thermalLambdaSlider.value;
+      }
+    }
+    const lambdaNm = parseFloat(thermalLambdaSlider.value) || 550;
+    const I0 = Math.max(0, parseFloat(thermalI0Num.value) || 0) * 1e9;        // GW/m² → W/m²
+    const T0c = Number.isFinite(parseFloat(thermalT0Input.value)) ? parseFloat(thermalT0Input.value) : 25;
+    const kappaMed = Math.max(1e-6, parseFloat(thermalKappaMed.value) || 0.6); // W/m/K
+
+    // Layer stack (core → outer), sorted by outer radius, paired with materials.
+    let mats: string[], dielFns: ((l: number) => [number, number])[], radiiNm: number[];
+    if (geometry === 'coreshell') {
+      const matsRaw = [coreMaterialSelect.value, materialSelect.value, ...extraShells.map(s => s.material.value)];
+      const pairs = buildLayers().map((l, i) => ({ getD: l.getDielectric, r: l.radiusNm, mat: matsRaw[i] ?? 'custom' }))
+        .sort((a, b) => a.r - b.r);
+      mats = pairs.map(p => p.mat); dielFns = pairs.map(p => p.getD); radiiNm = pairs.map(p => p.r);
+    } else {
+      mats = [materialSelect.value]; dielFns = [getDielectric]; radiiNm = [rParam.value];
+    }
+    const L = radiiNm.length;
+    const outerRnm = radiiNm[L - 1];
+    const R = outerRnm * 1e-9;
+
+    // σ_abs from NPLab Mie at this single wavelength (sphere or core-shell)
+    const coeffs: MieCoeffs = geometry === 'coreshell'
+      ? computeShellCoeffsAtLambda(buildLayers(), nhParam.value, lambdaNm)
+      : computeSphereCoeffs(getDielectric, rParam.value, nhParam.value, lambdaNm);
+    const k0 = 2 * Math.PI * nhParam.value / (lambdaNm * 1e-9);   // 1/m
+    const Cabs = cabsFromCoeffs(coeffs, k0);                       // m²
+    const Pabs = Cabs * I0;                                        // W
+
+    // Per-layer geometry and (user-defined) thermal properties, SI units.
+    const rOut = radiiNm.map(rn => rn * 1e-9);
+    const rIn = rOut.map((_, i) => i === 0 ? 0 : rOut[i - 1]);
+    const Vol = rOut.map((ro, i) => 4 / 3 * Math.PI * (ro ** 3 - rIn[i] ** 3));
+    const ImEps = dielFns.map(f => { const [n, kk] = f(lambdaNm); return Math.max(0, 2 * n * kk); });
+    const kappa = radiiNm.map((_, i) => Math.max(1e-6, tlVal(i, 'kappa', 1)));
+    const gEl = radiiNm.map((_, i) => Math.max(0, tlVal(i, 'g', 0)) * 1e16);
+    const Gtbc = radiiNm.map((_, i) => Math.max(1, tlVal(i, 'G', 100)) * 1e6);
+    const isMetal = radiiNm.map((_, i) => gEl[i] > 0 && ImEps[i] > 0.2);
+
+    // Absorbed power per layer. For layered particles use the true internal-field
+    // integral ∫Im(ε)|E|² (continuity-matching solver) so the nano-oven cascade
+    // is captured; fall back to the Im(ε)·V proxy if the field solve fails or for
+    // a homogeneous sphere. Normalised to the total σ_abs.
+    let wsum = 0; for (let i = 0; i < L; i++) wsum += ImEps[i] * Vol[i];
+    let split: number[] | null = null;
+    if (geometry === 'coreshell' && L >= 2 && isMetal.some(Boolean)) {
+      const idxC: Cx[] = dielFns.map(f => { const [n, kk] = f(lambdaNm); return [n, kk] as Cx; });
+      // the split depends only on λ/host/radii/indices — memoise so I₀/T₀/κ edits stay instant
+      const sig = lambdaNm + '|' + nhParam.value + '|' + radiiNm.join(',') + '|' +
+        idxC.map(c => c[0].toFixed(5) + '_' + c[1].toFixed(5)).join(';') + '|' + isMetal.join(',');
+      if (thermalSplitCache && thermalSplitCache.sig === sig) split = thermalSplitCache.split;
+      else { split = perShellAbsorbedSplit(lambdaNm, nhParam.value, radiiNm, idxC, isMetal); thermalSplitCache = { sig, split }; }
+    }
+    const Pn = radiiNm.map((_, i) => split ? Pabs * split[i]
+      : wsum > 0 ? Pabs * (ImEps[i] * Vol[i]) / wsum
+      : (i === L - 1 ? Pabs : 0));
+    const fluxAt: number[] = []; { let acc = 0; for (let i = 0; i < L; i++) { acc += Pn[i]; fluxAt.push(acc); } }
+
+    // Per-layer surface temperatures (°C): tOut/tInn are the lattice temperatures
+    // at each layer's outer/inner boundary, tElec the metal electron temperature.
+    const tOut = new Array<number>(L), tInn = new Array<number>(L), tElec = new Array<number>(L);
+
+    // Coupled two-temperature steady state (Meng et al. eqs 4–9) for a metal shell
+    // stack: per metal shell, electron Te / lattice Tl, and the dielectric interface
+    // temperatures Tdi (inner) / Tdo (outer). Each dielectric interface couples to
+    // BOTH the electron and lattice baths, so the core floats between Tl and Te and
+    // ends up hotter than the metal lattice. Gᵉˡ uses the paper's T-dependence (eq 3).
+    function solveOvenTemps() {
+      const mIdx: number[] = [];
+      for (let i = 0; i < L; i++) if (isMetal[i]) mIdx.push(i);
+      const N = mIdx.length;
+      const T0K = T0c + 273.15;
+      const sh = mIdx.map(i => ({
+        Ri: rIn[i], Ro: rOut[i], V: Vol[i],
+        Si: 4 * Math.PI * rIn[i] * rIn[i], So: 4 * Math.PI * rOut[i] * rOut[i],
+        g: gEl[i], P: Pn[i], GllI: Gtbc[i - 1], GllO: Gtbc[i],
+        kappaAbove: i + 1 < L ? Math.max(1e-6, kappa[i + 1]) : 0,
+      }));
+      const Gelf = (T: number) => (96.12 + 0.189 * T) * 1e6;   // eq 3, W/m²K
+      const ix = (j: number, w: number) => 4 * j + w;          // 0=Te 1=Tl 2=Tdi 3=Tdo
+      let Te = new Array<number>(N).fill(T0K);
+      let X = new Array<number>(4 * N).fill(T0K);
+      for (let iter = 0; iter < 80; iter++) {
+        const A: number[][] = Array.from({ length: 4 * N }, () => new Array<number>(4 * N).fill(0));
+        const b = new Array<number>(4 * N).fill(0);
+        const Gel = Te.map(t => Gelf(t));
+        let row = 0;
+        for (let j = 0; j < N; j++) {
+          const s = sh[j], GelI = Gel[j], GelO = j === N - 1 ? 0 : Gel[j];
+          // eq4 electron balance
+          A[row][ix(j, 0)] = s.g * s.V + GelI * s.Si + GelO * s.So;
+          A[row][ix(j, 1)] = -s.g * s.V;
+          A[row][ix(j, 2)] = -GelI * s.Si;
+          A[row][ix(j, 3)] = -GelO * s.So;
+          b[row] = s.P; row++;
+          // eq5 lattice balance
+          A[row][ix(j, 0)] = s.g * s.V;
+          A[row][ix(j, 1)] = -s.g * s.V - s.GllI * s.Si - s.GllO * s.So;
+          A[row][ix(j, 2)] = s.GllI * s.Si;
+          A[row][ix(j, 3)] = s.GllO * s.So;
+          b[row] = 0; row++;
+        }
+        // eq9 core interface (zero net flux into the dielectric core)
+        A[row][ix(0, 0)] = Gel[0]; A[row][ix(0, 1)] = sh[0].GllI; A[row][ix(0, 2)] = -(Gel[0] + sh[0].GllI);
+        b[row] = 0; row++;
+        // spacers k = 0..N-2
+        let Pcum = 0;
+        for (let k = 0; k < N - 1; k++) {
+          const sk = sh[k], sk1 = sh[k + 1];
+          // eq6 flux balance across the spacer
+          A[row][ix(k, 0)] += sk.So * Gel[k];
+          A[row][ix(k, 1)] += sk.So * sk.GllO;
+          A[row][ix(k, 3)] += -sk.So * (Gel[k] + sk.GllO);
+          A[row][ix(k + 1, 0)] += sk1.Si * Gel[k + 1];
+          A[row][ix(k + 1, 1)] += sk1.Si * sk1.GllI;
+          A[row][ix(k + 1, 2)] += -sk1.Si * (Gel[k + 1] + sk1.GllI);
+          b[row] = 0; row++;
+          // eq7 conduction through the spacer dielectric
+          const Gcond = 4 * Math.PI * sk.kappaAbove * sk.Ro * sk1.Ri / Math.max(sk1.Ri - sk.Ro, 1e-18);
+          A[row][ix(k, 3)] += Gcond; A[row][ix(k + 1, 2)] += -Gcond;
+          Pcum += sk.P; b[row] = Pcum; row++;
+        }
+        // eq8 water: all absorbed power conducts out through the outer shell
+        const Gw = 4 * Math.PI * kappaMed * sh[N - 1].Ro;
+        let Ptot = 0; for (const s of sh) Ptot += s.P;
+        A[row][ix(N - 1, 3)] = Gw; b[row] = Ptot + Gw * T0K; row++;
+
+        X = solveLinearSystem(A, b);
+        const newTe = Array.from({ length: N }, (_, j) => X[ix(j, 0)]);
+        let maxd = 0; for (let j = 0; j < N; j++) maxd = Math.max(maxd, Math.abs(newTe[j] - Te[j]));
+        Te = newTe;
+        if (maxd < 1e-7) break;
+      }
+      return {
+        Te: Array.from({ length: N }, (_, j) => X[ix(j, 0)]),
+        Tl: Array.from({ length: N }, (_, j) => X[ix(j, 1)]),
+        Tdi: Array.from({ length: N }, (_, j) => X[ix(j, 2)]),
+        Tdo: Array.from({ length: N }, (_, j) => X[ix(j, 3)]),
+      };
+    }
+
+    // Nano-oven topology: dielectric core, strictly alternating dielectric/metal,
+    // outermost layer metal — only then is the coupled solve well-posed.
+    const isNanoOven = L >= 2 && !isMetal[0] && isMetal[L - 1] && isMetal.every((m, i) => m === (i % 2 === 1));
+    const oven = isNanoOven ? solveOvenTemps() : null;
+
+    if (oven) {
+      for (let i = 0; i < L; i++) {
+        if (isMetal[i]) {
+          const s = (i - 1) / 2;                          // metal-shell index
+          tOut[i] = tInn[i] = oven.Tl[s] - 273.15;
+          tElec[i] = oven.Te[s] - 273.15;
+        } else if (i === 0) {
+          tOut[0] = tInn[0] = oven.Tdi[0] - 273.15;        // isothermal core
+          tElec[0] = NaN;
+        } else {
+          tInn[i] = oven.Tdo[(i - 2) / 2] - 273.15;        // inner boundary ← metal below
+          tOut[i] = oven.Tdi[i / 2] - 273.15;              // outer boundary ← metal above
+          tElec[i] = NaN;
+        }
+      }
+    } else {
+      // Steady-state outward conduction (dielectric core is a thermal dead-end, so
+      // all P_abs flows outward): medium 1/r tail, per-interface Kapitza jumps,
+      // per-dielectric A+B/r conduction, per-metal electron–lattice split.
+      let tBoundary = T0c + Pabs / (4 * Math.PI * kappaMed * R)
+                    + Pabs / (4 * Math.PI * R * R * Gtbc[L - 1]);
+      for (let k = L - 1; k >= 0; k--) {
+        tOut[k] = tBoundary;
+        if (isMetal[k]) {
+          tInn[k] = tBoundary;
+          tElec[k] = tBoundary + (Vol[k] > 0 ? Pn[k] / (gEl[k] * Vol[k]) : 0);
+        } else {
+          const fluxIn = k > 0 ? fluxAt[k - 1] : 0;
+          tInn[k] = tBoundary + (rIn[k] > 0 ? fluxIn / (4 * Math.PI * kappa[k]) * (1 / rIn[k] - 1 / rOut[k]) : 0);
+          tElec[k] = NaN;
+        }
+        if (k > 0) tBoundary = tInn[k] + fluxAt[k - 1] / (4 * Math.PI * rIn[k] * rIn[k] * Gtbc[k - 1]);
+      }
+    }
+
+    const npts = 400;
+    // Plotting range: user-set "max r" (bottom-right of the result box), else 3×outer radius.
+    const defRmax = Math.max(outerRnm * 3, outerRnm + 1);
+    let rmaxVal = parseFloat(thermalRmax.value);
+    if (!Number.isFinite(rmaxVal) || rmaxVal <= outerRnm) { rmaxVal = defRmax; thermalRmax.value = String(Math.round(defRmax)); }
+    const Rmax = rmaxVal;
+    const r = new Float64Array(npts);
+    const Te = new Float64Array(npts), Tl = new Float64Array(npts), Tw = new Float64Array(npts);
+    for (let i = 0; i < npts; i++) {
+      const rn = (i / (npts - 1)) * Rmax; r[i] = rn; const rm = rn * 1e-9;
+      if (rm > R) { Te[i] = NaN; Tl[i] = NaN; Tw[i] = T0c + Pabs / (4 * Math.PI * kappaMed * rm); continue; }
+      let kk = 0; while (kk < L - 1 && rm > rOut[kk]) kk++;
+      Tw[i] = NaN;
+      if (isMetal[kk]) { Tl[i] = tOut[kk]; Te[i] = tElec[kk]; }
+      else {
+        if (rIn[kk] <= 0 || rOut[kk] - rIn[kk] < 1e-18) { Tl[i] = tOut[kk]; }
+        else { const B = (tOut[kk] - tInn[kk]) / (1 / rOut[kk] - 1 / rIn[kk]); Tl[i] = (tOut[kk] - B / rOut[kk]) + B / Math.max(rm, 1e-18); }
+        Te[i] = NaN;
+      }
+    }
+    // Only show the electron temperature where there are free electrons (a metal
+    // layer with g > 0); a purely dielectric particle (all g = 0) has none.
+    const hasElectrons = isMetal.some(Boolean);
+    const series: PlotSeries[] = [
+      ...(hasElectrons ? [{ y: Te, color: '#EF4444', label: 'Tₑ (electron)' }] : []),
+      { y: Tl, color: '#111827', label: 'Tₗ (lattice)' },
+      { y: Tw, color: '#3B82F6', label: 'host (1/r)' },
+    ];
+
+    // Coloured layer bands + the surrounding host medium.
+    const bands: { x0: number; x1: number; color: string; label?: string }[] = [];
+    let prev = 0;
+    for (let i = 0; i < L; i++) {
+      if (radiiNm[i] > prev) { bands.push({ x0: prev, x1: radiiNm[i], color: hexToRgba(MAT_COLORS[mats[i]] ?? '#CBD5E1', 0.18), label: matBandLabel(mats[i]) }); prev = radiiNm[i]; }
+    }
+    bands.push({ x0: outerRnm, x1: Rmax, color: hexToRgba('#3B82F6', 0.06), label: 'host' });
+
+    currentXArr = r; currentSeries = series;           // enable hover read-out
+    chartXforms = drawChart(canvas, r, series, 'r (nm)', 'Temperature (°C)', { bands });
+    // Dashed baseline at the ambient temperature T₀.
+    {
+      const tctx = canvas.getContext('2d')!;
+      const yT0 = chartXforms.ty(T0c);
+      if (yT0 >= chartXforms.pT && yT0 <= chartXforms.pT + chartXforms.pH) {
+        tctx.save();
+        tctx.setLineDash([4, 4]); tctx.strokeStyle = 'rgba(107,114,128,0.7)'; tctx.lineWidth = 1.5;
+        tctx.beginPath(); tctx.moveTo(chartXforms.pL, yT0); tctx.lineTo(chartXforms.pL + chartXforms.pW, yT0); tctx.stroke();
+        tctx.setLineDash([]); tctx.fillStyle = 'rgba(107,114,128,0.95)'; tctx.font = '600 10px Inter, system-ui, sans-serif';
+        tctx.textAlign = 'right'; tctx.textBaseline = 'bottom';
+        tctx.fillText('T₀', chartXforms.pL + chartXforms.pW - 3, yT0 - 2);
+        tctx.restore();
+      }
+    }
+    clearOverlay();
+    // keep the range inputs in sync with the active sweep
+    thermalRangeMin.value = lamMinInput.value;
+    thermalRangeMax.value = lamMaxInput.value;
+
+    // ── Absorption cross-section spectrum with the illumination-wavelength marker ──
+    if (data) {
+      const specXf = drawChart(thermalSpectrumCanvas, data.lambda, [{ y: data.cabs, color: '#6366F1', label: 'σabs (nm²)' }], 'λ (nm)', 'σabs (nm²)', { fontScale: 0.82 });
+      const sctx = thermalSpectrumCanvas.getContext('2d')!;
+      const mx = specXf.tx(lambdaNm);
+      sctx.save();
+      sctx.setLineDash([4, 4]); sctx.strokeStyle = '#F43F5E'; sctx.lineWidth = 1.5;
+      sctx.beginPath(); sctx.moveTo(mx, specXf.pT); sctx.lineTo(mx, specXf.pT + specXf.pH); sctx.stroke();
+      sctx.restore();
+    }
+
+    notesBody.innerHTML = `<ul>
+      <li><strong>&lambda;</strong> — illumination wavelength of the incident plane wave, set with the λ slider or the nm entry in the σ<sub>abs</sub> box (a single value). σ<sub>abs</sub>(&lambda;) comes from NPLab's Mie theory and sets P<sub>abs</sub> = σ<sub>abs</sub>·I₀.</li>
+      <li><strong>I₀</strong> — incident irradiance (plane-wave intensity, GW/m²); scales the whole temperature rise linearly.</li>
+      <li><strong>T₀</strong> &amp; <strong>host &kappa;</strong> — environment temperature and the surrounding host's thermal conductivity (water ≈ 0.6, silica ≈ 1.0 W/m·K); the host sets the 1/r tail.</li>
+      <li><strong>Per-layer &kappa;</strong> — thermal conductivity inside each layer (metals ≫ ⇒ ~isothermal; dielectrics give an A+B/r drop).</li>
+      <li><strong>Per-layer g</strong> — electron–lattice coupling of each metal (10¹⁶ W/m³·K; gold ≈ 3, Al ≈ 30), giving T<sub>e</sub> − T<sub>l</sub> = P<sub>n</sub>/(g V<sub>n</sub>).</li>
+      <li><strong>Per-layer G</strong> — Kapitza boundary conductance at each layer's outer interface (MW/m²·K; Au/water ≈ 105), giving the jump P/(4&pi;r²G).</li>
+      <li>Coupled two-temperature steady state (eqs 4–9) after Meng <em>et al.</em>, ACS Nano 2017. Per-shell absorbed power from the multilayer internal-field integral ∫Im(ε)|E|² (a homogeneous sphere uses Im(ε)·V).</li>
+    </ul>
+    <div class="thermal-presets">
+      <div class="thermal-presets-label">Reproduce paper figures (I₀ = 2 GW/m²)</div>
+      <div class="thermal-preset-grid">
+        ${Object.entries(THERMAL_PRESETS).map(([k, p]) => `<button type="button" class="thermal-preset-btn${k === activeThermalPreset ? ' active' : ''}" data-preset="${k}" title="${p.tip}" aria-pressed="${k === activeThermalPreset ? 'true' : 'false'}">${p.label}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+
   // === Chart Interactions ===
 
   function sizeOverlay() { const dpr = window.devicePixelRatio || 1; const r = overlay.getBoundingClientRect(); overlay.width = r.width * dpr; overlay.height = r.height * dpr; const c = overlay.getContext('2d')!; c.scale(dpr, dpr); return c; }
@@ -3731,6 +4549,7 @@ initPermalinks({
       render();
       return;
     }
+    if (viewTabs.value === 'thermal') return;   // no zoom-drag on the temperature profile
     dragStart = { x: e.offsetX, y: e.offsetY };
     isDragging = false;
   });
@@ -3773,7 +4592,9 @@ initPermalinks({
       c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.stroke();
     }
     const isElectronSpectrum = excitation === 'electron' && viewTabs.value === 'spectrum';
-    const xS = isElectronSpectrum && axisTabs.value === 'lambda'
+    const xS = viewTabs.value === 'thermal'
+      ? `r = ${dX.toFixed(1)} nm`
+      : isElectronSpectrum && axisTabs.value === 'lambda'
       ? `\u03BB = ${dX.toFixed(1)} nm`
       : isElectronSpectrum
       ? `E_loss = ${dX.toFixed(3)} eV`
@@ -3781,7 +4602,7 @@ initPermalinks({
       ? `\u03BB = ${dX.toFixed(1)} nm`
       : `E = ${dX.toFixed(3)} eV`;
     let ttHtml = xS;
-    for (const s of visibleSeries) ttHtml += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}`;
+    for (const s of visibleSeries) { const v = s.y[idx]; if (!Number.isFinite(v)) continue; ttHtml += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(v)}`; }
     tooltip.innerHTML = ttHtml;
     tooltip.classList.add('visible');
     const pointYs = visibleSeries.map(s => ty(s.y[idx])).filter(v => Number.isFinite(v));
