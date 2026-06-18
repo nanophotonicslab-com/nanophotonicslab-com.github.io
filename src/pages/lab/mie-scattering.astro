@@ -230,9 +230,9 @@ const miePresets = [
               <div class="param" id="core-r-group">
                 <div class="param-header">
                   <label>Radius (nm)</label>
-                  <input type="number" class="param-number" id="core-r-num" value="60" step="5" min="1">
+                  <input type="number" class="param-number" id="core-r-num" value="60" step="1" min="1">
                 </div>
-                <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="5" value="60">
+                <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="1" value="60">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="core-r-min" value="5" step="5" min="1">
                   <span class="param-limit-dash">&mdash;</span>
@@ -245,9 +245,9 @@ const miePresets = [
           <div class="param">
             <div class="param-header">
               <label id="radius-label">Radius (nm)</label>
-              <input type="number" class="param-number" id="r-num" value="50" step="5" min="1">
+              <input type="number" class="param-number" id="r-num" value="50" step="1" min="1">
             </div>
-            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="5" value="50">
+            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="1" value="50">
             <div class="param-limits">
               <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
               <span class="param-limit-dash">&mdash;</span>
@@ -3570,9 +3570,9 @@ initPermalinks({
         <div class="param">
           <div class="param-header">
             <label>Outer radius (nm)</label>
-            <input type="number" class="param-number sh-r-num" value="${outerR}" step="5" min="1">
+            <input type="number" class="param-number sh-r-num" value="${outerR}" step="1" min="1">
           </div>
-          <input type="range" class="param-slider sh-r-slider" min="10" max="${maxOuterR}" step="5" value="${outerR}">
+          <input type="range" class="param-slider sh-r-slider" min="10" max="${maxOuterR}" step="1" value="${outerR}">
           <div class="param-limits">
             <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
             <span class="param-limit-dash">&mdash;</span>
