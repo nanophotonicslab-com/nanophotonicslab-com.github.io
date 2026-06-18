@@ -651,6 +651,10 @@ initPermalinks({
   .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
   .param-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
   .param-slider::-moz-range-track { height: 5px; background: var(--bg-muted); border-radius: 3px; border: none; }
+  /* illumination-λ thumb in rose, matching the dashed marker in the σabs chart */
+  #thermal-lambda-slider::-webkit-slider-thumb { background: #F43F5E; }
+  #thermal-lambda-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(244,63,94,0.18); }
+  #thermal-lambda-slider::-moz-range-thumb { background: #F43F5E; }
   .param-limits { display: flex; align-items: center; gap: 0.25rem; }
   .param-limit-dash { flex: 1; text-align: center; color: var(--bg-muted); font-size: 0.75rem; }
   .param-limit {
@@ -2846,6 +2850,12 @@ initPermalinks({
   }
   let thermalLayerSig = '';
   let thermalSplitCache: { sig: string; split: number[] | null } | null = null;   // memoised per-shell field split
+  interface ThermalExport {
+    xArr: Float64Array; series: PlotSeries[]; bands: { x0: number; x1: number; color: string; label?: string }[];
+    Te: Float64Array; Tl: Float64Array; Tw: Float64Array; T0c: number;
+    params: { lambdaNm: number; I0gw: number; kappaMed: number; nHost: number; mats: string[]; radiiNm: number[]; kappa: number[]; gEl: number[]; Gtbc: number[]; Cabs: number; Pabs: number };
+  }
+  let thermalExport: ThermalExport | null = null;   // last thermal profile, for PNG/CSV export
   function rebuildThermalLayers() {
     const mats = thermalLayerMaterials();
     const sig = geometry + '|' + mats.join(',');
@@ -4513,6 +4523,13 @@ initPermalinks({
     }
     bands.push({ x0: outerRnm, x1: Rmax, color: hexToRgba('#3B82F6', 0.06), label: 'host' });
 
+    thermalExport = {
+      xArr: r, series, bands, Te, Tl, Tw, T0c,
+      params: {
+        lambdaNm, I0gw: Math.max(0, parseFloat(thermalI0Num.value) || 0), kappaMed, nHost: nhParam.value,
+        mats: mats.slice(), radiiNm: radiiNm.slice(), kappa: kappa.slice(), gEl: gEl.slice(), Gtbc: Gtbc.slice(), Cabs, Pabs,
+      },
+    };
     currentXArr = r; currentSeries = series;           // enable hover read-out
     chartXforms = drawChart(canvas, r, series, 'r (nm)', 'Temperature (°C)', { bands });
     // Dashed baseline at the ambient temperature T₀.
@@ -4867,6 +4884,26 @@ initPermalinks({
     ec.width = w * s; ec.height = h * s; const cx = ec.getContext('2d')!; cx.scale(s, s);
     const or = ec.getBoundingClientRect.bind(ec);
     ec.getBoundingClientRect = () => ({ ...or(), width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON() { return this; } });
+    if (viewTabs.value === 'thermal' && thermalExport) {
+      const opts: ChartOpts = { bands: thermalExport.bands, fontScale: w / canvas.getBoundingClientRect().width };
+      const sd = window.devicePixelRatio;
+      Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
+      const xf = drawChart(ec, thermalExport.xArr, thermalExport.series, 'r (nm)', 'Temperature (°C)', opts);
+      const tctx = ec.getContext('2d')!;
+      const yT0 = xf.ty(thermalExport.T0c);
+      if (yT0 >= xf.pT && yT0 <= xf.pT + xf.pH) {
+        tctx.save();
+        tctx.setLineDash([4 * opts.fontScale!, 4 * opts.fontScale!]); tctx.strokeStyle = 'rgba(107,114,128,0.7)'; tctx.lineWidth = 1.5;
+        tctx.beginPath(); tctx.moveTo(xf.pL, yT0); tctx.lineTo(xf.pL + xf.pW, yT0); tctx.stroke();
+        tctx.setLineDash([]); tctx.fillStyle = 'rgba(107,114,128,0.95)'; tctx.font = `600 ${Math.round(10 * opts.fontScale!)}px Inter, system-ui, sans-serif`;
+        tctx.textAlign = 'right'; tctx.textBaseline = 'bottom';
+        tctx.fillText('T₀', xf.pL + xf.pW - 3, yT0 - 2);
+        tctx.restore();
+      }
+      Object.defineProperty(window, 'devicePixelRatio', { value: sd, writable: true, configurable: true });
+      ec.toBlob(b => { if (b) downloadBlob(b, filenameStem() + '_thermal.png'); }, 'image/png');
+      return;
+    }
     const materialPlot = viewTabs.value === 'material' ? getMaterialPlotData() : null;
     const electronPlot = !materialPlot && excitation === 'electron' ? getElectronPlotData() : null;
     const spectrumPlot = materialPlot || electronPlot ? null : getPlotData();
@@ -4886,6 +4923,25 @@ initPermalinks({
   });
 
   document.getElementById('dl-csv')!.addEventListener('click', () => {
+    if (viewTabs.value === 'thermal' && thermalExport) {
+      const p = thermalExport.params;
+      const layerDesc = p.mats.map((m, i) =>
+        `${matBandLabel(m)} r=${p.radiiNm[i]}nm kappa=${p.kappa[i]}W/mK g=${(p.gEl[i] / 1e16)}e16W/m3K G=${(p.Gtbc[i] / 1e6)}MW/m2K`).join(' | ');
+      const lines = [
+        '# Photothermal radial temperature profile (two-temperature model, Meng et al., ACS Nano 2017)',
+        `# lambda=${p.lambdaNm} nm, I0=${p.I0gw} GW/m^2, T0=${thermalExport.T0c} C, host kappa=${p.kappaMed} W/mK, n_host=${p.nHost}`,
+        `# Cabs=${(p.Cabs * 1e18).toFixed(3)} nm^2, Pabs=${(p.Pabs * 1e6).toFixed(5)} uW`,
+        `# Layers (core->out): ${layerDesc}`,
+        '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+        'r_nm,T_electron_C,T_lattice_C,T_host_C',
+      ];
+      const { xArr, Te, Tl, Tw } = thermalExport;
+      const f = (v: number) => Number.isFinite(v) ? v.toFixed(4) : '';
+      for (let i = 0; i < xArr.length; i++)
+        lines.push([xArr[i].toFixed(4), f(Te[i]), f(Tl[i]), f(Tw[i])].join(','));
+      downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_thermal.csv');
+      return;
+    }
     if (viewTabs.value === 'material') {
       const lines = [
         `# Mie material function, lambda=${lamMinInput.value}-${lamMaxInput.value} nm`,
