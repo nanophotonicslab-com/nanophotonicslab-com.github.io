@@ -328,6 +328,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
                   <span class="bz-legend">
                     <span class="bz-legend-item"><span class="bz-legend-swatch bz-legend-swatch--incident"></span>Incident</span>
                     <span class="bz-legend-item"><span class="bz-legend-swatch bz-legend-swatch--blaze"></span>Blaze direction</span>
+                    <span class="bz-legend-item bz-legend-warning" id="bz-legend-warning" hidden></span>
                   </span>
                   <span class="chart-status" id="bz-status"></span>
                 </span>
@@ -531,6 +532,8 @@ import ToolMeta from '../../components/ToolMeta.astro';
   .bz-legend-swatch { width: 16px; height: 0; border-top: 2.4px solid var(--text); border-radius: 2px; }
   .bz-legend-swatch--incident { border-top-color: var(--text); }
   .bz-legend-swatch--blaze { border-top-style: dashed; border-top-color: #F59E0B; }
+  .bz-legend-warning { color: #B45309; font-weight: 700; }
+  .bz-legend-warning[hidden] { display: none; }
 
   .bz-export-bar {
     display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
@@ -1205,10 +1208,22 @@ import ToolMeta from '../../components/ToolMeta.astro';
       const d = 1e6 / density;                                // nm
       const sinI = Math.sin(thetaI);
 
-      const orders: { m: number; thetaM: number }[] = [];
+      // Cap the displayed orders: at very low groove density (huge period) the
+      // grating supports thousands of propagating orders, which would blow up
+      // the DOM/canvas. Report the true count but only build up to MAX_ORDERS.
+      const MAX_ORDERS = 20;
       const mMin = Math.ceil((-1 + sinI) * d / lambda);
       const mMax = Math.floor((1 + sinI) * d / lambda);
-      for (let m = mMin; m <= mMax; m++) {
+      const totalOrders = Math.max(0, mMax - mMin + 1);
+      const truncated = totalOrders > MAX_ORDERS;
+      let dispMin = mMin, dispMax = mMax;
+      if (truncated) {                                   // window of MAX_ORDERS lowest-|m| orders, centred on 0
+        dispMin = Math.max(mMin, -Math.floor(MAX_ORDERS / 2));
+        dispMax = dispMin + MAX_ORDERS - 1;
+        if (dispMax > mMax) { dispMax = mMax; dispMin = dispMax - MAX_ORDERS + 1; }
+      }
+      const orders: { m: number; thetaM: number }[] = [];
+      for (let m = dispMin; m <= dispMax; m++) {
         const s = m * lambda / d - sinI;
         if (s >= -1 && s <= 1) orders.push({ m, thetaM: Math.asin(s) });
       }
@@ -1227,11 +1242,13 @@ import ToolMeta from '../../components/ToolMeta.astro';
       const dt = din[0] * nf[0] + din[1] * nf[1];
       const dout = [din[0] - 2 * dt * nf[0], din[1] - 2 * dt * nf[1]];
       const blazeAngle = Math.atan2(dout[0], dout[1]);
+      // Order nearest the blaze direction, computed analytically so it stays
+      // correct even when the displayed orders are truncated.
       let blazeOrder: { m: number; thetaM: number } | null = null;
-      let best = Infinity;
-      for (const o of orders) {
-        const dd = Math.abs(o.thetaM - blazeAngle);
-        if (dd < best) { best = dd; blazeOrder = o; }
+      if (totalOrders > 0) {
+        const mB = Math.max(mMin, Math.min(mMax, Math.round((Math.sin(blazeAngle) + sinI) * d / lambda)));
+        const sB = mB * lambda / d - sinI;
+        if (sB >= -1 && sB <= 1) blazeOrder = { m: mB, thetaM: Math.asin(sB) };
       }
 
       const sLit = mSel * lambda / (2 * d);
@@ -1241,7 +1258,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       const fsr = mSel !== 0 ? lambda / Math.abs(mSel) : null;
       const resolving = Math.abs(mSel) * N;
       const echelle = gamma > 45 * DEG;
-      return { density, d, gammaDeg, gamma, lambda, thetaIDeg, thetaI, mSel, N, orders, sel, blazeAngle, blazeOrder, littrow, blazeLambda, angDisp, fsr, resolving, echelle };
+      return { density, d, gammaDeg, gamma, lambda, thetaIDeg, thetaI, mSel, N, orders, totalOrders, truncated, maxOrders: MAX_ORDERS, sel, blazeAngle, blazeOrder, littrow, blazeLambda, angDisp, fsr, resolving, echelle };
     }
 
     const fmtDeg = (rad: number | null): string => (rad == null ? '—' : `${(rad / DEG).toFixed(2)}°`);
@@ -1318,7 +1335,9 @@ import ToolMeta from '../../components/ToolMeta.astro';
         ctx.textBaseline = 'bottom';
         ctx.fillText(`m=${o.m}`, r.ex + (right ? 5 : -5), r.ey - 2);
       }
-      statusEl.textContent = `${M.orders.length} order${M.orders.length === 1 ? '' : 's'}`;
+      statusEl.textContent = M.truncated
+        ? `${M.totalOrders} orders (showing ${M.orders.length})`
+        : `${M.orders.length} order${M.orders.length === 1 ? '' : 's'}`;
     }
 
     function renderReadout(M: ReturnType<typeof model>) {
@@ -1333,7 +1352,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       setText('bz-v-fsr', M.fsr == null ? '—' : M.fsr.toFixed(1), M.fsr == null);
       setText('bz-v-r', M.resolving.toLocaleString());
       setText('bz-v-echelle', M.echelle ? 'yes' : 'no', !M.echelle);
-      setText('bz-v-norders', String(M.orders.length));
+      setText('bz-v-norders', String(M.totalOrders));
     }
 
     function renderOrderButtons(M: ReturnType<typeof model>) {
@@ -1348,8 +1367,15 @@ import ToolMeta from '../../components/ToolMeta.astro';
         : '<span class="bz-order-empty">no propagating orders</span>';
     }
 
+    function updateLegendWarning(M: ReturnType<typeof model>) {
+      const w = document.getElementById('bz-legend-warning');
+      if (!w) return;
+      if (M.truncated) { w.textContent = `⚠ ${M.totalOrders} orders — showing ${M.orders.length}`; w.hidden = false; }
+      else w.hidden = true;
+    }
+
     let raf = 0;
-    const update = () => { const M = model(); draw(M); renderReadout(M); renderOrderButtons(M); };
+    const update = () => { const M = model(); draw(M); renderReadout(M); renderOrderButtons(M); updateLegendWarning(M); };
     const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); };
 
     PARAM_IDS.forEach(id => document.getElementById(id)?.addEventListener('input', schedule));
