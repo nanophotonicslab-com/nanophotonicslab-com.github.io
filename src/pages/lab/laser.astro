@@ -1055,6 +1055,17 @@ initPermalinks({
   .dual-chart { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .dual-chart canvas { aspect-ratio: 4 / 3; }
   @media (max-width: 600px) { .dual-chart { grid-template-columns: 1fr; } }
+
+  /* Keyboard focus visibility (a11y) */
+  .calc-tab:focus-visible,
+  .field-input:focus-visible,
+  .unit-sel:focus-visible,
+  .preset-btn:focus-visible,
+  .dl-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 </style>
 
 <script>

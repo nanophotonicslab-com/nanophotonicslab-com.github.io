@@ -1014,6 +1014,18 @@ initPermalinks({
     .drude-grid { grid-template-columns: 1fr; }
     .chart-wrap canvas { aspect-ratio: 4 / 3; }
   }
+
+  /* Keyboard focus visibility (a11y) */
+  .plot-tab:focus-visible,
+  .param-slider:focus-visible,
+  .param-number:focus-visible,
+  .param-limit:focus-visible,
+  .param-select:focus-visible,
+  .preset-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 </style>
 
 <script>

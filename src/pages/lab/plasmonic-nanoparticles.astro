@@ -930,6 +930,17 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     .shape-strip { padding: var(--space-sm); }
     .shape-strip__header { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
   }
+
+  /* Keyboard focus visibility (a11y) */
+  .tab-btn:focus-visible,
+  .seg-btn:focus-visible,
+  .param-slider:focus-visible,
+  .param-number:focus-visible,
+  .param-select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 </style>
 
 <script>

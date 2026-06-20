@@ -1711,6 +1711,20 @@ import ToolMeta from '../../../components/ToolMeta.astro';
       grid-template-columns: 1fr;
     }
   }
+
+  /* Keyboard focus visibility (a11y) */
+  .module-card:focus-visible,
+  .seg-btn:focus-visible,
+  .interface-btn:focus-visible,
+  .tool-btn:focus-visible,
+  .preset-chip:focus-visible,
+  .reset-btn:focus-visible,
+  .param-number:focus-visible,
+  .layer-input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 </style>
 
 <script>

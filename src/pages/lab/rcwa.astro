@@ -858,6 +858,16 @@ import ToolMeta from '../../components/ToolMeta.astro';
   .progress-fill {
     height: 100%; width: 0%; background: var(--spectrum); transition: width 0.2s ease;
   }
+
+  /* Keyboard focus visibility (a11y) */
+  .module-card:focus-visible,
+  .param-slider:focus-visible,
+  .param-number:focus-visible,
+  .param-select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 </style>
 
 <script>
