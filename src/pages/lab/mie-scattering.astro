@@ -2808,7 +2808,12 @@ initPermalinks({
   const thermalLayersEl = document.getElementById('thermal-layers')!;
   const thermalSpectrumCanvas = document.getElementById('thermal-spectrum-canvas') as HTMLCanvasElement;
   const thermalRmax = document.getElementById('thermal-rmax') as HTMLInputElement;
-  const renderIfThermal = () => { if (viewTabs.value === 'thermal') render(); };
+  let thermalRaf = 0;
+  const renderIfThermal = () => {
+    if (viewTabs.value !== 'thermal') return;
+    cancelAnimationFrame(thermalRaf);
+    thermalRaf = requestAnimationFrame(render);
+  };
   thermalRmax.addEventListener('input', renderIfThermal);
   thermalLambdaSlider.addEventListener('input', () => { thermalLambdaNum.value = thermalLambdaSlider.value; renderIfThermal(); });
   thermalLambdaNum.addEventListener('input', () => {
