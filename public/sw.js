@@ -1,5 +1,5 @@
 // Service Worker — NanophotonicsLab PWA
-const CACHE = 'nanolab-v2';
+const CACHE = 'nanolab-v3';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const IS_LOCAL = LOCAL_HOSTS.has(self.location.hostname);
 
@@ -9,6 +9,7 @@ const SHELL = [
   '/lab/',
   '/manifest.json',
   '/favicon.svg',
+  '/favicon.ico',
   '/icon-192.png',
 ];
 
