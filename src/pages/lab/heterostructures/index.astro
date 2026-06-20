@@ -3895,14 +3895,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     return lines.join('\n') + '\n';
   }
 
-  function downloadBlob(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  import { downloadBlob } from '../../../lib/download';
 
   const presetChipIds = [
     'preset-dmd', 'preset-mdm',
@@ -5142,12 +5135,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     return [...head, tCsvHeader.join(','), ...tCsvRows.map(r => r.join(','))].join('\n') + '\n';
   }
 
-  function downloadBlobTmm(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-  }
+  import { downloadBlob as downloadBlobTmm } from '../../../lib/download';
 
   // ---- events -------------------------------------------------------------
   $t('tmm-add-layer').addEventListener('click', tmmAddLayer);

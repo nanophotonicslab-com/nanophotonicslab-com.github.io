@@ -4789,7 +4789,7 @@ initPermalinks({
 
   // === Downloads ===
 
-  function downloadBlob(blob: Blob, fn: string) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fn; a.click(); URL.revokeObjectURL(u); }
+  import { downloadBlob } from '../../lib/download';
   function filenameStem() {
     const m = materialSelect.value;
     const matPart = m === 'custom' ? 'eps' + epsParam.value : m === 'drude' ? `drude_wp${readDrude(drudeHandle).wp}` : m;

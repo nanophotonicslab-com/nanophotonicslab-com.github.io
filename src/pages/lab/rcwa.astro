@@ -1103,11 +1103,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
   });
 
   // Export
-  function downloadBlob(blob: Blob, fn: string) {
-    const u = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = u; a.download = fn; a.click();
-    URL.revokeObjectURL(u);
-  }
+  import { downloadBlob } from '../../lib/download';
 
   document.getElementById('dl-png')!.addEventListener('click', () => {
     if (!lastResult) return;

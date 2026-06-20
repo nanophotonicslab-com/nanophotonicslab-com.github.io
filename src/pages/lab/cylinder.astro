@@ -4494,11 +4494,7 @@ initPermalinks({
   // ===== Export / Share =====
   const canvas = document.getElementById('cyl-chart') as HTMLCanvasElement;
 
-  function downloadBlob(blob: Blob, fn: string) {
-    const u = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = u; a.download = fn; a.click();
-    URL.revokeObjectURL(u);
-  }
+  import { downloadBlob } from '../../lib/download';
 
   function selectedFieldProfileForExport(): FieldProfile | null {
     if (!selectedFieldPoint || state.materialId !== 'custom') return null;

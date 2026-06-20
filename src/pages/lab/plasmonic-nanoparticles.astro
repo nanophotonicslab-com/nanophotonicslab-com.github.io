@@ -2554,14 +2554,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     drawChart();
   });
 
-  function downloadBlob(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  import { downloadBlob } from '../../lib/download';
 
   $('dl-png').addEventListener('click', () => {
     const canvas = $('plasmon-chart') as HTMLCanvasElement;
