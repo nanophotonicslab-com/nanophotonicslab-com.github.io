@@ -16,6 +16,7 @@ export const TOOL_VERSIONS: Record<string, ToolVersion> = {
   'laser':                   { version: '1.0.0', updated: '2026-06-10' },
   'units':                   { version: '1.0.0', updated: '2026-06-10' },
   'assistant':               { version: '0.1.0', updated: '2026-06-10' },
+  'heterostructures':        { version: '1.0.0', updated: '2026-06-20' },
 };
 
 export function formatCitation(toolName: string, toolSlug: string): string {

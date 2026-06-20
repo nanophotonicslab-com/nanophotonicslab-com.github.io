@@ -1,5 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import ModelInfo from '../../../components/ModelInfo.astro';
+import ToolMeta from '../../../components/ToolMeta.astro';
 ---
 
 <Layout title="Heterostructures | Lab" description="Interactive stacking solver for the electromagnetic modes of layered heterostructures: surface plasmons at planar Drude interfaces, with normalized Economou axes and physical unit controls.">
@@ -12,8 +14,24 @@ import Layout from '../../../layouts/Layout.astro';
         heterostructures. Pick a module below, build your stack, and explore its
         response with normalized Economou axes and physical unit controls.
       </p>
+      <ToolMeta slug="heterostructures" name="Heterostructures" />
     </div>
   </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Two modules over planar stratified media. <strong>Surface plasmons</strong> solves the TM dispersion relation of single boundaries and thin films from matched Drude dielectric layers. <strong>Layered structure</strong> uses the transfer-matrix method (TMM) for reflection/transmission spectra and field profiles of arbitrary multilayer stacks.</dd>
+      <dt>Assumptions</dt>
+      <dd>Infinite, flat, parallel interfaces; isotropic and local dielectric functions; TM polarization for the plasmon branch; metals described by a Drude model &epsilon;(E) = &epsilon;<sub>&infin;</sub> &minus; (&omega;<sub>p</sub>/E)<sup>2</sup>.</dd>
+      <dt>Validity</dt>
+      <dd>Exact within the transfer-matrix formalism for any stack of isotropic homogeneous layers. The plasmon dispersion uses the lossless Drude branch.</dd>
+      <dt>Limitations</dt>
+      <dd>No in-plane structure or roughness, no spatial dispersion (nonlocality), no absorption in the dispersion-pole branch. Graphene module not yet available.</dd>
+      <dt>References</dt>
+      <dd>E. N. Economou, Phys. Rev. <strong>182</strong>, 539 (1969); P. Yeh, <em>Optical Waves in Layered Media</em> (Wiley, 1988).</dd>
+    </dl>
+  </ModelInfo>
 
   <section class="section">
     <div class="container">
