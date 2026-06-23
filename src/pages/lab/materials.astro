@@ -42,15 +42,15 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <div class="module-bar__grid">
           <button type="button" class="module-card active" id="module-materials" role="radio" aria-checked="true">
             <span class="module-card__name">Materials</span>
-            <span class="module-card__desc">Tabulated n, k &middot; ε(ω) of metals &amp; dielectrics</span>
+            <span class="module-card__desc">n, k &middot; ε(ω) of metals &amp; dielectrics</span>
           </button>
           <button type="button" class="module-card" id="module-drude" role="radio" aria-checked="false">
             <span class="module-card__name">Drude</span>
             <span class="module-card__desc">Free-electron model &middot; ε<sub>∞</sub>, ω<sub>p</sub>, γ</span>
           </button>
-          <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false" disabled title="Coming soon">
-            <span class="module-card__name">Graphene <span class="module-card__badge">soon</span></span>
-            <span class="module-card__desc">Surface conductivity &middot; Kubo model</span>
+          <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false">
+            <span class="module-card__name">Graphene</span>
+            <span class="module-card__desc">Surface conductivity σ(ω) &middot; Kubo</span>
           </button>
           <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false" disabled title="Coming soon">
             <span class="module-card__name">TMDC <span class="module-card__badge">soon</span></span>
@@ -62,7 +62,13 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
-          <h3 class="controls-title">Parameters</h3>
+          <div class="controls-head">
+            <h3 class="controls-title">Parameters</h3>
+            <div class="seg controls-head__toggle" id="lin-nl-tabs" hidden role="radiogroup" aria-label="Linear / nonlinear">
+              <button type="button" class="seg-btn active" data-linnl="lin" role="radio" aria-checked="true" title="Linear conductivity">LIN</button>
+              <button type="button" class="seg-btn" data-linnl="nl" role="radio" aria-checked="false" title="Nonlinear (third-order) conductivity">NL</button>
+            </div>
+          </div>
 
           <!-- Materials controls -->
           <div class="ctrl-group" id="ctrl-materials">
@@ -124,13 +130,9 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                 <label for="drude-wp">&#8463;ω<sub>p</sub> [eV]</label>
                 <input type="text" class="field-input" id="drude-wp" inputmode="decimal" value="9.06">
               </div>
-              <div class="field">
-                <label for="drude-gamma">γ = &#8463;τ<sup>&minus;1</sup> [eV]</label>
-                <input type="text" class="field-input" id="drude-gamma" inputmode="decimal" value="0.071">
-              </div>
-              <div class="field">
-                <label for="drude-tau">τ [fs]</label>
-                <input type="text" class="field-input" id="drude-tau" inputmode="decimal" value="9.27">
+              <div class="mini-row">
+                <div class="mini-field"><label for="drude-gamma">γ = &#8463;τ<sup>&minus;1</sup> [eV]</label><input type="text" class="field-input" id="drude-gamma" inputmode="decimal" value="0.071"></div>
+                <div class="mini-field"><label for="drude-tau">τ [fs]</label><input type="text" class="field-input" id="drude-tau" inputmode="decimal" value="9.27"></div>
               </div>
             </div>
             <div class="preset-row">
@@ -141,13 +143,62 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
             </div>
           </div>
 
+          <!-- Graphene controls -->
+          <div class="ctrl-group" id="ctrl-graphene" hidden>
+            <div class="fields">
+              <div class="field" id="gr-model-field">
+                <label>Model</label>
+                <div class="seg" id="gr-model-tabs" role="radiogroup" aria-label="Graphene model">
+                  <button type="button" class="seg-btn" data-grmodel="drude" role="radio" aria-checked="false">Drude</button>
+                  <button type="button" class="seg-btn active" data-grmodel="local" role="radio" aria-checked="true">Local RPA</button>
+                  <button type="button" class="seg-btn" data-grmodel="nonlocal" role="radio" aria-checked="false">Nonlocal RPA</button>
+                </div>
+              </div>
+              <div class="field" id="gr-process-field" hidden>
+                <label for="gr-process">Process</label>
+                <select class="field-input" id="gr-process" aria-label="Nonlinear process">
+                  <option value="thg">THG (Cox)</option>
+                  <option value="kerr">Kerr (Cox)</option>
+                  <option value="mikh">THG (Mikhailov)</option>
+                  <option value="shg">SHG (Cox)</option>
+                  <option value="or">Optical rectification (Cox)</option>
+                </select>
+              </div>
+              <div class="field gr-ef-field">
+                <label for="gr-ef">E<sub>F</sub> [eV]</label>
+                <input type="text" class="field-input gr-ef-num" id="gr-ef" inputmode="decimal" value="0.4">
+                <input type="range" class="gr-slider" id="gr-ef-slider" min="0" max="1.5" step="0.01" value="0.4" aria-label="Fermi energy">
+              </div>
+              <div class="mini-row">
+                <div class="mini-field"><label for="gr-gamma">γ [eV]</label><input type="text" class="field-input" id="gr-gamma" inputmode="decimal" value="0.0037"></div>
+                <div class="mini-field"><label for="gr-tau">τ [fs]</label><input type="text" class="field-input" id="gr-tau" inputmode="decimal" value="177.9"></div>
+                <div class="mini-field"><label for="gr-mobility">μ<sup>DC</sup> [cm²/Vs]</label><input type="text" class="field-input" id="gr-mobility" inputmode="decimal" value="4448"></div>
+              </div>
+              <div class="field gr-ef-field">
+                <label for="gr-temp">T [K]</label>
+                <input type="text" class="field-input gr-ef-num" id="gr-temp" inputmode="decimal" value="300">
+                <input type="range" class="gr-slider" id="gr-temp-slider" min="0" max="1000" step="5" value="300" list="gr-temp-marks" aria-label="Temperature">
+                <datalist id="gr-temp-marks"><option value="300" label="300 K"></option></datalist>
+              </div>
+            </div>
+          </div>
+
           <h3>Display</h3>
           <div class="fields">
-            <div class="field">
+            <div class="field" id="qty-field">
               <label>Quantity</label>
               <div class="seg" id="qty-tabs" role="radiogroup" aria-label="Quantity">
                 <button type="button" class="seg-btn active" data-qty="eps" role="radio" aria-checked="true">ε (Re, Im)</button>
                 <button type="button" class="seg-btn" data-qty="nk" role="radio" aria-checked="false">n, k</button>
+              </div>
+            </div>
+            <div class="field" id="gr-unit-field" hidden>
+              <label>Units</label>
+              <div class="seg" id="gr-unit-tabs" role="radiogroup" aria-label="Conductivity units">
+                <button type="button" class="seg-btn active" data-grunit="sigma0" role="radio" aria-checked="true">σ₀</button>
+                <button type="button" class="seg-btn" data-grunit="esu" role="radio" aria-checked="false">esu</button>
+                <button type="button" class="seg-btn" data-grunit="au" role="radio" aria-checked="false">a.u.</button>
+                <button type="button" class="seg-btn" data-grunit="si" role="radio" aria-checked="false">SI</button>
               </div>
             </div>
             <div class="field">
@@ -173,6 +224,26 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
               <label for="mat-rmax" id="rmax-label">λ max</label>
               <input type="text" class="field-input" id="mat-rmax" inputmode="decimal" value="2000">
             </div>
+            <div class="field" id="gr-qunit-field" hidden>
+              <label>Q unit</label>
+              <div class="seg" id="gr-qunit-tabs" role="radiogroup" aria-label="Q unit">
+                <button type="button" class="seg-btn active" data-grqunit="nm" role="radio" aria-checked="true">nm⁻¹</button>
+                <button type="button" class="seg-btn" data-grqunit="kf" role="radio" aria-checked="false">k<sub>F</sub></button>
+              </div>
+            </div>
+            <div class="field" id="gr-qmin-field" hidden>
+              <label for="gr-qmin">Q min</label>
+              <input type="text" class="field-input" id="gr-qmin" inputmode="decimal" value="0">
+            </div>
+            <div class="field" id="gr-qmax-field" hidden>
+              <label for="gr-qmax">Q max</label>
+              <input type="text" class="field-input" id="gr-qmax" inputmode="decimal" value="1.2">
+            </div>
+            <div class="field gr-ef-field" id="gr-q-field" hidden>
+              <label for="gr-q">Q cut</label>
+              <input type="text" class="field-input gr-ef-num" id="gr-q" inputmode="decimal" value="0.3">
+              <input type="range" class="gr-slider" id="gr-q-slider" min="0" max="1.2" step="0.012" value="0.3" aria-label="Q cut (vertical line on the σ(Q,ω) map)">
+            </div>
           </div>
           <p class="ctrl-note" id="range-note"></p>
         </div>
@@ -180,7 +251,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <!-- ===== Results ===== -->
         <div class="mat-results card">
           <div class="chart-header">
-            <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
+            <span class="chart-title-wrap">
+              <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
+              <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
+            </span>
             <span class="chart-header__right">
               <span class="mat-legend" id="mat-legend"></span>
             </span>
@@ -191,11 +265,22 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
           <div class="output-card card" id="readout"></div>
 
+          <div class="gr-map-card card" id="gr-map-card" hidden>
+            <div class="gr-map-head">
+              <span class="gr-map-title">σ(Q, ω) / σ₀ — nonlocal RPA map</span>
+              <span class="gr-map-hint">Drag the <b>Q</b> slider (Range) to move the dashed cut</span>
+            </div>
+            <div class="chart-wrap gr-map-wrap"><canvas id="gr-map" aria-label="Nonlocal conductivity map σ(Q,ω)"></canvas></div>
+          </div>
+
           <div class="mat-export-bar">
             <span class="mat-export-label">Export</span>
             <button id="mat-dl-png" class="share-btn" title="Download plot as PNG">PNG</button>
             <button id="mat-dl-csv" class="share-btn" title="Download data as CSV">CSV</button>
           </div>
+
+          <div class="notes-card card" id="mat-notes"></div>
+          <div class="references card" id="mat-refs"></div>
         </div>
       </div>
     </div>
@@ -236,18 +321,24 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   .controls h3:first-of-type, .controls .ctrl-group h3 { }
   .controls-title { margin: 0 0 0.25rem !important; padding-top: 0 !important; border-top: none !important; font-size: 0.95rem !important; }
+  .controls-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .seg.controls-head__toggle { flex: 0 0 auto; width: 104px; }   /* fixed width, hugs right margin */
+  .controls-head__toggle[hidden] { display: none; }
+  .controls-head__toggle .seg-btn { flex: 1 1 0; padding: 0.2rem 0; font-weight: 700; font-size: 0.72rem; }  /* equal LIN / NL halves */
   .ctrl-group h3 { margin-top: 0; padding-top: 0; border-top: none; }
   .ctrl-group[hidden] { display: none; }
 
   .fields { display: flex; flex-direction: column; gap: 0.5rem; }
   .field { display: flex; align-items: center; gap: 0.5rem; }
-  .field label { flex: 0 0 auto; min-width: 92px; font-size: 0.8rem; color: var(--text-soft); }
+  .field[hidden] { display: none; }
+  .field label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
   .field-input {
     flex: 1 1 auto; min-width: 0; width: 100%; padding: 0.4rem 0.55rem;
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.85rem;
   }
   .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+  .field-input:disabled, .gr-slider:disabled { opacity: 0.45; cursor: not-allowed; }
   select.field-input { cursor: pointer; }
 
   .ctrl-note { font-size: 0.7rem; color: var(--text-muted); margin: 0.4rem 0 0; line-height: 1.4; }
@@ -264,7 +355,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   /* Segmented toggle */
   .seg { display: inline-flex; flex: 1 1 auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); overflow: hidden; }
   .seg-btn {
-    flex: 1 1 0; padding: 0.35rem 0.4rem; border: none; background: var(--bg);
+    flex: 1 1 0; padding: 0.35rem 0.3rem; border: none; background: var(--bg);
     color: var(--text-soft); font-family: var(--font); font-size: 0.74rem; font-weight: 600;
     cursor: pointer; transition: background 0.12s, color 0.12s; white-space: nowrap;
   }
@@ -272,9 +363,48 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .seg-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.06); color: var(--primary); }
   .seg-btn.active { background: var(--primary); color: #fff; }
 
-  .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+  .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; overflow: visible; }
   .chart-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .chart-title-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
   .chart-title { font-weight: 600; font-size: 0.95rem; }
+  .header-toggle {
+    padding: 0.18rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.7rem; font-weight: 700; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .header-toggle[hidden] { display: none; }
+  .header-toggle:hover { border-color: var(--primary); color: var(--primary); }
+  .header-toggle[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .gr-slider { width: 100%; accent-color: var(--primary); cursor: pointer; margin: -0.15rem 0 0.1rem; }
+  /* E_F: label + number + slider on one line */
+  .gr-ef-field { display: flex; align-items: center; gap: 0.5rem; }
+  .gr-ef-num { flex: 0 0 4rem; }
+  .gr-ef-field .gr-slider { flex: 1 1 auto; margin: 0; min-width: 0; }
+  /* damping / lifetime / mobility on one line */
+  .mini-row { display: flex; gap: 0.4rem; align-items: end; }
+  .mini-field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  .mini-field label { font-size: 0.8rem; font-weight: 400; color: var(--text-soft); line-height: 1.15; min-height: 1.6em; }
+  .mini-field .field-input { width: 100%; }
+  /* notes box */
+  .notes-card { padding: var(--space-md); }
+  .notes-card :global(h4) { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; }
+  .notes-card :global(ul) { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .notes-card :global(li) { font-size: 0.76rem; line-height: 1.4; color: var(--text-soft); }
+  .notes-card :global(b) { color: var(--text); }
+  .gr-map-card { padding: var(--space-md); margin-top: var(--space-sm); }
+  .gr-map-card[hidden] { display: none; }
+  .gr-map-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: 0.4rem; }
+  .gr-map-title { font-size: 0.85rem; font-weight: 800; }
+  .gr-map-hint { font-size: 0.7rem; color: var(--text-muted); }
+  .gr-map-wrap { position: relative; width: 100%; }
+  .gr-map-wrap canvas { width: 100%; display: block; }
+  .references { padding: var(--space-md); margin-top: var(--space-sm); }
+  .references[hidden] { display: none; }
+  .references :global(h4) { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; }
+  .references :global(.reference-list) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
+  .references :global(.reference-list li) { display: grid; grid-template-columns: 1.6rem 1fr; font-size: 0.74rem; line-height: 1.4; color: var(--text-soft); }
+  .references :global(.ref-index) { font-weight: 700; color: var(--text-soft); }
+  .references :global(a) { color: var(--accent); }
   .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
   .mat-legend { display: inline-flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
   :global(.mat-legend-item) { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; font-weight: 600; color: var(--text-soft); }
@@ -316,20 +446,39 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; cursor: crosshair; border-radius: var(--radius-sm); }
 
   /* Readout (built at runtime → global) */
-  .output-card { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.5rem; }
+  .output-card { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.5rem; overflow: visible; }
   :global(.readout-row) { display: grid; gap: 0.5rem; align-items: stretch; }
-  :global(.readout-shared) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  :global(.readout-mat) { grid-template-columns: minmax(96px, 0.9fr) repeat(4, minmax(0, 1fr)); }
+  :global(.readout-shared) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  :global(.readout-mat) { grid-template-columns: minmax(84px, 0.8fr) repeat(5, minmax(0, 1fr)); }
+  :global(.readout-sig) { grid-template-columns: minmax(56px, 0.5fr) repeat(4, minmax(0, 1fr)); }
+  :global(.readout-nl) { grid-template-columns: minmax(64px, 0.6fr) repeat(2, minmax(0, 1fr)); }
   @media (max-width: 620px) {
     :global(.readout-mat) { grid-template-columns: 1fr 1fr; }
     :global(.readout-mat__name) { grid-column: 1 / -1; }
+    :global(.readout-sig) { grid-template-columns: repeat(2, 1fr); }
+    :global(.readout-sig) :global(.readout-mat__name) { grid-column: 1 / -1; }
+    :global(.readout-nl) :global(.readout-mat__name) { grid-column: 1 / -1; }
   }
   :global(.readout-mat__name) { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
   :global(.readout-mat__dot) { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
   :global(.stat) {
+    position: relative;
     display: flex; flex-direction: column; gap: 0.1rem; min-width: 0;
     padding: 0.45rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg-soft);
   }
+  :global(.stat-info) {
+    position: absolute; top: 0.42rem; right: 0.42rem; width: 1.1rem; height: 1.1rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg);
+    color: var(--text-muted); font-family: var(--font); font-size: 0.72rem; font-weight: 750; line-height: 1; cursor: help; z-index: 1;
+  }
+  :global(.stat-info:hover), :global(.stat-info:focus-visible) { border-color: var(--primary-light); color: var(--primary); outline: none; }
+  :global(.stat-tooltip) {
+    position: absolute; top: calc(100% + 0.4rem); right: 0; width: min(220px, 70vw); padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft);
+    box-shadow: var(--shadow-md); font-size: 0.72rem; font-weight: 500; line-height: 1.35; text-align: left;
+    pointer-events: none; opacity: 0; transform: translateY(-3px); transition: opacity 0.15s, transform 0.15s; z-index: 100;
+  }
+  :global(.stat-info:hover .stat-tooltip), :global(.stat-info:focus-visible .stat-tooltip) { opacity: 1; transform: translateY(0); }
   :global(.stat-label) { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
   :global(.stat-value) { font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.2; overflow-wrap: anywhere; }
 
@@ -388,14 +537,16 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   interface Source { label: string; color: string; nk: (lamNm: number) => { re: number; im: number; n: number; k: number }; dataLo: number; dataHi: number; }
 
-  type Mod = 'materials' | 'drude';
+  type Mod = 'materials' | 'drude' | 'graphene';
   type Quantity = 'eps' | 'nk';
+  const isSigma = () => mod === 'graphene';
   type Axis = 'energy' | 'wavelength';
   let mod: Mod = 'materials';
   let quantity: Quantity = 'eps';
   let axis: Axis = 'wavelength';
   let waveUnit: 'nm' | 'um' = 'nm';
-  let energyUnit: 'eV' | 'meV' = 'eV';
+  let energyUnit: 'eV' | 'meV' | 'THz' | 'EF' = 'eV';
+  let grQUnit: 'nm' | 'kf' = 'nm';   // colormap Q axis: nm⁻¹ or normalized Q/k_F
   let mat2On = false;                       // second material in the Materials module
   // canonical plotting window, always stored as wavelength in nm (lo < hi)
   let rangeLoNm = 200, rangeHiNm = 2000;
@@ -493,26 +644,258 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   };
   const drudeParams = () => ({ epsB: num('drude-epsb', 1), wpEv: num('drude-wp', 9), gammaEv: num('drude-gamma', 0.05) });
 
+  // ── Graphene linear surface conductivity σ(ω), in units of σ₀ = e²/4ħ ──
+  // Ported from the MATLAB/C routines (graphene_sigma1.m, graphene.h). In the
+  // closed forms the eV→a.u. factors cancel, so we work directly in eV. σ₀ = 1/4.
+  const KB_EV = 8.617333262e-5;   // Boltzmann constant in eV/K
+  // i·μ / [π (ω + iγ)]  (intraband Drude term, a.u.)
+  function grDrude(mu: number, gam: number, w: number): { re: number; im: number } {
+    const dr = Math.PI * w, di = Math.PI * gam, d2 = dr * dr + di * di;
+    return { re: mu * di / d2, im: mu * dr / d2 };           // i/(dr+idi) = (di + i·dr)/|·|²
+  }
+  function grMuT(EF: number, T: number): number {
+    const KT = KB_EV * Math.max(T, 1e-9);
+    return Math.abs(EF) + 2 * KT * Math.log(1 + Math.exp(-Math.abs(EF) / KT));
+  }
+  // interband, T=0 (exact z-formula of graphene_sigma1.m), a.u.
+  function grInterT0(EF: number, gam: number, w: number): { re: number; im: number } {
+    const nr = w - 2 * EF, ni = gam, dr = w + 2 * EF, di = gam, dd = dr * dr + di * di;
+    const zr = (nr * dr + ni * di) / dd, zi = (ni * dr - nr * di) / dd;
+    const r = Math.hypot(zr, zi), th = Math.atan2(zi, zr);
+    return { re: 0.25 * (1 - th / Math.PI), im: 0.25 * Math.log(r) / Math.PI };
+  }
+  // interband, finite T (thermal μ + Hanson smearing), a.u.
+  function grInterT(EF: number, gam: number, T: number, w: number): { re: number; im: number } {
+    const KT = KB_EV * Math.max(T, 1e-9), mu = grMuT(EF, T), x = w - 2 * mu;
+    return {
+      re: 0.25 * (0.5 + Math.atan(x / (2 * KT)) / Math.PI),
+      im: 0.25 * Math.log((x * x + 4 * KT * KT) / ((w + 2 * mu) * (w + 2 * mu))) / (2 * Math.PI),
+    };
+  }
+  let grModel: 'drude' | 'local' | 'nonlocal' = 'local';
+  let grTempSaved = '300';   // T restored when leaving the (T=0) nonlocal RPA model
+  let grDecompose = false;
+  let grUnit = 'sigma0';
+  let grNL = false;                                                // linear vs nonlinear
+  let grProcess: 'thg' | 'kerr' | 'mikh' | 'shg' | 'or' = 'thg';   // nonlinear process
+
+  // ── complex helpers (principal branch) ──
+  type C = { re: number; im: number };
+  const cc = (re: number, im = 0): C => ({ re, im });
+  const cAdd = (a: C, b: C): C => ({ re: a.re + b.re, im: a.im + b.im });
+  const cSub = (a: C, b: C): C => ({ re: a.re - b.re, im: a.im - b.im });
+  const cMul = (a: C, b: C): C => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+  const cDiv = (a: C, b: C): C => { const d = b.re * b.re + b.im * b.im; return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d }; };
+  const cScale = (s: number, a: C): C => ({ re: s * a.re, im: s * a.im });
+  const cInv = (a: C): C => cDiv(cc(1), a);
+  const c2p = (a: C): C => cMul(a, a);
+  const c3p = (a: C): C => cMul(c2p(a), a);
+  const cMany = (...xs: C[]): C => xs.reduce((p, x) => cMul(p, x));
+  const cSqrt = (z: C): C => { const r = Math.hypot(z.re, z.im); const re = Math.sqrt(Math.max(0, (r + z.re) / 2)); let im = Math.sqrt(Math.max(0, (r - z.re) / 2)); if (z.im < 0) im = -im; return { re, im }; };
+  const cLog = (z: C): C => ({ re: 0.5 * Math.log(z.re * z.re + z.im * z.im), im: Math.atan2(z.im, z.re) });
+
+  const EV_AU = 1 / 27.2113834;
+  const NM_AU = 18.897260;
+  const VF_AU = 137.03599971 / 300;   // Fermi velocity in a.u. (c/300)
+  const PI = Math.PI;
+  const grNLgam = () => Math.max(0, num('gr-gamma', 0.0037)) * EV_AU;
+
+  // ── Linear nonlocal Mermin-RPA, T=0 (Koppens et al., Nano Lett. 11, 3370) → a.u. ──
+  const _Gc = (z: C): C => { const s = cSqrt(cSub(cMul(z, z), cc(1))); return cSub(cMul(z, s), cLog(cAdd(z, s))); };
+  function grNonlocal(wEv: number, qNm?: number): C {
+    const vF = VF_AU, vF2 = vF * vF;
+    const EF = num('gr-ef', 0.4) * EV_AU, gam = grNLgam(), w = wEv * EV_AU;
+    let Q = Math.max(1e-9, qNm ?? grQcutNm()) / NM_AU, Q2 = Q * Q;
+    const wg2 = c2p(cc(w, gam)), kF = EF / vF;
+    if (Q / kF <= 1e-10) { Q = 1e-10 * kF; Q2 = Q * Q; }
+    const wpE = cScale(1 / (vF * Q), cc(w + 2 * EF, gam));
+    const wmE = cScale(1 / (vF * Q), cc(w - 2 * EF, gam));
+    const F = cDiv(cc(vF2 * Q2 / (4 * PI)), cSqrt(cSub(wg2, cc(vF2 * Q2))));
+    let val = _Gc(wpE);
+    val = wmE.re < 0 ? cAdd(cSub(val, _Gc(cScale(-1, wmE))), cc(0, PI)) : cSub(val, _Gc(wmE));
+    const P1 = cAdd(cAdd(cScale(-PI / vF2, cMul(cc(0, 1), F)), cc(-2 * EF / (PI * vF2))), cScale(1 / vF2, cMul(F, val)));
+    const xi = cScale(-1 / Q2, P1);
+    let xi0 = -2 * kF / (PI * vF); const x = 2 * kF / Q;
+    if (x < 1) xi0 += Q / (2 * PI * vF) * (x * Math.sqrt(1 - x * x) - Math.acos(x));
+    xi0 = -xi0 / Q2;
+    const igw = cc(0, gam / w);
+    const xit = cDiv(cMul(cAdd(cc(1), igw), xi), cAdd(cc(1), cMul(igw, cScale(1 / xi0, xi))));
+    return cMul(cc(0, -w), xit);
+  }
+
+  // intra & inter contributions in units of σ₀ (= ×4 from a.u.) at ω [eV]
+  function grapheneParts(w: number): { iRe: number; iIm: number; nRe: number; nIm: number } {
+    if (grModel === 'nonlocal') { const s = cScale(4, grNonlocal(w)); return { iRe: s.re, iIm: s.im, nRe: 0, nIm: 0 }; }
+    const EF = num('gr-ef', 0.4), gam = Math.max(0, num('gr-gamma', 0.0037)), T = Math.max(0, num('gr-temp', 300));
+    const intra = T < 1 ? grDrude(EF, gam, w) : grDrude(grMuT(EF, T), gam, w);
+    const inter = grModel === 'drude' ? { re: 0, im: 0 } : (T < 1 ? grInterT0(EF, gam, w) : grInterT(EF, gam, T, w));
+    return { iRe: intra.re * 4, iIm: intra.im * 4, nRe: inter.re * 4, nIm: inter.im * 4 };
+  }
+  function grapheneTotal(w: number): { re: number; im: number } {
+    const p = grapheneParts(w);
+    return { re: p.iRe + p.nRe, im: p.iIm + p.nIm };
+  }
+
+  // ── Nonlinear conductivities (a.u.) ──
+  // Cox, Silveiro & García de Abajo, PRB 96, 045442 (2017): closed-form harmonics.
+  function grTHGcox(wEv: number): C {   // σ⁽³,³⁾ THG
+    const w = wEv * EV_AU, g = grNLgam(), fct = VF_AU * VF_AU / (4 * PI) / (num('gr-ef', 0.4) * EV_AU);
+    return cDiv(cc(0, 3 * fct), cMany(cc(w, g), cc(2 * w, g), cc(3 * w, g)));
+  }
+  function grKerrCox(wEv: number): C {  // σ⁽³,¹⁾ Kerr
+    const w = wEv * EV_AU, g = grNLgam(), fct = VF_AU * VF_AU / (4 * PI) / (num('gr-ef', 0.4) * EV_AU);
+    return cDiv(cc(0, -3 * fct / (w * w + g * g)), cc(2 * w, g));
+  }
+  function grSHG(name: string, wEv: number): C {   // σ⁽²,²⁾ component A/B/C
+    const w = wEv * EV_AU + 1e-16, g = grNLgam();
+    const fct = cDiv(cc(0, VF_AU * VF_AU / (4 * PI)), cMul(cc(2 * w, g), cc(w, g)));
+    const wg = cc(w, g), wg2 = cc(2 * w, g);
+    let sig: C;
+    if (name === 'A') sig = cScale(-1, cAdd(cScale(3, cInv(wg)), cScale(4, cInv(wg2))));
+    else if (name === 'B') sig = cScale(-1, cSub(cAdd(cScale(-1, cInv(wg)), cScale(4, cInv(wg2))), cc(4 / w)));
+    else sig = cSub(cAdd(cScale(0.5, cInv(wg)), cScale(2, cInv(wg2))), cc(2 / w));
+    return cMul(sig, fct);
+  }
+  function grOR(name: string, wEv: number): C {    // σ⁽²,⁰⁾ component A/B/C/D
+    const w = wEv * EV_AU, g = grNLgam(), fct = VF_AU * VF_AU / g / (4 * PI);
+    const wg = cc(w, -g), wg2 = w * w + g * g, wwg = cc(w * w, w * g);
+    let sig: C;
+    if (name === 'A') sig = cSub(cScale(3, cInv(c2p(wg))), cc(4 / wg2));
+    else if (name === 'B') sig = cSub(cAdd(cInv(c2p(wg)), cc(4 / wg2)), cScale(4, cInv(wwg)));
+    else if (name === 'C') sig = cDiv(cc(0, 2 * g), cc(-w, g));
+    else sig = cAdd(cInv(c2p(cc(w, g))), cScale(4, cInv(wwg)));
+    return cScale(fct, sig);
+  }
+  // Mikhailov, PRB 93, 085403 (2016): full third-harmonic S⁽³⁾_xxxx(ω,ω,ω) (dimensionless).
+  // Appendix-D integrals, general (distinct-argument) branch — valid for ω > 0.
+  function fInt(n: number, a: C, b: C, c: C): C {
+    const am1 = cAdd(a, cc(1)), bm1 = cAdd(b, cc(1)), cm1 = cAdd(c, cc(1));
+    const amb = cSub(a, b), amc = cSub(a, c), bmc = cSub(b, c), cma = cSub(c, a), cmb = cSub(c, b);
+    const la = cLog(am1), lb = cLog(bm1), lc = cLog(cm1);
+    const ab = cMul(a, b), ac = cMul(a, c), bc = cMul(b, c), abc = cMul(ab, c);
+    if (n === 3) return cSub(cAdd(cInv(ab), cMul(cInv(cMul(c2p(a), amb)), la)), cMul(cInv(cMul(c2p(b), amb)), lb));
+    if (n === 4) return cAdd(cAdd(cScale(-1, cInv(cMany(b, amb, bm1))), cMul(cInv(cMul(a, c2p(amb))), la)), cMul(cDiv(cSub(a, cScale(2, b)), cMul(c2p(b), c2p(amb))), lb));
+    if (n === 5) {
+      const apb = cAdd(a, b);
+      const La = cLog(cDiv(cSub(cc(1), a), cAdd(cc(1), a))), Lb = cLog(cDiv(cSub(cc(1), b), cAdd(cc(1), b)));
+      return cAdd(cSub(cScale(4, cInv(ab)), cMul(cDiv(cScale(2, b), cMany(c2p(a), amb, apb)), La)), cMul(cDiv(cScale(2, a), cMany(c2p(b), amb, apb)), Lb));
+    }
+    if (n === 1) {
+      let z = cInv(abc);
+      z = cAdd(z, cDiv(cAdd(cAdd(cScale(-1, ab), cScale(2, ac)), cSub(cScale(3, bc), cScale(4, c2p(c)))), cMany(c, c2p(cma), c2p(bmc), cm1)));
+      z = cSub(z, cInv(cMany(amb, c2p(bmc), bm1)));
+      z = cSub(z, cInv(cMany(amc, bmc, c2p(cm1))));
+      const p4 = cAdd(cAdd(cAdd(cAdd(cScale(-1, c3p(a)), cScale(-2, cMul(c2p(a), c))), cScale(3, abc)), cMul(a, c2p(c))), cScale(-1, cMul(b, c2p(c))));
+      z = cSub(z, cMul(cDiv(p4, cMany(c2p(a), c2p(amb), c3p(amc))), la));
+      const p5 = cAdd(cAdd(cAdd(cScale(-2, ab), ac), cScale(3, c2p(b))), cScale(-1, bc));
+      z = cSub(z, cMul(cDiv(p5, cMany(c2p(b), c2p(amb), c2p(bmc))), lb));
+      const p6 = cAdd(cAdd(cAdd(cAdd(c2p(a), ab), cScale(-4, ac)), cScale(-3, bc)), cScale(5, c2p(c)));
+      z = cSub(z, cMul(cDiv(p6, cMany(c, c3p(amc), c2p(cmb))), lc));
+      return z;
+    }
+    let z = cInv(cMany(b, amb, bmc, bm1));   // n === 2
+    z = cSub(z, cMul(cInv(cMany(a, c2p(amb), amc)), la));
+    const q2 = cAdd(cAdd(cSub(cScale(2, ab), ac), cScale(-3, c2p(b))), cScale(2, bc));
+    z = cSub(z, cMul(cDiv(q2, cMany(c2p(b), c2p(amb), c2p(bmc))), lb));
+    z = cSub(z, cMul(cInv(cMany(c, cma, c2p(bmc))), lc));
+    return z;
+  }
+  function grMikhTHG(wEv: number): C {
+    const EF = num('gr-ef', 0.4) * EV_AU, g = grNLgam(), w = Math.max(wEv, 1e-6) * EV_AU, aE = 2 * Math.abs(EF);
+    const O1 = cScale(1 / aE, cc(w, g)), O12 = cScale(1 / aE, cc(2 * w, g)), O123 = cScale(1 / aE, cc(3 * w, g));
+    const one = cc(1), q = 0.75, oneq = 0.25;   // Dabcd/4 = 3/4 ; (δδ − Dabcd/4) = 1/4
+    const S30 = cDiv(cc(0, 3), cScale(8, cMany(O123, O12, O1)));
+    // S_2_1
+    const I1a = fInt(1, O1, O12, O123), I2a = fInt(2, O1, O12, O123);
+    const p123 = cAdd(one, O123), p12 = cAdd(one, O12);
+    let rA = cDiv(cAdd(one, cScale(q, O123)), cMany(O1, O12, c2p(p123)));
+    rA = cAdd(rA, cDiv(cc(oneq), cMany(O1, p12, p123)));
+    rA = cAdd(rA, cDiv(cc(oneq), cMany(O1, p12, c2p(p123))));
+    rA = cSub(rA, cScale(oneq, I1a)); rA = cAdd(rA, cScale(oneq, I2a));
+    const I1b = fInt(1, cScale(-1, O1), cScale(-1, O12), cScale(-1, O123)), I2b = fInt(2, cScale(-1, O1), cScale(-1, O12), cScale(-1, O123));
+    const m123 = cSub(one, O123), m12 = cSub(one, O12);
+    let rB = cDiv(cSub(one, cScale(q, O123)), cMany(O1, O12, c2p(m123)));
+    rB = cAdd(rB, cDiv(cc(oneq), cMany(cScale(-1, O1), m12, m123)));
+    rB = cAdd(rB, cDiv(cc(oneq), cMany(cScale(-1, O1), m12, c2p(m123))));
+    rB = cSub(rB, cScale(oneq, I1b)); rB = cAdd(rB, cScale(oneq, I2b));
+    const S21 = cAdd(cMul(cc(0, -0.25), rA), cMul(cc(0, 0.25), rB));
+    // S_1_2
+    const I3a = fInt(3, O1, O12, one), I4a = fInt(4, O1, O12, one);
+    let sA = cMul(cDiv(cc(q), cMany(c2p(O1), O123, O12)), cLog(cAdd(one, O1)));
+    sA = cSub(sA, cDiv(cc(q), cMany(O123, O12, O1)));
+    sA = cAdd(sA, cDiv(cc(oneq), cMany(O123, O1, p12)));
+    sA = cSub(sA, cMul(cDiv(cc(oneq), O123), I3a));
+    sA = cAdd(sA, cMul(cDiv(cc(oneq), O123), I4a));
+    const I3b = fInt(3, cScale(-1, O1), cScale(-1, O12), one), I4b = fInt(4, cScale(-1, O1), cScale(-1, O12), one);
+    let sB = cMul(cDiv(cc(q), cMany(c2p(O1), O123, O12)), cLog(cSub(one, O1)));
+    sB = cSub(sB, cDiv(cc(q), cMany(cScale(-1, O123), O12, O1)));
+    sB = cAdd(sB, cDiv(cc(oneq), cMany(O123, O1, m12)));
+    sB = cAdd(sB, cMul(cDiv(cc(oneq), O123), I3b));
+    sB = cSub(sB, cMul(cDiv(cc(oneq), O123), I4b));
+    const S12 = cAdd(cMul(cc(0, 0.25), sA), cMul(cc(0, -0.25), sB));
+    // S_0_3
+    const S03 = cMul(cDiv(cc(0, 3), cScale(32, O12)), fInt(5, O1, O123, one));
+    return cAdd(cAdd(cAdd(S30, S21), S12), S03);
+  }
+
+  const NL_COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706'];
+  function grNLSeries(): { label: string; color: string; fn: (w: number) => C }[] {
+    switch (grProcess) {
+      case 'thg': return [{ label: 'σ⁽³,³⁾', color: '#111827', fn: grTHGcox }];
+      case 'kerr': return [{ label: 'σ⁽³,¹⁾', color: '#111827', fn: grKerrCox }];
+      case 'mikh': return [{ label: 'S⁽³⁾', color: '#111827', fn: grMikhTHG }];
+      case 'shg': return ['A', 'B', 'C'].map((nm, i) => ({ label: `σ⁽²,²⁾ ${nm}`, color: NL_COLORS[i], fn: (w: number) => grSHG(nm, w) }));
+      default: return ['A', 'B', 'C', 'D'].map((nm, i) => ({ label: `σ⁽²,⁰⁾ ${nm}`, color: NL_COLORS[i], fn: (w: number) => grOR(nm, w) }));
+    }
+  }
+  const grProcSymbol = (): string => grProcess === 'thg' ? 'σ⁽³,³⁾' : grProcess === 'kerr' ? 'σ⁽³,¹⁾' : grProcess === 'mikh' ? 'S⁽³⁾' : grProcess === 'shg' ? 'σ⁽²,²⁾' : 'σ⁽²,⁰⁾';
+  const grProcUnit = (): string => grProcess === 'mikh' ? '' : ' (a.u.)';
+  const grProcTitle = (): string => grProcess === 'thg' ? 'Third-harmonic σ⁽³,³⁾ (Cox)' : grProcess === 'kerr' ? 'Kerr σ⁽³,¹⁾ (Cox)' : grProcess === 'mikh' ? 'Third-harmonic S⁽³⁾ (Mikhailov)' : grProcess === 'shg' ? 'Second-harmonic σ⁽²,²⁾' : 'Optical rectification σ⁽²,⁰⁾';
+  // σ/σ₀ → selected unit. esu = c·α/4 cm/s (Gaussian 2D); SI = e²/4ħ S; a.u. = σ₀ = 1/4.
+  const SIGMA_UNITS: { key: string; label: string; factor: number; axis: string }[] = [
+    { key: 'sigma0', label: 'σ₀', factor: 1, axis: 'σ / σ₀' },
+    { key: 'au', label: 'a.u.', factor: 0.25, axis: 'σ (a.u.)' },
+    { key: 'esu', label: 'esu', factor: 5.46923e7, axis: 'σ (esu · cm/s)' },
+    { key: 'si', label: 'S', factor: 6.08528e-5, axis: 'σ (S)' },
+  ];
+  const sigmaUnit = () => SIGMA_UNITS.find(u => u.key === grUnit) ?? SIGMA_UNITS[0];
+
   // ── axis/unit conversions (canonical window = wavelength in nm) ──
+  const C_NM_THZ = 299792.458;          // λ[nm]·ν[THz] = c
+  const KF_FACTOR = 0.6582119569;       // ħ·v_F [eV·nm] (v_F = 1e6 m/s) → k_F[nm⁻¹] = E_F/ħv_F
+  const grEFnow = () => Math.max(1e-9, num('gr-ef', 0.4));
+  const kFnm = () => grEFnow() / KF_FACTOR;   // Fermi wavevector in nm⁻¹
+  const qDispToNm = (d: number) => grQUnit === 'kf' ? d * kFnm() : d;   // Q from display unit → nm⁻¹
+  const qNmToDisp = (nm: number) => grQUnit === 'kf' ? nm / kFnm() : nm;
+  const grQcutNm = () => qDispToNm(num('gr-q', 0.3));
   const xToLamNm = (x: number): number =>
     axis === 'wavelength' ? (waveUnit === 'um' ? x * 1000 : x)
-                          : HC / (energyUnit === 'meV' ? x * 1e-3 : x);
+    : energyUnit === 'THz' ? C_NM_THZ / x
+    : energyUnit === 'EF' ? HC / (x * grEFnow())
+    : HC / (energyUnit === 'meV' ? x * 1e-3 : x);
   const lamNmToX = (lamNm: number): number => {
     if (axis === 'wavelength') return waveUnit === 'um' ? lamNm / 1000 : lamNm;
+    if (energyUnit === 'THz') return C_NM_THZ / lamNm;
     const eEv = HC / lamNm;
+    if (energyUnit === 'EF') return eEv / grEFnow();
     return energyUnit === 'meV' ? eEv * 1e3 : eEv;
   };
   const unitLabel = (): string =>
-    axis === 'wavelength' ? (waveUnit === 'um' ? 'µm' : 'nm') : (energyUnit === 'meV' ? 'meV' : 'eV');
+    axis === 'wavelength' ? (waveUnit === 'um' ? 'µm' : 'nm') : (energyUnit === 'EF' ? 'E_F' : energyUnit);
+  const xAxisLabel = (): string =>
+    axis === 'wavelength' ? `Wavelength (${unitLabel()})`
+    : energyUnit === 'EF' ? 'Photon energy ℏω / E_F' : `Photon energy (${unitLabel()})`;
 
   const rminEl = $('mat-rmin') as HTMLInputElement;
   const rmaxEl = $('mat-rmax') as HTMLInputElement;
   const unitSel = $('range-unit') as HTMLSelectElement;
 
   function refreshUnitSelect() {
+    if (mod !== 'graphene' && energyUnit === 'EF') energyUnit = 'eV';
     unitSel.innerHTML = axis === 'wavelength'
       ? '<option value="nm">nm</option><option value="um">µm</option>'
-      : '<option value="eV">eV</option><option value="meV">meV</option>';
+      : '<option value="eV">eV</option><option value="meV">meV</option><option value="THz">THz</option>'
+        + (mod === 'graphene' ? '<option value="EF">E_F</option>' : '');
     unitSel.value = axis === 'wavelength' ? waveUnit : energyUnit;
   }
 
@@ -520,10 +903,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   function refreshRangeInputs() {
     const a = lamNmToX(rangeLoNm), b = lamNmToX(rangeHiNm);
     const lo = Math.min(a, b), hi = Math.max(a, b);
-    const dp = axis === 'wavelength' ? (waveUnit === 'um' ? 3 : 0) : (energyUnit === 'meV' ? 0 : 3);
+    const dp = axis === 'wavelength' ? (waveUnit === 'um' ? 3 : 0) : (energyUnit === 'meV' ? 0 : energyUnit === 'THz' ? 1 : 3);
     rminEl.value = lo.toFixed(dp);
     rmaxEl.value = hi.toFixed(dp);
-    const q = axis === 'wavelength' ? 'λ' : 'E';
+    const q = axis === 'wavelength' ? 'λ' : energyUnit === 'THz' ? 'ν' : 'E';
     $('rmin-label').textContent = `${q} min`;
     $('rmax-label').textContent = `${q} max`;
   }
@@ -537,8 +920,31 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     if (hi > lo) { rangeLoNm = lo; rangeHiNm = hi; }
   }
 
-  // Active plot sources: 1–2 tabulated materials, or the single Drude model.
+  // Active plot sources: 1–2 tabulated materials, the Drude model, or graphene σ.
   function sources(): Source[] {
+    if (mod === 'graphene' && grNL) {
+      return grNLSeries().map(s => ({
+        label: s.label, color: s.color, dataLo: -Infinity, dataHi: Infinity,
+        nk: (lam: number) => { const v = s.fn(HC / lam); return { re: v.re, im: v.im, n: NaN, k: NaN }; },
+      }));
+    }
+    if (mod === 'graphene') {
+      const f = sigmaUnit().factor;
+      if (grDecompose) {
+        return [
+          { label: 'Intraband', color: COLORS[0], dataLo: -Infinity, dataHi: Infinity,
+            nk: (lam) => { const p = grapheneParts(HC / lam); return { re: p.iRe * f, im: p.iIm * f, n: NaN, k: NaN }; } },
+          { label: 'Interband', color: COLORS[1], dataLo: -Infinity, dataHi: Infinity,
+            nk: (lam) => { const p = grapheneParts(HC / lam); return { re: p.nRe * f, im: p.nIm * f, n: NaN, k: NaN }; } },
+          { label: 'Total', color: '#111827', dataLo: -Infinity, dataHi: Infinity,
+            nk: (lam) => { const s = grapheneTotal(HC / lam); return { re: s.re * f, im: s.im * f, n: NaN, k: NaN }; } },
+        ];
+      }
+      return [{
+        label: 'Graphene', color: COLORS[0], dataLo: -Infinity, dataHi: Infinity,
+        nk: (lam) => { const s = grapheneTotal(HC / lam); return { re: s.re * f, im: s.im * f, n: NaN, k: NaN }; },
+      }];
+    }
     if (mod === 'drude') {
       return [{
         label: 'Drude', color: COLORS[0],
@@ -577,7 +983,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   let current: { xs: Float64Array; lam: Float64Array; src: Source[]; series: { color: string; real: Float64Array; imag: Float64Array }[] } | null = null;
-  let view: { tx: (v: number) => number; PAD: { l: number; r: number; t: number; b: number }; pw: number; ph: number; xMin: number; xMax: number } | null = null;
+  let view: { tx: (v: number) => number; PAD: { l: number; r: number; t: number; b: number }; pw: number; ph: number; xMin: number; xMax: number; xStep: number } | null = null;
 
   function compute() {
     const N = 360;
@@ -596,7 +1002,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       for (let j = 0; j < src.length; j++) {
         if (!valid) { series[j].real[i] = NaN; series[j].imag[i] = NaN; continue; }
         const o = src[j].nk(l);
-        if (quantity === 'eps') { series[j].real[i] = o.re; series[j].imag[i] = o.im; }
+        if (isSigma() || quantity === 'eps') { series[j].real[i] = o.re; series[j].imag[i] = o.im; }
         else { series[j].real[i] = o.n; series[j].imag[i] = o.k; }
       }
     }
@@ -630,10 +1036,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
 
-    const PAD = { l: 58, r: 16, t: 14, b: 42 };
-    const pw = cw - PAD.l - PAD.r, ph = ch - PAD.t - PAD.b;
     const xs = current.xs;
-
     let ymin = Infinity, ymax = -Infinity;
     for (const s of current.series) for (const arr of [s.real, s.imag]) for (const v of arr) { if (Number.isFinite(v)) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; } }
     if (!Number.isFinite(ymin)) { ymin = 0; ymax = 1; }
@@ -642,12 +1045,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     if (xmax < xmin) { const tmp = xmin; xmin = xmax; xmax = tmp; }
 
     const ys = niceScale(ymin, ymax), xsc = niceScale(xmin, xmax);
+    // adaptive left margin so wide tick labels (esu ~5e7, SI ~6e-5) clear the y-axis title
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    let maxYW = 0;
+    for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) { const w = ctx.measureText(fmt(v)).width; if (w > maxYW) maxYW = w; }
+    const PAD = { l: Math.max(56, Math.ceil(maxYW) + 30), r: 16, t: 14, b: 42 };
+    const pw = cw - PAD.l - PAD.r, ph = ch - PAD.t - PAD.b;
     const tx = (v: number) => PAD.l + (v - xsc.min) / (xsc.max - xsc.min) * pw;
     const ty = (v: number) => PAD.t + ph - (v - ys.min) / (ys.max - ys.min) * ph;
-    view = { tx, PAD, pw, ph, xMin: xsc.min, xMax: xsc.max };
+    view = { tx, PAD, pw, ph, xMin: xsc.min, xMax: xsc.max, xStep: xsc.step };
 
     // grid + ticks
-    ctx.font = '11px Inter, system-ui, sans-serif';
     ctx.strokeStyle = t.grid; ctx.lineWidth = 1;
     ctx.fillStyle = t.textMuted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) {
@@ -685,6 +1093,25 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     // each material: real part solid, imaginary part dashed, in the material colour
     for (const s of current.series) { drawLine(s.real, s.color, []); drawLine(s.imag, s.color, [5, 4]); }
 
+    // graphene: mark the E_F and 2E_F energies (interband onset)
+    if (isSigma()) {
+      const EF = num('gr-ef', 0.4);
+      for (const [E, base] of [[EF, 'E'], [2 * EF, '2E']] as [number, string][]) {
+        if (E <= 0) continue;
+        const vx = lamNmToX(HC / E), px = tx(vx);
+        if (px < PAD.l - 0.5 || px > PAD.l + pw + 0.5) continue;
+        ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = t.textMuted; ctx.globalAlpha = 0.75; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, PAD.t); ctx.lineTo(px, PAD.t + ph); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = t.textMuted;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        const bx = px + 3, by = PAD.t + 2;
+        ctx.font = '10px Inter, system-ui, sans-serif'; ctx.fillText(base, bx, by);
+        const bw = ctx.measureText(base).width;
+        ctx.font = '7px Inter, system-ui, sans-serif'; ctx.fillText('F', bx + bw + 0.5, by + 4);  // subscript F
+        ctx.restore();
+      }
+    }
+
     // hover crosshair
     if (hoverIdx >= 0 && hoverIdx < xs.length && Number.isFinite(xs[hoverIdx])) {
       const hx = tx(xs[hoverIdx]); ctx.save(); ctx.strokeStyle = t.textMuted; ctx.globalAlpha = 0.6; ctx.setLineDash([4, 3]);
@@ -697,17 +1124,143 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
     // axis labels
     ctx.fillStyle = t.text; ctx.font = '12px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText(axis === 'energy' ? `Photon energy (${unitLabel()})` : `Wavelength (${unitLabel()})`, PAD.l + pw / 2, ch - 12);
-    ctx.save(); ctx.translate(15, PAD.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
-    ctx.fillText(quantity === 'eps' ? 'Dielectric function ε' : 'Refractive index', 0, 0); ctx.restore();
+    if (axis === 'energy' && energyUnit === 'EF') drawSubF(ctx, 'Photon energy ℏω / E', PAD.l + pw / 2, ch - 12, 12);
+    else ctx.fillText(xAxisLabel(), PAD.l + pw / 2, ch - 12);
+    ctx.save(); ctx.translate(13, PAD.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
+    const yLab = !isSigma() ? (quantity === 'eps' ? 'Dielectric function ε' : 'Refractive index')
+      : grNL ? `${grProcSymbol()}${grProcUnit()}` : sigmaUnit().axis;
+    ctx.fillText(yLab, 0, 0); ctx.restore();
   }
 
-  // Build the per-source readout boxes (one labelled group per material).
-  function rebuildReadout(src: Source[]) {
-    let html = `<div class="readout-row readout-shared">
+  // ── Nonlocal RPA σ(Q,ω) colormap — 1×2 (Re | Im), Q horizontal, energy vertical.
+  //    The top chart is the vertical cut at the selected Q. ──
+  const grMap = $('gr-map') as HTMLCanvasElement;
+  const grMapCtx = grMap.getContext('2d')!;
+  const VIRIDIS = [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]];
+  const DIVMAP = [[33, 102, 172], [247, 247, 247], [178, 24, 43]];
+  const lerpC = (a: number[], b: number[], t: number) => `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
+  const ramp = (stops: number[][], t: number) => { t = Math.max(0, Math.min(1, t)); const s = t * (stops.length - 1); const i = Math.min(stops.length - 2, Math.floor(s)); return lerpC(stops[i], stops[i + 1], s - i); };
+  // Draw `base` followed by a subscript "F" (canvas has no HTML <sub>), centered at x.
+  function drawSubF(c: CanvasRenderingContext2D, base: string, x: number, y: number, size: number) {
+    const baseFont = `${size}px Inter, system-ui, sans-serif`, subFont = `${Math.round(size * 0.72)}px Inter, system-ui, sans-serif`;
+    c.font = baseFont; const bw = c.measureText(base).width;
+    c.font = subFont; const sw = c.measureText('F').width;
+    const sx = x - (bw + sw) / 2, a = c.textAlign; c.textAlign = 'left';
+    c.font = baseFont; c.fillText(base, sx, y);
+    c.font = subFont; c.fillText('F', sx + bw, y + size * 0.2);
+    c.textAlign = a;
+  }
+  const GR_NQ = 48, GR_NE = 60;   // grid columns (Q) × rows (energy) — kept modest to stay light
+  const pctl = (sorted: number[], p: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))];
+  let grMapCache: { key: string; re: Float64Array; im: Float64Array; reLo: number; reHi: number; imAbs: number; qloD: number; qhiD: number } | null = null;
+  function computeGrMap() {
+    const qloD = num('gr-qmin', 0), qhiD = Math.max(qloD + 1e-6, num('gr-qmax', 1.2));
+    const EF = num('gr-ef', 0.4), gam = num('gr-gamma', 0.0037);
+    const key = `${EF}|${gam}|${view!.xMin}|${view!.xMax}|${axis}|${waveUnit}|${energyUnit}|${grQUnit}|${qloD}|${qhiD}`;
+    if (grMapCache && grMapCache.key === key) return grMapCache;
+    const re = new Float64Array(GR_NQ * GR_NE), im = new Float64Array(GR_NQ * GR_NE);
+    for (let j = 0; j < GR_NQ; j++) {
+      const qnm = qDispToNm(qloD + (j + 0.5) / GR_NQ * (qhiD - qloD));
+      for (let i = 0; i < GR_NE; i++) {
+        const yv = view!.xMin + (i + 0.5) / GR_NE * (view!.xMax - view!.xMin);
+        const s = grNonlocal(HC / xToLamNm(yv), qnm);
+        re[j * GR_NE + i] = s.re * 4; im[j * GR_NE + i] = s.im * 4;   // → σ/σ₀
+      }
+    }
+    const rs = Array.from(re).sort((a, b) => a - b), is = Array.from(im).sort((a, b) => a - b);
+    const reLo = Math.max(0, pctl(rs, 0.02)), reHi = pctl(rs, 0.98);
+    const imAbs = Math.max(Math.abs(pctl(is, 0.02)), Math.abs(pctl(is, 0.98))) || 1;
+    grMapCache = { key, re, im, reLo, reHi: reHi > reLo ? reHi : reLo + 1, imAbs, qloD, qhiD };
+    return grMapCache;
+  }
+  const grMapLayout = (cw: number) => {
+    const PADl = 50, PADr = 12, gap = 30, top = 22, bot = 42;
+    const panelW = (cw - PADl - PADr - gap) / 2, panelH = 210;
+    return { PADl, PADr, gap, top, bot, panelW, panelH, ch: top + panelH + bot, leftX: [PADl, PADl + panelW + gap] };
+  };
+  let grMapBaked: { key: string; canvas: HTMLCanvasElement } | null = null;
+  function bakeGrMap(cw: number, dpr: number, t: ReturnType<typeof chartTheme>, g: NonNullable<typeof grMapCache>) {
+    const L = grMapLayout(cw);
+    const off = document.createElement('canvas'); off.width = cw * dpr; off.height = L.ch * dpr;
+    const c = off.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cellW = L.panelW / GR_NQ, cellH = L.panelH / GR_NE;
+    const tyE = (v: number) => L.top + L.panelH - (v - view!.xMin) / (view!.xMax - view!.xMin) * L.panelH;
+    const panels = [
+      { label: 'Re σ/σ₀', val: (k: number) => g.re[k], col: (v: number) => ramp(VIRIDIS, (v - g.reLo) / (g.reHi - g.reLo)) },
+      { label: 'Im σ/σ₀', val: (k: number) => g.im[k], col: (v: number) => ramp(DIVMAP, 0.5 + 0.5 * Math.max(-1, Math.min(1, v / g.imAbs))) },
+    ];
+    panels.forEach((p, pi) => {
+      const x0 = L.leftX[pi];
+      for (let j = 0; j < GR_NQ; j++) { const x = x0 + j * cellW; for (let i = 0; i < GR_NE; i++) { c.fillStyle = p.col(p.val(j * GR_NE + i)); c.fillRect(x, L.top + L.panelH - (i + 1) * cellH, cellW + 0.6, cellH + 0.6); } }
+      c.strokeStyle = t.grid; c.lineWidth = 1; c.strokeRect(x0, L.top, L.panelW, L.panelH);
+      // Q (x) ticks
+      c.fillStyle = t.textMuted; c.font = '10px Inter, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'top';
+      const qs = niceScale(g.qloD, g.qhiD);
+      for (let v = qs.min; v <= qs.max + qs.step * 0.5; v += qs.step) { if (v < g.qloD - 1e-9 || v > g.qhiD + 1e-9) continue; const x = x0 + (v - g.qloD) / (g.qhiD - g.qloD) * L.panelW; c.fillText(fmt(v), x, L.top + L.panelH + 5); }
+      // panel title
+      c.fillStyle = 'rgba(255,255,255,0.85)'; c.fillRect(x0 + 3, L.top + 3, c.measureText(p.label).width + 8, 15);
+      c.fillStyle = t.text; c.font = '700 11px Inter, system-ui, sans-serif'; c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(p.label, x0 + 6, L.top + 4);
+      // Q axis label
+      c.fillStyle = t.text; c.font = '11px Inter, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'top';
+      if (grQUnit === 'kf') drawSubF(c, 'Q / k', x0 + L.panelW / 2, L.ch - 16, 11);
+      else c.fillText('Q [nm⁻¹]', x0 + L.panelW / 2, L.ch - 16);
+    });
+    // energy (y) ticks + label on the far left (shared)
+    c.fillStyle = t.textMuted; c.font = '10px Inter, system-ui, sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+    for (let v = view!.xMin; v <= view!.xMax + view!.xStep * 0.5; v += view!.xStep) { const y = tyE(v); if (y < L.top - 1 || y > L.top + L.panelH + 1) continue; c.fillText(fmt(v), L.PADl - 6, y); }
+    c.save(); c.translate(12, L.top + L.panelH / 2); c.rotate(-Math.PI / 2); c.textAlign = 'center'; c.textBaseline = 'top'; c.fillStyle = t.text; c.font = '10px Inter, system-ui, sans-serif';
+    if (axis === 'energy' && energyUnit === 'EF') drawSubF(c, 'ℏω / E', 0, 0, 10);
+    else c.fillText(axis === 'wavelength' ? `λ (${unitLabel()})` : `ℏω (${unitLabel()})`, 0, 0);
+    c.restore();
+    return off;
+  }
+  function paintMap() {
+    if ($('gr-map-card').hidden || !view) return;
+    const t = chartTheme(), dpr = window.devicePixelRatio || 1;
+    const cw = grMap.clientWidth || 600;
+    const L = grMapLayout(cw);
+    grMap.width = cw * dpr; grMap.height = L.ch * dpr; grMap.style.height = L.ch + 'px';
+    const c = grMapCtx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, cw, L.ch);
+    const g = computeGrMap();
+    const bakeKey = `${g.key}|${cw}|${dpr}|${t.bg}`;
+    if (!grMapBaked || grMapBaked.key !== bakeKey) grMapBaked = { key: bakeKey, canvas: bakeGrMap(cw, dpr, t, g) };
+    c.drawImage(grMapBaked.canvas, 0, 0, cw, L.ch);
+    // live Q cut — vertical dashed line on both panels at the selected Q
+    const Qd = num('gr-q', 0.3), frac = Math.max(0, Math.min(1, (Qd - g.qloD) / (g.qhiD - g.qloD)));
+    c.save(); c.strokeStyle = '#ff3b30'; c.lineWidth = 1.6; c.setLineDash([5, 3]);
+    for (const x0 of L.leftX) { const xQ = x0 + frac * L.panelW; c.beginPath(); c.moveTo(xQ, L.top); c.lineTo(xQ, L.top + L.panelH); c.stroke(); }
+    c.restore();
+    c.fillStyle = '#ff3b30'; c.font = '700 10px Inter, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+    for (const x0 of L.leftX) c.fillText('Q = ' + Qd.toFixed(3), x0 + frac * L.panelW, L.top - 3);
+  }
+
+  const sharedRow = `<div class="readout-row readout-shared">
       <div class="stat"><span class="stat-label">Wavelength (nm)</span><span class="stat-value" id="r-lambda">—</span></div>
+      <div class="stat"><span class="stat-label">Wavenumber (µm⁻¹)</span><span class="stat-value" id="r-wavenum">—</span></div>
       <div class="stat"><span class="stat-label">Energy (eV)</span><span class="stat-value" id="r-energy">—</span></div>
     </div>`;
+
+  // Build the readout boxes. Materials/Drude: per-source ε & n,k. Graphene: the
+  // total σ shown in every unit (σ₀, a.u., esu, SI).
+  function rebuildReadout(src: Source[]) {
+    if (isSigma() && grNL) {
+      const u = grProcUnit();
+      const rows = src.map((s, i) => `<div class="readout-row readout-nl">
+        <div class="readout-mat__name" style="color:${s.color}">${s.label}</div>
+        <div class="stat"><span class="stat-label">Re${u}</span><span class="stat-value" id="r-re-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">Im${u}</span><span class="stat-value" id="r-im-${i}">—</span></div>
+      </div>`).join('');
+      $('readout').innerHTML = sharedRow + rows;
+      return;
+    }
+    if (isSigma()) {
+      const cells = (part: string) => SIGMA_UNITS.map(u => `<div class="stat"><span class="stat-label">${u.label}</span><span class="stat-value" id="r-${part}-${u.key}">—</span></div>`).join('');
+      $('readout').innerHTML = sharedRow
+        + `<div class="readout-row readout-sig"><div class="readout-mat__name" style="color:${COLORS[0]}">Re σ</div>${cells('re')}</div>`
+        + `<div class="readout-row readout-sig"><div class="readout-mat__name" style="color:${COLORS[0]}">Im σ</div>${cells('im')}</div>`;
+      return;
+    }
+    let html = sharedRow;
     src.forEach((s, i) => {
       html += `<div class="readout-row readout-mat">
         <div class="readout-mat__name" style="color:${s.color}"><span class="readout-mat__dot" style="background:${s.color}"></span>${s.label}</div>
@@ -715,6 +1268,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <div class="stat"><span class="stat-label">Im ε</span><span class="stat-value" id="r-im-${i}">—</span></div>
         <div class="stat"><span class="stat-label">n</span><span class="stat-value" id="r-n-${i}">—</span></div>
         <div class="stat"><span class="stat-label">k</span><span class="stat-value" id="r-k-${i}">—</span></div>
+        <div class="stat"><button class="stat-info" type="button" aria-label="Skin depth info">i<span class="stat-tooltip" role="tooltip">Skin depth δ = 1 / (2·(ω/c)·k) = λ / (4π·k) — the 1/e penetration depth of the field intensity (k = Im n). δ → ∞ when k = 0.</span></button><span class="stat-label">δ (nm)</span><span class="stat-value" id="r-d-${i}">—</span></div>
       </div>`;
     });
     $('readout').innerHTML = html;
@@ -722,39 +1276,59 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   function setReadout(idx: number) {
     if (!current) return;
-    const src = current.src;
+    const setEl = (id: string, txt: string) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
     const invalid = idx < 0 || idx >= current.lam.length || !Number.isFinite(current.lam[idx]);
+    if (isSigma() && grNL) {
+      if (invalid) { setEl('r-lambda', '—'); setEl('r-wavenum', '—'); setEl('r-energy', '—'); current.series.forEach((_, i) => { setEl(`r-re-${i}`, '—'); setEl(`r-im-${i}`, '—'); }); return; }
+      const lam = current.lam[idx];
+      setEl('r-lambda', lam.toFixed(1)); setEl('r-wavenum', fmt(2000 * Math.PI / lam)); setEl('r-energy', (HC / lam).toFixed(3));
+      current.series.forEach((s, i) => { setEl(`r-re-${i}`, fmt(s.real[idx])); setEl(`r-im-${i}`, fmt(s.imag[idx])); });
+      return;
+    }
+    if (isSigma()) {
+      if (invalid) { setEl('r-lambda', '—'); setEl('r-wavenum', '—'); setEl('r-energy', '—'); SIGMA_UNITS.forEach(u => { setEl(`r-re-${u.key}`, '—'); setEl(`r-im-${u.key}`, '—'); }); return; }
+      const lam = current.lam[idx], s = grapheneTotal(HC / lam);   // σ/σ₀
+      setEl('r-lambda', lam.toFixed(1)); setEl('r-wavenum', fmt(2000 * Math.PI / lam)); setEl('r-energy', (HC / lam).toFixed(3));
+      SIGMA_UNITS.forEach(u => { setEl(`r-re-${u.key}`, fmt(s.re * u.factor)); setEl(`r-im-${u.key}`, fmt(s.im * u.factor)); });
+      return;
+    }
+    const src = current.src;
     if (invalid) {
-      $('r-lambda').textContent = '—'; $('r-energy').textContent = '—';
-      src.forEach((_, i) => ['re', 'im', 'n', 'k'].forEach(q => { const el = document.getElementById(`r-${q}-${i}`); if (el) el.textContent = '—'; }));
+      setEl('r-lambda', '—'); setEl('r-wavenum', '—'); setEl('r-energy', '—');
+      src.forEach((_, i) => ['re', 'im', 'n', 'k', 'd'].forEach(q => setEl(`r-${q}-${i}`, '—')));
       return;
     }
     const lam = current.lam[idx];
-    $('r-lambda').textContent = lam.toFixed(1);
-    $('r-energy').textContent = (HC / lam).toFixed(3);
+    setEl('r-lambda', lam.toFixed(1)); setEl('r-wavenum', fmt(2000 * Math.PI / lam)); setEl('r-energy', (HC / lam).toFixed(3));
     src.forEach((s, i) => {
       const o = s.nk(lam);
-      const set = (q: string, v: number) => { const el = document.getElementById(`r-${q}-${i}`); if (el) el.textContent = fmt(v); };
-      set('re', o.re); set('im', o.im); set('n', o.n); set('k', o.k);
+      setEl(`r-re-${i}`, fmt(o.re)); setEl(`r-im-${i}`, fmt(o.im)); setEl(`r-n-${i}`, fmt(o.n)); setEl(`r-k-${i}`, fmt(o.k));
+      // skin depth δ = 1/(2·(ω/c)·k) = λ/(4π·k); ∞ when k = 0
+      setEl(`r-d-${i}`, Number.isFinite(o.k) && o.k > 0 ? fmt(lam / (4 * Math.PI * o.k)) : '∞');
     });
   }
 
   // Legend: a solid/dashed style key + one coloured entry per material.
   function buildLegend(src: Source[]) {
-    const realLab = quantity === 'eps' ? 'Re ε' : 'n';
-    const imagLab = quantity === 'eps' ? 'Im ε' : 'k';
+    const realLab = isSigma() ? (grNL ? 'Re' : 'Re σ') : quantity === 'eps' ? 'Re ε' : 'n';
+    const imagLab = isSigma() ? (grNL ? 'Im' : 'Im σ') : quantity === 'eps' ? 'Im ε' : 'k';
     let h = `<span class="mat-legend-item"><span class="mat-legend-swatch ml-solid"></span>${realLab}</span>`
           + `<span class="mat-legend-item"><span class="mat-legend-swatch ml-dashed"></span>${imagLab}</span>`;
-    for (const s of src) h += `<span class="mat-legend-item"><span class="mat-legend-swatch" style="border-top-color:${s.color}"></span>${s.label}</span>`;
+    // single graphene source needs no name chip (we already know it's graphene)
+    const showNames = !(isSigma() && src.length === 1);
+    if (showNames) for (const s of src) h += `<span class="mat-legend-item"><span class="mat-legend-swatch" style="border-top-color:${s.color}"></span>${s.label}</span>`;
     $('mat-legend').innerHTML = h;
   }
 
   function render(hoverIdx = -1) {
-    $('mat-title').textContent = quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
+    $('mat-title').textContent = isSigma()
+      ? (grNL ? grProcTitle() : 'Surface conductivity σ(ω)')
+      : quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
     compute();
     buildLegend(current!.src);
     rebuildReadout(current!.src);
     paint(hoverIdx);
+    paintMap();
     setReadout(hoverIdx >= 0 ? hoverIdx : Math.floor((current?.lam.length ?? 1) / 2));
   }
 
@@ -774,7 +1348,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   canvas.addEventListener('mouseleave', () => render(-1));
 
   // ── module switch ──
-  const moduleBtns: Record<Mod, string> = { materials: 'module-materials', drude: 'module-drude' };
+  const moduleBtns: Record<Mod, string> = { materials: 'module-materials', drude: 'module-drude', graphene: 'module-graphene' };
+  let grSeeded = false;
   function selectModule(m: Mod) {
     mod = m;
     (Object.keys(moduleBtns) as Mod[]).forEach(k => {
@@ -783,10 +1358,103 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     });
     $('ctrl-materials').hidden = m !== 'materials';
     $('ctrl-drude').hidden = m !== 'drude';
+    $('ctrl-graphene').hidden = m !== 'graphene';
+    $('qty-field').hidden = m === 'graphene';            // ε / n,k (materials & Drude)
+    $('lin-nl-tabs').hidden = m !== 'graphene';           // LIN / NL (graphene)
+    refreshUnitSelect();                                  // add/remove the E_F energy unit
+    updateGrapheneUI();
+    // first time into graphene, widen the range to show the IR Drude peak + 2EF edge
+    if (m === 'graphene' && !grSeeded) { grSeeded = true; rangeLoNm = 600; rangeHiNm = 25000; refreshRangeInputs(); }
+    updateNotes();
     render();
+  }
+
+  // Graphene control visibility: linear (model + units + decompose) vs nonlinear (process).
+  function updateGrapheneUI() {
+    const g = mod === 'graphene';
+    $('gr-model-field').hidden = !g || grNL;
+    $('gr-process-field').hidden = !g || !grNL;
+    const nl = g && !grNL && grModel === 'nonlocal';                 // Q controls + map — nonlocal RPA only
+    for (const id of ['gr-qunit-field', 'gr-qmin-field', 'gr-qmax-field', 'gr-q-field', 'gr-map-card']) $(id).hidden = !nl;
+    $('gr-unit-field').hidden = !g || grNL;                          // σ₀/esu/a.u./SI — linear only
+    $('gr-decompose').hidden = !g || grNL || grModel === 'nonlocal'; // intra/inter — local/Drude only
+    // Nonlocal RPA is a T = 0 model — lock the temperature at 0.
+    const tEl = $('gr-temp') as HTMLInputElement, tSl = $('gr-temp-slider') as HTMLInputElement;
+    const lockT = g && !grNL && grModel === 'nonlocal';
+    if (lockT && !tEl.disabled) { grTempSaved = tEl.value; tEl.value = '0'; tSl.value = '0'; }
+    else if (!lockT && tEl.disabled) { tEl.value = grTempSaved; tSl.value = grTempSaved; }
+    tEl.disabled = lockT; tSl.disabled = lockT;
+  }
+
+  // Notes box — defines the models for the active module.
+  function updateNotes() {
+    let html = '';
+    if (mod === 'graphene' && grNL) {
+      const perProc: Record<string, string> = {
+        thg: `<li>σ<sup>(3,3)</sup>(ω) = 3i · v<sub>F</sub><sup>2</sup>/(4π E<sub>F</sub>) · 1 / [(ω+iγ)(2ω+iγ)(3ω+iγ)]</li>`,
+        kerr: `<li>σ<sup>(3,1)</sup>(ω) = −3i · v<sub>F</sub><sup>2</sup>/(4π E<sub>F</sub>) · 1 / [(2ω+iγ)(ω<sup>2</sup>+γ<sup>2</sup>)]</li>`,
+        mikh: `<li>σ<sup>(3)</sup><sub>xxxx</sub>(ω,ω,ω) = σ<sub>0</sub><sup>(3)</sup> · [ S<sup>(3/0)</sup> + S<sup>(2/1)</sup> + S<sup>(1/2)</sup> + S<sup>(0/3)</sup> ],&nbsp; σ<sub>0</sub><sup>(3)</sup> = v<sub>F</sub><sup>2</sup>/(4π E<sub>F</sub><sup>4</sup>)</li>
+        <li>plotted as the dimensionless S<sup>(3)</sup> = σ<sup>(3)</sup>/σ<sub>0</sub><sup>(3)</sup>; the four S<sup>(m/n)</sup> are the intra/inter contributions (Mikhailov Appendix-D integrals).</li>`,
+        shg: `<li>σ<sup>(2,2)</sup><sub>n</sub>(ω) = P · f<sub>n</sub>,&nbsp; P = i v<sub>F</sub><sup>2</sup> / [4π (2ω+iγ)(ω+iγ)]</li>
+        <li>f<sub>A</sub> = −[3/(ω+iγ) + 4/(2ω+iγ)]</li>
+        <li>f<sub>B</sub> = −[−1/(ω+iγ) + 4/(2ω+iγ) − 4/ω]</li>
+        <li>f<sub>C</sub> = 1/[2(ω+iγ)] + 2/(2ω+iγ) − 2/ω</li>`,
+        or: `<li>σ<sup>(2,0)</sup><sub>n</sub>(ω) = P · g<sub>n</sub>,&nbsp; P = v<sub>F</sub><sup>2</sup>/(4π γ)</li>
+        <li>g<sub>A</sub> = 3/(ω−iγ)<sup>2</sup> − 4/(ω<sup>2</sup>+γ<sup>2</sup>)</li>
+        <li>g<sub>B</sub> = 1/(ω−iγ)<sup>2</sup> + 4/(ω<sup>2</sup>+γ<sup>2</sup>) − 4/[ω(ω+iγ)]</li>
+        <li>g<sub>C</sub> = 2iγ/(−ω+iγ)</li>
+        <li>g<sub>D</sub> = 1/(ω+iγ)<sup>2</sup> + 4/[ω(ω+iγ)]</li>`,
+      };
+      html = `<h4>Graphene nonlinear conductivity — ${grProcTitle()}</h4><ul>${perProc[grProcess]}</ul>`;
+    } else if (mod === 'graphene') {
+      html = `<h4>Graphene surface conductivity</h4><ul>
+        <li><b>σ(ω) = σ<sub>intra</sub> + σ<sub>inter</sub></b> — the total is the sum of the intraband (Drude) and interband terms; toggle <b>intra/inter</b> above the plot to see each.</li>
+        <li><b>Drude</b> — intraband free-carrier response, σ = iE<sub>F</sub>/[π(ω+iγ)] (T=0, ℏω ≪ 2E<sub>F</sub>).</li>
+        <li><b>Local RPA</b> — adds the interband Kubo term with the Pauli-blocking step at <b>ℏω = 2E<sub>F</sub></b>; Re σ → σ<sub>0</sub> above the edge.</li>
+        <li><b>Nonlocal RPA</b> — Mermin-corrected σ(Q,ω) retaining the finite in-plane wavevector Q (Landau damping, plasmon dispersion); reduces to Local RPA as Q → 0.</li>
+        <li><b>Finite T</b> (T &gt; 0) — thermal chemical potential μ(E<sub>F</sub>,T) smears the intraband weight and the 2E<sub>F</sub> edge.</li>
+        <li><b>Damping ⇄ mobility</b> — γ, lifetime τ = ℏ/γ and DC mobility are linked by <b>τ = μ<sup>DC</sup>E<sub>F</sub>/(e v<sub>F</sub><sup>2</sup>)</b> (so γ = ℏ e v<sub>F</sub><sup>2</sup>/(μ<sup>DC</sup>E<sub>F</sub>)), with v<sub>F</sub> ≈ 10<sup>8</sup> cm/s.</li>
+        <li>σ<sub>0</sub> = e²/4ℏ ≈ 6.085×10⁻⁵ S (universal optical conductivity) = 1/4 a.u.</li>
+      </ul>`;
+    } else if (mod === 'drude') {
+      html = `<h4>Drude model</h4><ul>
+        <li>ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub><sup>2</sup>/[ω(ω+iγ)] — free-electron metal with background ε<sub>∞</sub>, plasma frequency ω<sub>p</sub>, and damping γ = ℏτ<sup>-1</sup>.</li>
+        <li>Presets Au/Ag/Al/Cu are Drude fits (a single Lorentzian-free term); accurate in the IR, approximate near interband transitions.</li>
+      </ul>`;
+    } else {
+      html = `<h4>Tabulated optical constants</h4><ul>
+        <li>ε = (n + ik)². Tabulated n(λ), k(λ) are <b>linearly</b> interpolated in wavelength.</li>
+        <li>Built-in tables, an uploaded file, or a refractiveindex.info database entry. Values are clamped to each material's measured range (no extrapolation).</li>
+        <li>Compare two materials with “+ Add material”: solid = real part, dashed = imaginary part, one colour per material.</li>
+      </ul>`;
+    }
+    $('mat-notes').innerHTML = html;
+    updateRefs();
+  }
+
+  // References box — papers behind the active module (citations live here, not in the notes).
+  function updateRefs() {
+    let refs: string[];
+    if (mod === 'graphene') {
+      refs = [
+        `J. D. Cox, R. Yu &amp; F. J. Garc&iacute;a de Abajo, second- and third-order nonlinear conductivity of graphene, Phys. Rev. B <strong>96</strong>, 045442 (2017), <a href="https://doi.org/10.1103/PhysRevB.96.045442" target="_blank" rel="noopener">doi:10.1103/PhysRevB.96.045442</a>.`,
+        `S. A. Mikhailov, <em>Quantum theory of the third-order nonlinear electrodynamic effects of graphene</em>, Phys. Rev. B <strong>93</strong>, 085403 (2016), <a href="https://doi.org/10.1103/PhysRevB.93.085403" target="_blank" rel="noopener">doi:10.1103/PhysRevB.93.085403</a>.`,
+        `F. H. L. Koppens, D. E. Chang &amp; F. J. Garc&iacute;a de Abajo, <em>Graphene plasmonics: a platform for strong light&ndash;matter interactions</em>, Nano Lett. <strong>11</strong>, 3370 (2011), <a href="https://doi.org/10.1021/nl201771h" target="_blank" rel="noopener">doi:10.1021/nl201771h</a>.`,
+      ];
+    } else if (mod === 'drude') {
+      refs = [];   // no reference box for the Drude module
+    } else {
+      refs = [
+        `Optical constants from <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Built-ins &mdash; Au, Ag, Cu: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1998); TiO<sub>2</sub>: Sarkar et al. (2019).`,
+      ];
+    }
+    $('mat-refs').hidden = refs.length === 0;
+    $('mat-refs').innerHTML = refs.length === 0 ? '' : `<h4>References</h4><ul class="reference-list">`
+      + refs.map((r, i) => `<li><span class="ref-index">[${i + 1}]</span><span>${r}</span></li>`).join('') + `</ul>`;
   }
   $('module-materials').addEventListener('click', () => selectModule('materials'));
   $('module-drude').addEventListener('click', () => selectModule('drude'));
+  $('module-graphene').addEventListener('click', () => selectModule('graphene'));
 
   // ── segmented toggles ──
   function wireSeg(groupId: string, apply: (val: string) => void) {
@@ -795,7 +1463,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       btn.addEventListener('click', () => {
         group.querySelectorAll('.seg-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
         btn.classList.add('active'); btn.setAttribute('aria-checked', 'true');
-        apply(btn.dataset.qty ?? btn.dataset.axis ?? '');
+        apply(btn.dataset.qty ?? btn.dataset.axis ?? btn.dataset.grmodel ?? btn.dataset.grunit ?? btn.dataset.linnl ?? btn.dataset.grproc ?? btn.dataset.grqunit ?? '');
         render();
       });
     });
@@ -806,14 +1474,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   unitSel.addEventListener('change', () => {
     if (axis === 'wavelength') waveUnit = unitSel.value as 'nm' | 'um';
-    else energyUnit = unitSel.value as 'eV' | 'meV';
+    else energyUnit = unitSel.value as 'eV' | 'meV' | 'THz' | 'EF';
     refreshRangeInputs();
     render();
   });
 
   // ── inputs ──
   function refreshMatRef() {
-    if (mod === 'drude') { $('mat-ref').textContent = ''; return; }
+    if (mod !== 'materials') { $('mat-ref').textContent = ''; return; }
     const slots = mat2On ? [slot1, slot2] : [slot1];
     const refs = slots.map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
     $('mat-ref').textContent = refs.join('  ·  ');
@@ -863,29 +1531,85 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     });
   });
 
+  // ── Graphene controls ──
+  const grEfEl = $('gr-ef') as HTMLInputElement;
+  const grEfSlider = $('gr-ef-slider') as HTMLInputElement;
+  const grGammaEl = $('gr-gamma') as HTMLInputElement;
+  const grTauEl = $('gr-tau') as HTMLInputElement;
+  const grMobEl = $('gr-mobility') as HTMLInputElement;
+  const VF_MS = 1.0e6;                                   // graphene Fermi velocity ≈ 1e8 cm/s
+  const HBAR_EVS = 6.582119569e-16;                      // ħ in eV·s
+  // mobility ⇄ γ via τ = μ_DC·E_F/(e·v_F²)  (so γ = ħ/τ); γ is the source of truth
+  function grGammaFromMob(muCm: number, EF: number): number { const tau = (muCm * 1e-4) * EF / (VF_MS * VF_MS); return HBAR_EVS / tau; }
+  function grMobFromGamma(gam: number, EF: number): number { const tau = HBAR_EVS / gam; return tau * VF_MS * VF_MS / EF * 1e4; }
+  function grRefreshTauMob() {
+    const g = parseFloat(grGammaEl.value), EF = num('gr-ef', 0.4);
+    if (Number.isFinite(g) && g > 0) { grTauEl.value = trim(HBAR_EV_FS / g, 1); if (EF > 0) grMobEl.value = trim(grMobFromGamma(g, EF), 0); }
+  }
+  grEfEl.addEventListener('input', () => { const v = parseFloat(grEfEl.value); if (Number.isFinite(v)) grEfSlider.value = String(v); grRefreshTauMob(); if (energyUnit === 'EF') refreshRangeInputs(); render(); });
+  grEfSlider.addEventListener('input', () => { grEfEl.value = grEfSlider.value; grRefreshTauMob(); if (energyUnit === 'EF') refreshRangeInputs(); render(); });
+  const grTempEl = $('gr-temp') as HTMLInputElement, grTempSlider = $('gr-temp-slider') as HTMLInputElement;
+  grTempEl.addEventListener('input', () => { const v = parseFloat(grTempEl.value); if (Number.isFinite(v)) grTempSlider.value = String(v); render(); });
+  grTempSlider.addEventListener('input', () => { grTempEl.value = grTempSlider.value; render(); });
+  const grQEl = $('gr-q') as HTMLInputElement, grQSlider = $('gr-q-slider') as HTMLInputElement;
+  const grQminEl = $('gr-qmin') as HTMLInputElement, grQmaxEl = $('gr-qmax') as HTMLInputElement;
+  // Keep the cut slider bounded by [Q min, Q max] and clamp the cut into range.
+  function syncQSlider() {
+    const lo = parseFloat(grQminEl.value), hi = parseFloat(grQmaxEl.value);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return;
+    grQSlider.min = String(lo); grQSlider.max = String(hi); grQSlider.step = String((hi - lo) / 100);
+    let cut = parseFloat(grQEl.value);
+    if (!Number.isFinite(cut) || cut < lo || cut > hi) { cut = (lo + hi) / 2; grQEl.value = trim(cut, 3); }
+    grQSlider.value = String(cut);
+  }
+  grQEl.addEventListener('input', () => { const v = parseFloat(grQEl.value); if (Number.isFinite(v)) grQSlider.value = String(v); render(); });
+  grQSlider.addEventListener('input', () => { grQEl.value = grQSlider.value; render(); });
+  grQminEl.addEventListener('input', () => { syncQSlider(); render(); });
+  grQmaxEl.addEventListener('input', () => { syncQSlider(); render(); });
+  wireSeg('gr-qunit-tabs', v => {
+    const next = v as 'nm' | 'kf'; if (next === grQUnit) return;
+    const old = grQUnit; const kf = kFnm();
+    const conv = (d: number) => { const nm = old === 'kf' ? d * kf : d; return next === 'kf' ? nm / kf : nm; };
+    grQUnit = next;
+    for (const el of [grQminEl, grQmaxEl, grQEl]) { const d = parseFloat(el.value); if (Number.isFinite(d)) el.value = trim(conv(d), 3); }
+    syncQSlider();
+  });
+  grGammaEl.addEventListener('input', () => { grRefreshTauMob(); render(); });
+  grTauEl.addEventListener('input', () => { const t = parseFloat(grTauEl.value); if (Number.isFinite(t) && t > 0) { grGammaEl.value = trim(HBAR_EV_FS / t, 5); grRefreshTauMob(); } render(); });
+  grMobEl.addEventListener('input', () => { const mu = parseFloat(grMobEl.value), EF = num('gr-ef', 0.4); if (Number.isFinite(mu) && mu > 0 && EF > 0) { grGammaEl.value = trim(grGammaFromMob(mu, EF), 5); grTauEl.value = trim(HBAR_EV_FS / parseFloat(grGammaEl.value), 1); } render(); });
+  wireSeg('gr-model-tabs', v => { grModel = v as 'drude' | 'local' | 'nonlocal'; updateGrapheneUI(); updateNotes(); });
+  wireSeg('gr-unit-tabs', v => { grUnit = v; });
+  wireSeg('lin-nl-tabs', v => { grNL = v === 'nl'; updateGrapheneUI(); updateNotes(); });
+  ($('gr-process') as HTMLSelectElement).addEventListener('change', e => { grProcess = (e.target as HTMLSelectElement).value as typeof grProcess; updateNotes(); render(); });
+  $('gr-decompose').addEventListener('click', () => { grDecompose = !grDecompose; ($('gr-decompose') as HTMLButtonElement).setAttribute('aria-pressed', String(grDecompose)); render(); });
+
   // ── export ──
   $('mat-dl-csv').addEventListener('click', () => {
     if (!current) return;
     const src = current.src;
+    const sig = isSigma();
     const head = ['wavelength_nm', 'energy_eV'];
-    for (const s of src) { const p = s.label.replace(/[^A-Za-z0-9]+/g, '_'); head.push(`${p}_n`, `${p}_k`, `${p}_eps_re`, `${p}_eps_im`); }
-    const lines = [
-      `# Optical constants — ${src.map(s => s.label).join(', ')}`,
-      '# Generated by NanophotonicsLab (nanophotonicslab.com)',
-      head.join(','),
-    ];
+    for (const s of src) {
+      const p = s.label.replace(/[^A-Za-z0-9]+/g, '_');
+      if (sig) head.push(`${p}_sigma_re_over_sigma0`, `${p}_sigma_im_over_sigma0`);
+      else head.push(`${p}_n`, `${p}_k`, `${p}_eps_re`, `${p}_eps_im`);
+    }
+    const title = sig
+      ? `Graphene surface conductivity σ/σ₀ — EF=${num('gr-ef', 0.4)} eV, γ=${num('gr-gamma', 0.0037)} eV, T=${num('gr-temp', 300)} K, model=${grModel}`
+      : `Optical constants — ${src.map(s => s.label).join(', ')}`;
+    const lines = [`# ${title}`, '# Generated by NanophotonicsLab (nanophotonicslab.com)', head.join(',')];
     for (let i = 0; i < current.lam.length; i++) {
       const lam = current.lam[i]; if (!Number.isFinite(lam)) continue;
       const row = [lam.toFixed(4), (HC / lam).toFixed(5)];
-      for (const s of src) { const o = s.nk(lam); row.push(o.n.toFixed(6), o.k.toFixed(6), o.re.toFixed(6), o.im.toFixed(6)); }
+      for (const s of src) { const o = s.nk(lam); if (sig) row.push(o.re.toFixed(6), o.im.toFixed(6)); else row.push(o.n.toFixed(6), o.k.toFixed(6), o.re.toFixed(6), o.im.toFixed(6)); }
       lines.push(row.join(','));
     }
-    const stem = mod === 'drude' ? 'drude' : current.src.map(s => s.label.split(/[\s(]/)[0].toLowerCase()).join('_');
+    const stem = mod === 'drude' ? 'drude' : mod === 'graphene' ? 'graphene' : current.src.map(s => s.label.split(/[\s(]/)[0].toLowerCase()).join('_');
     downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), `materials_${stem}.csv`);
   });
   $('mat-dl-png').addEventListener('click', () => {
     const a = document.createElement('a');
-    a.download = `materials_${mod === 'drude' ? 'drude' : matSelect.value}.png`;
+    a.download = `materials_${mod === 'drude' ? 'drude' : mod === 'graphene' ? 'graphene' : matSelect.value}.png`;
     a.href = canvas.toDataURL('image/png');
     a.click();
   });
@@ -894,7 +1618,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   refreshMatRef();
   refreshUnitSelect();
   refreshRangeInputs();
-  onThemeChange(() => paint());
-  window.addEventListener('resize', () => paint());
+  updateNotes();
+  onThemeChange(() => { paint(); paintMap(); });
+  window.addEventListener('resize', () => { paint(); paintMap(); });
   render();
 </script>
