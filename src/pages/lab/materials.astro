@@ -1,0 +1,900 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
+import { MATERIALS } from '../../data/optical-constants';
+
+const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, ref: m.ref }));
+---
+
+<Layout title="Materials — Optical Constants" description="Optical constants explorer: dielectric function ε(ω) and refractive index n, k of common nanophotonics materials versus photon energy or wavelength, plus an analytic Drude model.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Optical <span class="gradient-text">Materials</span></h1>
+      <p class="widget-hero__subtitle">
+        Explore the complex dielectric function ε(ω) and the refractive index
+        n, k of common nanophotonics materials versus photon energy or
+        wavelength, plus an analytic Drude model. All curves use the same
+        tabulated optical constants as the rest of the Lab.
+      </p>
+      <ToolMeta slug="materials" name="Materials — Optical Constants" />
+    </div>
+  </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>Tabulated refractive-index data <em>n(λ), k(λ)</em> interpolated in wavelength; ε = (n + ik)² with the e<sup>−iωt</sup> convention (Im ε &gt; 0 for loss). The Drude module evaluates ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub>² / [ω(ω + iγ)] analytically.</dd>
+      <dt>Assumptions</dt>
+      <dd>Linear, isotropic, local, non-magnetic media. Values outside a table's measured range are clamped to the nearest endpoint (no extrapolation).</dd>
+      <dt>Data sources</dt>
+      <dd>refractiveindex.info database — Johnson &amp; Christy 1972 (Au, Ag), Aspnes &amp; Studna 1983 (Si), Rakić 1995 (Al), Sarkar et al. 2019 (TiO₂).</dd>
+      <dt>References</dt>
+      <dd>E. D. Palik, <em>Handbook of Optical Constants of Solids</em> (1985); M. A. Ordal et al., Appl. Opt. <strong>22</strong>, 1099 (1983).</dd>
+    </dl>
+  </ModelInfo>
+
+  <section class="section">
+    <div class="container">
+      <div class="module-bar card" role="radiogroup" aria-label="Materials module">
+        <span class="module-bar__label">Module</span>
+        <div class="module-bar__grid">
+          <button type="button" class="module-card active" id="module-materials" role="radio" aria-checked="true">
+            <span class="module-card__name">Materials</span>
+            <span class="module-card__desc">Tabulated n, k &middot; ε(ω) of metals &amp; dielectrics</span>
+          </button>
+          <button type="button" class="module-card" id="module-drude" role="radio" aria-checked="false">
+            <span class="module-card__name">Drude</span>
+            <span class="module-card__desc">Free-electron model &middot; ε<sub>∞</sub>, ω<sub>p</sub>, γ</span>
+          </button>
+          <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false" disabled title="Coming soon">
+            <span class="module-card__name">Graphene <span class="module-card__badge">soon</span></span>
+            <span class="module-card__desc">Surface conductivity &middot; Kubo model</span>
+          </button>
+          <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false" disabled title="Coming soon">
+            <span class="module-card__name">TMDC <span class="module-card__badge">soon</span></span>
+            <span class="module-card__desc">Transition-metal dichalcogenides</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="widget-layout">
+        <!-- ===== Controls ===== -->
+        <div class="controls card">
+          <h3 class="controls-title">Parameters</h3>
+
+          <!-- Materials controls -->
+          <div class="ctrl-group" id="ctrl-materials">
+            <h3>Material</h3>
+            <div class="fields">
+              <!-- Material 1 -->
+              <div class="field">
+                <label for="mat-select" id="mat1-label">Material</label>
+                <select class="field-input" id="mat-select">
+                  {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="file">Upload file&hellip;</option>
+                  <option value="rii">Search database&hellip;</option>
+                </select>
+              </div>
+              <div class="mat-extra" id="mat1-rii" hidden>
+                <input type="text" class="field-input rii-input" id="mat1-rii-input" placeholder="Search refractiveindex.info&hellip;" autocomplete="off">
+                <div class="rii-results" id="mat1-rii-results"></div>
+                <span class="ctrl-note rii-status" id="mat1-rii-status"></span>
+              </div>
+              <div class="mat-extra" id="mat1-file" hidden>
+                <input type="file" class="file-input" id="mat1-file-input" accept=".csv,.tsv,.txt,.dat">
+                <span class="ctrl-note" id="mat1-file-status">Columns: x, n, k or x, ε′, ε″ (x = nm, µm or eV — auto-detected).</span>
+              </div>
+
+              <!-- Material 2 -->
+              <div class="field" id="mat2-row" hidden>
+                <label for="mat2-select">Material 2</label>
+                <select class="field-input" id="mat2-select">
+                  {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="file">Upload file&hellip;</option>
+                  <option value="rii">Search database&hellip;</option>
+                </select>
+                <button type="button" class="icon-btn" id="mat2-remove" title="Remove material 2" aria-label="Remove material 2">&times;</button>
+              </div>
+              <div class="mat-extra" id="mat2-rii" hidden>
+                <input type="text" class="field-input rii-input" id="mat2-rii-input" placeholder="Search refractiveindex.info&hellip;" autocomplete="off">
+                <div class="rii-results" id="mat2-rii-results"></div>
+                <span class="ctrl-note rii-status" id="mat2-rii-status"></span>
+              </div>
+              <div class="mat-extra" id="mat2-file" hidden>
+                <input type="file" class="file-input" id="mat2-file-input" accept=".csv,.tsv,.txt,.dat">
+                <span class="ctrl-note" id="mat2-file-status">Columns: x, n, k or x, ε′, ε″.</span>
+              </div>
+            </div>
+            <button type="button" class="add-mat-btn" id="mat-add" title="Compare a second material">+ Add material</button>
+            <p class="ctrl-note" id="mat-ref"></p>
+          </div>
+
+          <!-- Drude controls -->
+          <div class="ctrl-group" id="ctrl-drude" hidden>
+            <h3>Drude model</h3>
+            <p class="drude-formula">ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub><sup>2</sup> / [ω(ω + iγ)]</p>
+            <div class="fields">
+              <div class="field">
+                <label for="drude-epsb">ε<sub>∞</sub></label>
+                <input type="text" class="field-input" id="drude-epsb" inputmode="decimal" value="9.5">
+              </div>
+              <div class="field">
+                <label for="drude-wp">&#8463;ω<sub>p</sub> [eV]</label>
+                <input type="text" class="field-input" id="drude-wp" inputmode="decimal" value="9.06">
+              </div>
+              <div class="field">
+                <label for="drude-gamma">γ = &#8463;τ<sup>&minus;1</sup> [eV]</label>
+                <input type="text" class="field-input" id="drude-gamma" inputmode="decimal" value="0.071">
+              </div>
+              <div class="field">
+                <label for="drude-tau">τ [fs]</label>
+                <input type="text" class="field-input" id="drude-tau" inputmode="decimal" value="9.27">
+              </div>
+            </div>
+            <div class="preset-row">
+              <button type="button" class="preset-btn drude-preset" data-epsb="9.5" data-wp="9.06" data-gamma="0.071">Au</button>
+              <button type="button" class="preset-btn drude-preset" data-epsb="4.0" data-wp="9.17" data-gamma="0.021">Ag</button>
+              <button type="button" class="preset-btn drude-preset" data-epsb="1.0" data-wp="15.0" data-gamma="0.6">Al</button>
+              <button type="button" class="preset-btn drude-preset" data-epsb="8.0" data-wp="8.88" data-gamma="0.103">Cu</button>
+            </div>
+          </div>
+
+          <h3>Display</h3>
+          <div class="fields">
+            <div class="field">
+              <label>Quantity</label>
+              <div class="seg" id="qty-tabs" role="radiogroup" aria-label="Quantity">
+                <button type="button" class="seg-btn active" data-qty="eps" role="radio" aria-checked="true">ε (Re, Im)</button>
+                <button type="button" class="seg-btn" data-qty="nk" role="radio" aria-checked="false">n, k</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>X axis</label>
+              <div class="seg" id="axis-tabs" role="radiogroup" aria-label="X axis">
+                <button type="button" class="seg-btn" data-axis="energy" role="radio" aria-checked="false">Energy</button>
+                <button type="button" class="seg-btn active" data-axis="wavelength" role="radio" aria-checked="true">Wavelength</button>
+              </div>
+            </div>
+          </div>
+
+          <h3>Range</h3>
+          <div class="fields">
+            <div class="field">
+              <label for="range-unit">Unit</label>
+              <select class="field-input" id="range-unit"></select>
+            </div>
+            <div class="field">
+              <label for="mat-rmin" id="rmin-label">λ min</label>
+              <input type="text" class="field-input" id="mat-rmin" inputmode="decimal" value="200">
+            </div>
+            <div class="field">
+              <label for="mat-rmax" id="rmax-label">λ max</label>
+              <input type="text" class="field-input" id="mat-rmax" inputmode="decimal" value="2000">
+            </div>
+          </div>
+          <p class="ctrl-note" id="range-note"></p>
+        </div>
+
+        <!-- ===== Results ===== -->
+        <div class="mat-results card">
+          <div class="chart-header">
+            <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
+            <span class="chart-header__right">
+              <span class="mat-legend" id="mat-legend"></span>
+            </span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="mat-canvas" aria-label="Optical constants plot"></canvas>
+          </div>
+
+          <div class="output-card card" id="readout"></div>
+
+          <div class="mat-export-bar">
+            <span class="mat-export-label">Export</span>
+            <button id="mat-dl-png" class="share-btn" title="Download plot as PNG">PNG</button>
+            <button id="mat-dl-csv" class="share-btn" title="Download data as CSV">CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .module-bar { margin-bottom: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .module-bar__label { color: var(--text); font-size: 0.75rem; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.04em; }
+  .module-bar__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); align-items: stretch; }
+  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: repeat(2, 1fr); } }
+  .module-card {
+    display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
+    width: 100%; min-height: 66px; text-align: left;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    padding: 0.6rem 0.7rem; cursor: pointer;
+  }
+  .module-card__name { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 800; }
+  .module-card__desc { color: var(--text-soft); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; }
+  .module-card__badge {
+    align-self: flex-start; border-radius: var(--radius-full); background: var(--bg-muted);
+    color: var(--text-muted); font-size: 0.625rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.04em; padding: 0.1rem 0.4rem;
+  }
+  .module-card:hover:not(:disabled):not(.active) { border-color: var(--primary-light); background: rgba(99, 102, 241, 0.06); }
+  .module-card.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
+  .module-card.active .module-card__desc { color: var(--primary); opacity: 0.85; }
+  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }
+
+  .widget-layout { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
+  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+
+  .controls { padding: var(--space-md); position: relative; }
+  .controls h3 {
+    font-size: 0.8rem; font-weight: 700; color: var(--text); margin: var(--space-md) 0 0.5rem;
+    padding-top: var(--space-md); border-top: 1px solid var(--bg-muted);
+  }
+  .controls h3:first-of-type, .controls .ctrl-group h3 { }
+  .controls-title { margin: 0 0 0.25rem !important; padding-top: 0 !important; border-top: none !important; font-size: 0.95rem !important; }
+  .ctrl-group h3 { margin-top: 0; padding-top: 0; border-top: none; }
+  .ctrl-group[hidden] { display: none; }
+
+  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .field { display: flex; align-items: center; gap: 0.5rem; }
+  .field label { flex: 0 0 auto; min-width: 92px; font-size: 0.8rem; color: var(--text-soft); }
+  .field-input {
+    flex: 1 1 auto; min-width: 0; width: 100%; padding: 0.4rem 0.55rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.85rem;
+  }
+  .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+  select.field-input { cursor: pointer; }
+
+  .ctrl-note { font-size: 0.7rem; color: var(--text-muted); margin: 0.4rem 0 0; line-height: 1.4; }
+  .drude-formula { font-size: 0.78rem; color: var(--text-soft); margin: 0 0 0.5rem; }
+
+  .preset-row { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+  .preset-btn {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem;
+    font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Segmented toggle */
+  .seg { display: inline-flex; flex: 1 1 auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); overflow: hidden; }
+  .seg-btn {
+    flex: 1 1 0; padding: 0.35rem 0.4rem; border: none; background: var(--bg);
+    color: var(--text-soft); font-family: var(--font); font-size: 0.74rem; font-weight: 600;
+    cursor: pointer; transition: background 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .seg-btn + .seg-btn { border-left: 1px solid var(--bg-muted); }
+  .seg-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.06); color: var(--primary); }
+  .seg-btn.active { background: var(--primary); color: #fff; }
+
+  .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .chart-title { font-weight: 600; font-size: 0.95rem; }
+  .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
+  .mat-legend { display: inline-flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+  :global(.mat-legend-item) { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; font-weight: 600; color: var(--text-soft); }
+  :global(.mat-legend-swatch) { width: 16px; height: 0; border-top: 2.6px solid var(--text-muted); border-radius: 2px; flex: 0 0 auto; }
+  :global(.ml-dashed) { border-top-style: dashed; }
+
+  /* Add / remove material controls */
+  .add-mat-btn {
+    margin-top: 0.5rem; padding: 0.3rem 0.7rem; border: 1px dashed var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .add-mat-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(99, 102, 241, 0.06); }
+  .add-mat-btn[hidden] { display: none; }
+  #mat2-row[hidden] { display: none; }
+  .icon-btn {
+    flex: 0 0 auto; width: 1.7rem; height: 1.7rem; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-muted);
+    font-size: 1.1rem; line-height: 1; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { border-color: #F43F5E; color: #F43F5E; }
+
+  /* Database search + file upload */
+  .mat-extra { display: flex; flex-direction: column; gap: 0.3rem; }
+  .mat-extra[hidden] { display: none; }
+  .rii-input { width: 100%; }
+  .rii-results { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .rii-results:empty { display: none; }
+  :global(.rii-result) { padding: 0.35rem 0.5rem; font-size: 0.76rem; cursor: pointer; line-height: 1.3; border-bottom: 1px solid var(--bg-muted); }
+  :global(.rii-result:last-child) { border-bottom: none; }
+  :global(.rii-result:hover) { background: rgba(99, 102, 241, 0.08); }
+  :global(.rii-result__book) { font-weight: 700; color: var(--text); }
+  :global(.rii-result__page) { color: var(--text-muted); }
+  :global(.rii-empty) { padding: 0.4rem 0.5rem; font-size: 0.76rem; color: var(--text-muted); }
+  .rii-status.err, .ctrl-note.err { color: #DC2626; }
+  .file-input { width: 100%; font-size: 0.74rem; color: var(--text-soft); }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; cursor: crosshair; border-radius: var(--radius-sm); }
+
+  /* Readout (built at runtime → global) */
+  .output-card { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.5rem; }
+  :global(.readout-row) { display: grid; gap: 0.5rem; align-items: stretch; }
+  :global(.readout-shared) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :global(.readout-mat) { grid-template-columns: minmax(96px, 0.9fr) repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 620px) {
+    :global(.readout-mat) { grid-template-columns: 1fr 1fr; }
+    :global(.readout-mat__name) { grid-column: 1 / -1; }
+  }
+  :global(.readout-mat__name) { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+  :global(.readout-mat__dot) { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  :global(.stat) {
+    display: flex; flex-direction: column; gap: 0.1rem; min-width: 0;
+    padding: 0.45rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg-soft);
+  }
+  :global(.stat-label) { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+  :global(.stat-value) { font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.2; overflow-wrap: anywhere; }
+
+  .mat-export-bar { display: flex; align-items: center; gap: 0.5rem; }
+  .mat-export-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .share-btn {
+    padding: 0.3rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.74rem; font-weight: 600; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
+</style>
+
+<script>
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK, drudeEpsilon, PHOTON_HC_EV_NM as HC } from '../../lib/materials';
+  import { downloadBlob } from '../../lib/download';
+  import { loadCatalog, searchCatalog, fetchMaterialNK, type RIIMaterial } from '../../data/refractiveindex';
+
+  // ── optical-file parser (tabulated x, n, k or x, ε′, ε″ — axis/value auto-detected) ──
+  type FileRow = [number, number, number];
+  function parseOpticalFile(text: string): { rows: FileRow[] } | { error: string } {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
+    if (lines.length < 2) return { error: 'File needs at least 2 data rows' };
+    let delim: RegExp = /\t/;
+    if (lines[0].split(delim).length < 3) delim = /,/;
+    if (lines[0].split(delim).length < 3) delim = /\s+/;
+    const start = isNaN(parseFloat(lines[0].split(delim)[0])) ? 1 : 0;
+    const rows: FileRow[] = [];
+    for (let i = start; i < lines.length; i++) {
+      const p = lines[i].split(delim).map(Number);
+      if (p.length >= 3 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2])) rows.push([p[0], p[1], p[2]]);
+    }
+    return rows.length >= 2 ? { rows } : { error: 'Could not parse ≥2 rows of 3 numeric columns' };
+  }
+  function inferModes(rows: FileRow[]): { axis: 'nm' | 'um' | 'eV'; values: 'nk' | 'eps' } {
+    const xMax = Math.max(...rows.map(r => r[0]));
+    const yMaxAbs = Math.max(...rows.flatMap(r => [Math.abs(r[1]), Math.abs(r[2])]));
+    const values = rows.some(r => r[1] < 0) || yMaxAbs > 25 ? 'eps' : 'nk';
+    const axis = xMax > 50 ? 'nm' : (values === 'eps' || xMax > 8 ? 'eV' : 'um');
+    return { axis, values };
+  }
+  function rowsToData(rows: FileRow[], m: { axis: 'nm' | 'um' | 'eV'; values: 'nk' | 'eps' }): number[][] {
+    const data: number[][] = [];
+    for (const [x, a, b] of rows) {
+      if (x <= 0) continue;
+      const lamUm = m.axis === 'nm' ? x / 1000 : m.axis === 'eV' ? HC / x / 1000 : x;
+      const [n, k] = m.values === 'eps' ? epsilonToNK(a, b) : [a, Math.abs(b)];
+      if (Number.isFinite(lamUm) && Number.isFinite(n) && Number.isFinite(k) && n >= 0) data.push([lamUm, n, k]);
+    }
+    data.sort((p, q) => p[0] - q[0]);
+    return data;
+  }
+
+  const COLORS = ['#6366F1', '#F59E0B'];   // one colour per material; solid = real part, dashed = imaginary
+
+  interface Source { label: string; color: string; nk: (lamNm: number) => { re: number; im: number; n: number; k: number }; dataLo: number; dataHi: number; }
+
+  type Mod = 'materials' | 'drude';
+  type Quantity = 'eps' | 'nk';
+  type Axis = 'energy' | 'wavelength';
+  let mod: Mod = 'materials';
+  let quantity: Quantity = 'eps';
+  let axis: Axis = 'wavelength';
+  let waveUnit: 'nm' | 'um' = 'nm';
+  let energyUnit: 'eV' | 'meV' = 'eV';
+  let mat2On = false;                       // second material in the Materials module
+  // canonical plotting window, always stored as wavelength in nm (lo < hi)
+  let rangeLoNm = 200, rangeHiNm = 2000;
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const canvas = $('mat-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const matSelect = $('mat-select') as HTMLSelectElement;
+  const mat2Select = $('mat2-select') as HTMLSelectElement;
+
+  // ── a material slot: built-in table, uploaded file, or database (RII) result ──
+  interface Slot {
+    select: HTMLSelectElement;
+    custom: { label: string; ref: string; data: number[][] } | null;
+    catalog: RIIMaterial[] | null;
+    resolve: () => { label: string; ref: string; data: number[][] } | null;
+  }
+  function setupSlot(prefix: string, select: HTMLSelectElement): Slot {
+    const riiGroup = $(`${prefix}-rii`), fileGroup = $(`${prefix}-file`);
+    const riiInput = $(`${prefix}-rii-input`) as HTMLInputElement;
+    const riiResults = $(`${prefix}-rii-results`);
+    const riiStatus = $(`${prefix}-rii-status`);
+    const fileInput = $(`${prefix}-file-input`) as HTMLInputElement;
+    const fileStatus = $(`${prefix}-file-status`);
+    const slot: Slot = { select, custom: null, catalog: null, resolve: () => null };
+
+    slot.resolve = () => {
+      const v = select.value;
+      if (MATERIALS[v]) return { label: MATERIALS[v].label, ref: MATERIALS[v].ref, data: MATERIALS[v].data };
+      if ((v === 'file' || v === 'rii') && slot.custom) return slot.custom;
+      return null;
+    };
+
+    select.addEventListener('change', () => {
+      riiGroup.hidden = select.value !== 'rii';
+      fileGroup.hidden = select.value !== 'file';
+      if (select.value === 'rii') runSearch();
+      refreshMatRef(); render();
+    });
+
+    // database search
+    let timer: number | undefined;
+    async function runSearch() {
+      if (!slot.catalog) {
+        riiStatus.textContent = 'Loading database…'; riiStatus.classList.remove('err');
+        try { slot.catalog = await loadCatalog(); }
+        catch { riiStatus.textContent = 'Failed to load database'; riiStatus.classList.add('err'); return; }
+      }
+      const hits = searchCatalog(slot.catalog, riiInput.value.trim());
+      (riiResults as any)._hits = hits;
+      riiResults.innerHTML = hits.length
+        ? hits.map((m, i) => `<div class="rii-result" data-i="${i}"><span class="rii-result__book">${m.bookName || m.book}</span> <span class="rii-result__page">${m.pageName}</span></div>`).join('')
+        : '<div class="rii-empty">No matches</div>';
+      riiStatus.textContent = `${slot.catalog.length} materials in database`;
+    }
+    riiInput.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(runSearch, 200); });
+    riiResults.addEventListener('click', async (e) => {
+      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement | null;
+      if (!el) return;
+      const m = ((riiResults as any)._hits as RIIMaterial[])[+el.dataset.i!];
+      if (!m) return;
+      riiStatus.textContent = 'Loading data…'; riiStatus.classList.remove('err');
+      try {
+        const data = await fetchMaterialNK(m.dataPath);
+        slot.custom = { label: m.bookName || m.book, ref: `refractiveindex.info · ${m.pageName}`, data };
+        riiStatus.textContent = `${m.bookName || m.book} · ${m.pageName} (${data.length} pts)`;
+        refreshMatRef(); render();
+      } catch { riiStatus.textContent = 'Failed to load data'; riiStatus.classList.add('err'); }
+    });
+
+    // file upload
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files?.[0]; if (!f) return;
+      f.text().then(text => {
+        const parsed = parseOpticalFile(text);
+        if ('error' in parsed) { fileStatus.textContent = parsed.error; fileStatus.classList.add('err'); return; }
+        const modes = inferModes(parsed.rows);
+        const data = rowsToData(parsed.rows, modes);
+        if (data.length < 2) { fileStatus.textContent = 'No valid optical rows'; fileStatus.classList.add('err'); return; }
+        slot.custom = { label: f.name.replace(/\.[^.]+$/, ''), ref: `uploaded · ${modes.values === 'eps' ? 'ε' : 'n,k'} vs ${modes.axis}`, data };
+        fileStatus.classList.remove('err');
+        fileStatus.textContent = `${f.name}: ${data.length} rows · ${modes.values === 'eps' ? 'ε' : 'n,k'} vs ${modes.axis}`;
+        refreshMatRef(); render();
+      });
+    });
+
+    return slot;
+  }
+  const slot1 = setupSlot('mat1', matSelect);
+  const slot2 = setupSlot('mat2', mat2Select);
+
+  const num = (id: string, def: number): number => {
+    const v = parseFloat(($(id) as HTMLInputElement).value);
+    return Number.isFinite(v) ? v : def;
+  };
+  const drudeParams = () => ({ epsB: num('drude-epsb', 1), wpEv: num('drude-wp', 9), gammaEv: num('drude-gamma', 0.05) });
+
+  // ── axis/unit conversions (canonical window = wavelength in nm) ──
+  const xToLamNm = (x: number): number =>
+    axis === 'wavelength' ? (waveUnit === 'um' ? x * 1000 : x)
+                          : HC / (energyUnit === 'meV' ? x * 1e-3 : x);
+  const lamNmToX = (lamNm: number): number => {
+    if (axis === 'wavelength') return waveUnit === 'um' ? lamNm / 1000 : lamNm;
+    const eEv = HC / lamNm;
+    return energyUnit === 'meV' ? eEv * 1e3 : eEv;
+  };
+  const unitLabel = (): string =>
+    axis === 'wavelength' ? (waveUnit === 'um' ? 'µm' : 'nm') : (energyUnit === 'meV' ? 'meV' : 'eV');
+
+  const rminEl = $('mat-rmin') as HTMLInputElement;
+  const rmaxEl = $('mat-rmax') as HTMLInputElement;
+  const unitSel = $('range-unit') as HTMLSelectElement;
+
+  function refreshUnitSelect() {
+    unitSel.innerHTML = axis === 'wavelength'
+      ? '<option value="nm">nm</option><option value="um">µm</option>'
+      : '<option value="eV">eV</option><option value="meV">meV</option>';
+    unitSel.value = axis === 'wavelength' ? waveUnit : energyUnit;
+  }
+
+  // Write the canonical range into the inputs, converted to the current axis/unit.
+  function refreshRangeInputs() {
+    const a = lamNmToX(rangeLoNm), b = lamNmToX(rangeHiNm);
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    const dp = axis === 'wavelength' ? (waveUnit === 'um' ? 3 : 0) : (energyUnit === 'meV' ? 0 : 3);
+    rminEl.value = lo.toFixed(dp);
+    rmaxEl.value = hi.toFixed(dp);
+    const q = axis === 'wavelength' ? 'λ' : 'E';
+    $('rmin-label').textContent = `${q} min`;
+    $('rmax-label').textContent = `${q} max`;
+  }
+
+  // Read the inputs (current axis/unit) back into the canonical nm window.
+  function readRangeInputs() {
+    const a = parseFloat(rminEl.value), b = parseFloat(rmaxEl.value);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return;
+    const la = xToLamNm(a), lb = xToLamNm(b);
+    const lo = Math.min(la, lb), hi = Math.max(la, lb);
+    if (hi > lo) { rangeLoNm = lo; rangeHiNm = hi; }
+  }
+
+  // Active plot sources: 1–2 tabulated materials, or the single Drude model.
+  function sources(): Source[] {
+    if (mod === 'drude') {
+      return [{
+        label: 'Drude', color: COLORS[0],
+        nk: (lam) => { const e = drudeEpsilon(lam, drudeParams()); const [n, k] = epsilonToNK(e.re, e.im); return { re: e.re, im: e.im, n, k }; },
+        dataLo: -Infinity, dataHi: Infinity,
+      }];
+    }
+    const slots = mat2On ? [slot1, slot2] : [slot1];
+    const out: Source[] = [];
+    for (const sl of slots) {
+      const r = sl.resolve(); if (!r) continue;
+      const d = r.data;
+      out.push({
+        label: r.label, color: COLORS[out.length % COLORS.length],
+        nk: (lam) => { const [n, k] = interpolateNK(d, lam); const e = nkToEpsilon(n, k); return { re: e.re, im: e.im, n, k }; },
+        dataLo: d[0][0] * 1000, dataHi: d[d.length - 1][0] * 1000,
+      });
+    }
+    return out;
+  }
+
+  // Wavelength range [nm]; for tabulated materials clamp to the (common) measured extent.
+  function lamRange(src: Source[]): [number, number] {
+    let lo = rangeLoNm, hi = rangeHiNm;
+    if (hi <= lo) { const a = Math.min(lo, hi); hi = Math.max(lo, hi) + 1; lo = a; }
+    let note = '';
+    if (mod === 'materials') {
+      let dlo = -Infinity, dhi = Infinity;
+      for (const s of src) { dlo = Math.max(dlo, s.dataLo); dhi = Math.min(dhi, s.dataHi); }
+      const clo = Math.max(lo, dlo), chi = Math.min(hi, dhi);
+      if (clo > lo || chi < hi) note = `${src.length > 1 ? 'Common data' : 'Data'} range ${dlo.toFixed(0)}–${dhi.toFixed(0)} nm; plot clamped.`;
+      lo = clo; hi = chi;
+    }
+    $('range-note').textContent = note;
+    return [lo, hi];
+  }
+
+  let current: { xs: Float64Array; lam: Float64Array; src: Source[]; series: { color: string; real: Float64Array; imag: Float64Array }[] } | null = null;
+  let view: { tx: (v: number) => number; PAD: { l: number; r: number; t: number; b: number }; pw: number; ph: number; xMin: number; xMax: number } | null = null;
+
+  function compute() {
+    const N = 360;
+    const src = sources();
+    const [lamLo, lamHi] = lamRange(src);
+    const valid = lamHi > lamLo;
+    const xs = new Float64Array(N), lam = new Float64Array(N);
+    const xa = lamNmToX(lamLo), xb = lamNmToX(lamHi);
+    const xMin = Math.min(xa, xb), xMax = Math.max(xa, xb);
+    const series = src.map(s => ({ color: s.color, real: new Float64Array(N), imag: new Float64Array(N) }));
+    for (let i = 0; i < N; i++) {
+      const x = valid ? xMin + (xMax - xMin) * i / (N - 1) : NaN;
+      const l = valid ? xToLamNm(x) : NaN;
+      lam[i] = l;
+      xs[i] = x;
+      for (let j = 0; j < src.length; j++) {
+        if (!valid) { series[j].real[i] = NaN; series[j].imag[i] = NaN; continue; }
+        const o = src[j].nk(l);
+        if (quantity === 'eps') { series[j].real[i] = o.re; series[j].imag[i] = o.im; }
+        else { series[j].real[i] = o.n; series[j].imag[i] = o.k; }
+      }
+    }
+    current = { xs, lam, src, series };
+  }
+
+  function niceScale(min: number, max: number, ticks = 5) {
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) { min = (min || 0) - 1; max = (max || 0) + 1; }
+    const range = max - min, raw = range / ticks;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    return { min: Math.floor(min / step) * step, max: Math.ceil(max / step) * step, step };
+  }
+
+  const fmt = (v: number): string => {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    if (a < 1e-3 || a >= 1e5) return v.toExponential(1);
+    let s = a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(2) : v.toFixed(3);
+    if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+    return s;
+  };
+
+  function paint(hoverIdx = -1) {
+    if (!current) return;
+    const t = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const cw = canvas.clientWidth || 600, ch = Math.max(280, Math.round(cw * 0.6));
+    canvas.width = cw * dpr; canvas.height = ch * dpr; canvas.style.height = ch + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+
+    const PAD = { l: 58, r: 16, t: 14, b: 42 };
+    const pw = cw - PAD.l - PAD.r, ph = ch - PAD.t - PAD.b;
+    const xs = current.xs;
+
+    let ymin = Infinity, ymax = -Infinity;
+    for (const s of current.series) for (const arr of [s.real, s.imag]) for (const v of arr) { if (Number.isFinite(v)) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; } }
+    if (!Number.isFinite(ymin)) { ymin = 0; ymax = 1; }
+    let xmin = xs[0], xmax = xs[xs.length - 1];
+    if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) { xmin = 0; xmax = 1; }
+    if (xmax < xmin) { const tmp = xmin; xmin = xmax; xmax = tmp; }
+
+    const ys = niceScale(ymin, ymax), xsc = niceScale(xmin, xmax);
+    const tx = (v: number) => PAD.l + (v - xsc.min) / (xsc.max - xsc.min) * pw;
+    const ty = (v: number) => PAD.t + ph - (v - ys.min) / (ys.max - ys.min) * ph;
+    view = { tx, PAD, pw, ph, xMin: xsc.min, xMax: xsc.max };
+
+    // grid + ticks
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.strokeStyle = t.grid; ctx.lineWidth = 1;
+    ctx.fillStyle = t.textMuted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) {
+      const y = ty(v); if (y < PAD.t - 1 || y > PAD.t + ph + 1) continue;
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + pw, y); ctx.stroke();
+      ctx.fillText(fmt(v), PAD.l - 8, y);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let v = xsc.min; v <= xsc.max + xsc.step * 0.5; v += xsc.step) {
+      const x = tx(v); if (x < PAD.l - 1 || x > PAD.l + pw + 1) continue;
+      ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, PAD.t + ph); ctx.stroke();
+      ctx.fillText(fmt(v), x, PAD.t + ph + 6);
+    }
+    // zero line
+    if (ys.min < 0 && ys.max > 0) {
+      const y0 = ty(0); ctx.save(); ctx.setLineDash([3, 3]); ctx.globalAlpha = 0.55; ctx.strokeStyle = t.textMuted;
+      ctx.beginPath(); ctx.moveTo(PAD.l, y0); ctx.lineTo(PAD.l + pw, y0); ctx.stroke(); ctx.restore();
+    }
+    // axes
+    ctx.strokeStyle = t.grid; ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t + ph); ctx.lineTo(PAD.l + pw, PAD.t + ph); ctx.stroke();
+
+    // series
+    const drawLine = (arr: Float64Array, color: string, dash: number[]) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.setLineDash(dash); ctx.beginPath();
+      let first = true;
+      for (let i = 0; i < xs.length; i++) {
+        const v = arr[i];
+        if (!Number.isFinite(v) || !Number.isFinite(xs[i])) { first = true; continue; }
+        const px = tx(xs[i]), py = ty(v);
+        if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    // each material: real part solid, imaginary part dashed, in the material colour
+    for (const s of current.series) { drawLine(s.real, s.color, []); drawLine(s.imag, s.color, [5, 4]); }
+
+    // hover crosshair
+    if (hoverIdx >= 0 && hoverIdx < xs.length && Number.isFinite(xs[hoverIdx])) {
+      const hx = tx(xs[hoverIdx]); ctx.save(); ctx.strokeStyle = t.textMuted; ctx.globalAlpha = 0.6; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, PAD.t + ph); ctx.stroke(); ctx.restore();
+      for (const s of current.series) for (const arr of [s.real, s.imag]) {
+        const v = arr[hoverIdx]; if (!Number.isFinite(v)) continue;
+        ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(hx, ty(v), 3.2, 0, 2 * Math.PI); ctx.fill();
+      }
+    }
+
+    // axis labels
+    ctx.fillStyle = t.text; ctx.font = '12px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(axis === 'energy' ? `Photon energy (${unitLabel()})` : `Wavelength (${unitLabel()})`, PAD.l + pw / 2, ch - 12);
+    ctx.save(); ctx.translate(15, PAD.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
+    ctx.fillText(quantity === 'eps' ? 'Dielectric function ε' : 'Refractive index', 0, 0); ctx.restore();
+  }
+
+  // Build the per-source readout boxes (one labelled group per material).
+  function rebuildReadout(src: Source[]) {
+    let html = `<div class="readout-row readout-shared">
+      <div class="stat"><span class="stat-label">Wavelength (nm)</span><span class="stat-value" id="r-lambda">—</span></div>
+      <div class="stat"><span class="stat-label">Energy (eV)</span><span class="stat-value" id="r-energy">—</span></div>
+    </div>`;
+    src.forEach((s, i) => {
+      html += `<div class="readout-row readout-mat">
+        <div class="readout-mat__name" style="color:${s.color}"><span class="readout-mat__dot" style="background:${s.color}"></span>${s.label}</div>
+        <div class="stat"><span class="stat-label">Re ε</span><span class="stat-value" id="r-re-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">Im ε</span><span class="stat-value" id="r-im-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">n</span><span class="stat-value" id="r-n-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">k</span><span class="stat-value" id="r-k-${i}">—</span></div>
+      </div>`;
+    });
+    $('readout').innerHTML = html;
+  }
+
+  function setReadout(idx: number) {
+    if (!current) return;
+    const src = current.src;
+    const invalid = idx < 0 || idx >= current.lam.length || !Number.isFinite(current.lam[idx]);
+    if (invalid) {
+      $('r-lambda').textContent = '—'; $('r-energy').textContent = '—';
+      src.forEach((_, i) => ['re', 'im', 'n', 'k'].forEach(q => { const el = document.getElementById(`r-${q}-${i}`); if (el) el.textContent = '—'; }));
+      return;
+    }
+    const lam = current.lam[idx];
+    $('r-lambda').textContent = lam.toFixed(1);
+    $('r-energy').textContent = (HC / lam).toFixed(3);
+    src.forEach((s, i) => {
+      const o = s.nk(lam);
+      const set = (q: string, v: number) => { const el = document.getElementById(`r-${q}-${i}`); if (el) el.textContent = fmt(v); };
+      set('re', o.re); set('im', o.im); set('n', o.n); set('k', o.k);
+    });
+  }
+
+  // Legend: a solid/dashed style key + one coloured entry per material.
+  function buildLegend(src: Source[]) {
+    const realLab = quantity === 'eps' ? 'Re ε' : 'n';
+    const imagLab = quantity === 'eps' ? 'Im ε' : 'k';
+    let h = `<span class="mat-legend-item"><span class="mat-legend-swatch ml-solid"></span>${realLab}</span>`
+          + `<span class="mat-legend-item"><span class="mat-legend-swatch ml-dashed"></span>${imagLab}</span>`;
+    for (const s of src) h += `<span class="mat-legend-item"><span class="mat-legend-swatch" style="border-top-color:${s.color}"></span>${s.label}</span>`;
+    $('mat-legend').innerHTML = h;
+  }
+
+  function render(hoverIdx = -1) {
+    $('mat-title').textContent = quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
+    compute();
+    buildLegend(current!.src);
+    rebuildReadout(current!.src);
+    paint(hoverIdx);
+    setReadout(hoverIdx >= 0 ? hoverIdx : Math.floor((current?.lam.length ?? 1) / 2));
+  }
+
+  // ── hover ──
+  canvas.addEventListener('mousemove', (e) => {
+    if (!current || !view) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const frac = (px - view.PAD.l) / view.pw;
+    if (frac < 0 || frac > 1) return;
+    const xval = view.xMin + frac * (view.xMax - view.xMin);
+    // nearest sample by x
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < current.xs.length; i++) { const d = Math.abs(current.xs[i] - xval); if (d < bd) { bd = d; best = i; } }
+    paint(best); setReadout(best);
+  });
+  canvas.addEventListener('mouseleave', () => render(-1));
+
+  // ── module switch ──
+  const moduleBtns: Record<Mod, string> = { materials: 'module-materials', drude: 'module-drude' };
+  function selectModule(m: Mod) {
+    mod = m;
+    (Object.keys(moduleBtns) as Mod[]).forEach(k => {
+      const b = $(moduleBtns[k]); const on = k === m;
+      b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on));
+    });
+    $('ctrl-materials').hidden = m !== 'materials';
+    $('ctrl-drude').hidden = m !== 'drude';
+    render();
+  }
+  $('module-materials').addEventListener('click', () => selectModule('materials'));
+  $('module-drude').addEventListener('click', () => selectModule('drude'));
+
+  // ── segmented toggles ──
+  function wireSeg(groupId: string, apply: (val: string) => void) {
+    const group = $(groupId);
+    group.querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.seg-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-checked', 'true');
+        apply(btn.dataset.qty ?? btn.dataset.axis ?? '');
+        render();
+      });
+    });
+  }
+  wireSeg('qty-tabs', v => { quantity = v as Quantity; });
+  // Switching the X axis converts the range inputs to the new axis/unit.
+  wireSeg('axis-tabs', v => { axis = v as Axis; refreshUnitSelect(); refreshRangeInputs(); });
+
+  unitSel.addEventListener('change', () => {
+    if (axis === 'wavelength') waveUnit = unitSel.value as 'nm' | 'um';
+    else energyUnit = unitSel.value as 'eV' | 'meV';
+    refreshRangeInputs();
+    render();
+  });
+
+  // ── inputs ──
+  function refreshMatRef() {
+    if (mod === 'drude') { $('mat-ref').textContent = ''; return; }
+    const slots = mat2On ? [slot1, slot2] : [slot1];
+    const refs = slots.map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
+    $('mat-ref').textContent = refs.join('  ·  ');
+  }
+
+  // ── add / remove a second material ──
+  function setMat2(on: boolean) {
+    mat2On = on;
+    $('mat2-row').hidden = !on;
+    $('mat2-rii').hidden = !on || mat2Select.value !== 'rii';
+    $('mat2-file').hidden = !on || mat2Select.value !== 'file';
+    $('mat-add').hidden = on;
+    $('mat1-label').textContent = on ? 'Material 1' : 'Material';
+    refreshMatRef();
+    render();
+  }
+  $('mat-add').addEventListener('click', () => {
+    if (mat2Select.value === matSelect.value) {
+      const alt = Object.keys(MATERIALS).find(k => k !== matSelect.value);
+      if (alt) mat2Select.value = alt;
+    }
+    setMat2(true);
+  });
+  $('mat2-remove').addEventListener('click', () => setMat2(false));
+
+  [rminEl, rmaxEl].forEach(el => el.addEventListener('input', () => { readRangeInputs(); render(); }));
+
+  // ── Drude γ [eV] ⇄ τ [fs] (γ = ħ/τ, with ħ = 0.658212 eV·fs) ──
+  const HBAR_EV_FS = 0.6582119569;
+  const trim = (v: number, dp: number) => { let s = v.toFixed(dp); if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, ''); return s; };
+  const gammaEl = $('drude-gamma') as HTMLInputElement;
+  const tauEl = $('drude-tau') as HTMLInputElement;
+  function syncTauFromGamma() { const g = parseFloat(gammaEl.value); if (Number.isFinite(g) && g > 0) tauEl.value = trim(HBAR_EV_FS / g, 2); }
+  function syncGammaFromTau() { const t = parseFloat(tauEl.value); if (Number.isFinite(t) && t > 0) gammaEl.value = trim(HBAR_EV_FS / t, 4); }
+
+  ['drude-epsb', 'drude-wp'].forEach(id => $(id).addEventListener('input', () => render()));
+  gammaEl.addEventListener('input', () => { syncTauFromGamma(); render(); });
+  tauEl.addEventListener('input', () => { syncGammaFromTau(); render(); });
+
+  document.querySelectorAll<HTMLButtonElement>('.drude-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ($('drude-epsb') as HTMLInputElement).value = btn.dataset.epsb!;
+      ($('drude-wp') as HTMLInputElement).value = btn.dataset.wp!;
+      gammaEl.value = btn.dataset.gamma!;
+      syncTauFromGamma();
+      render();
+    });
+  });
+
+  // ── export ──
+  $('mat-dl-csv').addEventListener('click', () => {
+    if (!current) return;
+    const src = current.src;
+    const head = ['wavelength_nm', 'energy_eV'];
+    for (const s of src) { const p = s.label.replace(/[^A-Za-z0-9]+/g, '_'); head.push(`${p}_n`, `${p}_k`, `${p}_eps_re`, `${p}_eps_im`); }
+    const lines = [
+      `# Optical constants — ${src.map(s => s.label).join(', ')}`,
+      '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+      head.join(','),
+    ];
+    for (let i = 0; i < current.lam.length; i++) {
+      const lam = current.lam[i]; if (!Number.isFinite(lam)) continue;
+      const row = [lam.toFixed(4), (HC / lam).toFixed(5)];
+      for (const s of src) { const o = s.nk(lam); row.push(o.n.toFixed(6), o.k.toFixed(6), o.re.toFixed(6), o.im.toFixed(6)); }
+      lines.push(row.join(','));
+    }
+    const stem = mod === 'drude' ? 'drude' : current.src.map(s => s.label.split(/[\s(]/)[0].toLowerCase()).join('_');
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), `materials_${stem}.csv`);
+  });
+  $('mat-dl-png').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.download = `materials_${mod === 'drude' ? 'drude' : matSelect.value}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  });
+
+  // ── init ──
+  refreshMatRef();
+  refreshUnitSelect();
+  refreshRangeInputs();
+  onThemeChange(() => paint());
+  window.addEventListener('resize', () => paint());
+  render();
+</script>
