@@ -50,11 +50,11 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
           </button>
           <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false">
             <span class="module-card__name">Graphene</span>
-            <span class="module-card__desc">Surface conductivity σ(ω) &middot; Kubo</span>
+            <span class="module-card__desc">Surface conductivity σ(ω,T) &middot; Kubo</span>
           </button>
-          <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false" disabled title="Coming soon">
-            <span class="module-card__name">TMDC <span class="module-card__badge">soon</span></span>
-            <span class="module-card__desc">Transition-metal dichalcogenides</span>
+          <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false">
+            <span class="module-card__name">TMDC</span>
+            <span class="module-card__desc">ε(ω,T) of MoS₂, MoSe₂, WS₂ &middot; DFPM</span>
           </button>
         </div>
       </div>
@@ -179,6 +179,26 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                 <input type="text" class="field-input gr-ef-num" id="gr-temp" inputmode="decimal" value="300">
                 <input type="range" class="gr-slider" id="gr-temp-slider" min="0" max="1000" step="5" value="300" list="gr-temp-marks" aria-label="Temperature">
                 <datalist id="gr-temp-marks"><option value="300" label="300 K"></option></datalist>
+              </div>
+            </div>
+          </div>
+
+          <!-- TMDC controls -->
+          <div class="ctrl-group" id="ctrl-tmdc" hidden>
+            <div class="fields">
+              <div class="field">
+                <label for="tmdc-mat">Material</label>
+                <select class="field-input" id="tmdc-mat" aria-label="TMDC material">
+                  <option value="MoS2">MoS₂</option>
+                  <option value="MoSe2">MoSe₂</option>
+                  <option value="WS2">WS₂</option>
+                </select>
+              </div>
+              <div class="field gr-ef-field">
+                <label for="tmdc-temp">T [K]</label>
+                <input type="text" class="field-input gr-ef-num" id="tmdc-temp" inputmode="decimal" value="300">
+                <input type="range" class="gr-slider" id="tmdc-temp-slider" min="35" max="350" step="1" value="300" list="tmdc-temp-marks" aria-label="Temperature">
+                <datalist id="tmdc-temp-marks"><option value="300" label="300 K"></option></datalist>
               </div>
             </div>
           </div>
@@ -497,6 +517,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK, drudeEpsilon, PHOTON_HC_EV_NM as HC } from '../../lib/materials';
   import { downloadBlob } from '../../lib/download';
   import { loadCatalog, searchCatalog, fetchMaterialNK, type RIIMaterial } from '../../data/refractiveindex';
+  import { TMDC, TMDC_LABEL, tmdcEpsilon } from '../../data/tmdc';
 
   // ── optical-file parser (tabulated x, n, k or x, ε′, ε″ — axis/value auto-detected) ──
   type FileRow = [number, number, number];
@@ -537,7 +558,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   interface Source { label: string; color: string; nk: (lamNm: number) => { re: number; im: number; n: number; k: number }; dataLo: number; dataHi: number; }
 
-  type Mod = 'materials' | 'drude' | 'graphene';
+  type Mod = 'materials' | 'drude' | 'graphene' | 'tmdc';
   type Quantity = 'eps' | 'nk';
   const isSigma = () => mod === 'graphene';
   type Axis = 'energy' | 'wavelength';
@@ -921,7 +942,37 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   // Active plot sources: 1–2 tabulated materials, the Drude model, or graphene σ.
+  // ── TMDC dielectric function ε(E,T): cache the spectrum per (material, T) ──
+  let tmdcMat = 'MoS2';
+  let tmdcCache: { key: string; E: Float64Array; e1: Float64Array; e2: Float64Array } | null = null;
+  function tmdcSpectrum() {
+    const T = Math.max(0, num('tmdc-temp', 300));
+    const key = `${tmdcMat}|${T.toFixed(2)}`;
+    if (tmdcCache && tmdcCache.key === key) return tmdcCache;
+    const [Elo, Ehi] = TMDC[tmdcMat].Erange;
+    const N = 216, E = new Float64Array(N);
+    for (let i = 0; i < N; i++) E[i] = Elo + (Ehi - Elo) * i / (N - 1);   // dense grid resolves sharp excitons
+    const { e1, e2 } = tmdcEpsilon(tmdcMat, T, E, 351);   // 351-pt support: < 0.002 error vs 601, ~2× faster
+    tmdcCache = { key, E, e1, e2 };
+    return tmdcCache;
+  }
+  function tmdcNK(lam: number, sp: ReturnType<typeof tmdcSpectrum>) {
+    const E = HC / lam, arr = sp.E;
+    if (E <= arr[0] || E >= arr[arr.length - 1]) return { re: NaN, im: NaN, n: NaN, k: NaN };
+    let a = 0, b = arr.length - 1;
+    while (b - a > 1) { const m = (a + b) >> 1; if (arr[m] <= E) a = m; else b = m; }
+    const t = (E - arr[a]) / (arr[b] - arr[a]);
+    const e1 = sp.e1[a] + t * (sp.e1[b] - sp.e1[a]), e2 = sp.e2[a] + t * (sp.e2[b] - sp.e2[a]);
+    const [n, k] = epsilonToNK(e1, e2);
+    return { re: e1, im: e2, n, k };
+  }
+
   function sources(): Source[] {
+    if (mod === 'tmdc') {
+      const sp = tmdcSpectrum();
+      const [Elo, Ehi] = TMDC[tmdcMat].Erange;
+      return [{ label: TMDC_LABEL[tmdcMat], color: COLORS[0], dataLo: HC / Ehi, dataHi: HC / Elo, nk: (lam) => tmdcNK(lam, sp) }];
+    }
     if (mod === 'graphene' && grNL) {
       return grNLSeries().map(s => ({
         label: s.label, color: s.color, dataLo: -Infinity, dataHi: Infinity,
@@ -986,7 +1037,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   let view: { tx: (v: number) => number; PAD: { l: number; r: number; t: number; b: number }; pw: number; ph: number; xMin: number; xMax: number; xStep: number } | null = null;
 
   function compute() {
-    const N = 360;
+    const N = 216;
     const src = sources();
     const [lamLo, lamHi] = lamRange(src);
     const valid = lamHi > lamLo;
@@ -1322,8 +1373,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   function render(hoverIdx = -1) {
     $('mat-title').textContent = isSigma()
-      ? (grNL ? grProcTitle() : 'Surface conductivity σ(ω)')
-      : quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
+      ? (grNL ? grProcTitle() : 'Surface conductivity σ(ω,T)')
+      : mod === 'tmdc'
+        ? (quantity === 'eps' ? 'Dielectric function ε(ω,T)' : 'Refractive index n, k (ω,T)')
+        : quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
     compute();
     buildLegend(current!.src);
     rebuildReadout(current!.src);
@@ -1348,8 +1401,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   canvas.addEventListener('mouseleave', () => render(-1));
 
   // ── module switch ──
-  const moduleBtns: Record<Mod, string> = { materials: 'module-materials', drude: 'module-drude', graphene: 'module-graphene' };
-  let grSeeded = false;
+  const moduleBtns: Record<Mod, string> = { materials: 'module-materials', drude: 'module-drude', graphene: 'module-graphene', tmdc: 'module-tmdc' };
+  let grSeeded = false, tmdcSeeded = false;
   function selectModule(m: Mod) {
     mod = m;
     (Object.keys(moduleBtns) as Mod[]).forEach(k => {
@@ -1359,12 +1412,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     $('ctrl-materials').hidden = m !== 'materials';
     $('ctrl-drude').hidden = m !== 'drude';
     $('ctrl-graphene').hidden = m !== 'graphene';
-    $('qty-field').hidden = m === 'graphene';            // ε / n,k (materials & Drude)
+    $('ctrl-tmdc').hidden = m !== 'tmdc';
+    $('qty-field').hidden = m === 'graphene';            // ε / n,k (materials, Drude, TMDC)
     $('lin-nl-tabs').hidden = m !== 'graphene';           // LIN / NL (graphene)
     refreshUnitSelect();                                  // add/remove the E_F energy unit
     updateGrapheneUI();
     // first time into graphene, widen the range to show the IR Drude peak + 2EF edge
     if (m === 'graphene' && !grSeeded) { grSeeded = true; rangeLoNm = 600; rangeHiNm = 25000; refreshRangeInputs(); }
+    if (m === 'tmdc' && !tmdcSeeded) { tmdcSeeded = true; tmdcApplyMaterial(); }
     updateNotes();
     render();
   }
@@ -1421,6 +1476,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <li>ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub><sup>2</sup>/[ω(ω+iγ)] — free-electron metal with background ε<sub>∞</sub>, plasma frequency ω<sub>p</sub>, and damping γ = ℏτ<sup>-1</sup>.</li>
         <li>Presets Au/Ag/Al/Cu are Drude fits (a single Lorentzian-free term); accurate in the IR, approximate near interband transitions.</li>
       </ul>`;
+    } else if (mod === 'tmdc') {
+      const td = TMDC[tmdcMat];
+      html = `<h4>TMDC dielectric function — ${TMDC_LABEL[tmdcMat]}</h4><ul>
+        <li>Temperature-dependent ε(E,T) from the <b>Dielectric Function Parametric Model</b> (DFPM / PSEMI): each critical point is a polynomial-spline joint density of states broadened by a Kramers–Kronig-consistent Gaussian; ε = (n + ik)².</li>
+        <li>Every parameter follows the cubic law f(T) = a + b·x + c·x² + d·x³, with x = T/1000 (T in K).</li>
+        <li><b>Validity window:</b> energy <b>${td.Erange[0]}–${td.Erange[1]} eV</b>, temperature <b>${td.Trange[0]}–${td.Trange[1]} K</b>. Outside these ranges the cubic laws and splines extrapolate and are <b>not physically supported</b> (the curve is clamped to the energy window here).</li>
+        <li>In-plane (ordinary) response only — not the out-of-plane component.</li>
+        ${tmdcMat === 'MoS2'
+          ? '<li>MoS₂ is the validated reference; CP energies, widths and temperature trends are exact, but the sharpest excitonic ε₂ peaks are slightly over-estimated (an open PSEMI-normalization issue).</li>'
+          : '<li>CP energies, widths and amplitudes reproduce the source paper exactly; the per-CP line-shape (M-type) is assigned by analogy with MoS₂, so absolute ε₂ line shapes are indicative.</li>'}
+      </ul>`;
     } else {
       html = `<h4>Tabulated optical constants</h4><ul>
         <li>ε = (n + ik)². Tabulated n(λ), k(λ) are <b>linearly</b> interpolated in wavelength.</li>
@@ -1441,6 +1507,16 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         `S. A. Mikhailov, <em>Quantum theory of the third-order nonlinear electrodynamic effects of graphene</em>, Phys. Rev. B <strong>93</strong>, 085403 (2016), <a href="https://doi.org/10.1103/PhysRevB.93.085403" target="_blank" rel="noopener">doi:10.1103/PhysRevB.93.085403</a>.`,
         `F. H. L. Koppens, D. E. Chang &amp; F. J. Garc&iacute;a de Abajo, <em>Graphene plasmonics: a platform for strong light&ndash;matter interactions</em>, Nano Lett. <strong>11</strong>, 3370 (2011), <a href="https://doi.org/10.1021/nl201771h" target="_blank" rel="noopener">doi:10.1021/nl201771h</a>.`,
       ];
+    } else if (mod === 'tmdc') {
+      const matRef: Record<string, string> = {
+        MoS2: `V. L. Le, T. J. Kim, H. G. Park, H. T. Nguyen, X. A. Nguyen &amp; Y. D. Kim, <em>Temperature dependence of the dielectric function of monolayer MoS₂</em>, Curr. Appl. Phys. <strong>19</strong> (2019) 182, <a href="https://doi.org/10.1016/j.cap.2018.10.007" target="_blank" rel="noopener">doi:10.1016/j.cap.2018.10.007</a>.`,
+        MoSe2: `Le / Kim group, <em>Temperature dependence of the dielectric function of monolayer MoSe₂</em> (Dielectric Function Parametric Model).`,
+        WS2: `T. J. Kim et al., <em>Modeling of the optical properties of monolayer WS₂</em>, J. Korean Phys. Soc. <strong>77</strong> (2020) 298.`,
+      };
+      refs = [
+        matRef[tmdcMat],
+        `B. Johs, C. M. Herzinger, J. H. Dinan, A. Cornfeld &amp; J. D. Benson, <em>Development of a parametric optical constant model</em>, Thin Solid Films <strong>313–314</strong> (1998) 137 (PSEMI / DFPM oscillator).`,
+      ];
     } else if (mod === 'drude') {
       refs = [];   // no reference box for the Drude module
     } else {
@@ -1455,6 +1531,25 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   $('module-materials').addEventListener('click', () => selectModule('materials'));
   $('module-drude').addEventListener('click', () => selectModule('drude'));
   $('module-graphene').addEventListener('click', () => selectModule('graphene'));
+  $('module-tmdc').addEventListener('click', () => selectModule('tmdc'));
+
+  // ── TMDC controls ──
+  const tmdcMatSel = $('tmdc-mat') as HTMLSelectElement;
+  const tmdcTempEl = $('tmdc-temp') as HTMLInputElement, tmdcTempSlider = $('tmdc-temp-slider') as HTMLInputElement;
+  let tmdcRaf = false;
+  const tmdcRender = () => { if (tmdcRaf) return; tmdcRaf = true; requestAnimationFrame(() => { tmdcRaf = false; render(); }); };  // coalesce to one render per frame (live, no debounce lag)
+  function tmdcApplyMaterial() {
+    const [Tlo, Thi] = TMDC[tmdcMat].Trange, [Elo, Ehi] = TMDC[tmdcMat].Erange;
+    tmdcTempSlider.min = String(Tlo); tmdcTempSlider.max = String(Thi);
+    let T = parseFloat(tmdcTempEl.value);
+    if (!Number.isFinite(T) || T < Tlo || T > Thi) { T = Math.min(Math.max(300, Tlo), Thi); tmdcTempEl.value = String(T); }
+    tmdcTempSlider.value = String(T);
+    rangeLoNm = HC / Ehi; rangeHiNm = HC / Elo; refreshRangeInputs();   // window = material's valid energy range
+    tmdcCache = null;
+  }
+  tmdcMatSel.addEventListener('change', () => { tmdcMat = tmdcMatSel.value; tmdcApplyMaterial(); updateNotes(); render(); });
+  tmdcTempEl.addEventListener('input', () => { const v = parseFloat(tmdcTempEl.value); if (Number.isFinite(v)) tmdcTempSlider.value = String(v); tmdcRender(); });
+  tmdcTempSlider.addEventListener('input', () => { tmdcTempEl.value = tmdcTempSlider.value; tmdcRender(); });
 
   // ── segmented toggles ──
   function wireSeg(groupId: string, apply: (val: string) => void) {
