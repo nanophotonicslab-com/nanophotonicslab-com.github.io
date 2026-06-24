@@ -942,7 +942,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   // Active plot sources: 1–2 tabulated materials, the Drude model, or graphene σ.
-  // ── TMDC dielectric function ε(E,T): cache the spectrum per (material, T) ──
+  // ── TMDC dielectric function ε(ω,T): cache the spectrum per (material, T) ──
   let tmdcMat = 'MoS2';
   let tmdcCache: { key: string; E: Float64Array; e1: Float64Array; e2: Float64Array } | null = null;
   function tmdcSpectrum() {
@@ -1479,7 +1479,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     } else if (mod === 'tmdc') {
       const td = TMDC[tmdcMat];
       html = `<h4>TMDC dielectric function — ${TMDC_LABEL[tmdcMat]}</h4><ul>
-        <li>Temperature-dependent ε(E,T) from the <b>Dielectric Function Parametric Model</b> (DFPM / PSEMI): each critical point is a polynomial-spline joint density of states broadened by a Kramers–Kronig-consistent Gaussian; ε = (n + ik)².</li>
+        <li>Temperature-dependent ε(ω,T) from the <b>Dielectric Function Parametric Model</b> (DFPM / PSEMI): each critical point is a polynomial-spline joint density of states broadened by a Kramers–Kronig-consistent Gaussian; ε = (n + ik)².</li>
         <li>Every parameter follows the cubic law f(T) = a + b·x + c·x² + d·x³, with x = T/1000 (T in K).</li>
         <li><b>Validity window:</b> energy <b>${td.Erange[0]}–${td.Erange[1]} eV</b>, temperature <b>${td.Trange[0]}–${td.Trange[1]} K</b>. Outside these ranges the cubic laws and splines extrapolate and are <b>not physically supported</b> (the curve is clamped to the energy window here).</li>
         <li>In-plane (ordinary) response only — not the out-of-plane component.</li>
@@ -1510,13 +1510,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     } else if (mod === 'tmdc') {
       const matRef: Record<string, string> = {
         MoS2: `V. L. Le, T. J. Kim, H. G. Park, H. T. Nguyen, X. A. Nguyen &amp; Y. D. Kim, <em>Temperature dependence of the dielectric function of monolayer MoS₂</em>, Curr. Appl. Phys. <strong>19</strong> (2019) 182, <a href="https://doi.org/10.1016/j.cap.2018.10.007" target="_blank" rel="noopener">doi:10.1016/j.cap.2018.10.007</a>.`,
-        MoSe2: `Le / Kim group, <em>Temperature dependence of the dielectric function of monolayer MoSe₂</em> (Dielectric Function Parametric Model).`,
-        WS2: `T. J. Kim et al., <em>Modeling of the optical properties of monolayer WS₂</em>, J. Korean Phys. Soc. <strong>77</strong> (2020) 298.`,
+        MoSe2: `T. J. Kim, H. G. Park, V. L. Le, H. T. Nguyen, X. A. Nguyen &amp; Y. D. Kim, <em>Parameterized optical properties of monolayer MoSe₂</em>, AIP Advances <strong>9</strong>, 125132 (2019), <a href="https://doi.org/10.1063/1.5125973" target="_blank" rel="noopener">doi:10.1063/1.5125973</a>.`,
+        WS2: `T. J. Kim, V. L. Le, H. T. Nguyen et al., <em>Modeling of the optical properties of monolayer WS₂</em>, J. Korean Phys. Soc. <strong>77</strong>, 298–302 (2020), <a href="https://doi.org/10.3938/jkps.77.298" target="_blank" rel="noopener">doi:10.3938/jkps.77.298</a>.`,
       };
-      refs = [
-        matRef[tmdcMat],
-        `B. Johs, C. M. Herzinger, J. H. Dinan, A. Cornfeld &amp; J. D. Benson, <em>Development of a parametric optical constant model</em>, Thin Solid Films <strong>313–314</strong> (1998) 137 (PSEMI / DFPM oscillator).`,
-      ];
+      refs = [matRef.MoS2, matRef.MoSe2, matRef.WS2];
     } else if (mod === 'drude') {
       refs = [];   // no reference box for the Drude module
     } else {
