@@ -52,8 +52,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
             <span class="module-card__name">Graphene</span>
             <span class="module-card__desc">Surface conductivity σ(ω,T) &middot; Kubo</span>
           </button>
-          <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false">
-            <span class="module-card__name">TMDC</span>
+          <button type="button" class="module-card" id="module-tmdc" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">TMDC <span class="module-card__badge">Soon</span></span>
             <span class="module-card__desc">ε(ω,T) of MoS₂, MoSe₂, WS₂ &middot; DFPM</span>
           </button>
         </div>
@@ -1715,6 +1715,6 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   window.addEventListener('resize', () => { paint(); paintMap(); });
   // deep-link: #graphene / #drude / #tmdc open that module directly (e.g. from the NL plasmonics lab)
   const hashMod = location.hash.replace('#', '') as Mod;
-  if (['drude', 'graphene', 'tmdc'].includes(hashMod)) selectModule(hashMod);
+  if (['drude', 'graphene'].includes(hashMod)) selectModule(hashMod);   // tmdc disabled (coming soon)
   else render();
 </script>
