@@ -1713,5 +1713,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   updateNotes();
   onThemeChange(() => { paint(); paintMap(); });
   window.addEventListener('resize', () => { paint(); paintMap(); });
-  render();
+  // deep-link: #graphene / #drude / #tmdc open that module directly (e.g. from the NL plasmonics lab)
+  const hashMod = location.hash.replace('#', '') as Mod;
+  if (['drude', 'graphene', 'tmdc'].includes(hashMod)) selectModule(hashMod);
+  else render();
 </script>

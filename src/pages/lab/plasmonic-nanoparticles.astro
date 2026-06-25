@@ -48,16 +48,31 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     <div class="container">
       <div class="shape-strip card">
         <div class="shape-strip__header">
-          <span>Geometries</span>
+          <span>Geometries (three-dimensional)</span>
           <span id="shape-strip-current">Nanorod</span>
         </div>
         <div class="shape-gallery shape-gallery--strip" id="shape-gallery" aria-label="Available geometries"></div>
       </div>
 
+      <div class="shape-strip card" id="nl-shape-strip" style="display:none">
+        <div class="shape-strip__header">
+          <span>Geometries (two-dimensional)</span>
+          <span id="nl-shape-current">Triangle</span>
+        </div>
+        <div class="shape-gallery shape-gallery--strip" id="nl-shape-gallery" aria-label="Available nanographene geometries"></div>
+      </div>
+
       <div class="widget-layout">
         <aside class="controls card">
-          <h3>Parameters</h3>
+          <div class="controls-head">
+            <h3>Parameters</h3>
+            <div class="resonance-controls controls-head__toggle" id="linnl-tabs" role="radiogroup" aria-label="Linear / nonlinear">
+              <button type="button" class="seg-btn active" data-linnl="lin" role="radio" aria-checked="true">3D</button>
+              <button type="button" class="seg-btn" data-linnl="nl" role="radio" aria-checked="false">2D</button>
+            </div>
+          </div>
 
+          <div id="lin-controls">
           <div class="param">
             <div class="param-header"><label for="material-select">Material</label></div>
             <select id="material-select" class="param-select">
@@ -159,21 +174,179 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
             </div>
           </div>
 
-          <p class="theory-note">
-            Model: retarded dipolar polarizability from geometry-only modal
-            fits. Cross sections are normalized by particle volume in the main
-            spectrum view.
-          </p>
 
           <div class="geometry-schematic" id="geometry-schematic" aria-label="Selected geometry convention"></div>
+          </div>
+
+          <div id="nl-controls-box" hidden>
+            <div class="param">
+              <div class="param-header"><label for="nl-material">Material</label></div>
+              <select id="nl-material" class="param-select">
+                <option value="graphene">Graphene</option>
+                <option value="au">Gold (Au)</option>
+                <option value="ag">Silver (Ag)</option>
+                <option value="cu">Copper (Cu)</option>
+                <option value="al">Aluminium (Al)</option>
+                <option value="drude">Drude metal</option>
+                <option value="sigma">Input file — 2D σ(E)</option>
+                <option value="eps">Input file — ε(E)</option>
+              </select>
+              <span class="material-ref" id="nl-material-ref"></span>
+            </div>
+
+            <div class="param">
+              <div class="param-header"><label for="nl-geo">Geometry</label></div>
+              <select id="nl-geo" class="param-select"></select>
+            </div>
+
+            <!-- Graphene parameters — same controls as the Materials / Graphene module -->
+            <div class="nl-box" id="nl-graphene-box">
+              <div class="gr-ef-field">
+                <label for="nl-ef">E<sub>F</sub> [eV]</label>
+                <input type="text" class="field-input gr-ef-num" id="nl-ef" inputmode="decimal" value="1.0">
+                <input type="range" class="gr-slider" id="nl-ef-slider" min="0" max="1.5" step="0.01" value="1.0" aria-label="Fermi energy">
+              </div>
+              <div class="mini-row">
+                <div class="mini-field"><label for="nl-gamma">γ [eV]</label><input type="text" class="field-input" id="nl-gamma" inputmode="decimal" value="0.05"></div>
+                <div class="mini-field"><label for="nl-tau">τ [fs]</label><input type="text" class="field-input" id="nl-tau" inputmode="decimal"></div>
+                <div class="mini-field"><label for="nl-mu">μ<sup>DC</sup> [cm²/Vs]</label><input type="text" class="field-input" id="nl-mu" inputmode="decimal"></div>
+              </div>
+            </div>
+
+            <!-- Drude-metal permittivity — same controls as the Materials / Drude module -->
+            <div class="nl-box" id="nl-drude-box" hidden>
+              <p class="drude-formula">ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub><sup>2</sup> / [ω(ω + iγ)]</p>
+              <div class="field"><label for="nl-drude-einf">ε<sub>∞</sub></label><input type="text" class="field-input" id="nl-drude-einf" inputmode="decimal" value="9.5"></div>
+              <div class="field"><label for="nl-drude-wp">&#8463;ω<sub>p</sub> [eV]</label><input type="text" class="field-input" id="nl-drude-wp" inputmode="decimal" value="9.06"></div>
+              <div class="mini-row">
+                <div class="mini-field"><label for="nl-drude-g">γ = &#8463;τ<sup>&minus;1</sup> [eV]</label><input type="text" class="field-input" id="nl-drude-g" inputmode="decimal" value="0.071"></div>
+                <div class="mini-field"><label for="nl-drude-tau">τ [fs]</label><input type="text" class="field-input" id="nl-drude-tau" inputmode="decimal" value="9.27"></div>
+              </div>
+              <div class="preset-row">
+                <button type="button" class="preset-btn nl-drude-preset" data-epsb="9.5" data-wp="9.06" data-gamma="0.071">Au</button>
+                <button type="button" class="preset-btn nl-drude-preset" data-epsb="4.0" data-wp="9.17" data-gamma="0.021">Ag</button>
+                <button type="button" class="preset-btn nl-drude-preset" data-epsb="1.0" data-wp="15.0" data-gamma="0.6">Al</button>
+                <button type="button" class="preset-btn nl-drude-preset" data-epsb="8.0" data-wp="8.88" data-gamma="0.103">Cu</button>
+              </div>
+            </div>
+
+            <!-- σ²ᴰ(E) upload -->
+            <div class="param" id="nl-sigma-param" hidden>
+              <div class="param-header"><label for="nl-sigma-upload">σ²ᴰ(E) file</label></div>
+              <input type="file" id="nl-sigma-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="nl-sigma-name">columns: E [eV], Re σ, Im σ [nm/fs]</span>
+            </div>
+
+            <!-- ε(E) upload -->
+            <div class="param" id="nl-eps-param" hidden>
+              <div class="param-header"><label for="nl-eps-upload">ε(E) file</label></div>
+              <input type="file" id="nl-eps-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="nl-eps-name">columns: E [eV], Re ε, Im ε</span>
+            </div>
+
+            <!-- Thickness — only for ε-based materials (metals, Drude, ε file) -->
+            <div class="param" id="nl-thickness-param" hidden>
+              <div class="param-header"><label for="nl-thickness">Thickness t (nm)</label><input id="nl-thickness" class="param-number" type="number" value="2" step="0.5" min="0.3" max="20"></div>
+            </div>
+
+            <div class="param">
+              <div class="param-header"><label for="nl-order">Response</label></div>
+              <div class="nl-response-row">
+                <select id="nl-order" class="param-select">
+                  <option value="11">α(1,1) linear</option>
+                  <option value="22">α(2,2) SHG</option>
+                  <option value="31">α(3,1) Kerr</option>
+                  <option value="33" selected>α(3,3) THG</option>
+                </select>
+                <span class="nl-qty-seg" id="nl-qty-toggle" role="radiogroup" aria-label="Polarizability or susceptibility"><button type="button" class="nl-qty-btn active" data-nlqty="alpha" title="Polarizability α⁽ⁿ⁾" role="radio" aria-checked="true">α</button><button type="button" class="nl-qty-btn" data-nlqty="chi" title="Effective susceptibility χ⁽ⁿ⁾ = α⁽ⁿ⁾/(A·d)" role="radio" aria-checked="false">χ</button></span>
+              </div>
+            </div>
+            <div class="param">
+              <div class="param-header"><label for="nl-d">D (nm)</label><input id="nl-d" class="param-number" type="number" value="20" step="1" min="5" max="200"></div>
+              <input type="range" class="param-slider" id="nl-d-slider" min="5" max="100" step="1" value="20">
+            </div>
+
+            <h3 class="nl-range-head">Range</h3>
+            <div class="param">
+              <div class="param-header"><label for="nl-range-unit">Unit</label></div>
+              <select id="nl-range-unit" class="param-select"></select>
+            </div>
+            <div class="param-grid">
+              <div class="param">
+                <div class="param-header"><label for="nl-range-min" id="nl-range-min-label">Min</label></div>
+                <input type="text" inputmode="decimal" class="param-number param-number--wide" id="nl-range-min" autocomplete="off">
+              </div>
+              <div class="param">
+                <div class="param-header"><label for="nl-range-max" id="nl-range-max-label">Max</label></div>
+                <input type="text" inputmode="decimal" class="param-number param-number--wide" id="nl-range-max" autocomplete="off">
+              </div>
+            </div>
+          </div>
         </aside>
 
         <main class="lab-main">
           <div class="tabs" role="tablist" aria-label="Plot views">
             <button class="tab-btn active" data-tab="spectrum" role="tab" aria-selected="true">Spectrum</button>
+            <button class="tab-btn" data-tab="polar" role="tab" aria-selected="false">Polarizability</button>
             <button class="tab-btn" data-tab="resonance" role="tab" aria-selected="false">Resonance</button>
             <button class="tab-btn" data-tab="ldos" role="tab" aria-selected="false">LDOS</button>
             <button class="tab-btn" data-tab="material" role="tab" aria-selected="false">Material</button>
+          </div>
+
+          <section class="nl-panel card" id="nl-panel" style="display:none">
+            <div class="chart-header">
+              <div>
+                <span class="nl-title-row"><span class="chart-title" id="nl-title">Nonlinear polarizability</span><button class="nl-log-btn" id="nl-log-btn" type="button" aria-pressed="false" title="Plot log₁₀ of the magnitude">log</button></span>
+                <span class="chart-subtitle" id="nl-subtitle">Cox et al., PRB 96, 045442 (2017)</span>
+              </div>
+              <div class="chart-legend" id="nl-legend"></div>
+              <div class="resonance-controls" id="nl-unit-controls" aria-label="Polarizability units">
+                <button class="seg-btn active" type="button" data-naunit="esu">esu</button>
+                <button class="seg-btn" type="button" data-naunit="si">SI</button>
+                <button class="seg-btn" type="button" data-naunit="au">a.u.</button>
+              </div>
+            </div>
+            <div class="chart-wrap nl-chart-wrap">
+              <canvas id="nl-chart" aria-label="Nonlinear polarizability chart"></canvas>
+              <div class="axis-overlay">
+                <div class="axis-toggle" id="nl-axis-tabs" role="radiogroup" aria-label="X axis">
+                  <button class="axis-btn active" type="button" data-naxis="energy" role="radio" aria-checked="true">E (eV)</button>
+                  <button class="axis-btn" type="button" data-naxis="lambda" role="radio" aria-checked="false">&lambda; (nm)</button>
+                </div>
+              </div>
+            </div>
+            <div class="toolbar-actions nl-export-bar">
+              <button id="nl-dl-png" class="tool-btn" title="Download plot as PNG">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="nl-dl-csv" class="tool-btn" title="Download data as CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+            </div>
+          </section>
+
+          <div id="nl-results">
+            <div class="output-card card" id="nl-readout">
+              <div class="stat"><button class="stat-info" type="button" aria-label="Energy info">i<span class="stat-tooltip" role="tooltip">Photon energy E = ℏω at the cursor position on the curve.</span></button><span class="stat-label">Energy E</span><span class="stat-value" id="nl-r-energy">&mdash;</span><span class="stat-unit">eV</span></div>
+              <div class="stat"><button class="stat-info" type="button" aria-label="Wavelength info">i<span class="stat-tooltip" role="tooltip">Free-space wavelength λ = hc/E corresponding to the cursor energy.</span></button><span class="stat-label">Wavelength <span class="lc">&lambda;</span></span><span class="stat-value" id="nl-r-lambda">&mdash;</span><span class="stat-unit">nm</span></div>
+              <div class="stat"><button class="stat-info" type="button" aria-label="Re alpha info">i<span class="stat-tooltip" role="tooltip">Real (in-phase) part of the complex dipolar polarizability α of the selected response order.</span></button><span class="stat-label">Real <span class="lc">&alpha;</span></span><span class="stat-value" id="nl-r-re">&mdash;</span><span class="stat-unit" id="nl-u-re">esu</span></div>
+              <div class="stat"><button class="stat-info" type="button" aria-label="Im alpha info">i<span class="stat-tooltip" role="tooltip">Imaginary (out-of-phase / absorptive) part of the polarizability α.</span></button><span class="stat-label">Imaginary <span class="lc">&alpha;</span></span><span class="stat-value" id="nl-r-im">&mdash;</span><span class="stat-unit" id="nl-u-im">esu</span></div>
+              <div class="stat"><button class="stat-info" type="button" aria-label="Modulus alpha info">i<span class="stat-tooltip" role="tooltip">Modulus |α| = √(Re α² + Im α²) of the complex polarizability.</span></button><span class="stat-label">Abs. <span class="lc">&alpha;</span></span><span class="stat-value" id="nl-r-abs">&mdash;</span><span class="stat-unit" id="nl-u-abs">esu</span></div>
+            </div>
+            <section class="model-note card nl-model-note">
+              <div class="model-note__header"><span>Notes</span><span id="nl-mode-summary"></span></div>
+              <ul class="nl-note-list">
+                <li id="nl-note-text"></li>
+                <li id="nl-units-note">Absolute nonlinear magnitudes are in the model's internal Gaussian units (the paper plots relative/arbitrary curves); the esu / SI / a.u. factors follow the polarizability-order conversion table.</li>
+                <li class="nl-xref">The graphene conductivity σ²ᴰ(ω), Fermi energy E<sub>F</sub>, damping γ ⇄ τ and Drude parameters are explained in detail in the <a href="/lab/materials#graphene">Materials / Graphene calculator</a>.</li>
+              </ul>
+            </section>
+            <div class="references card nl-references">
+              <h4>References</h4>
+              <ul id="nl-ref-list" class="reference-list"></ul>
+            </div>
           </div>
 
           <section class="chart-panel card">
@@ -186,6 +359,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
               <div class="resonance-controls" id="resonance-controls" style="display:none" aria-label="Resonance sweep">
                 <button class="seg-btn active" type="button" data-sweep="L">Sweep L</button>
                 <button class="seg-btn" type="button" data-sweep="R">Sweep R</button>
+              </div>
+              <div class="resonance-controls" id="alpha-unit-controls" style="display:none" aria-label="Polarizability units">
+                <button class="seg-btn active" type="button" data-aunit="esu">esu</button>
+                <button class="seg-btn" type="button" data-aunit="si">SI</button>
+                <button class="seg-btn" type="button" data-aunit="au">a.u.</button>
               </div>
               <div class="toolbar-actions">
                 <button id="dl-png" class="tool-btn" title="Download plot as PNG" data-umami-event="plasmonic-export" data-umami-event-format="png">
@@ -225,10 +403,10 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
             </div>
           </section>
 
-          <section class="output-card card">
+          <section class="output-card card" id="peak-stats">
             <div class="stat">
               <button class="stat-info" type="button" aria-label="Peak wavelength info">i<span class="stat-tooltip" role="tooltip">Wavelength where the extinction spectrum reaches its maximum within the selected range.</span></button>
-              <span class="stat-label">Peak &lambda;</span>
+              <span class="stat-label">Peak <span class="lc">&lambda;</span></span>
               <span class="stat-value" id="out-peak-lambda">&mdash;</span>
               <span class="stat-unit">nm</span>
             </div>
@@ -264,11 +442,40 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
             </div>
           </section>
 
+          <section class="output-card card" id="polar-readout" style="display:none">
+            <div class="stat">
+              <span class="stat-label">Wavelength <span class="lc">&lambda;</span></span>
+              <span class="stat-value" id="pol-lambda">&mdash;</span>
+              <span class="stat-unit">nm</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Energy E</span>
+              <span class="stat-value" id="pol-energy">&mdash;</span>
+              <span class="stat-unit">eV</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Real <span class="lc">&alpha;</span></span>
+              <span class="stat-value" id="pol-re">&mdash;</span>
+              <span class="stat-unit" id="pol-unit-re">esu</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Imaginary <span class="lc">&alpha;</span></span>
+              <span class="stat-value" id="pol-im">&mdash;</span>
+              <span class="stat-unit" id="pol-unit-im">esu</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Abs. <span class="lc">&alpha;</span></span>
+              <span class="stat-value" id="pol-abs">&mdash;</span>
+              <span class="stat-unit" id="pol-unit-abs">esu</span>
+            </div>
+          </section>
+
           <section class="model-note card">
             <div class="model-note__header">
-              <span>Model range</span>
+              <span>Notes</span>
               <span id="mode-summary">Dominant mode</span>
             </div>
+            <p>Model: retarded dipolar polarizability from geometry-only modal fits. Cross sections are normalized by particle volume in the main spectrum view.</p>
             <p id="validity-note">
               Homogeneous local-response particles in a uniform host. The scalar
               modal model does not provide exact near-field or LDOS maps.
@@ -322,7 +529,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
         </div>
       </dialog>
 
-      <div class="references card">
+      <div class="references card" id="lin-references">
         <h4>References &amp; data sources</h4>
         <ul>
           <li>R. Yu, L. M. Liz-Marzan, and F. J. Garcia de Abajo, <em>Universal analytical modeling of plasmonic nanoparticles</em>, Chemical Society Reviews 46, 6710-6724 (2017).</li>
@@ -363,9 +570,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     position: sticky;
     top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg));
   }
+  .widget-layout.nl-mode .controls { position: static; top: auto; }
   .controls h3 { font-size: 1rem; }
 
   .param, .preset-block { display: flex; flex-direction: column; gap: 0.4rem; }
+  .param[hidden], [hidden].nl-box { display: none; }
   .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .param-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
   .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
@@ -596,6 +805,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     font-weight: 650;
     text-align: right;
   }
+  /* NL gallery has only 3 shapes — keep the cards compact (don't stretch to full width) */
+  :global(#nl-shape-gallery) { display: flex; flex-wrap: wrap; }
+  :global(#nl-shape-gallery .shape-card) { flex: 0 0 108px; }
   .shape-gallery {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
@@ -712,6 +924,62 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     border-radius: var(--radius-full);
     background: var(--bg-soft);
   }
+  .controls-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .controls-head h3 { margin: 0; }
+  .controls-head__toggle .seg-btn { padding: 0.22rem 0.7rem; font-weight: 700; }
+  .nl-panel { padding: var(--space-lg); position: relative; }
+  .nl-panel__badge { position: absolute; top: var(--space-md); right: var(--space-md); font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--primary); background: var(--bg-soft); border: 1px solid var(--bg-muted); border-radius: var(--radius-full); padding: 0.15rem 0.55rem; }
+  .nl-panel h3 { margin: 0 0 0.6rem; padding-right: 6rem; }
+  .nl-panel p { color: var(--text-soft); font-size: 0.85rem; line-height: 1.5; margin: 0 0 0.7rem; }
+  .nl-panel ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .nl-panel li { font-size: 0.8rem; line-height: 1.45; color: var(--text-soft); }
+  .nl-panel b { color: var(--text); }
+  .nl-panel em { color: var(--text); }
+  .nl-controls { display: flex; flex-wrap: wrap; gap: 0.55rem 0.85rem; margin: 0.3rem 0 0.9rem; }
+  .nl-controls label { display: flex; flex-direction: column; gap: 0.22rem; font-size: 0.7rem; font-weight: 650; color: var(--text-muted); }
+  .nl-controls .param-number { width: 5.4rem; }
+  .nl-title-row { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .nl-log-btn { padding: 0.08rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem; font-weight: 700; line-height: 1.5; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+  .nl-log-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .nl-log-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .nl-qty-seg { display: inline-flex; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); overflow: hidden; }
+  .nl-qty-btn { padding: 0.08rem 0.6rem; border: none; background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.82rem; font-weight: 700; line-height: 1.5; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .nl-qty-btn:not(.active):hover { color: var(--primary); }
+  .nl-qty-btn.active { background: var(--primary); color: #fff; }
+  .nl-response-row { display: flex; align-items: center; gap: 0.5rem; }
+  .nl-response-row .param-select { flex: 1 1 auto; min-width: 0; }
+  .nl-response-row .nl-qty-seg { flex: 0 0 auto; }
+  .nl-export-bar { margin-top: var(--space-lg); }
+  #nl-results { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-md); }
+  #nl-results .references { margin-top: 0; padding: var(--space-md); }   /* match the notes card padding so note & reference text align */
+  #nl-controls-box { display: flex; flex-direction: column; gap: var(--space-md); }
+  #nl-controls-box[hidden] { display: none; }
+  .nl-box { display: flex; flex-direction: column; gap: var(--space-md); }
+  .nl-range-head { margin: 0.3rem 0 -0.2rem; font-size: 1rem; }
+  /* graphene controls — replicated verbatim from the Materials / Graphene module */
+  .field-input { width: 100%; min-width: 0; padding: 0.4rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.85rem; }
+  .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+  .field { display: flex; align-items: center; gap: 0.5rem; }
+  .field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
+  .field .field-input { flex: 1 1 auto; }
+  .drude-formula { font-size: 0.78rem; color: var(--text-soft); margin: 0; }
+  .gr-slider { width: 100%; accent-color: var(--primary); cursor: pointer; }
+  .gr-ef-field { display: flex; align-items: center; gap: 0.5rem; }
+  .gr-ef-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
+  .gr-ef-num { flex: 0 0 4rem; }
+  .gr-ef-field .gr-slider { flex: 1 1 auto; margin: 0; min-width: 0; }
+  .mini-row { display: flex; gap: 0.4rem; align-items: end; }
+  .mini-field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  .mini-field label { font-size: 0.8rem; font-weight: 400; color: var(--text-soft); line-height: 1.15; min-height: 1.6em; }
+  .mini-field .field-input { width: 100%; }
+  /* keep the μ^DC [cm²/Vs] label on one line: give it more width, squeeze γ/τ a touch */
+  #nl-graphene-box .mini-field label { white-space: nowrap; }
+  #nl-graphene-box .mini-field:nth-child(1), #nl-graphene-box .mini-field:nth-child(2) { flex: 0.85 1 0; }
+  #nl-graphene-box .mini-field:nth-child(3) { flex: 1.5 1 0; }
+  .nl-chart-wrap { margin-bottom: 2.35rem; }
+  .nl-note { margin-top: 0.6rem; }
+  .nl-note p { font-size: 0.78rem; line-height: 1.5; color: var(--text-soft); margin: 0 0 0.4rem; }
+  .nl-note__cite { font-size: 0.72rem !important; color: var(--text-muted) !important; }
   .seg-btn {
     border: 0;
     border-radius: var(--radius-full);
@@ -817,6 +1085,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-sm);
   }
+  #nl-readout { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 720px) { #nl-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .stat {
     position: relative;
     display: flex;
@@ -829,6 +1099,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     background: var(--bg-soft);
   }
   .stat-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .stat-label .lc { text-transform: none; }   /* keep Greek letters lowercase (α, λ) */
   .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }
   .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
   .stat-info {
@@ -895,6 +1166,14 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   }
   .model-note__header span:last-child { color: var(--primary); font-weight: 600; text-align: right; }
   .model-note p { font-size: 0.8125rem; line-height: 1.55; color: var(--text-muted); margin: 0; }
+  /* Notes & References match the Mie-scattering lab: indented disc bullets / [n] indices,
+     with note text and reference text aligned to the same indent and filling the box. */
+  .nl-note-list { display: flex; flex-direction: column; gap: 0.45rem; margin: 0; padding-left: 2rem; list-style: disc outside; }
+  .nl-note-list li { padding-left: 0.35rem; font-size: 0.8125rem; line-height: 1.5; color: var(--text-soft); }
+  .nl-note-list li::marker { color: var(--text-soft); }
+  .nl-note-list strong { color: var(--text); }
+  .nl-xref a { color: var(--primary); font-weight: 600; text-decoration: none; }
+  .nl-xref a:hover { text-decoration: underline; }
   .geometry-definitions {
     display: grid;
     gap: 0.22rem;
@@ -911,6 +1190,13 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  /* NL reference list is generated at runtime (no scoped attribute) — style it globally.
+     2rem index column + 0.35rem gap ⇒ reference text starts at 2.35rem, same as the note
+     text (2rem padding + 0.35rem li padding); [n] is right-aligned under the note bullets. */
+  :global(#nl-ref-list) { list-style: none; margin: 0; padding-left: 0; display: flex; flex-direction: column; gap: var(--space-xs); }
+  :global(#nl-ref-list li) { display: grid; grid-template-columns: 2rem 1fr; gap: 0.35rem; font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
+  :global(#nl-ref-list .ref-index) { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  :global(#nl-ref-list a) { color: var(--primary); }
 
   @media (max-width: 980px) {
     .widget-layout { grid-template-columns: 1fr; }
@@ -949,6 +1235,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   import type { RIIMaterial } from '../../data/refractiveindex';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
   import { spectrumToHex } from '../../lib/colorimetry';
+  import { NL_GEOMETRIES, getNlGeometry, nlSpectrum, nlResonance, nlResonanceEnergyGraphene, grapheneSigma2d, metalSigma2d, type NlOrder, type NlGeometryId, type NlMaterial } from '../../lib/nl-graphene';
   import {
     SHAPE_OPTIONS,
     availableModeCount,
@@ -961,9 +1248,68 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   } from '../../lib/plasmonic-nanoparticles';
   import type { Complex, PlasmonShapeId, PlasmonSpectrum } from '../../lib/plasmonic-nanoparticles';
 
-  type TabId = 'spectrum' | 'material' | 'resonance' | 'ldos';
+  type TabId = 'spectrum' | 'polar' | 'material' | 'resonance' | 'ldos';
   type ResonanceSweep = 'L' | 'R';
   type ChartAxisMode = 'lambda' | 'energy';
+  type AlphaUnit = 'esu' | 'si' | 'au';
+  // Polarizability α⁽¹⁾ unit conversion from the lab's native nm³ (Gaussian/esu volume).
+  // Table 1: 1 cm³ (esu) = 1.113e-16 C²m²J⁻¹ (SI) = 6.748e24 (a.u.).  1 nm³ = 1e-21 cm³.
+  const ALPHA_UNITS: Record<AlphaUnit, { factor: number; label: string; axis: string }> = {
+    esu: { factor: 1e-21, label: 'esu', axis: 'α (cm³, esu)' },
+    si: { factor: 1e-21 * 1.113e-16, label: 'SI', axis: 'α (C² m² J⁻¹)' },
+    au: { factor: 1e-21 * 6.748e24, label: 'a.u.', axis: 'α (a.u.)' },
+  };
+  let alphaUnit: AlphaUnit = 'esu';
+  let labMode: 'lin' | 'nl' = 'lin';
+  let cursorIdx = -1;   // hovered sample index on the polarizability chart (−1 = none)
+
+  // ── nonlinear-plasmonics state ──
+  // material: graphene (Drude σ²ᴰ) | au/ag/cu/al (tabulated ε, thin film) | drude (Drude ε)
+  //         | sigma (uploaded σ²ᴰ) | eps (uploaded ε, thin film)
+  type NlMatId = 'graphene' | 'au' | 'ag' | 'cu' | 'al' | 'drude' | 'sigma' | 'eps';
+  const nl: { material: NlMatId; thickness: number; drudeEpsInf: number; drudeWp: number; drudeGamma: number; geometry: NlGeometryId; order: NlOrder; quantity: 'alpha' | 'chi'; EF: number; D: number; gamma: number; epsBar: number; axis: ChartAxisMode; unit: AlphaUnit; rangeUnit: string; eMin: number; eMax: number; log: boolean; cursorIdx: number } =
+    { material: 'graphene', thickness: 2, drudeEpsInf: 9.5, drudeWp: 9.06, drudeGamma: 0.071, geometry: 'triangle', order: '33', quantity: 'alpha', EF: 1.0, D: 20, gamma: 0.05, epsBar: 1.0, axis: 'energy', unit: 'esu', rangeUnit: 'eV', eMin: 0.1, eMax: 1.0, log: false, cursorIdx: -1 };
+  let nlCustomSigma: { E: Float64Array; re: Float64Array; im: Float64Array } | null = null;   // uploaded σ²ᴰ(E)
+  let nlCustomEps: { E: Float64Array; re: Float64Array; im: Float64Array } | null = null;     // uploaded ε(E)
+  const nlEpsBased = (m: NlMatId) => m === 'au' || m === 'ag' || m === 'cu' || m === 'al' || m === 'drude' || m === 'eps';
+  let nlResult: { E: Float64Array; re: Float64Array; im: Float64Array } | null = null;
+  // Per-order conversion. α11 is a true nm³ volume (esu = cm³ = ×1e-21); the nonlinear
+  // orders are in the model's internal Gaussian units, scaled by the table's esu→SI/a.u. factors.
+  const NL_FACTOR: Record<NlOrder, Record<AlphaUnit, number>> = {
+    '11': { esu: 1e-21, si: 1e-21 * 1.113e-16, au: 1e-21 * 6.748e24 },
+    '22': { esu: 1, si: 3.711e-21, au: 1.157e32 },
+    '31': { esu: 1, si: 1.238e-25, au: 1.985e39 },
+    '33': { esu: 1, si: 1.238e-25, au: 1.985e39 },
+  };
+  const NL_UNIT_LABEL: Record<AlphaUnit, string> = { esu: 'esu', si: 'SI', au: 'a.u.' };
+  const NL_ORDER_PAIR: Record<NlOrder, string> = { '11': '1,1', '22': '2,2', '31': '3,1', '33': '3,3' };
+  const NL_ORDER_NAME: Record<NlOrder, string> = { '11': 'linear', '22': 'second-harmonic', '31': 'Kerr', '33': 'third-harmonic' };
+  const NL_ORDER_SHORT: Record<NlOrder, string> = { '11': 'linear', '22': 'SHG', '31': 'Kerr', '33': 'THG' };
+  // α vs χ: effective bulk susceptibility from the per-atom polarizability,
+  //   χ⁽ˢ⁾ = α̃⁽ˢ⁾ n_C / d_gr   (Cox & García de Abajo, Nat. Commun. 5, 5725 (2014)),
+  // with α̃ = α/(n_C·A) the polarizability per carbon atom, n_C = 3.8×10¹⁵ cm⁻² the areal
+  // C density and d_gr ≃ 0.33 nm the effective graphene thickness ⇒ χ = α/(A·d_gr): the
+  // polarizability per effective volume V = A·d_gr (in cm³, so χ comes out in esu). Area:
+  // ribbon → width D (per length); triangle → √3/4 D²; disk → π(D/2)². Thin-film: d_gr → t.
+  //
+  // Absolute esu scale (matches the nlgraphene reference, validated in nl-graphene.test.ts):
+  // the third-order χ⁽³⁾ has internal units nm³/eV, which converts to Gaussian esu (cm³/erg)
+  // by the pure dimensional factor (1e-7 cm/nm)³ / (1.602176634e-12 erg/eV) = 6.2415e-10 —
+  // no free parameter. χ = α/V with V = A·d_gr; the linear α is already esu-calibrated
+  // (prefactor 1, χ⁽¹⁾ dimensionless). This gives THG χ⁽³,³⁾ ≈ 2×10⁻⁷ esu and Kerr ≈ 6×10⁻⁵
+  // esu at E_F = 1 eV, D = 20 nm (ribbon D=50: THG ≈ 5×10⁻⁷, Kerr ≈ 1×10⁻⁴), as in the paper.
+  const NL_NC_CM2 = 3.8e15;     // areal density of carbon atoms in graphene [cm⁻²]
+  const NL_DGR_NM = 0.33;       // effective graphene thickness d_gr ≃ 3.3×10⁻⁸ cm [nm]
+  const NL_CHI_PNL = 6.2415e-31; // nm³/eV → cm³/erg (esu), with V already taken in cm³ (×1e-21)
+  const nlQtyLetter = () => nl.quantity === 'chi' ? 'χ' : 'α';
+  const nlSym = (ord: NlOrder) => `${nlQtyLetter()}(${NL_ORDER_PAIR[ord]})`;                 // plain text (canvas, <option>)
+  const nlSymHtml = (ord: NlOrder) => `${nlQtyLetter()}<sup>(${NL_ORDER_PAIR[ord]})</sup>`;   // HTML (notes) — comma is raised with the digits
+  const nlArea = () => { const D = nl.D; return nl.geometry === 'disk' ? Math.PI * (D / 2) ** 2 : nl.geometry === 'triangle' ? Math.sqrt(3) / 4 * D ** 2 : D; };
+  const nlEffThk = () => (nl.material === 'graphene' || nl.material === 'sigma') ? NL_DGR_NM : nl.thickness;
+  const nlVolumeCm3 = () => nlArea() * nlEffThk() * 1e-21;   // V = A·d_gr in cm³ (A, d in nm)
+  const nlChiPrefac = () => nl.order === '11' ? 1 : NL_CHI_PNL;   // linear α is already esu-calibrated
+  const nlDispFactor = () => NL_FACTOR[nl.order][nl.unit] * (nl.quantity === 'chi' ? nlChiPrefac() / nlVolumeCm3() : 1);
+  const nlUnitLbl = () => NL_UNIT_LABEL[nl.unit];
 
   const colors = {
     ext: '#10B981',
@@ -1544,8 +1890,25 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     `;
   }
 
-  function updateOutputs() {
+  function setPolarReadout(idx: number) {
     if (!result) return;
+    const n = result.alpha.length;
+    const i = idx >= 0 && idx < n ? idx : nearestIndex(result.wavelengthNm, result.peak.lambdaPeakNm);
+    const lam = result.wavelengthNm[i], a = result.alpha[i], f = ALPHA_UNITS[alphaUnit].factor, u = ALPHA_UNITS[alphaUnit].label;
+    $('pol-lambda').textContent = fmtFixed(lam, 1);
+    $('pol-energy').textContent = fmt(HC_EV_NM / lam, 4);
+    $('pol-re').textContent = fmt(a.re * f, 3);
+    $('pol-im').textContent = fmt(a.im * f, 3);
+    $('pol-abs').textContent = fmt(Math.hypot(a.re, a.im) * f, 3);
+    $('pol-unit-re').textContent = u; $('pol-unit-im').textContent = u; $('pol-unit-abs').textContent = u;
+  }
+
+  function updateOutputs() {
+    const isPolar = state.tab === 'polar';
+    $('peak-stats').style.display = isPolar ? 'none' : '';
+    $('polar-readout').style.display = isPolar ? '' : 'none';
+    if (!result) return;
+    if (isPolar) setPolarReadout(cursorIdx);
     const peak = result.peak;
     const idx = nearestIndex(result.wavelengthNm, peak.lambdaPeakNm);
     const cext = result.sigmaExtNm2[idx];
@@ -1578,6 +1941,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   }
 
   function updateSwatches() {
+    $('color-swatches').style.display = state.tab === 'polar' ? 'none' : '';   // apparent colour is meaningless for α
     const swatchSca = $('swatch-sca');
     const swatchTrans = $('swatch-trans');
     if (!result) {
@@ -1642,8 +2006,18 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     }
   }
 
+  function updateAlphaUnitControls() {
+    const controls = $('alpha-unit-controls');
+    controls.style.display = state.tab === 'polar' ? 'inline-flex' : 'none';
+    controls.querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(btn => {
+      const active = btn.dataset.aunit === alphaUnit;
+      btn.classList.toggle('active', active);
+    });
+  }
+
   function updateChartCopy() {
     updateAxisControls();
+    updateAlphaUnitControls();
     const title = $('chart-title');
     const subtitle = $('chart-subtitle');
     const legend = $('chart-legend');
@@ -1655,6 +2029,17 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
         ['Absorption', colors.abs],
         ['Scattering', colors.sca],
       ]);
+    } else if (state.tab === 'polar') {
+      title.textContent = 'Dipolar polarizability α(ω)';
+      subtitle.textContent = `Linear polarizability α⁽¹⁾ in ${ALPHA_UNITS[alphaUnit].label} units · hover the curve for cursor values`;
+      legend.innerHTML = legendHtml([
+        ['Re α', colors.re],
+        ['Im α', colors.im],
+        ['|α|', colors.ext],
+      ]);
+      updateResonanceControls();
+      updateLdosProbeNote();
+      return;
     } else {
       if (state.tab === 'resonance') {
         title.textContent = 'Resonance sweep';
@@ -1714,13 +2099,14 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   function drawChart() {
     if (!result) return;
     if (state.tab === 'spectrum') drawSpectrumChart();
+    else if (state.tab === 'polar') drawPolarizabilityChart();
     else if (state.tab === 'material') drawMaterialChart();
     else if (state.tab === 'ldos') drawLdosChart();
     else drawResonanceChart();
   }
 
   function hasAxisToggle(): boolean {
-    return state.tab === 'spectrum' || state.tab === 'material';
+    return state.tab === 'spectrum' || state.tab === 'polar' || state.tab === 'material';
   }
 
   function updateAxisControls() {
@@ -1765,8 +2151,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     return `${fmtFixed(lambdaNm, 0)} nm`;
   }
 
-  function canvasSetup() {
-    const canvas = $('plasmon-chart') as HTMLCanvasElement;
+  function canvasSetup(id = 'plasmon-chart') {
+    const canvas = $(id) as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(320, canvas.clientWidth);
@@ -1818,6 +2204,212 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       ctx.textBaseline = 'top';
       ctx.fillText(peakAxisLabel(result.peak.lambdaPeakNm), xPeak + (xPeak > w - m.right - 72 ? -5 : 5), m.top + 3);
     }
+  }
+
+  // Polarizability α⁽¹⁾(ω) in the selected unit system (esu / SI / a.u.).
+  function drawPolarizabilityChart() {
+    if (!result) return;
+    const { ctx, w, h, theme } = canvasSetup();
+    const m = { top: 18, right: 22, bottom: 42, left: 70 };
+    const [xMin, xMax] = axisRange();
+    const f = ALPHA_UNITS[alphaUnit].factor;
+    const n = result.alpha.length;
+    const reN = new Float64Array(n), imN = new Float64Array(n), absN = new Float64Array(n);
+    for (let i = 0; i < n; i++) { const a = result.alpha[i]; reN[i] = a.re * f; imN[i] = a.im * f; absN[i] = Math.hypot(a.re, a.im) * f; }
+    const xArr = axisArray(result.wavelengthNm);
+    const series = [
+      { data: axisSeries(reN), color: colors.re, label: 'Re α' },
+      { data: axisSeries(imN), color: colors.im, label: 'Im α' },
+      { data: axisSeries(absN), color: colors.ext, label: '|α|' },
+    ];
+    let yMin = 0, yMax = 0;
+    for (const s of series) for (let i = 0; i < s.data.length; i++) { const v = s.data[i]; if (Number.isFinite(v)) { yMax = Math.max(yMax, v); yMin = Math.min(yMin, v); } }
+    if (yMax <= yMin) yMax = yMin + 1;
+    const pad = 0.08 * (yMax - yMin);
+    yMax += pad; yMin -= pad;
+
+    const plot = drawAxes(ctx, w, h, m, xMin, xMax, yMin, yMax, axisLabel(), ALPHA_UNITS[alphaUnit].axis, theme);
+    if (yMin < 0 && yMax > 0) { ctx.save(); ctx.strokeStyle = theme.grid; ctx.setLineDash([2, 3]); ctx.beginPath(); const y0 = plot.yTo(0); ctx.moveTo(plot.left, y0); ctx.lineTo(plot.right, y0); ctx.stroke(); ctx.restore(); }
+    for (const s of series) drawLine(ctx, xArr, s.data, plot, s.color, 2.2);
+
+    // cursor crosshair at the hovered wavelength
+    if (cursorIdx >= 0 && cursorIdx < n) {
+      const xc = plot.xTo(axisValue(result.wavelengthNm[cursorIdx]));
+      if (xc >= plot.left && xc <= plot.right) {
+        ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = colors.peak; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(xc, plot.top); ctx.lineTo(xc, plot.bottom); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = colors.peak;
+        for (const arr of [reN, imN, absN]) { const yv = plot.yTo(arr[cursorIdx]); if (yv >= plot.top && yv <= plot.bottom) { ctx.beginPath(); ctx.arc(xc, yv, 3, 0, 2 * Math.PI); ctx.fill(); } }
+        ctx.fillStyle = colors.peak; ctx.font = '600 10px Inter, system-ui, sans-serif';
+        ctx.textAlign = xc > plot.right - 72 ? 'right' : 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(peakAxisLabel(result.wavelengthNm[cursorIdx]), xc + (xc > plot.right - 72 ? -5 : 5), plot.top + 3);
+      }
+    }
+  }
+
+  // ── Nonlinear-plasmonics polarizability view ──
+  function nlInterp(cs: { E: Float64Array; re: Float64Array; im: Float64Array }, E: number): { re: number; im: number } {
+    const arr = cs.E, n = arr.length;
+    if (E <= arr[0]) return { re: cs.re[0], im: cs.im[0] };
+    if (E >= arr[n - 1]) return { re: cs.re[n - 1], im: cs.im[n - 1] };
+    let a = 0, b = n - 1; while (b - a > 1) { const m = (a + b) >> 1; if (arr[m] <= E) a = m; else b = m; }
+    const t = (E - arr[a]) / (arr[b] - arr[a]);
+    return { re: cs.re[a] + t * (cs.re[b] - cs.re[a]), im: cs.im[a] + t * (cs.im[b] - cs.im[a]) };
+  }
+  function nlEpsAt(E: number): { re: number; im: number } {
+    const lam = HC_EV_NM / E;
+    if (nl.material === 'drude') return drudeEpsilon(lam, nl.drudeEpsInf, nl.drudeWp, nl.drudeGamma);
+    if (nl.material === 'eps' && nlCustomEps) return nlInterp(nlCustomEps, E);
+    return epsilonFromMaterial(nl.material, lam);   // au/ag/cu/al
+  }
+  function nlMaterial(): NlMaterial {
+    if (nl.material === 'sigma') return { sigma2d: (E) => nlCustomSigma ? nlInterp(nlCustomSigma, E) : grapheneSigma2d(E, nl.EF, nl.gamma), nlEF: nl.EF, nlGamma: nl.gamma, doping: 1 };
+    if (nlEpsBased(nl.material)) return { sigma2d: (E) => { const e = nlEpsAt(E); return metalSigma2d(E, e.re, e.im, nl.thickness); }, nlEF: nl.EF, nlGamma: nl.gamma, doping: 1 };
+    return { sigma2d: (E) => grapheneSigma2d(E, nl.EF, nl.gamma), nlEF: nl.EF, nlGamma: nl.gamma, doping: 1 };   // graphene
+  }
+  function nlResonanceE(): number {
+    if (nl.material === 'graphene') return nlResonanceEnergyGraphene(nl.geometry, nl.EF, nl.D, nl.epsBar);
+    const r = nlResonance(nl.geometry, nl.D, nl.epsBar, nlMaterial().sigma2d);
+    return Number.isFinite(r) ? r : 1.0;
+  }
+  function nlEnergyRange(): [number, number] { return [Math.min(nl.eMin, nl.eMax), Math.max(nl.eMin, nl.eMax)]; }
+  // Seed the plot range: the file's span for uploads, else around the plasmon resonance.
+  function nlSeedRange() {
+    if (nl.material === 'sigma' && nlCustomSigma) { nl.eMin = nlCustomSigma.E[0]; nl.eMax = nlCustomSigma.E[nlCustomSigma.E.length - 1]; return; }
+    if (nl.material === 'eps' && nlCustomEps) { nl.eMin = nlCustomEps.E[0]; nl.eMax = nlCustomEps.E[nlCustomEps.E.length - 1]; return; }
+    const Er = nlResonanceE(); nl.eMin = Math.max(0.02, Er / 6); nl.eMax = Math.max(0.4, 1.3 * Er);
+  }
+  function nlRefreshUnitSelect() {
+    const sel = $('nl-range-unit') as HTMLSelectElement, energy = nl.axis === 'energy';
+    sel.innerHTML = energy ? '<option value="eV">eV</option><option value="meV">meV</option>' : '<option value="nm">nm</option><option value="um">µm</option>';
+    if (energy && nl.rangeUnit !== 'eV' && nl.rangeUnit !== 'meV') nl.rangeUnit = 'eV';
+    if (!energy && nl.rangeUnit !== 'nm' && nl.rangeUnit !== 'um') nl.rangeUnit = 'nm';
+    sel.value = nl.rangeUnit;
+  }
+  function nlRefreshRangeInputs() {
+    const energy = nl.axis === 'energy';
+    let lo: number, hi: number, q: string, dp: number;
+    if (energy) { const f = nl.rangeUnit === 'meV' ? 1000 : 1; lo = nl.eMin * f; hi = nl.eMax * f; q = nl.rangeUnit === 'meV' ? 'E (meV)' : 'E (eV)'; dp = nl.rangeUnit === 'meV' ? 0 : 3; }
+    else { const f = nl.rangeUnit === 'um' ? 1e-3 : 1; lo = HC_EV_NM / nl.eMax * f; hi = HC_EV_NM / nl.eMin * f; q = nl.rangeUnit === 'um' ? 'λ (µm)' : 'λ (nm)'; dp = nl.rangeUnit === 'um' ? 3 : 0; }
+    ($('nl-range-min') as HTMLInputElement).value = lo.toFixed(dp);
+    ($('nl-range-max') as HTMLInputElement).value = hi.toFixed(dp);
+    $('nl-range-min-label').textContent = 'Min ' + q; $('nl-range-max-label').textContent = 'Max ' + q;
+  }
+  function nlReadRangeInputs() {
+    const a = parseFloat(($('nl-range-min') as HTMLInputElement).value), b = parseFloat(($('nl-range-max') as HTMLInputElement).value);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return;
+    let eMin: number, eMax: number;
+    if (nl.axis === 'energy') { const f = nl.rangeUnit === 'meV' ? 1e-3 : 1; eMin = Math.min(a, b) * f; eMax = Math.max(a, b) * f; }
+    else { const f = nl.rangeUnit === 'um' ? 1000 : 1; const l1 = a * f, l2 = b * f; eMin = HC_EV_NM / Math.max(l1, l2); eMax = HC_EV_NM / Math.min(l1, l2); }
+    if (eMax > eMin) { nl.eMin = eMin; nl.eMax = eMax; }
+  }
+  function computeNl() {
+    const [Elo, Ehi] = nlEnergyRange();
+    const N = 360, E = new Float64Array(N);
+    for (let i = 0; i < N; i++) E[i] = Elo + (Ehi - Elo) * i / (N - 1);
+    const { re, im } = nlSpectrum(nl.order, nl.geometry, nl.D, nl.epsBar, nlMaterial(), E);
+    nlResult = { E, re, im };
+  }
+  const nlAxisValue = (E: number) => nl.axis === 'lambda' ? HC_EV_NM / E : E;
+  const nlAxisLabel = () => nl.axis === 'lambda' ? 'Wavelength λ (nm)' : 'Photon energy (eV)';
+
+  function drawNlChart() {
+    if (!nlResult) computeNl();
+    const r = nlResult!;
+    const { ctx, w, h, theme } = canvasSetup('nl-chart');
+    const m = { top: 18, right: 22, bottom: 48, left: 76 };
+    const f = nlDispFactor();
+    const n = r.E.length;
+    const reN = new Float64Array(n), imN = new Float64Array(n), absN = new Float64Array(n);
+    for (let i = 0; i < n; i++) { reN[i] = r.re[i] * f; imN[i] = r.im[i] * f; absN[i] = Math.hypot(r.re[i], r.im[i]) * f; }
+    const tr = (v: number) => nl.log ? (Math.abs(v) > 0 ? Math.log10(Math.abs(v)) : NaN) : v;   // log₁₀|·| when log scale is on
+    const ord = Array.from({ length: n }, (_, i) => i); if (nl.axis === 'lambda') ord.reverse();
+    const xs = ord.map(i => nlAxisValue(r.E[i]));
+    const reS = ord.map(i => tr(reN[i])), imS = ord.map(i => tr(imN[i])), absS = ord.map(i => tr(absN[i]));
+    // log scale only makes sense for the (positive) magnitude — Re/Im change sign, so plot |·| alone.
+    const series = nl.log ? [absS] : [reS, imS, absS];
+    let yMin = nl.log ? Infinity : 0, yMax = nl.log ? -Infinity : 0;
+    for (const arr of series) for (const v of arr) if (Number.isFinite(v)) { yMax = Math.max(yMax, v); yMin = Math.min(yMin, v); }
+    if (!Number.isFinite(yMin) || yMax <= yMin) { yMin = nl.log ? yMin - 1 : 0; yMax = (Number.isFinite(yMax) ? yMax : 0) + 1; }
+    const pad = 0.08 * (yMax - yMin); yMax += pad; yMin -= pad;
+    const yLabel = nl.log ? `log₁₀ |${nlSym(nl.order)}| (${nlUnitLbl()})` : `${nlSym(nl.order)} (${nlUnitLbl()})`;
+    const plot = drawAxes(ctx, w, h, m, xs[0], xs[n - 1], yMin, yMax, nlAxisLabel(), yLabel, theme, { tick: 12, label: 14 });
+    if (!nl.log && yMin < 0 && yMax > 0) { ctx.save(); ctx.strokeStyle = theme.grid; ctx.setLineDash([2, 3]); const y0 = plot.yTo(0); ctx.beginPath(); ctx.moveTo(plot.left, y0); ctx.lineTo(plot.right, y0); ctx.stroke(); ctx.restore(); }
+    if (!nl.log) { drawLine(ctx, xs, reS, plot, colors.re, 2.2); drawLine(ctx, xs, imS, plot, colors.im, 2.2); }
+    drawLine(ctx, xs, absS, plot, colors.ext, 2.2);
+    if (nl.cursorIdx >= 0 && nl.cursorIdx < n) {
+      const xc = plot.xTo(nlAxisValue(r.E[nl.cursorIdx]));
+      if (xc >= plot.left && xc <= plot.right) {
+        ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = colors.peak; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xc, plot.top); ctx.lineTo(xc, plot.bottom); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = colors.peak;
+        for (const arr of (nl.log ? [absN] : [reN, imN, absN])) { const vv = tr(arr[nl.cursorIdx]); if (!Number.isFinite(vv)) continue; const yv = plot.yTo(vv); if (yv >= plot.top && yv <= plot.bottom) { ctx.beginPath(); ctx.arc(xc, yv, 3, 0, 2 * Math.PI); ctx.fill(); } }
+        ctx.font = '600 10px Inter, system-ui, sans-serif'; ctx.textAlign = xc > plot.right - 72 ? 'right' : 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(nl.axis === 'lambda' ? `${fmtFixed(HC_EV_NM / r.E[nl.cursorIdx], 0)} nm` : `${fmt(r.E[nl.cursorIdx], 3)} eV`, xc + (xc > plot.right - 72 ? -5 : 5), plot.top + 3);
+      }
+    }
+  }
+
+  function setNlReadout(idx: number) {
+    if (!nlResult) return;
+    const r = nlResult, n = r.E.length;
+    const i = idx >= 0 && idx < n ? idx : Math.round(n / 2);
+    const f = nlDispFactor(), u = nlUnitLbl();
+    $('nl-r-energy').textContent = fmt(r.E[i], 4);
+    $('nl-r-lambda').textContent = fmtFixed(HC_EV_NM / r.E[i], 1);
+    $('nl-r-re').textContent = fmt(r.re[i] * f, 3);
+    $('nl-r-im').textContent = fmt(r.im[i] * f, 3);
+    $('nl-r-abs').textContent = fmt(Math.hypot(r.re[i], r.im[i]) * f, 3);
+    $('nl-u-re').textContent = u; $('nl-u-im').textContent = u; $('nl-u-abs').textContent = u;
+  }
+
+  const NL_MAT_LABEL: Record<string, string> = { graphene: 'doped graphene', au: 'Au', ag: 'Ag', cu: 'Cu', al: 'Al', drude: 'Drude-metal', sigma: 'custom 2D σ', eps: 'custom ε' };
+  function updateNlLegend() {
+    const ql = nlQtyLetter();
+    // log scale plots only |·|, so the legend shows the magnitude alone
+    const items: [string, string][] = nl.log ? [[`|${ql}|`, colors.ext]] : [[`Re ${ql}`, colors.re], [`Im ${ql}`, colors.im], [`|${ql}|`, colors.ext]];
+    $('nl-legend').innerHTML = legendHtml(items);
+  }
+  function updateNlCopy() {
+    const geo = getNlGeometry(nl.geometry);
+    const tStr = nlEpsBased(nl.material) ? ` film (t = ${fmtFixed(nl.thickness, 0)} nm)` : '';
+    const matLabel = `${NL_MAT_LABEL[nl.material]}${tStr}`;
+    const paramStr = nl.material === 'graphene' ? `E<sub>F</sub> = ${fmt(nl.EF, 2)} eV, D = ${fmtFixed(nl.D, 0)} nm` : `D = ${fmtFixed(nl.D, 0)} nm`;
+    $('nl-subtitle').innerHTML = `${matLabel} · ${geo.label} ${geo.dLabel} · ${NL_ORDER_NAME[nl.order]} · ${paramStr}`;
+    updateNlLegend();
+    updateNlRefs();
+    const setNote = (summary: string, html: string) => { $('nl-mode-summary').innerHTML = summary; $('nl-note-text').innerHTML = html; };
+    const shgBlocked = nl.order === '22' && !geo.hasShg;
+    if (shgBlocked) return setNote('', `<b>SHG (${ql}<sup>(2,2)</sup>) is symmetry-forbidden</b> for the centrosymmetric ${geo.label.toLowerCase()} — only the triangle has a non-zero second-harmonic response, so the curve is zero. Switch to the triangle, or to another response order.`);
+    if (nl.material === 'sigma' && !nlCustomSigma) return setNote('awaiting input', `Upload a three-column σ²ᴰ(E) file — E [eV], Re σ, Im σ (nm/fs). The eigenvalue is η(ω) = iσ²ᴰ/(ωDε̄).`);
+    if (nl.material === 'eps' && !nlCustomEps) return setNote('awaiting input', `Upload a three-column ε(E) file — E [eV], Re ε, Im ε — and set a thickness t. The thin-film eigenvalue is η(ω) = t(ε−1)/(4πDε̄).`);
+    const etaForm = nl.material === 'graphene' ? 'η(ω) = −e²E<sub>F</sub>/(π ε̄ D ω(ω+iγ))' : nl.material === 'sigma' ? 'η(ω) = iσ²ᴰ/(ωDε̄)' : 'η(ω) = t(ε−1)/(4π D ε̄)';
+    const qtyWord = nl.quantity === 'chi' ? 'susceptibility' : 'polarizability';
+    const chiNote = nl.quantity === 'chi'
+      ? (nl.material === 'graphene' || nl.material === 'sigma'
+          ? ` Effective bulk susceptibility χ<sup>(s)</sup> = α̃<sup>(s)</sup> n<sub>C</sub>/d<sub>gr</sub> = α<sup>(s)</sup>/(A·d<sub>gr</sub>), with n<sub>C</sub> = 3.8×10¹⁵ cm⁻² and d<sub>gr</sub> ≃ 0.33 nm [2].`
+          : ` Effective bulk susceptibility χ<sup>(s)</sup> = α<sup>(s)</sup>/(A·t), normalised by the film volume V = A·t (t = ${fmt(nl.thickness, 2)} nm).`)
+      : '';
+    let note = `Dipolar ${NL_ORDER_NAME[nl.order]} ${qtyWord} ${nlSymHtml(nl.order)} of a ${matLabel} ${geo.label.toLowerCase()}, lowest plasmon mode (Eq. 29 of Cox et al.). Material eigenvalue ${etaForm}; resonance where Re η = η₁.${chiNote}`;
+    if (nl.material !== 'graphene' && nl.order !== '11') note += ` <b>Note:</b> for non-graphene materials only the linear α<sup>(1,1)</sup> and the resonance position are material-exact; the nonlinear orders carry graphene's nonlinear conductivity (illustrative).`;
+    setNote(`ℏω<sub>p</sub> ≈ ${fmt(nlResonanceE(), 3)} eV`, note);
+  }
+  // material-dependent reference list
+  const NL_REF_COX = `J. D. Cox, R. Yu &amp; F. J. García de Abajo, <em>Analytical description of the nonlinear plasmonic response in nanographene</em>, Phys. Rev. B <strong>96</strong>, 045442 (2017), <a href="https://doi.org/10.1103/PhysRevB.96.045442" target="_blank" rel="noopener">doi:10.1103/PhysRevB.96.045442</a>.`;
+  const NL_REF_NATCOMM = `J. D. Cox &amp; F. J. García de Abajo, <em>Electrically tunable nonlinear plasmonics in graphene nanoislands</em>, Nat. Commun. <strong>5</strong>, 5725 (2014), <a href="https://doi.org/10.1038/ncomms6725" target="_blank" rel="noopener">doi:10.1038/ncomms6725</a> — per-atom χ⁽ˢ⁾ = α̃⁽ˢ⁾ n<sub>C</sub>/d<sub>gr</sub> conversion.`;
+  const NL_REF_FILM = `Z. M. Abd El-Fattah <em>et al.</em>, <em>Plasmonics in atomically thin crystalline silver films</em>, ACS Nano <strong>13</strong>, 7771 (2019) — thin-film 2D-sheet mapping σ²ᴰ = iωt(1−ε)/4π.`;
+  const NL_REF_JC = `Bulk optical constants ε(ω): P. B. Johnson &amp; R. W. Christy, Phys. Rev. B <strong>6</strong>, 4370 (1972) (Au, Ag, Cu); A. D. Rakić (1998) (Al), via the Lab's tabulated n, k.`;
+  function updateNlRefs() {
+    const refs = [NL_REF_COX, NL_REF_NATCOMM];
+    if (nl.material === 'au' || nl.material === 'ag' || nl.material === 'cu' || nl.material === 'al') refs.push(NL_REF_FILM, NL_REF_JC);
+    else if (nl.material === 'drude' || nl.material === 'eps') refs.push(NL_REF_FILM);
+    $('nl-ref-list').innerHTML = refs.map((r, i) => `<li><span class="ref-index">[${i + 1}]</span><span>${r}</span></li>`).join('');
+  }
+
+  function renderNl() {
+    computeNl();
+    updateNlCopy();
+    setNlReadout(nl.cursorIdx);
+    drawNlChart();
   }
 
   function drawMaterialChart() {
@@ -2146,7 +2738,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     xLabel: string,
     yLabel: string,
     theme: ReturnType<typeof chartTheme>,
+    fonts: { tick?: number; label?: number } = {},
   ) {
+    const tickPx = fonts.tick ?? 10, labelPx = fonts.label ?? 11;
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, w, h);
     const pw = w - m.left - m.right;
@@ -2183,7 +2777,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     ctx.stroke();
 
     ctx.fillStyle = theme.textSoft;
-    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.font = `${tickPx}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (let i = 0; i <= 5; i++) {
@@ -2191,11 +2785,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       ctx.fillText(fmt(value, 4), m.left + pw * i / 5, m.top + ph + 5);
     }
     ctx.fillStyle = theme.text;
-    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.font = `${labelPx}px Inter, system-ui, sans-serif`;
     ctx.fillText(xLabel, m.left + pw / 2, h - 16);
 
     ctx.fillStyle = theme.textSoft;
-    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.font = `${tickPx}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (let i = 0; i <= 5; i++) {
@@ -2207,7 +2801,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.fillStyle = theme.text;
-    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.font = `${labelPx}px Inter, system-ui, sans-serif`;
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
 
@@ -2537,12 +3131,15 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       state.tab = btn.dataset.tab as TabId;
+      cursorIdx = -1;
       document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach(other => {
         const active = other === btn;
         other.classList.toggle('active', active);
         other.setAttribute('aria-selected', active ? 'true' : 'false');
       });
       updateChartCopy();
+      updateOutputs();
+      updateSwatches();
       drawChart();
     });
   });
@@ -2552,7 +3149,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (!btn || !btn.dataset.axis) return;
     state.xAxis = btn.dataset.axis as ChartAxisMode;
     updateAxisControls();
-    if (state.tab === 'spectrum' || state.tab === 'material') {
+    if (state.tab === 'spectrum' || state.tab === 'material' || state.tab === 'polar') {
       drawChart();
     }
   });
@@ -2564,6 +3161,236 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     updateChartCopy();
     drawChart();
   });
+
+  $('alpha-unit-controls').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
+    if (!btn || !btn.dataset.aunit) return;
+    alphaUnit = btn.dataset.aunit as AlphaUnit;
+    updateChartCopy();
+    setPolarReadout(cursorIdx);
+    drawChart();
+  });
+
+  // LIN (metal-nanoparticle model, implemented) vs NL (nonlinear-graphene placeholder).
+  function updateLabMode() {
+    const nlOn = labMode === 'nl';
+    $('nl-panel').style.display = nlOn ? '' : 'none';
+    $('nl-results').style.display = nlOn ? '' : 'none';
+    document.querySelector('.widget-layout')?.classList.toggle('nl-mode', nlOn);   // drop sticky so param + result scroll together
+    ($('nl-controls-box') as HTMLElement).hidden = !nlOn;
+    const linEls = [document.querySelector('.shape-strip:not(#nl-shape-strip)'), document.querySelector('.tabs'), document.querySelector('.chart-panel'), $('peak-stats'), $('polar-readout'), document.querySelector('.model-note:not(.nl-model-note)'), $('lin-controls'), $('lin-references')];
+    for (const el of linEls) if (el) (el as HTMLElement).style.display = nlOn ? 'none' : '';
+    $('nl-shape-strip').style.display = nlOn ? '' : 'none';
+    if (nlOn) renderNl();
+    else render();   // restore the LIN view
+  }
+  $('linnl-tabs').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
+    if (!btn || !btn.dataset.linnl) return;
+    labMode = btn.dataset.linnl as 'lin' | 'nl';
+    $('linnl-tabs').querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(b => { const a = b.dataset.linnl === labMode; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
+    updateLabMode();
+  });
+
+  // ── nonlinear-graphene controls ──
+  const nlChanged = () => { nl.cursorIdx = -1; renderNl(); };
+  // Only geometries that support the selected response are offered.
+  // SHG (α²²) is symmetry-allowed for the triangle only; the others allow all three.
+  function nlAvailableGeos() { return nl.order === '22' ? NL_GEOMETRIES.filter(g => g.hasShg) : NL_GEOMETRIES; }
+  // SVG icons for the nanographene geometries (ribbon / triangle / disk), drawn like the LIN gallery.
+  function nlShapeBody(id: NlGeometryId, stroke = 'currentColor', fill = 'rgba(99,102,241,0.12)'): string {
+    // 2D shapes (flat, no 3D extrusion/shadow) — the NL model is for two-dimensional structures
+    if (id === 'triangle') return `<path d="M40 8 64 44 16 44Z" fill="${fill}" stroke="${stroke}" stroke-width="3" stroke-linejoin="round"/>`;
+    if (id === 'disk') return `<circle cx="40" cy="26" r="18" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`;
+    // ribbon: an infinite strip of width D (band spanning the frame)
+    return `<rect x="-2" y="20" width="84" height="14" fill="${fill}" stroke="none"/><path d="M-2 20h84M-2 34h84" stroke="${stroke}" stroke-width="3"/><path d="M40 16v22" stroke="${stroke}" stroke-width="1.6" opacity=".4"/>`;
+  }
+  function renderNlGallery() {
+    $('nl-shape-gallery').innerHTML = nlAvailableGeos().map(g =>
+      `<button class="shape-card ${g.id === nl.geometry ? 'active' : ''}" type="button" data-nlshape="${g.id}" title="${g.label}"><svg viewBox="0 0 80 52">${nlShapeBody(g.id)}</svg><span>${g.label}</span></button>`).join('');
+    $('nl-shape-current').textContent = getNlGeometry(nl.geometry).label;
+  }
+  function updateNlGeoOptions() {
+    const sel = $('nl-geo') as HTMLSelectElement;
+    const geos = nlAvailableGeos();
+    if (!geos.some(g => g.id === nl.geometry)) nl.geometry = geos[0].id;
+    sel.innerHTML = geos.map(g => `<option value="${g.id}"${g.id === nl.geometry ? ' selected' : ''}>${g.label}</option>`).join('');
+    renderNlGallery();
+  }
+  // Material-dependent control visibility: graphene exposes E_F/γ/doping and all orders;
+  // metal/custom expose only the linear α¹¹ (η/σ²ᴰ are material-exact; nonlinear is graphene).
+  function updateNlMaterialUI() {
+    const m = nl.material, g = m === 'graphene';
+    ($('nl-graphene-box') as HTMLElement).hidden = !g;
+    ($('nl-drude-box') as HTMLElement).hidden = m !== 'drude';
+    ($('nl-sigma-param') as HTMLElement).hidden = m !== 'sigma';
+    ($('nl-eps-param') as HTMLElement).hidden = m !== 'eps';
+    ($('nl-thickness-param') as HTMLElement).hidden = !nlEpsBased(m);   // only ε-based materials need a thickness
+    const ord = $('nl-order') as HTMLSelectElement;
+    if (!g) nl.order = '11';   // nonlinear orders are graphene-only
+    ord.querySelectorAll('option').forEach(o => { (o as HTMLOptionElement).hidden = !g && (o as HTMLOptionElement).value !== '11'; });
+    ord.value = nl.order;
+    $('nl-material-ref').innerHTML = nlMaterialRefText();
+    updateNlGeoOptions();
+  }
+  function nlMaterialRefText(): string {
+    if (nl.material === 'graphene') return 'Drude conductivity σ²ᴰ = iE<sub>F</sub>/[πℏ(E+iγ)]';
+    if (nl.material === 'drude') return 'Tunable Drude dielectric function';
+    if (nl.material === 'sigma') return nlCustomSigma ? '' : 'Upload σ²ᴰ(E) file';
+    if (nl.material === 'eps') return nlCustomEps ? '' : 'Upload ε(E) file';
+    return MATERIALS[nl.material]?.ref ?? '';   // au / ag / cu / al → tabulated-data reference
+  }
+  function parseSigmaFile(text: string): { E: Float64Array; re: Float64Array; im: Float64Array } | null {
+    const E: number[] = [], re: number[] = [], im: number[] = [];
+    for (const line of text.split(/\r?\n/)) {
+      const t = line.trim(); if (!t || /^[#%]/.test(t)) continue;
+      const p = t.split(/[\s,;\t]+/).map(Number);
+      if (p.length >= 3 && p.slice(0, 3).every(Number.isFinite)) { E.push(p[0]); re.push(p[1]); im.push(p[2]); }
+    }
+    if (E.length < 2) return null;
+    const idx = E.map((_, i) => i).sort((a, b) => E[a] - E[b]);
+    return { E: Float64Array.from(idx.map(i => E[i])), re: Float64Array.from(idx.map(i => re[i])), im: Float64Array.from(idx.map(i => im[i])) };
+  }
+  updateNlMaterialUI();
+  ($('nl-order') as HTMLSelectElement).value = nl.order;
+  $('nl-material').addEventListener('change', e => { nl.material = (e.target as HTMLSelectElement).value as NlMatId; updateNlMaterialUI(); nlSeedRange(); nlRefreshRangeInputs(); nlChanged(); });
+  $('nl-thickness').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.thickness = v; nlChanged(); } });
+  const NL_HBAR_EVFS = 0.6582119569;   // ħ in eV·fs, for the Drude γ ⇄ τ link
+  const nlDrudeRefreshTau = () => { ($('nl-drude-tau') as HTMLInputElement).value = (NL_HBAR_EVFS / nl.drudeGamma).toFixed(2); };
+  $('nl-drude-einf').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v)) { nl.drudeEpsInf = v; nlChanged(); } });
+  $('nl-drude-wp').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.drudeWp = v; nlChanged(); } });
+  $('nl-drude-g').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.drudeGamma = v; nlDrudeRefreshTau(); nlChanged(); } });
+  $('nl-drude-tau').addEventListener('input', e => { const t = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(t) && t > 0) { nl.drudeGamma = NL_HBAR_EVFS / t; ($('nl-drude-g') as HTMLInputElement).value = nl.drudeGamma.toFixed(4); nlChanged(); } });
+  document.querySelectorAll<HTMLButtonElement>('.nl-drude-preset').forEach(btn => btn.addEventListener('click', () => {
+    nl.drudeEpsInf = parseFloat(btn.dataset.epsb!); nl.drudeWp = parseFloat(btn.dataset.wp!); nl.drudeGamma = parseFloat(btn.dataset.gamma!);
+    ($('nl-drude-einf') as HTMLInputElement).value = btn.dataset.epsb!; ($('nl-drude-wp') as HTMLInputElement).value = btn.dataset.wp!; ($('nl-drude-g') as HTMLInputElement).value = btn.dataset.gamma!;
+    nlDrudeRefreshTau(); nlChanged();
+  }));
+  nlDrudeRefreshTau();
+  $('nl-sigma-upload').addEventListener('change', async e => {
+    const file = (e.target as HTMLInputElement).files?.[0]; if (!file) return;
+    const parsed = parseSigmaFile(await file.text());
+    if (parsed) { nlCustomSigma = parsed; $('nl-sigma-name').textContent = `${file.name} (${parsed.E.length} pts)`; $('nl-material-ref').innerHTML = nlMaterialRefText(); nlSeedRange(); nlRefreshRangeInputs(); renderNl(); }
+    else $('nl-sigma-name').textContent = `${file.name}: need 3 columns E, Reσ, Imσ`;
+  });
+  $('nl-eps-upload').addEventListener('change', async e => {
+    const file = (e.target as HTMLInputElement).files?.[0]; if (!file) return;
+    const parsed = parseSigmaFile(await file.text());
+    if (parsed) { nlCustomEps = parsed; $('nl-eps-name').textContent = `${file.name} (${parsed.E.length} pts)`; $('nl-material-ref').innerHTML = nlMaterialRefText(); nlSeedRange(); nlRefreshRangeInputs(); renderNl(); }
+    else $('nl-eps-name').textContent = `${file.name}: need 3 columns E, Reε, Imε`;
+  });
+  $('nl-geo').addEventListener('change', e => { nl.geometry = (e.target as HTMLSelectElement).value as NlGeometryId; renderNlGallery(); nlChanged(); });
+  $('nl-shape-gallery').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.shape-card'); if (!btn || !btn.dataset.nlshape) return;
+    nl.geometry = btn.dataset.nlshape as NlGeometryId;
+    ($('nl-geo') as HTMLSelectElement).value = nl.geometry;
+    renderNlGallery(); nlChanged();
+  });
+  $('nl-order').addEventListener('change', e => { nl.order = (e.target as HTMLSelectElement).value as NlOrder; updateNlGeoOptions(); nlChanged(); });
+  // graphene damping ⇄ lifetime ⇄ DC mobility (γ is the source of truth), as in the Materials/graphene module
+  const NL_HBAR_EVS = 6.582119569e-16, NL_VF_MS = 1e6, NL_HBAR_EV_FS = 0.6582119569;
+  const nlMobFromGamma = (g: number, EF: number) => (NL_HBAR_EVS / g) * NL_VF_MS * NL_VF_MS / EF * 1e4;
+  const nlGammaFromMob = (mu: number, EF: number) => NL_HBAR_EVS / ((mu * 1e-4) * EF / (NL_VF_MS * NL_VF_MS));
+  function nlRefreshTauMob() { ($('nl-tau') as HTMLInputElement).value = (NL_HBAR_EV_FS / nl.gamma).toFixed(1); if (nl.EF > 0) ($('nl-mu') as HTMLInputElement).value = nlMobFromGamma(nl.gamma, nl.EF).toFixed(0); }
+  $('nl-ef').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.EF = v; ($('nl-ef-slider') as HTMLInputElement).value = String(v); nlRefreshTauMob(); nlChanged(); } });
+  $('nl-ef-slider').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); nl.EF = v; ($('nl-ef') as HTMLInputElement).value = String(v); nlRefreshTauMob(); nlChanged(); });
+  $('nl-d').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.D = v; ($('nl-d-slider') as HTMLInputElement).value = String(v); nlChanged(); } });
+  $('nl-d-slider').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); nl.D = v; ($('nl-d') as HTMLInputElement).value = String(v); nlChanged(); });
+  $('nl-gamma').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) { nl.gamma = v; nlRefreshTauMob(); nlChanged(); } });
+  $('nl-tau').addEventListener('input', e => { const t = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(t) && t > 0) { nl.gamma = NL_HBAR_EV_FS / t; ($('nl-gamma') as HTMLInputElement).value = nl.gamma.toFixed(5); if (nl.EF > 0) ($('nl-mu') as HTMLInputElement).value = nlMobFromGamma(nl.gamma, nl.EF).toFixed(0); nlChanged(); } });
+  $('nl-mu').addEventListener('input', e => { const mu = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(mu) && mu > 0 && nl.EF > 0) { nl.gamma = nlGammaFromMob(mu, nl.EF); ($('nl-gamma') as HTMLInputElement).value = nl.gamma.toFixed(5); ($('nl-tau') as HTMLInputElement).value = (NL_HBAR_EV_FS / nl.gamma).toFixed(1); nlChanged(); } });
+  nlRefreshTauMob();
+  nlSeedRange(); nlRefreshUnitSelect(); nlRefreshRangeInputs();
+  $('nl-axis-tabs').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.axis-btn'); if (!btn || !btn.dataset.naxis) return;
+    nl.axis = btn.dataset.naxis as ChartAxisMode;
+    $('nl-axis-tabs').querySelectorAll<HTMLButtonElement>('.axis-btn').forEach(b => { const a = b.dataset.naxis === nl.axis; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
+    nlRefreshUnitSelect(); nlRefreshRangeInputs();
+    drawNlChart();
+  });
+  $('nl-range-unit').addEventListener('change', e => { nl.rangeUnit = (e.target as HTMLSelectElement).value; nlRefreshRangeInputs(); });
+  $('nl-range-min').addEventListener('input', () => { nlReadRangeInputs(); nlChanged(); });
+  $('nl-range-max').addEventListener('input', () => { nlReadRangeInputs(); nlChanged(); });
+  $('nl-unit-controls').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn'); if (!btn || !btn.dataset.naunit) return;
+    nl.unit = btn.dataset.naunit as AlphaUnit;
+    $('nl-unit-controls').querySelectorAll<HTMLButtonElement>('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.naunit === nl.unit));
+    setNlReadout(nl.cursorIdx); drawNlChart();
+  });
+  $('nl-log-btn').addEventListener('click', () => { nl.log = !nl.log; ($('nl-log-btn') as HTMLButtonElement).setAttribute('aria-pressed', String(nl.log)); updateNlLegend(); drawNlChart(); });
+  function nlUpdateQtyUI() {
+    $('nl-title').textContent = nl.quantity === 'chi' ? 'Nonlinear susceptibility' : 'Nonlinear polarizability';
+    // Response menu: relabel each option with the active quantity letter (α⁽ⁿ⁾ ↔ χ⁽ⁿ⁾)
+    ($('nl-order') as HTMLSelectElement).querySelectorAll('option').forEach(o => {
+      const v = (o as HTMLOptionElement).value as NlOrder;
+      o.textContent = `${nlSym(v)} ${NL_ORDER_SHORT[v]}`;
+    });
+    // readout: swap the α/χ symbol on Real/Imaginary/Abs labels (leave the λ alone)
+    $('nl-readout').querySelectorAll('.lc').forEach(s => { if (s.textContent === 'α' || s.textContent === 'χ') s.textContent = nlQtyLetter(); });
+  }
+  $('nl-qty-toggle').addEventListener('click', event => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.nl-qty-btn');
+    if (!btn) return;
+    nl.quantity = btn.dataset.nlqty as 'alpha' | 'chi';
+    $('nl-qty-toggle').querySelectorAll<HTMLButtonElement>('.nl-qty-btn').forEach(b => { const a = b.dataset.nlqty === nl.quantity; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
+    nlUpdateQtyUI();
+    nl.cursorIdx = -1;
+    renderNl();
+  });
+  $('nl-dl-png').addEventListener('click', () => {
+    const canvas = $('nl-chart') as HTMLCanvasElement;
+    canvas.toBlob(blob => { if (blob) downloadBlob(blob, `nlplasmon_${nl.material}_${nl.geometry}_alpha${nl.order}.png`); }, 'image/png');
+  });
+  $('nl-dl-csv').addEventListener('click', () => {
+    if (!nlResult) computeNl();
+    const r = nlResult!, f = nlDispFactor(), u = nlUnitLbl(), q = nl.quantity === 'chi' ? 'chi' : 'alpha';
+    const lines = [
+      `# Nonlinear-plasmonics ${q === 'chi' ? 'susceptibility' : 'polarizability'}`,
+      `# material=${NL_MAT_LABEL[nl.material]}, geometry=${nl.geometry}, order=${q}(${nl.order}), D_nm=${nl.D}, EF_eV=${nl.EF}, gamma_eV=${nl.gamma}, unit=${u}`,
+      `energy_eV,wavelength_nm,Re_${q},Im_${q},abs_${q}`,
+    ];
+    for (let i = 0; i < r.E.length; i++) {
+      lines.push([r.E[i], HC_EV_NM / r.E[i], r.re[i] * f, r.im[i] * f, Math.hypot(r.re[i], r.im[i]) * f].map(v => Number(v).toPrecision(8)).join(','));
+    }
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), `nlplasmon_${nl.material}_${q}${nl.order}.csv`);
+  });
+  {
+    const nlCanvas = $('nl-chart') as HTMLCanvasElement;
+    const M_LEFT = 72, M_RIGHT = 22;
+    nlCanvas.addEventListener('mousemove', e => {
+      if (!nlResult) return;
+      const rect = nlCanvas.getBoundingClientRect();
+      const frac = (e.clientX - rect.left - M_LEFT) / (rect.width - M_LEFT - M_RIGHT);
+      if (frac < 0 || frac > 1) { if (nl.cursorIdx !== -1) { nl.cursorIdx = -1; setNlReadout(-1); drawNlChart(); } return; }
+      const E = nlResult.E, n = E.length, Elo = E[0], Ehi = E[n - 1];
+      let targetE: number;
+      if (nl.axis === 'energy') targetE = Elo + frac * (Ehi - Elo);
+      else { const lam = HC_EV_NM / Ehi + frac * (HC_EV_NM / Elo - HC_EV_NM / Ehi); targetE = HC_EV_NM / lam; }
+      let idx = 0, best = Infinity; for (let i = 0; i < n; i++) { const d = Math.abs(E[i] - targetE); if (d < best) { best = d; idx = i; } }
+      if (idx !== nl.cursorIdx) { nl.cursorIdx = idx; setNlReadout(idx); drawNlChart(); }
+    });
+    nlCanvas.addEventListener('mouseleave', () => { if (nl.cursorIdx !== -1) { nl.cursorIdx = -1; setNlReadout(-1); drawNlChart(); } });
+  }
+
+  // Cursor readout on the polarizability chart.
+  {
+    const chartCanvas = $('plasmon-chart') as HTMLCanvasElement;
+    const POL_M_LEFT = 70, POL_M_RIGHT = 22;
+    chartCanvas.addEventListener('mousemove', event => {
+      if (state.tab !== 'polar' || !result) return;
+      const rect = chartCanvas.getBoundingClientRect();
+      const frac = (event.clientX - rect.left - POL_M_LEFT) / (rect.width - POL_M_LEFT - POL_M_RIGHT);
+      if (frac < 0 || frac > 1) { if (cursorIdx !== -1) { cursorIdx = -1; setPolarReadout(-1); drawChart(); } return; }
+      const [xMin, xMax] = axisRange();
+      const axisVal = xMin + frac * (xMax - xMin);
+      const lambda = state.xAxis === 'energy' ? HC_EV_NM / axisVal : axisVal;
+      const idx = nearestIndex(result.wavelengthNm, lambda);
+      if (idx !== cursorIdx) { cursorIdx = idx; setPolarReadout(idx); drawChart(); }
+    });
+    chartCanvas.addEventListener('mouseleave', () => {
+      if (state.tab === 'polar' && cursorIdx !== -1) { cursorIdx = -1; setPolarReadout(-1); drawChart(); }
+    });
+  }
 
   import { downloadBlob } from '../../lib/download';
 
@@ -2685,7 +3512,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (p.has('min')) state.lambdaMinNm = Number.parseFloat(p.get('min')!);
     if (p.has('max')) state.lambdaMaxNm = Number.parseFloat(p.get('max')!);
     if (p.has('modes')) state.modeCount = Number.parseInt(p.get('modes')!, 10);
-    if (p.has('view') && ['spectrum', 'material', 'resonance', 'ldos'].includes(p.get('view')!)) state.tab = p.get('view') as TabId;
+    if (p.has('view') && ['spectrum', 'polar', 'material', 'resonance', 'ldos'].includes(p.get('view')!)) state.tab = p.get('view') as TabId;
     if (p.has('axis') && ['lambda', 'energy'].includes(p.get('axis')!)) state.xAxis = p.get('axis') as ChartAxisMode;
     if (p.has('sweep') && ['L', 'R'].includes(p.get('sweep')!)) state.resonanceSweep = p.get('sweep') as ResonanceSweep;
 
