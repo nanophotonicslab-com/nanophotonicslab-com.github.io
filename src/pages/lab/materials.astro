@@ -269,40 +269,45 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         </div>
 
         <!-- ===== Results ===== -->
-        <div class="mat-results card">
-          <div class="chart-header">
-            <span class="chart-title-wrap">
-              <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
-              <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
-            </span>
-            <span class="chart-header__right">
-              <span class="mat-legend" id="mat-legend"></span>
-            </span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="mat-canvas" aria-label="Optical constants plot"></canvas>
-          </div>
-
-          <div class="output-card card" id="readout"></div>
-
-          <div class="gr-map-card card" id="gr-map-card" hidden>
-            <div class="gr-map-head">
-              <span class="gr-map-title">σ(Q, ω) / σ₀ — nonlocal RPA map</span>
-              <span class="gr-map-hint">Drag the <b>Q</b> slider (Range) to move the dashed cut</span>
+        <div class="mat-results-col">
+          <div class="mat-results card">
+            <div class="chart-header">
+              <span class="chart-title-wrap">
+                <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
+                <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
+              </span>
+              <span class="chart-header__right">
+                <span class="mat-legend" id="mat-legend"></span>
+              </span>
             </div>
-            <div class="chart-wrap gr-map-wrap"><canvas id="gr-map" aria-label="Nonlocal conductivity map σ(Q,ω)"></canvas></div>
+            <div class="chart-wrap">
+              <canvas id="mat-canvas" aria-label="Optical constants plot"></canvas>
+            </div>
+
+            <div class="output-card card" id="readout"></div>
+
+            <div class="gr-map-card card" id="gr-map-card" hidden>
+              <div class="gr-map-head">
+                <span class="gr-map-title">σ(Q, ω) / σ₀ — nonlocal RPA map</span>
+                <span class="gr-map-hint">Drag the <b>Q</b> slider (Range) to move the dashed cut</span>
+              </div>
+              <div class="chart-wrap gr-map-wrap"><canvas id="gr-map" aria-label="Nonlocal conductivity map σ(Q,ω)"></canvas></div>
+            </div>
+
+            <div class="mat-export-bar">
+              <span class="mat-export-label">Export</span>
+              <button id="mat-dl-png" class="share-btn" title="Download plot as PNG">PNG</button>
+              <button id="mat-dl-csv" class="share-btn" title="Download data as CSV">CSV</button>
+            </div>
           </div>
 
-          <div class="mat-export-bar">
-            <span class="mat-export-label">Export</span>
-            <button id="mat-dl-png" class="share-btn" title="Download plot as PNG">PNG</button>
-            <button id="mat-dl-csv" class="share-btn" title="Download data as CSV">CSV</button>
-          </div>
-
+          <!-- Notes — independent card below the result box -->
           <div class="notes-card card" id="mat-notes"></div>
-          <div class="references card" id="mat-refs"></div>
         </div>
       </div>
+
+      <!-- References — full page width, like the Mie-scattering lab -->
+      <div class="references card" id="mat-refs"></div>
     </div>
   </section>
 </Layout>
@@ -334,9 +339,9 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .widget-layout { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
-  .controls { padding: var(--space-md); position: relative; }
+  .controls { padding: var(--space-lg); position: relative; }
   .controls h3 {
-    font-size: 0.8rem; font-weight: 700; color: var(--text); margin: var(--space-md) 0 0.5rem;
+    font-size: 0.9rem; font-weight: 700; color: var(--text); margin: var(--space-md) 0 0.5rem;
     padding-top: var(--space-md); border-top: 1px solid var(--bg-muted);
   }
   .controls h3:first-of-type, .controls .ctrl-group h3 { }
@@ -348,14 +353,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .ctrl-group h3 { margin-top: 0; padding-top: 0; border-top: none; }
   .ctrl-group[hidden] { display: none; }
 
-  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .fields { display: flex; flex-direction: column; gap: 0.7rem; }
   .field { display: flex; align-items: center; gap: 0.5rem; }
   .field[hidden] { display: none; }
-  .field label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
+  .field label { flex: 0 0 auto; min-width: 70px; font-size: 0.875rem; color: var(--text-soft); }
   .field-input {
     flex: 1 1 auto; min-width: 0; width: 100%; padding: 0.4rem 0.55rem;
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.85rem;
+    background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.875rem;
   }
   .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
   .field-input:disabled, .gr-slider:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -382,7 +387,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .seg-btn + .seg-btn { border-left: 1px solid var(--bg-muted); }
   .seg-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.06); color: var(--primary); }
   .seg-btn.active { background: var(--primary); color: #fff; }
+  /* Graphene model: stack the label above the 3-way seg so "Nonlocal RPA" gets the full width;
+     extra top margin separates it from the "Parameters" header. */
+  #gr-model-field { flex-direction: column; align-items: stretch; gap: 0.4rem; margin-top: 0.6rem; }
+  #gr-model-field > label { min-width: 0; font-weight: 600; }
+  #gr-model-tabs .seg-btn { padding-left: 0.2rem; padding-right: 0.2rem; }
 
+  /* right column: result card + Notes card stacked as independent cards (like the Mie lab) */
+  .mat-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; overflow: visible; }
   .chart-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
   .chart-title-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
@@ -418,7 +430,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .gr-map-hint { font-size: 0.7rem; color: var(--text-muted); }
   .gr-map-wrap { position: relative; width: 100%; }
   .gr-map-wrap canvas { width: 100%; display: block; }
-  .references { padding: var(--space-md); margin-top: var(--space-sm); }
+  .references { width: 100%; padding: var(--space-md); margin-top: var(--space-lg); }
   .references[hidden] { display: none; }
   .references :global(h4) { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; }
   .references :global(.reference-list) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
