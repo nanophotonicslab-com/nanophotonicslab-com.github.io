@@ -376,6 +376,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s;
   }
   .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .preset-btn.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
 
   /* Segmented toggle */
   .seg { display: inline-flex; flex: 1 1 auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); overflow: hidden; }
@@ -677,6 +678,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     return Number.isFinite(v) ? v : def;
   };
   const drudeParams = () => ({ epsB: num('drude-epsb', 1), wpEv: num('drude-wp', 9), gammaEv: num('drude-gamma', 0.05) });
+  // highlight the Au/Ag/Al/Cu preset whose (ε∞, ℏω_p, γ) matches the current Drude inputs
+  function syncDrudePreset() {
+    const p = drudeParams();
+    document.querySelectorAll<HTMLButtonElement>('.drude-preset').forEach(btn => {
+      const match = Math.abs(p.epsB - parseFloat(btn.dataset.epsb!)) < 1e-9
+        && Math.abs(p.wpEv - parseFloat(btn.dataset.wp!)) < 1e-9
+        && Math.abs(p.gammaEv - parseFloat(btn.dataset.gamma!)) < 1e-9;
+      btn.classList.toggle('active', match);
+      btn.setAttribute('aria-pressed', match ? 'true' : 'false');
+    });
+  }
 
   // ── Graphene linear surface conductivity σ(ω), in units of σ₀ = e²/4ħ ──
   // Ported from the MATLAB/C routines (graphene_sigma1.m, graphene.h). In the
@@ -1313,6 +1325,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   function render(hoverIdx = -1) {
+    syncDrudePreset();   // keep the Au/Ag/Al/Cu preset highlight in sync with the inputs
     $('mat-title').textContent = isSigma()
       ? (grNL ? grProcTitle() : 'Surface conductivity σ(ω,T)')
       : mod === 'tmdc'
