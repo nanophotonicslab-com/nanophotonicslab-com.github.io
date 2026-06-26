@@ -530,14 +530,6 @@ export function validityNotes(options: PlasmonSpectrumOptions): string[] {
     notes.push('This geometry has one fitted analytical mode in the local paper data.');
   }
   if (
-    options.shape === 'rod'
-    && options.materialId.toLowerCase() === 'au'
-    && Math.abs(options.lengthNm - 50) < 1e-6
-    && Math.abs(options.aspectRatio - 4) < 1e-6
-  ) {
-    notes.push('This default is the Au nanorod L = 50 nm, R = 4 curve from Fig. 5a of the same 2017 Chem. Soc. Rev. paper.');
-  }
-  if (
     options.shape === 'rod transverse'
     && options.materialId.toLowerCase() === 'ag'
     && Math.abs(options.lengthNm - 50) < 1e-6

@@ -518,6 +518,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   import { downloadBlob } from '../../lib/download';
   import { loadCatalog, searchCatalog, fetchMaterialNK, type RIIMaterial } from '../../data/refractiveindex';
   import { TMDC, TMDC_LABEL, tmdcEpsilon } from '../../data/tmdc';
+  import { grapheneMuT, mikhailovS3THG, KB_EV } from '../../lib/graphene-conductivity';
 
   // ── optical-file parser (tabulated x, n, k or x, ε′, ε″ — axis/value auto-detected) ──
   type FileRow = [number, number, number];
@@ -668,15 +669,11 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   // ── Graphene linear surface conductivity σ(ω), in units of σ₀ = e²/4ħ ──
   // Ported from the MATLAB/C routines (graphene_sigma1.m, graphene.h). In the
   // closed forms the eV→a.u. factors cancel, so we work directly in eV. σ₀ = 1/4.
-  const KB_EV = 8.617333262e-5;   // Boltzmann constant in eV/K
-  // i·μ / [π (ω + iγ)]  (intraband Drude term, a.u.)
+  // i·μ / [π (ω + iγ)]  (intraband Drude term, a.u.). KB_EV and the thermal μ(T) (grapheneMuT)
+  // come from the shared graphene-conductivity module.
   function grDrude(mu: number, gam: number, w: number): { re: number; im: number } {
     const dr = Math.PI * w, di = Math.PI * gam, d2 = dr * dr + di * di;
     return { re: mu * di / d2, im: mu * dr / d2 };           // i/(dr+idi) = (di + i·dr)/|·|²
-  }
-  function grMuT(EF: number, T: number): number {
-    const KT = KB_EV * Math.max(T, 1e-9);
-    return Math.abs(EF) + 2 * KT * Math.log(1 + Math.exp(-Math.abs(EF) / KT));
   }
   // interband, T=0 (exact z-formula of graphene_sigma1.m), a.u.
   function grInterT0(EF: number, gam: number, w: number): { re: number; im: number } {
@@ -687,7 +684,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   // interband, finite T (thermal μ + Hanson smearing), a.u.
   function grInterT(EF: number, gam: number, T: number, w: number): { re: number; im: number } {
-    const KT = KB_EV * Math.max(T, 1e-9), mu = grMuT(EF, T), x = w - 2 * mu;
+    const KT = KB_EV * Math.max(T, 1e-9), mu = grapheneMuT(EF, T), x = w - 2 * mu;
     return {
       re: 0.25 * (0.5 + Math.atan(x / (2 * KT)) / Math.PI),
       im: 0.25 * Math.log((x * x + 4 * KT * KT) / ((w + 2 * mu) * (w + 2 * mu))) / (2 * Math.PI),
@@ -748,7 +745,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   function grapheneParts(w: number): { iRe: number; iIm: number; nRe: number; nIm: number } {
     if (grModel === 'nonlocal') { const s = cScale(4, grNonlocal(w)); return { iRe: s.re, iIm: s.im, nRe: 0, nIm: 0 }; }
     const EF = num('gr-ef', 0.4), gam = Math.max(0, num('gr-gamma', 0.0037)), T = Math.max(0, num('gr-temp', 300));
-    const intra = T < 1 ? grDrude(EF, gam, w) : grDrude(grMuT(EF, T), gam, w);
+    const intra = T < 1 ? grDrude(EF, gam, w) : grDrude(grapheneMuT(EF, T), gam, w);
     const inter = grModel === 'drude' ? { re: 0, im: 0 } : (T < 1 ? grInterT0(EF, gam, w) : grInterT(EF, gam, T, w));
     return { iRe: intra.re * 4, iIm: intra.im * 4, nRe: inter.re * 4, nIm: inter.im * 4 };
   }
@@ -787,77 +784,9 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     else sig = cAdd(cInv(c2p(cc(w, g))), cScale(4, cInv(wwg)));
     return cScale(fct, sig);
   }
-  // Mikhailov, PRB 93, 085403 (2016): full third-harmonic S⁽³⁾_xxxx(ω,ω,ω) (dimensionless).
-  // Appendix-D integrals, general (distinct-argument) branch — valid for ω > 0.
-  function fInt(n: number, a: C, b: C, c: C): C {
-    const am1 = cAdd(a, cc(1)), bm1 = cAdd(b, cc(1)), cm1 = cAdd(c, cc(1));
-    const amb = cSub(a, b), amc = cSub(a, c), bmc = cSub(b, c), cma = cSub(c, a), cmb = cSub(c, b);
-    const la = cLog(am1), lb = cLog(bm1), lc = cLog(cm1);
-    const ab = cMul(a, b), ac = cMul(a, c), bc = cMul(b, c), abc = cMul(ab, c);
-    if (n === 3) return cSub(cAdd(cInv(ab), cMul(cInv(cMul(c2p(a), amb)), la)), cMul(cInv(cMul(c2p(b), amb)), lb));
-    if (n === 4) return cAdd(cAdd(cScale(-1, cInv(cMany(b, amb, bm1))), cMul(cInv(cMul(a, c2p(amb))), la)), cMul(cDiv(cSub(a, cScale(2, b)), cMul(c2p(b), c2p(amb))), lb));
-    if (n === 5) {
-      const apb = cAdd(a, b);
-      const La = cLog(cDiv(cSub(cc(1), a), cAdd(cc(1), a))), Lb = cLog(cDiv(cSub(cc(1), b), cAdd(cc(1), b)));
-      return cAdd(cSub(cScale(4, cInv(ab)), cMul(cDiv(cScale(2, b), cMany(c2p(a), amb, apb)), La)), cMul(cDiv(cScale(2, a), cMany(c2p(b), amb, apb)), Lb));
-    }
-    if (n === 1) {
-      let z = cInv(abc);
-      z = cAdd(z, cDiv(cAdd(cAdd(cScale(-1, ab), cScale(2, ac)), cSub(cScale(3, bc), cScale(4, c2p(c)))), cMany(c, c2p(cma), c2p(bmc), cm1)));
-      z = cSub(z, cInv(cMany(amb, c2p(bmc), bm1)));
-      z = cSub(z, cInv(cMany(amc, bmc, c2p(cm1))));
-      const p4 = cAdd(cAdd(cAdd(cAdd(cScale(-1, c3p(a)), cScale(-2, cMul(c2p(a), c))), cScale(3, abc)), cMul(a, c2p(c))), cScale(-1, cMul(b, c2p(c))));
-      z = cSub(z, cMul(cDiv(p4, cMany(c2p(a), c2p(amb), c3p(amc))), la));
-      const p5 = cAdd(cAdd(cAdd(cScale(-2, ab), ac), cScale(3, c2p(b))), cScale(-1, bc));
-      z = cSub(z, cMul(cDiv(p5, cMany(c2p(b), c2p(amb), c2p(bmc))), lb));
-      const p6 = cAdd(cAdd(cAdd(cAdd(c2p(a), ab), cScale(-4, ac)), cScale(-3, bc)), cScale(5, c2p(c)));
-      z = cSub(z, cMul(cDiv(p6, cMany(c, c3p(amc), c2p(cmb))), lc));
-      return z;
-    }
-    let z = cInv(cMany(b, amb, bmc, bm1));   // n === 2
-    z = cSub(z, cMul(cInv(cMany(a, c2p(amb), amc)), la));
-    const q2 = cAdd(cAdd(cSub(cScale(2, ab), ac), cScale(-3, c2p(b))), cScale(2, bc));
-    z = cSub(z, cMul(cDiv(q2, cMany(c2p(b), c2p(amb), c2p(bmc))), lb));
-    z = cSub(z, cMul(cInv(cMany(c, cma, c2p(bmc))), lc));
-    return z;
-  }
-  function grMikhTHG(wEv: number): C {
-    const EF = num('gr-ef', 0.4) * EV_AU, g = grNLgam(), w = Math.max(wEv, 1e-6) * EV_AU, aE = 2 * Math.abs(EF);
-    const O1 = cScale(1 / aE, cc(w, g)), O12 = cScale(1 / aE, cc(2 * w, g)), O123 = cScale(1 / aE, cc(3 * w, g));
-    const one = cc(1), q = 0.75, oneq = 0.25;   // Dabcd/4 = 3/4 ; (δδ − Dabcd/4) = 1/4
-    const S30 = cDiv(cc(0, 3), cScale(8, cMany(O123, O12, O1)));
-    // S_2_1
-    const I1a = fInt(1, O1, O12, O123), I2a = fInt(2, O1, O12, O123);
-    const p123 = cAdd(one, O123), p12 = cAdd(one, O12);
-    let rA = cDiv(cAdd(one, cScale(q, O123)), cMany(O1, O12, c2p(p123)));
-    rA = cAdd(rA, cDiv(cc(oneq), cMany(O1, p12, p123)));
-    rA = cAdd(rA, cDiv(cc(oneq), cMany(O1, p12, c2p(p123))));
-    rA = cSub(rA, cScale(oneq, I1a)); rA = cAdd(rA, cScale(oneq, I2a));
-    const I1b = fInt(1, cScale(-1, O1), cScale(-1, O12), cScale(-1, O123)), I2b = fInt(2, cScale(-1, O1), cScale(-1, O12), cScale(-1, O123));
-    const m123 = cSub(one, O123), m12 = cSub(one, O12);
-    let rB = cDiv(cSub(one, cScale(q, O123)), cMany(O1, O12, c2p(m123)));
-    rB = cAdd(rB, cDiv(cc(oneq), cMany(cScale(-1, O1), m12, m123)));
-    rB = cAdd(rB, cDiv(cc(oneq), cMany(cScale(-1, O1), m12, c2p(m123))));
-    rB = cSub(rB, cScale(oneq, I1b)); rB = cAdd(rB, cScale(oneq, I2b));
-    const S21 = cAdd(cMul(cc(0, -0.25), rA), cMul(cc(0, 0.25), rB));
-    // S_1_2
-    const I3a = fInt(3, O1, O12, one), I4a = fInt(4, O1, O12, one);
-    let sA = cMul(cDiv(cc(q), cMany(c2p(O1), O123, O12)), cLog(cAdd(one, O1)));
-    sA = cSub(sA, cDiv(cc(q), cMany(O123, O12, O1)));
-    sA = cAdd(sA, cDiv(cc(oneq), cMany(O123, O1, p12)));
-    sA = cSub(sA, cMul(cDiv(cc(oneq), O123), I3a));
-    sA = cAdd(sA, cMul(cDiv(cc(oneq), O123), I4a));
-    const I3b = fInt(3, cScale(-1, O1), cScale(-1, O12), one), I4b = fInt(4, cScale(-1, O1), cScale(-1, O12), one);
-    let sB = cMul(cDiv(cc(q), cMany(c2p(O1), O123, O12)), cLog(cSub(one, O1)));
-    sB = cSub(sB, cDiv(cc(q), cMany(cScale(-1, O123), O12, O1)));
-    sB = cAdd(sB, cDiv(cc(oneq), cMany(O123, O1, m12)));
-    sB = cAdd(sB, cMul(cDiv(cc(oneq), O123), I3b));
-    sB = cSub(sB, cMul(cDiv(cc(oneq), O123), I4b));
-    const S12 = cAdd(cMul(cc(0, 0.25), sA), cMul(cc(0, -0.25), sB));
-    // S_0_3
-    const S03 = cMul(cDiv(cc(0, 3), cScale(32, O12)), fInt(5, O1, O123, one));
-    return cAdd(cAdd(cAdd(S30, S21), S12), S03);
-  }
+  // Mikhailov, PRB 93, 085403 (2016): full third-harmonic S⁽³⁾_xxxx(ω,ω,ω) (dimensionless) —
+  // the Appendix-D machinery now lives in the shared graphene-conductivity module.
+  const grMikhTHG = (wEv: number): C => mikhailovS3THG(Math.max(wEv, 1e-6), num('gr-ef', 0.4), num('gr-gamma', 0.0037)).full;
 
   const NL_COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706'];
   function grNLSeries(): { label: string; color: string; fn: (w: number) => C }[] {
