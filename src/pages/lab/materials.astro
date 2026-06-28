@@ -79,6 +79,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                 <label for="mat-select" id="mat1-label">Material</label>
                 <select class="field-input" id="mat-select">
                   {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="vo2">Vanadium dioxide (VO&#8322;)</option>
                   <option value="file">Upload file&hellip;</option>
                   <option value="rii">Search database&hellip;</option>
                 </select>
@@ -92,12 +93,19 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                 <input type="file" class="file-input" id="mat1-file-input" accept=".csv,.tsv,.txt,.dat">
                 <span class="ctrl-note" id="mat1-file-status">Columns: x, n, k or x, ε′, ε″ (x = nm, µm or eV — auto-detected).</span>
               </div>
+              <div class="mat-extra mat-vo2" id="mat1-vo2" hidden>
+                <div class="vo2-head"><label for="mat1-vo2-fm">Metallic fraction f<sub>m</sub></label><span class="vo2-fm-val" id="mat1-vo2-fm-val">0.00</span></div>
+                <input type="range" class="vo2-slider" id="mat1-vo2-fm" min="0" max="1" step="0.01" value="0">
+                <div class="vo2-tbox"><canvas id="mat1-vo2-tplot" aria-label="Metallic fraction vs temperature"></canvas></div>
+                <span class="ctrl-note" id="mat1-vo2-tnote"></span>
+              </div>
 
               <!-- Material 2 -->
               <div class="field" id="mat2-row" hidden>
                 <label for="mat2-select">Material 2</label>
                 <select class="field-input" id="mat2-select">
                   {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="vo2">Vanadium dioxide (VO&#8322;)</option>
                   <option value="file">Upload file&hellip;</option>
                   <option value="rii">Search database&hellip;</option>
                 </select>
@@ -111,6 +119,12 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
               <div class="mat-extra" id="mat2-file" hidden>
                 <input type="file" class="file-input" id="mat2-file-input" accept=".csv,.tsv,.txt,.dat">
                 <span class="ctrl-note" id="mat2-file-status">Columns: x, n, k or x, ε′, ε″.</span>
+              </div>
+              <div class="mat-extra mat-vo2" id="mat2-vo2" hidden>
+                <div class="vo2-head"><label for="mat2-vo2-fm">Metallic fraction f<sub>m</sub></label><span class="vo2-fm-val" id="mat2-vo2-fm-val">0.00</span></div>
+                <input type="range" class="vo2-slider" id="mat2-vo2-fm" min="0" max="1" step="0.01" value="0">
+                <div class="vo2-tbox"><canvas id="mat2-vo2-tplot" aria-label="Metallic fraction vs temperature"></canvas></div>
+                <span class="ctrl-note" id="mat2-vo2-tnote"></span>
               </div>
             </div>
             <button type="button" class="add-mat-btn" id="mat-add" title="Compare a second material">+ Add material</button>
@@ -500,6 +514,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   /* Database search + file upload */
   .mat-extra { display: flex; flex-direction: column; gap: 0.3rem; }
   .mat-extra[hidden] { display: none; }
+  /* VO₂ metallic-fraction control + fm-vs-T mini plot */
+  .mat-vo2 { gap: 0.4rem; padding: 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .vo2-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .vo2-head label { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+  .vo2-fm-val { font-size: 0.78rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+  .vo2-slider { width: 100%; accent-color: var(--primary); }
+  .vo2-tbox { border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
+  .vo2-tbox canvas { width: 100%; height: 108px; display: block; }
   .rii-input { width: 100%; }
   .rii-results { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
   .rii-results:empty { display: none; }
@@ -587,6 +609,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 <script>
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
   import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK, drudeEpsilon, PHOTON_HC_EV_NM as HC } from '../../lib/materials';
+  import { epsVO2, fmFromTemperature, temperatureFromFm, VO2_TM, VO2_DT } from '../../lib/vo2';
   import { downloadBlob } from '../../lib/download';
   import { loadCatalog, searchCatalog, fetchMaterialNK, type RIIMaterial } from '../../data/refractiveindex';
   import { TMDC, TMDC_LABEL, tmdcEpsilon } from '../../data/tmdc';
@@ -656,7 +679,44 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     select: HTMLSelectElement;
     custom: { label: string; ref: string; data: number[][] } | null;
     catalog: RIIMaterial[] | null;
+    vo2fm: number;
     resolve: () => { label: string; ref: string; data: number[][] } | null;
+  }
+  // ── VO₂: build an n,k table from the Bruggeman mixed-phase ε(E, fm), plus the fm↔T mini plot ──
+  const cvarV = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+  function vo2DataTable(fm: number): number[][] {
+    const data: number[][] = [], N = 420, Elo = 0.08, Ehi = 6.5;
+    for (let i = 0; i < N; i++) {
+      const E = Elo * Math.pow(Ehi / Elo, i / (N - 1));      // log-spaced in photon energy
+      const e = epsVO2(E, fm), [n, k] = epsilonToNK(e.re, e.im), lamUm = HC / E / 1000;
+      if (Number.isFinite(lamUm) && Number.isFinite(n) && Number.isFinite(k) && n >= 0) data.push([lamUm, n, k]);
+    }
+    data.sort((a, b) => a[0] - b[0]);
+    return data;
+  }
+  function vo2TempLabel(fm: number): string {
+    if (fm <= 0.005) return `insulating phase · T ≲ ${(VO2_TM - 5 * VO2_DT).toFixed(0)} K`;
+    if (fm >= 0.995) return `metallic phase · T ≳ ${(VO2_TM + 5 * VO2_DT).toFixed(0)} K`;
+    return `fₘ = ${fm.toFixed(2)} ⇒ T ≈ ${temperatureFromFm(fm).toFixed(1)} K`;
+  }
+  function drawVo2Tplot(canvas: HTMLCanvasElement, fm: number) {
+    const r = canvas.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
+    const dpr = window.devicePixelRatio || 1; canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    const g = canvas.getContext('2d')!; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+    const w = r.width, h = r.height, m = { l: 26, r: 8, t: 8, b: 30 }, Tlo = VO2_TM - 6 * VO2_DT, Thi = VO2_TM + 6 * VO2_DT;
+    const px = (T: number) => m.l + (T - Tlo) / (Thi - Tlo) * (w - m.l - m.r);
+    const py = (f: number) => h - m.b - f * (h - m.t - m.b);
+    g.strokeStyle = cvarV('--bg-muted'); g.lineWidth = 1; g.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    g.strokeStyle = cvarV('--primary'); g.lineWidth = 1.8; g.beginPath();
+    for (let i = 0; i <= 80; i++) { const T = Tlo + (Thi - Tlo) * i / 80, X = px(T), Y = py(fmFromTemperature(T)); i ? g.lineTo(X, Y) : g.moveTo(X, Y); } g.stroke();
+    const Tc = Math.min(Thi, Math.max(Tlo, temperatureFromFm(fm)));
+    g.strokeStyle = 'rgba(150,150,160,0.55)'; g.setLineDash([3, 3]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(m.l, py(fm)); g.lineTo(px(Tc), py(fm)); g.lineTo(px(Tc), h - m.b); g.stroke(); g.setLineDash([]);
+    g.fillStyle = cvarV('--primary'); g.beginPath(); g.arc(px(Tc), py(fm), 3, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = cvarV('--text-muted'); g.font = '9px ' + (cvarV('--font') || 'sans-serif');
+    g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText('1', m.l - 7, py(1)); g.fillText('0', m.l - 7, py(0));
+    g.textAlign = 'center'; g.textBaseline = 'top'; for (const T of [Tlo, VO2_TM, Thi]) g.fillText(T.toFixed(0), px(T), h - m.b + 5);   // tick numbers, clear of the axis
+    g.fillText('T (K)', (m.l + w - m.r) / 2, h - 11);   // axis label, on its own line below the ticks
   }
   function setupSlot(prefix: string, select: HTMLSelectElement): Slot {
     const riiGroup = $(`${prefix}-rii`), fileGroup = $(`${prefix}-file`);
@@ -665,20 +725,28 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const riiStatus = $(`${prefix}-rii-status`);
     const fileInput = $(`${prefix}-file-input`) as HTMLInputElement;
     const fileStatus = $(`${prefix}-file-status`);
-    const slot: Slot = { select, custom: null, catalog: null, resolve: () => null };
+    const vo2Group = $(`${prefix}-vo2`), vo2Slider = $(`${prefix}-vo2-fm`) as HTMLInputElement;
+    const vo2Val = $(`${prefix}-vo2-fm-val`), vo2Tplot = $(`${prefix}-vo2-tplot`) as HTMLCanvasElement, vo2Tnote = $(`${prefix}-vo2-tnote`);
+    const slot: Slot = { select, custom: null, catalog: null, vo2fm: 0, resolve: () => null };
 
     slot.resolve = () => {
       const v = select.value;
       if (MATERIALS[v]) return { label: MATERIALS[v].label, ref: MATERIALS[v].ref, data: MATERIALS[v].data };
+      if (v === 'vo2') return { label: 'Vanadium dioxide (VO₂)', ref: `mixed-phase Bruggeman EMA · ${vo2TempLabel(slot.vo2fm)} · calibrated Drude–Lorentz model`, data: vo2DataTable(slot.vo2fm) };
       if ((v === 'file' || v === 'rii') && slot.custom) return slot.custom;
       return null;
     };
 
+    const updateVo2 = () => { vo2Val.textContent = slot.vo2fm.toFixed(2); vo2Tnote.textContent = vo2TempLabel(slot.vo2fm); drawVo2Tplot(vo2Tplot, slot.vo2fm); };
+    vo2Slider.addEventListener('input', () => { slot.vo2fm = parseFloat(vo2Slider.value); updateVo2(); refreshMatRef(); updateNotes(); render(); });
+
     select.addEventListener('change', () => {
       riiGroup.hidden = select.value !== 'rii';
       fileGroup.hidden = select.value !== 'file';
+      vo2Group.hidden = select.value !== 'vo2';
       if (select.value === 'rii') runSearch();
-      refreshMatRef(); render();
+      if (select.value === 'vo2') requestAnimationFrame(updateVo2);   // draw once the group is laid out
+      refreshMatRef(); updateNotes(); render();
     });
 
     // database search
@@ -1524,6 +1592,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   // Notes box — defines the models for the active module.
+  const vo2ActiveSlots = (): Slot[] => (mat2On ? [slot1, slot2] : [slot1]).filter(s => s.select.value === 'vo2');
+  const vo2NoteText = (s: Slot): string => `Vanadium dioxide (VO₂) — mixed-phase Bruggeman EMA · ${vo2TempLabel(s.vo2fm)} · calibrated Drude–Lorentz model`;
   function updateNotes() {
     let html = '';
     if (mod === 'graphene' && grNL) {
@@ -1574,6 +1644,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <li>ε = (n + ik)². Tabulated n(λ), k(λ) are <b>linearly</b> interpolated in wavelength.</li>
         <li>Built-in tables, an uploaded file, or a refractiveindex.info database entry. Values are clamped to each material's measured range (no extrapolation).</li>
         <li>Compare two materials with “+ Add material”: solid = real part, dashed = imaginary part, one colour per material.</li>
+        ${vo2ActiveSlots().length ? `<li>VO₂ is a Bruggeman effective-medium average of the <b>insulating (fₘ = 0)</b> and <b>metallic (fₘ = 1)</b> phases; the metallic fraction fₘ ∈ [0, 1] is set by temperature through the transition law (midpoint T<sub>M</sub> = 341 K, width ΔT = 2 K).</li>` : ''}
+        ${vo2ActiveSlots().map(s => `<li>${vo2NoteText(s)}</li>`).join('')}
       </ul>`;
     }
     $('mat-notes').innerHTML = html;
@@ -1602,6 +1674,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       refs = [
         `Optical constants from <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Built-ins &mdash; Au, Ag, Cu: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1998); TiO<sub>2</sub>: Sarkar et al. (2019).`,
       ];
+      if (vo2ActiveSlots().length) refs.push(
+        `R. Beaini, B. Baloukas, S. Loquai, J. E. Klemberg-Sapieha &amp; L. Martinu, <em>Thermochromic VO₂-based smart radiator devices with ultralow refractive index cavities for increased performance</em>, Sol. Energy Mater. Sol. Cells <strong>205</strong>, 110260 (2020), <a href="https://doi.org/10.1016/j.solmat.2019.110260" target="_blank" rel="noopener">doi:10.1016/j.solmat.2019.110260</a>.`);
     }
     $('mat-refs').hidden = refs.length === 0;
     $('mat-refs').innerHTML = refs.length === 0 ? '' : `<h4>References</h4><ul class="reference-list">`
@@ -1657,7 +1731,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   function refreshMatRef() {
     if (mod !== 'materials') { $('mat-ref').textContent = ''; return; }
     const slots = mat2On ? [slot1, slot2] : [slot1];
-    const refs = slots.map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
+    const refs = slots.filter(s => s.select.value !== 'vo2')   // VO₂ description lives in the Notes box instead
+      .map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
     $('mat-ref').textContent = refs.join('  ·  ');
   }
 
