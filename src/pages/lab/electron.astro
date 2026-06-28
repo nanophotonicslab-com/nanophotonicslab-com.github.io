@@ -18,7 +18,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
     </div>
   </section>
 
-  <ModelInfo status="Stable">
+  <ModelInfo status="Beta">
     <dl>
       <dt>Model</dt>
       <dd>Special-relativistic kinematics: K = (&gamma; &minus; 1)m<sub>e</sub>c&sup2;, &gamma; = (1 &minus; v&sup2;/c&sup2;)<sup>&minus;1/2</sup>, &lambda;<sub>e</sub> = h/p.</dd>
@@ -31,6 +31,26 @@ import ToolMeta from '../../components/ToolMeta.astro';
 
   <section class="section">
     <div class="container">
+      <div class="module-bar card" role="radiogroup" aria-label="Electron module">
+        <span class="module-bar__label">Module</span>
+        <div class="module-bar__grid">
+          <button type="button" class="module-card active" id="module-fields" role="radio" aria-checked="true">
+            <span class="module-card__name">Fields</span>
+            <span class="module-card__desc">Relativistic electron &middot; &lambda;<sub>e</sub>, E(t), field spectrum</span>
+          </button>
+          <button type="button" class="module-card" id="module-smith-purcell" role="radio" aria-checked="false">
+            <span class="module-card__name">Smith&ndash;Purcell</span>
+            <span class="module-card__desc">Light emission from an electron over a grating</span>
+          </button>
+          <button type="button" class="module-card" id="module-pinem" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">PINEM <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Photon-induced near-field electron microscopy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ===================== FIELDS module ===================== -->
+      <div id="panel-fields">
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
         <div class="controls card">
@@ -170,10 +190,284 @@ import ToolMeta from '../../components/ToolMeta.astro';
       <div class="references card">
         <h4>References</h4>
         <ul class="reference-list">
-          <li><span class="ref-index">[1]</span><span>F. J. Garc&iacute;a de Abajo, <em>Optical excitations in electron microscopy</em>, Reviews of Modern Physics <strong>82</strong>, 209&ndash;275 (2010).</span></li>
+          <li><span class="ref-index">[1]</span><span>F. J. Garc&iacute;a de Abajo, <em>Optical excitations in electron microscopy</em>, Reviews of Modern Physics <strong>82</strong>, 209&ndash;275 (2010), <a href="https://doi.org/10.1103/RevModPhys.82.209" target="_blank" rel="noopener">doi:10.1103/RevModPhys.82.209</a>.</span></li>
           <li><span class="ref-index">[2]</span><span>J. D. Jackson, <em>Classical Electrodynamics</em>, 3rd ed. (Wiley, 1999).</span></li>
         </ul>
       </div>
+      </div><!-- /#panel-fields -->
+
+      <!-- ===================== SMITH–PURCELL module ===================== -->
+      <div id="panel-sp" hidden>
+        <div class="widget-layout">
+          <!-- ===== Controls ===== -->
+          <div class="controls card">
+            <h3>Parameters</h3>
+
+            <div class="fields">
+              <div class="field"><label for="sp-vc">v / c</label><input type="text" class="field-input" id="sp-vc" inputmode="decimal" value="0.5"></div>
+              <div class="field"><label for="sp-kev">K (keV)</label><input type="text" class="field-input" id="sp-kev" inputmode="decimal"></div>
+            </div>
+
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="sp-a">Spacing a (nm)</label><input type="number" class="field-input sp-num" id="sp-a" value="200" step="10" min="20" max="2000"></div>
+              <input type="range" class="sp-slider" id="sp-a-slider" min="20" max="1000" step="10" value="200">
+            </div>
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="sp-b">Impact para. b (nm)</label><input type="number" class="field-input sp-num" id="sp-b" value="50" step="5" min="1" max="500"></div>
+              <input type="range" class="sp-slider" id="sp-b-slider" min="1" max="300" step="1" value="50">
+            </div>
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="sp-N">Number of elements N</label><input type="number" class="field-input sp-num" id="sp-N" value="51" step="2" min="3" max="201"></div>
+              <input type="range" class="sp-slider" id="sp-N-slider" min="3" max="151" step="2" value="51">
+            </div>
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="sp-xi">Steering mode &xi;</label><input type="number" class="field-input sp-num" id="sp-xi" value="0" step="1" min="0" max="25"></div>
+              <input type="range" class="sp-slider" id="sp-xi-slider" min="0" max="25" step="1" value="0">
+            </div>
+
+            <div class="field"><label for="sp-orient">Dipole orientation</label>
+              <select class="field-input" id="sp-orient">
+                <option value="electron" selected>Electron (elliptical)</option>
+                <option value="x">x &middot; &parallel; v</option>
+                <option value="z">z &middot; &perp;</option>
+                <option value="plasmonic">Plasmonic NPs&hellip;</option>
+                <option value="input">Input polarizability &alpha;(&omega;)&hellip;</option>
+              </select>
+            </div>
+
+            <!-- Imported α(ω): summary chip + re-open button (only shown for the Input source) -->
+            <div class="sp-alpha-chip" id="sp-alpha-chip" hidden>
+              <span id="sp-alpha-chip-label">No α loaded</span>
+              <button type="button" id="sp-alpha-edit" title="Load / edit polarizability data">Edit&hellip;</button>
+            </div>
+
+            <!-- Complex dipole oscillation direction p = (px, py, pz): always shown; editable only for Custom -->
+            <div class="sp-dipole" id="sp-dipole">
+              <div class="sp-dipole__cap" id="sp-dipole-cap">Induced dipole direction</div>
+              <div class="sp-dipole__row sp-dipole__head">
+                <span>comp</span>
+                <span>Re</span>
+                <span>Im</span>
+              </div>
+              <div class="sp-dipole__row">
+                <label for="sp-px-re">p<sub>x</sub></label>
+                <input type="text" class="field-input sp-cnum" id="sp-px-re" inputmode="decimal" value="0">
+                <input type="text" class="field-input sp-cnum" id="sp-px-im" inputmode="decimal" value="1">
+              </div>
+              <div class="sp-dipole__row">
+                <label for="sp-py-re">p<sub>y</sub></label>
+                <input type="text" class="field-input sp-cnum" id="sp-py-re" inputmode="decimal" value="0">
+                <input type="text" class="field-input sp-cnum" id="sp-py-im" inputmode="decimal" value="0">
+              </div>
+              <div class="sp-dipole__row">
+                <label for="sp-pz-re">p<sub>z</sub></label>
+                <input type="text" class="field-input sp-cnum" id="sp-pz-re" inputmode="decimal" value="1">
+                <input type="text" class="field-input sp-cnum" id="sp-pz-im" inputmode="decimal" value="0">
+              </div>
+              <div class="sp-dipole__foot">
+                <span class="sp-dipole__mag" id="sp-dipole-mag">|p| = 1.000</span>
+                <button type="button" class="sp-normalize" id="sp-normalize">Normalize |p| = 1</button>
+              </div>
+            </div>
+
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="sp-phi">Azimuth &phi; (&deg;)</label><input type="number" class="field-input sp-num" id="sp-phi" value="30" step="5" min="0" max="90"></div>
+              <input type="range" class="sp-slider" id="sp-phi-slider" min="0" max="90" step="1" value="30">
+            </div>
+
+            <!-- Spectral-map axes (Spectrum view only): emission-angle and wavelength ranges -->
+            <div class="sp-range" id="sp-th-field">
+              <label>Emission angle &theta; (&deg;)</label>
+              <div class="sp-range__row">
+                <input type="number" class="field-input sp-rnum" id="sp-th-min" value="-45" step="5">
+                <span class="sp-range__dash">to</span>
+                <input type="number" class="field-input sp-rnum" id="sp-th-max" value="225" step="5">
+              </div>
+            </div>
+            <div class="sp-range" id="sp-spec-field">
+              <div class="sp-range__head">
+                <label id="sp-spec-label">Wavelength (nm)</label>
+                <div class="sp-unit-toggle" id="sp-spec-unit" role="radiogroup" aria-label="Wavelength unit">
+                  <button type="button" data-su="nm" class="active" aria-pressed="true">&lambda;</button>
+                  <button type="button" data-su="eV" aria-pressed="false">eV</button>
+                </div>
+              </div>
+              <div class="sp-range__row">
+                <input type="number" class="field-input sp-rnum" id="sp-spec-min" value="400" step="10">
+                <span class="sp-range__dash">to</span>
+                <input type="number" class="field-input sp-rnum" id="sp-spec-max" value="800" step="10">
+              </div>
+            </div>
+
+            <!-- Far-field view only: single wavelength, dual λ ⇄ E entry + slider with a λ/eV switch -->
+            <div id="sp-wl-field" hidden>
+              <div class="fields">
+                <div class="field"><label for="sp-wl-nm">&lambda; (nm)</label><input type="text" class="field-input" id="sp-wl-nm" inputmode="decimal" value="620"></div>
+                <div class="field"><label for="sp-wl-ev">E (eV)</label><input type="text" class="field-input" id="sp-wl-ev" inputmode="decimal" value="2.0"></div>
+              </div>
+              <div class="sp-wl-slider-row">
+                <input type="range" class="sp-slider" id="sp-wl-slider" min="200" max="2000" step="5" value="620">
+                <div class="sp-unit-toggle" id="sp-wl-unit" role="radiogroup" aria-label="Slider unit">
+                  <button type="button" data-wu="nm" class="active" aria-pressed="true">&lambda;</button>
+                  <button type="button" data-wu="eV" aria-pressed="false">eV</button>
+                </div>
+              </div>
+            </div>
+
+            <p class="sp-aol" id="sp-aol">&mdash;</p>
+
+            <!-- Geometry schematic (click to enlarge — like the Mie-scattering lab) -->
+            <div class="sp-geo" id="sp-geo-open" role="button" tabindex="0" aria-label="Open enlarged geometry schematic" title="Click to enlarge">
+              <canvas id="sp-geo-canvas" aria-label="Generalized Smith–Purcell geometry schematic"></canvas>
+              <button type="button" class="sp-geo__png" id="sp-geo-png" title="Download schematic as PNG">PNG</button>
+              <span class="sp-geo__hint">&#10530; enlarge</span>
+            </div>
+          </div>
+
+          <!-- ===== Results ===== -->
+          <div class="sp-results-col">
+            <!-- main view selector — sits just above the result box (like the plasmonic lab tabs) -->
+            <div class="sp-view-tabs" id="sp-view-tabs" role="tablist" aria-label="View">
+              <button type="button" class="sp-view-tab active" data-view="spectrum" role="tab" aria-selected="true">Spectrum</button>
+              <button type="button" class="sp-view-tab" data-view="farfield" role="tab" aria-selected="false">Far-field</button>
+              <button type="button" class="sp-view-tab" data-view="materials" role="tab" aria-selected="false" id="sp-view-materials" hidden>Materials</button>
+            </div>
+
+            <div class="result-panel card sp-result-card">
+              <div class="sp-sub-tabs" id="sp-sub-tabs" role="tablist" aria-label="Sub-view"></div>
+              <div class="sp-chart-head">
+                <div class="sp-chart-title" id="sp-chart-title">&mdash;</div>
+                <div class="sp-stokes-sel" id="sp-stokes-sel" role="radiogroup" aria-label="Stokes parameter" hidden>
+                  <button type="button" data-stk="s1" aria-pressed="false">S<sub>1</sub></button>
+                  <button type="button" data-stk="s2" aria-pressed="false">S<sub>2</sub></button>
+                  <button type="button" data-stk="s3" class="active" aria-pressed="true">S<sub>3</sub></button>
+                </div>
+                <div class="sp-stokes-sel" id="sp-mat-scale" role="radiogroup" aria-label="Polarizability scale" hidden>
+                  <button type="button" data-ms="lin" class="active" aria-pressed="true">linear</button>
+                  <button type="button" data-ms="log" aria-pressed="false">log |&alpha;|</button>
+                </div>
+              </div>
+              <div class="chart-wrap sp-chart-wrap"><canvas id="sp-chart" aria-label="Smith–Purcell result plot"></canvas></div>
+              <div class="sp-readout" id="sp-readout"></div>
+              <div class="sp-export-bar">
+                <button type="button" class="tool-btn" id="sp-export-png" title="Download the plot as PNG">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  PNG
+                </button>
+                <button type="button" class="tool-btn" id="sp-export-csv" title="Download the plotted data as CSV">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Induced-dipole profile for the current steering mode ξ (Fig. 2b of the paper) -->
+            <div class="sp-steer-card card">
+              <div class="sp-steer-head">
+                <span class="sp-steer-title">Steering mode &mdash; induced dipole profile</span>
+                <span class="sp-steer-sub" id="sp-steer-sub">&xi; = 0</span>
+              </div>
+              <div class="chart-wrap sp-steer-wrap"><canvas id="sp-steer-chart" aria-label="Induced dipole magnitude vs array index for the steering mode"></canvas></div>
+            </div>
+
+            <div class="notes-card card" id="sp-notes">
+              <h4>Notes</h4>
+              <p>
+                <strong>Generalized Smith&ndash;Purcell.</strong>
+                A swift electron (v/c, energy K) flies parallel to a periodic array of N point
+                emitters (period a, impact parameter b) and induces a coherent dipole on each.
+                Each Fourier mode &#8467; of the (engineered) dipole profile opens an emission
+                channel at
+                sin&thinsp;&theta;<sub>n,&#8467;</sub>&nbsp;=&nbsp;1/&beta;&nbsp;&minus;&nbsp;(n&nbsp;&minus;&nbsp;&#8467;/N)&thinsp;&lambda;/a (Eq.&nbsp;6);
+                &#8467;&nbsp;=&nbsp;0 is the ordinary Smith&ndash;Purcell line. Steering &xi; modulates
+                |p<sub>j</sub>|&thinsp;=&thinsp;1&nbsp;+&nbsp;sin(2&pi;&xi;j/N) to select channel &#8467;&nbsp;=&nbsp;&xi;.
+              </p>
+              <p>
+                <strong>Polarization.</strong> The electron field drives an elliptical dipole
+                d&nbsp;=&nbsp;(i/&gamma;)K<sub>0</sub>&thinsp;x&#770;&nbsp;+&nbsp;K<sub>1</sub>&thinsp;z&#770; (Eq.&nbsp;9): the i makes
+                x and z oscillate 90&deg; out of phase. In the &phi;&nbsp;=&nbsp;0 plane the emission is
+                purely p-polarized; off-plane (&phi;&nbsp;&ne;&nbsp;0) it becomes elliptical, with
+                wavelength- and angle-dependent handedness (Stokes S<sub>3</sub>).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="references card">
+          <h4>References</h4>
+          <ul class="reference-list">
+            <li><span class="ref-index">[1]</span><span>E. J. C. Dias, A. Rodr&iacute;guez Echarri, T. P. Rasmussen, F. J. Garc&iacute;a de Abajo &amp; J. D. Cox, <em>Active steering of cathodoluminescence through a generalized Smith&ndash;Purcell effect</em>, Light: Science &amp; Applications <strong>15</strong>, 218 (2026), <a href="https://doi.org/10.1038/s41377-026-02280-y" target="_blank" rel="noopener">doi:10.1038/s41377-026-02280-y</a>.</span></li>
+            <li><span class="ref-index">[2]</span><span>S. J. Smith &amp; E. M. Purcell, <em>Visible Light from Localized Surface Charges Moving across a Grating</em>, Phys. Rev. <strong>92</strong>, 1069 (1953), <a href="https://doi.org/10.1103/PhysRev.92.1069" target="_blank" rel="noopener">doi:10.1103/PhysRev.92.1069</a>.</span></li>
+          </ul>
+        </div>
+
+        <dialog id="sp-geo-dialog" class="sp-geo-dialog" aria-label="Geometry schematic">
+          <div class="sp-geo-dialog__panel">
+            <button type="button" class="tool-btn sp-geo-dialog__png" id="sp-geo-png-big" title="Download schematic as PNG">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              PNG
+            </button>
+            <button type="button" class="sp-geo-dialog__close" id="sp-geo-close" aria-label="Close">&times;</button>
+            <canvas id="sp-geo-canvas-big" aria-label="Enlarged generalized Smith–Purcell geometry schematic"></canvas>
+          </div>
+        </dialog>
+
+        <!-- Confirm imported polarizability α(ω): map file columns → spectral axis + Re/Im of αx,αy,αz -->
+        <dialog id="sp-alpha-dialog" class="sp-alpha-dialog" aria-labelledby="sp-alpha-title">
+          <div class="sp-alpha-dialog__panel">
+            <div class="sp-alpha-dialog__header">
+              <div>
+                <h3 id="sp-alpha-title">Confirm polarizability input α(ω)</h3>
+                <p id="sp-alpha-file">Load a file or paste the data below.</p>
+              </div>
+              <button type="button" class="sp-geo-dialog__close" id="sp-alpha-x" aria-label="Cancel">&times;</button>
+            </div>
+
+            <div class="sp-alpha-dialog__src">
+              <input type="file" id="sp-alpha-file-input" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="sp-alpha-dialog__or">or paste</span>
+              <textarea id="sp-alpha-paste" rows="3" placeholder="# E_eV   Re_ax   Im_ax   Re_az   Im_az&#10;0.20   1.5   0.3   0.8   0.1 …"></textarea>
+              <button type="button" class="chart-tool-btn" id="sp-alpha-parse">Load pasted</button>
+            </div>
+
+            <div class="sp-alpha-dialog__grid">
+              <label><span>Spectral axis unit</span>
+                <select id="sp-alpha-unit" class="param-select">
+                  <option value="ev">Photon energy (eV)</option>
+                  <option value="thz">Frequency (THz)</option>
+                  <option value="nm">Wavelength (nm)</option>
+                  <option value="um">Wavelength (µm)</option>
+                </select>
+              </label>
+            </div>
+
+            <p class="sp-alpha-dialog__hint">Map each quantity to a file column (1-based). Unmapped components are taken as zero. The swift electron's near-field has no y-component, so α<sub>y</sub> does not drive emission in this geometry. Only the <em>spectral shape</em> of α matters — its overall magnitude, units, and global phase cancel in the normalized SP outputs.</p>
+            <div class="sp-alpha-dialog__roles" id="sp-alpha-roles"><!-- role selects injected here --></div>
+
+            <div class="sp-alpha-dialog__preview"><canvas id="sp-alpha-preview" aria-label="Polarizability preview"></canvas></div>
+            <div class="sp-alpha-dialog__table-wrap">
+              <table class="sp-alpha-dialog__table"><thead id="sp-alpha-thead"></thead><tbody id="sp-alpha-rows"></tbody></table>
+            </div>
+            <p class="sp-alpha-dialog__status" id="sp-alpha-status"></p>
+            <div class="sp-alpha-dialog__actions">
+              <button type="button" class="chart-tool-btn" id="sp-alpha-cancel">Cancel</button>
+              <button type="button" class="chart-tool-btn active" id="sp-alpha-accept" disabled>Use α</button>
+            </div>
+          </div>
+        </dialog>
+
+        <!-- Plasmonic NPs: embed the real nanoparticle lab; on "Use α" read its controls and compute the matching α(ω) -->
+        <dialog id="sp-plas-dialog" class="sp-plas-frame-dialog" aria-label="Plasmonic nanoparticles lab">
+          <div class="sp-plas-frame-wrap">
+            <iframe id="sp-plas-iframe" title="Plasmonic nanoparticles lab" src="about:blank"></iframe>
+            <div class="sp-plas-frame-bar">
+              <span class="sp-plas-frame-status" id="sp-plas-status">Configure the lab, then “Use α”.</span>
+              <button type="button" class="chart-tool-btn" id="sp-plas-cancel">Cancel</button>
+              <button type="button" class="chart-tool-btn active" id="sp-plas-accept">Use α</button>
+            </div>
+          </div>
+        </dialog>
+      </div><!-- /#panel-sp -->
     </div>
   </section>
 <script>
@@ -192,9 +486,33 @@ initPermalinks({ kev: 'kev' });
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
 
+  /* Module bar (Fields / Smith–Purcell / PINEM) — same pattern as the Materials calculator */
+  .module-bar { margin-bottom: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .module-bar__label { color: var(--text); font-size: 0.75rem; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.04em; }
+  .module-bar__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm); align-items: stretch; }
+  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }
+  .module-card {
+    display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
+    width: 100%; min-height: 66px; text-align: left;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    padding: 0.6rem 0.7rem; cursor: pointer;
+  }
+  .module-card__name { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 800; }
+  .module-card__desc { color: var(--text-soft); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; }
+  .module-card__badge {
+    align-self: flex-start; border-radius: var(--radius-full); background: var(--bg-muted);
+    color: var(--text-muted); font-size: 0.625rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.04em; padding: 0.1rem 0.4rem;
+  }
+  .module-card:hover:not(:disabled):not(.active) { border-color: var(--primary-light); background: rgba(99, 102, 241, 0.06); }
+  .module-card.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
+  .module-card.active .module-card__desc { color: var(--primary); opacity: 0.85; }
+  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }
+
   /* Layout */
   .widget-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
-  .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); }
   .controls h3 { font-size: 1rem; }
 
   /* Fields */
@@ -276,6 +594,148 @@ initPermalinks({ kev: 'kev' });
     line-height: 1.5;
   }
   .ref-index { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ===================== Smith–Purcell module ===================== */
+  .sp-param { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sp-param__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+  .sp-param__head label { font-size: 0.8125rem; font-weight: 500; color: var(--text); }
+  .sp-num { width: 5.2rem; text-align: right; }
+  .sp-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: var(--bg-muted); border-radius: 3px; outline: none; cursor: pointer; }
+  .sp-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); cursor: pointer; }
+  .sp-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
+  .sp-aol { margin: 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+
+  /* spectral-map axis ranges (emission angle / wavelength) */
+  .sp-range { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sp-range__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+  .sp-range > label, .sp-range__head label { font-size: 0.8125rem; font-weight: 500; color: var(--text); }
+  .sp-range__row { display: flex; align-items: center; gap: 0.4rem; }
+  .sp-rnum { flex: 1; min-width: 0; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.8rem; }
+  .sp-range__dash { font-size: 0.72rem; color: var(--text-muted); }
+  .sp-unit-toggle { display: inline-flex; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); overflow: hidden; }
+  .sp-unit-toggle button { padding: 0.15rem 0.55rem; border: none; background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+  .sp-unit-toggle button + button { border-left: 1px solid var(--bg-muted); }
+  .sp-unit-toggle button.active { background: var(--primary); color: #fff; }
+  /* view-dependent controls: ranges (Spectrum) vs single wavelength (Far-field) — id [hidden] beats the display rule */
+  #sp-th-field[hidden], #sp-spec-field[hidden], #sp-wl-field[hidden] { display: none; }
+  .sp-wl-slider-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.45rem; }
+  .sp-wl-slider-row .sp-slider { flex: 1; min-width: 0; }
+
+  /* custom complex dipole p = (pₓ, p_y, p_z) */
+  .sp-dipole { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .sp-dipole[hidden] { display: none; }   /* class display: flex would otherwise override the hidden attribute */
+  .sp-dipole__cap { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+  .sp-dipole--readonly .sp-cnum { background: var(--bg-muted); color: var(--text-soft); cursor: default; }   /* computed (non-editable) values */
+  .sp-dipole__row { display: grid; grid-template-columns: 1.8rem 1fr 1fr; gap: 0.4rem; align-items: center; }
+  .sp-dipole__head span { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-align: center; }
+  .sp-dipole__head span:first-child { visibility: hidden; }
+  .sp-dipole__row label { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+  .sp-cnum { width: 100%; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.8rem; }
+  .sp-dipole__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .sp-dipole__mag { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .sp-normalize { padding: 0.3rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  .sp-normalize:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* geometry schematic (click to enlarge) */
+  .sp-geo { position: relative; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); cursor: zoom-in; overflow: hidden; }
+  .sp-geo canvas { width: 100%; aspect-ratio: 3 / 2; display: block; }
+  .sp-geo:hover { border-color: var(--primary-light); }
+  .sp-geo__hint { position: absolute; bottom: 0.35rem; right: 0.45rem; font-size: 0.66rem; font-weight: 700; color: var(--text-muted); background: color-mix(in srgb, var(--bg) 80%, transparent); padding: 0.05rem 0.35rem; border-radius: var(--radius-full); }
+  .sp-geo__png { position: absolute; top: 0.35rem; right: 0.45rem; z-index: 2; padding: 0.08rem 0.42rem; font-size: 0.62rem; font-weight: 700; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: color-mix(in srgb, var(--bg) 85%, transparent); color: var(--text-soft); cursor: pointer; font-family: var(--font); }
+  .sp-geo__png:hover { border-color: var(--primary); color: var(--primary); }
+  .sp-geo-dialog__png { position: absolute; top: 0.45rem; right: 3rem; z-index: 2; }
+  /* result-box export bar + shared tool-btn (not defined elsewhere in this file) */
+  .sp-export-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: var(--space-xs); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .tool-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.72rem; font-size: 0.78rem; font-weight: 500; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .sp-geo-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 92vw; }
+  .sp-geo-dialog::backdrop { background: rgba(15, 18, 30, 0.55); }
+  .sp-geo-dialog__panel { position: relative; padding: var(--space-md); }
+  .sp-geo-dialog__panel canvas { width: min(760px, 86vw); aspect-ratio: 3 / 2; display: block; }
+  .sp-geo-dialog__close { position: absolute; top: 0.4rem; right: 0.5rem; width: 1.9rem; height: 1.9rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+  .sp-geo-dialog__close:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* imported-α summary chip under the orientation select */
+  .sp-alpha-chip { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); font-size: 0.72rem; color: var(--text-soft); }
+  .sp-alpha-chip[hidden] { display: none; }
+  .sp-alpha-chip #sp-alpha-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp-alpha-chip button { flex: none; padding: 0.15rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-size: 0.68rem; font-family: var(--font); cursor: pointer; }
+  .sp-alpha-chip button:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* α(ω) import dialog */
+  .sp-alpha-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 94vw; width: 560px; color: var(--text); }
+  .sp-alpha-dialog::backdrop { background: rgba(15, 18, 30, 0.55); }
+  .sp-alpha-dialog__panel { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.7rem; }
+  .sp-alpha-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); position: relative; }
+  .sp-alpha-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .sp-alpha-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+  .sp-alpha-dialog__src { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .sp-alpha-dialog__or { font-size: 0.72rem; color: var(--text-muted); }
+  .sp-alpha-dialog__src textarea { flex: 1 1 240px; min-width: 180px; font-family: var(--font-mono, monospace); font-size: 0.72rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); padding: 0.35rem 0.45rem; background: var(--bg); color: var(--text); resize: vertical; }
+  .sp-alpha-dialog__grid { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .sp-alpha-dialog__grid label { display: flex; flex-direction: column; gap: 0.25rem; }
+  .sp-alpha-dialog__grid span { font-size: 0.7rem; font-weight: 600; color: var(--text-soft); }
+  .sp-alpha-dialog__hint { margin: 0; font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; }
+  .sp-alpha-dialog__roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.4rem 0.6rem; }
+  .sp-alpha-dialog__roles label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.68rem; font-weight: 600; color: var(--text-soft); }
+  .sp-alpha-dialog__roles select { font-family: var(--font); font-size: 0.72rem; padding: 0.2rem 0.3rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); }
+  .sp-alpha-dialog__preview canvas { width: 100%; height: 130px; display: block; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .sp-alpha-dialog__table-wrap { max-height: 120px; overflow: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .sp-alpha-dialog__table { width: 100%; border-collapse: collapse; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+  .sp-alpha-dialog__table th, .sp-alpha-dialog__table td { padding: 0.2rem 0.4rem; text-align: right; border-bottom: 1px solid var(--bg-muted); white-space: nowrap; }
+  .sp-alpha-dialog__table th { position: sticky; top: 0; background: var(--bg-soft, var(--bg)); color: var(--text-soft); font-weight: 700; }
+  .sp-alpha-dialog__status { margin: 0; font-size: 0.72rem; color: var(--text-muted); min-height: 1em; }
+  .sp-alpha-dialog__status.error { color: var(--rose, #e11d48); }
+  .sp-alpha-dialog__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  .chart-tool-btn { padding: 0.3rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .chart-tool-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .chart-tool-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .chart-tool-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  /* Plasmonic NPs: embedded real lab in a large modal with a floating corner action bar */
+  .sp-plas-frame-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); width: 95vw; max-width: 1240px; height: 90vh; overflow: hidden; }
+  .sp-plas-frame-dialog::backdrop { background: rgba(15, 18, 30, 0.6); }
+  .sp-plas-frame-wrap { position: relative; width: 100%; height: 100%; }
+  .sp-plas-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  .sp-plas-frame-bar { position: absolute; top: 0.7rem; right: 0.9rem; display: flex; align-items: center; gap: 0.5rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-full); padding: 0.35rem 0.55rem; box-shadow: var(--shadow-md); z-index: 3; }
+  .sp-plas-frame-status { font-size: 0.7rem; color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp-plas-frame-status.error { color: var(--rose, #e11d48); }
+
+  /* results column + two-level tabs */
+  .sp-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .sp-result-card { gap: var(--space-sm); }
+  /* main view selector (Spectrum / Far-field) — compact pill bar OUTSIDE the result box, just above it */
+  .sp-view-tabs { display: inline-flex; align-self: flex-start; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; margin-bottom: calc(var(--space-sm) - var(--space-lg)); }
+  .sp-view-tab { padding: 0.45rem 1.1rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .sp-view-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  .sp-view-tab:hover:not(.active) { color: var(--text); }
+  /* sub-view selector — full-width segmented bar inside the result box (created at runtime → :global) */
+  .sp-sub-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
+  :global(#sp-sub-tabs .sp-sub-tab) { flex: 1; padding: 0.45rem 0.85rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.2s; white-space: nowrap; text-align: center; }
+  :global(#sp-sub-tabs .sp-sub-tab.active) { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  :global(#sp-sub-tabs .sp-sub-tab:hover:not(.active)) { color: var(--text); }
+  .sp-chart-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .sp-chart-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+  .sp-stokes-sel { display: inline-flex; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); overflow: hidden; }
+  .sp-stokes-sel[hidden] { display: none; }
+  .sp-stokes-sel button { padding: 0.2rem 0.7rem; border: none; background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sp-stokes-sel button + button { border-left: 1px solid var(--bg-muted); }
+  .sp-stokes-sel button.active { background: var(--primary); color: #fff; }
+  .sp-chart-wrap canvas { aspect-ratio: 16 / 11; }
+  /* small steering-mode box (Fig. 2b induced-dipole profile) below the result box */
+  .sp-steer-card { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .sp-steer-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); }
+  .sp-steer-title { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+  .sp-steer-sub { font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .sp-steer-wrap canvas { aspect-ratio: 16 / 5; }
+  .sp-readout { display: flex; flex-wrap: wrap; gap: 0.35rem 1.2rem; font-size: 0.78rem; color: var(--text-soft); }
+  .sp-readout b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .sp-readout-link { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+  .sp-readout-link:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+
+  .notes-card { padding: var(--space-md); }
+  .notes-card h4 { font-size: 0.875rem; margin: 0 0 var(--space-sm); }
+  .notes-card p { font-size: 0.8125rem; line-height: 1.55; color: var(--text-soft); margin: 0; max-width: none; }
+  .notes-card p + p { margin-top: var(--space-sm); }
 
   @media (max-width: 1120px) {
     .widget-layout { grid-template-columns: 280px minmax(0, 1fr); }
@@ -1290,4 +1750,971 @@ initPermalinks({ kev: 'kev' });
 
   // Initial state
   updateFrom((parseFloat(inputs.kev.value || inputs.kev.placeholder || '100') || 100) * 1000, 'init');
+
+  // Cross-module velocity sync: let the Smith–Purcell module push v/c back into Fields on switch.
+  (window as any).__electronFieldsSetBeta = (beta: number) => {
+    if (!(beta > 0 && beta < 1)) return;
+    inputs.vc.value = fmt(beta);
+    updateFrom(keFromV(beta), 'vc');
+  };
+</script>
+
+<!-- ===================== Smith–Purcell module ===================== -->
+<script>
+  import {
+    gspCondition, gspAngleDeg, dipoleDistribution, farFieldVector, sphericalComponents,
+    stokes, dipoleOrientation, externalFieldOnArray, xPolarized, zPolarized, oriented, c,
+    wavelengthNmFromEV, eVFromWavelengthNm, omegaFromEV, HBAR_EVS, C_NM_S, cabs, type Vec3c, type Cpx,
+  } from '../../lib/smith-purcell';
+  import { computePlasmonSpectrum, SHAPE_OPTIONS, drudeEpsilon, epsilonFromMaterial } from '../../lib/plasmonic-nanoparticles';
+  import { geometrySpectrumMulti, grapheneSigma2d, grapheneSigma2dRPA, metalSigma2d } from '../../lib/nl-graphene';
+  import { downloadBlob } from '../../lib/download';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const PI = Math.PI, MEC2_KEV = 510.998950;
+  const cvar = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+
+  const sp = { vc: 0.5, a: 200, b: 50, N: 51, E: 2.0, xi: 0, orient: 'electron', phi: 30,
+               thMin: -45, thMax: 225, specUnit: 'nm', specMin: 400, specMax: 800,
+               wlUnit: 'nm', stokesSel: 's3', view: 'spectrum', sub: 'spectral', matLog: false };
+
+  const betaToK = (beta: number) => { const g = 1 / Math.sqrt(1 - beta * beta); return (g - 1) * MEC2_KEV; };
+  const kToBeta = (K: number) => { const g = 1 + K / MEC2_KEV; return Math.sqrt(Math.max(0, 1 - 1 / (g * g))); };
+  const aOverLambda = () => sp.a / wavelengthNmFromEV(sp.E);
+  const NCOL = ['#7c3aed', '#2563eb', '#0d9488', '#f59e0b', '#dc2626'];   // n = −2..+2
+
+  const dnum = (id: string) => parseFloat(($(id) as HTMLInputElement).value) || 0;
+  const dipoleMag = () => Math.sqrt(['px', 'py', 'pz'].reduce((a, k) => a + dnum('sp-' + k + '-re') ** 2 + dnum('sp-' + k + '-im') ** 2, 0));
+
+  // ── imported polarizability α(ω): induced dipole direction p = α·E_ext (Methods Eq. 1; E_ext from Eq. 9) ──
+  const cmul = (a: Cpx, b: Cpx): Cpx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+  type AlphaData = { eV: number[]; ax: Cpx[]; ay: Cpx[]; az: Cpx[]; label: string; permalink?: string };
+  let spAlpha: AlphaData | null = null;
+  let spAlphaSource: 'input' | 'plasmonic' | null = null;        // where the loaded α came from
+  const isAlphaSource = () => sp.orient === 'input' || sp.orient === 'plasmonic';
+  function alphaAt(omega: number): { x: Cpx; z: Cpx } {
+    const E = omega * HBAR_EVS, eV = spAlpha!.eV, n = eV.length;       // ħω in eV
+    let i = 0;
+    if (E <= eV[0]) i = 0; else if (E >= eV[n - 1]) i = n - 2; else { while (i < n - 2 && eV[i + 1] < E) i++; }
+    const t = Math.max(0, Math.min(1, (E - eV[i]) / (eV[i + 1] - eV[i] || 1)));
+    const lerp = (arr: Cpx[]) => c(arr[i].re + (arr[i + 1].re - arr[i].re) * t, arr[i].im + (arr[i + 1].im - arr[i].im) * t);
+    return { x: lerp(spAlpha!.ax), z: lerp(spAlpha!.az) };             // E_ext has no y-component → α_y inert
+  }
+  // un-normalized: |p| carries |α(ω)·E_ext(ω)| so the spectral map is weighted by |α(ω)|² (README §α)
+  function inputDir(omega: number): Vec3c {
+    const gamma = 1 / Math.sqrt(1 - sp.vc * sp.vc);
+    if (!spAlpha) return dipoleOrientation(omega, sp.b, sp.vc * C_NM_S, gamma, true);   // graceful fallback
+    const { Ex, Ez } = externalFieldOnArray(omega, sp.b, sp.vc * C_NM_S, gamma);
+    const a = alphaAt(omega);
+    return [cmul(a.x, Ex), c(0), cmul(a.z, Ez)];
+  }
+
+  function buildDipoles(): Vec3c[] {
+    const mag = dipoleDistribution(sp.N, sp.xi, 1.0);
+    if (sp.orient === 'x') return xPolarized(mag);
+    if (sp.orient === 'z') return zPolarized(mag);
+    if (isAlphaSource()) return oriented(mag, inputDir(omegaFromEV(sp.E)));
+    if (sp.orient === 'custom') {
+      let dir: Vec3c = [c(dnum('sp-px-re'), dnum('sp-px-im')), c(dnum('sp-py-re'), dnum('sp-py-im')), c(dnum('sp-pz-re'), dnum('sp-pz-im'))];
+      const m = dipoleMag(); if (m > 1e-12) dir = dir.map(z => ({ re: z.re / m, im: z.im / m })) as Vec3c;   // unit orientation
+      return oriented(mag, dir);
+    }
+    const gamma = 1 / Math.sqrt(1 - sp.vc * sp.vc);
+    return oriented(mag, dipoleOrientation(omegaFromEV(sp.E), sp.b, sp.vc * C_NM_S, gamma, true));
+  }
+
+  // ── canvas helper (DPI-aware) ──
+  function ctx2d(canvas: HTMLCanvasElement) {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return null;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    return { ctx, w: r.width, h: r.height };
+  }
+  type Plot = { px: (x: number) => number; py: (y: number) => number; m: { l: number; r: number; t: number; b: number } };
+  function axes(ctx: CanvasRenderingContext2D, w: number, h: number, xmin: number, xmax: number, ymin: number, ymax: number,
+               xlabel: string, ylabel: string, yticks: number[], xticks: number[]): Plot {
+    const m = { l: 50, r: 16, t: 14, b: 38 };
+    const px = (x: number) => m.l + (x - xmin) / (xmax - xmin) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / (ymax - ymin) * (h - m.t - m.b);
+    const muted = cvar('--text-muted'), line = cvar('--bg-muted');
+    ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.fillStyle = muted;
+    ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const y of yticks) { const Y = py(y); ctx.strokeStyle = 'rgba(140,140,150,0.18)'; ctx.beginPath(); ctx.moveTo(m.l, Y); ctx.lineTo(w - m.r, Y); ctx.stroke(); ctx.fillText(String(y), m.l - 6, Y); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const x of xticks) { const X = px(x); ctx.fillText(String(x), X, h - m.b + 6); }
+    ctx.fillStyle = cvar('--text-soft');
+    ctx.fillText(xlabel, (m.l + w - m.r) / 2, h - 14);
+    ctx.save(); ctx.translate(13, (m.t + h - m.b) / 2); ctx.rotate(-PI / 2); ctx.fillText(ylabel, 0, 0); ctx.restore();
+    return { px, py, m };
+  }
+  const clipPlot = (ctx: CanvasRenderingContext2D, w: number, h: number, p: Plot) => { ctx.save(); ctx.beginPath(); ctx.rect(p.m.l, p.m.t, w - p.m.l - p.m.r, h - p.m.t - p.m.b); ctx.clip(); };
+
+  // ── colormaps for the spectral density maps (fig3_polarization) ──
+  const HEX = (s: string) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const INT_STOPS = ['#21318a', '#5c8fcf', '#f3f6fb', '#f4a93b', '#b8312a'].map(HEX);
+  const cmapInt = (t: number) => { t = Math.max(0, Math.min(1, t)); const x = t * 4, i = Math.min(3, Math.floor(x)), f = x - i, a = INT_STOPS[i], b = INT_STOPS[i + 1]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; };
+  const cmapDiv = (v: number) => { const t = (Math.max(-1, Math.min(1, v)) + 1) / 2, lo = t < 0.5, f = lo ? t * 2 : (t - 0.5) * 2, A = lo ? [33, 49, 138] : [243, 246, 251], B = lo ? [243, 246, 251] : [184, 49, 42]; return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f]; };
+
+  // dipole vectors at angular frequency ω (electron / imported-α orientations are wavelength-dependent; x/z/custom are fixed)
+  function dipolesAtOmega(omega: number, mag: number[]): Vec3c[] {
+    if (sp.orient === 'x') return xPolarized(mag);
+    if (sp.orient === 'z') return zPolarized(mag);
+    if (isAlphaSource()) return oriented(mag, inputDir(omega));
+    if (sp.orient === 'custom') {
+      let dir: Vec3c = [c(dnum('sp-px-re'), dnum('sp-px-im')), c(dnum('sp-py-re'), dnum('sp-py-im')), c(dnum('sp-pz-re'), dnum('sp-pz-im'))];
+      const m = dipoleMag(); if (m > 1e-12) dir = dir.map(z => ({ re: z.re / m, im: z.im / m })) as Vec3c;
+      return oriented(mag, dir);
+    }
+    const gamma = 1 / Math.sqrt(1 - sp.vc * sp.vc);
+    return oriented(mag, dipoleOrientation(omega, sp.b, sp.vc * C_NM_S, gamma, true));
+  }
+
+  // Spectral-dependence map (fig3): total far-field |f|² ('amplitude') or circular degree S₃/S₀ ('s3')
+  // over (emission angle θ, wavelength|energy) using the user ranges, with the GSP dispersion overlaid.
+  function drawSpectralMap(which: 'amplitude' | 's1' | 's2' | 's3') {
+    const cc = ctx2d($('sp-chart') as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc, m = { l: 56, r: 66, t: 14, b: 38 };
+    const thMin = sp.thMin, thMax = sp.thMax, NX = 150, NU = 78;
+    const yMin = Math.min(sp.specMin, sp.specMax), yMax = Math.max(sp.specMin, sp.specMax), isEv = sp.specUnit === 'eV';
+    const toE = (v: number) => isEv ? v : eVFromWavelengthNm(v);
+    const phi = sp.phi * PI / 180, mag = dipoleDistribution(sp.N, sp.xi, 1.0);
+    const M = new Float64Array(NX * NU), S0 = new Float64Array(NX * NU); let mx = 1e-30;
+    for (let iu = 0; iu < NU; iu++) {
+      const E = toE(yMin + (yMax - yMin) * iu / (NU - 1)), aol = sp.a / wavelengthNmFromEV(E);
+      const dip = dipolesAtOmega(omegaFromEV(E), mag);
+      for (let ix = 0; ix < NX; ix++) {
+        const t = (thMin + (thMax - thMin) * ix / (NX - 1)) * PI / 180;
+        const { fTheta, fPhi } = sphericalComponents(t, phi, farFieldVector(t, phi, dip, aol, sp.vc));
+        const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+        const sv = which === 's1' ? s1 : which === 's2' ? s2 : s3;
+        S0[iu * NX + ix] = s0; if (s0 > mx) mx = s0;
+        M[iu * NX + ix] = which === 'amplitude' ? s0 : (s0 > 1e-12 ? sv / s0 : NaN);
+      }
+    }
+    const off = document.createElement('canvas'); off.width = NX; off.height = NU; const octx = off.getContext('2d')!;
+    const img = octx.createImageData(NX, NU);
+    for (let iu = 0; iu < NU; iu++) for (let ix = 0; ix < NX; ix++) {
+      const idx = iu * NX + ix, pi = ((NU - 1 - iu) * NX + ix) * 4; let rgb: number[], al = 255;
+      if (which === 'amplitude') rgb = cmapInt(M[idx] / mx);
+      else if (!(S0[idx] / mx > 0.02) || Number.isNaN(M[idx])) { rgb = [255, 255, 255]; al = 0; } else rgb = cmapDiv(M[idx]);
+      img.data[pi] = rgb[0]; img.data[pi + 1] = rgb[1]; img.data[pi + 2] = rgb[2]; img.data[pi + 3] = al;
+    }
+    octx.putImageData(img, 0, 0);
+    const px = (x: number) => m.l + (x - thMin) / (thMax - thMin) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - yMin) / (yMax - yMin) * (h - m.t - m.b);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(off, m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.fillStyle = cvar('--text-muted');
+    const fmtY = (v: number) => isEv ? v.toFixed(2) : String(Math.round(v));
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const y of [yMin, (yMin + yMax) / 2, yMax]) ctx.fillText(fmtY(y), m.l - 6, py(y));
+    const xt = [...new Set([Math.round(thMin), ...[-90, -45, 0, 45, 90, 135, 180, 225].filter(x => x > thMin + 8 && x < thMax - 8), Math.round(thMax)])];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const x of xt) ctx.fillText(x + '°', px(x), h - m.b + 6);
+    ctx.fillStyle = cvar('--text-soft'); ctx.fillText('emission angle θ', (m.l + w - m.r) / 2, h - 14);
+    ctx.save(); ctx.translate(13, (m.t + h - m.b) / 2); ctx.rotate(-PI / 2); ctx.fillText(isEv ? 'E (eV)' : 'λ (nm)', 0, 0); ctx.restore();
+    // GSP dispersion overlay (n=1, ℓ = 0, ξ, −ξ)
+    ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, w - m.l - m.r, h - m.t - m.b); ctx.clip();
+    for (const ell of [...new Set([0, sp.xi, -sp.xi])]) {
+      ctx.strokeStyle = which === 'amplitude' ? 'rgba(255,255,255,0.65)' : 'rgba(60,60,70,0.6)'; ctx.lineWidth = ell === 0 ? 1.1 : 0.8; ctx.beginPath(); let started = false;
+      for (let ix = 0; ix <= 240; ix++) {
+        const td = thMin + (thMax - thMin) * ix / 240, s = Math.sin(td * PI / 180) * Math.cos(phi);
+        const lamNm = sp.a * (1 / sp.vc - s) / (1 - ell / sp.N);
+        if (lamNm <= 0) { started = false; continue; }
+        const yval = isEv ? eVFromWavelengthNm(lamNm) : lamNm;
+        if (yval < yMin || yval > yMax) { started = false; continue; }
+        const X = px(td), Y = py(yval); started ? ctx.lineTo(X, Y) : (ctx.moveTo(X, Y), started = true);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    // colorbar
+    const cbx = w - m.r + 20, cbh = h - m.t - m.b; const NB = 48;
+    for (let i = 0; i < NB; i++) { const t = i / (NB - 1), rgb = which === 'amplitude' ? cmapInt(t) : cmapDiv(t * 2 - 1); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(cbx, m.t + cbh - (i + 1) / NB * cbh, 11, cbh / NB + 1); }
+    ctx.strokeStyle = cvar('--bg-muted'); ctx.strokeRect(cbx, m.t, 11, cbh);
+    ctx.fillStyle = cvar('--text-muted'); ctx.font = '9px ' + (cvar('--font') || 'sans-serif'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    if (which === 'amplitude') { ctx.fillText('1', cbx + 14, m.t); ctx.fillText('0', cbx + 14, m.t + cbh); }
+    else { ctx.fillText('+1', cbx + 14, m.t); ctx.fillText('0', cbx + 14, m.t + cbh / 2); ctx.fillText('−1', cbx + 14, m.t + cbh); }
+    const STK = { s1: ['S₁/S₀ (p vs s linear)', 'red = p (θ̂), blue = s (φ̂)'], s2: ['S₂/S₀ (±45° linear)', 'red = +45°, blue = −45°'], s3: ['S₃/S₀ (circular)', 'red = right-handed, blue = left-handed'] } as const;
+    $('sp-readout').innerHTML = which === 'amplitude'
+      ? `<span>total far-field |f|² vs (θ, ${isEv ? 'E' : 'λ'}) at φ = <b>${sp.phi}°</b></span><span>ξ = <b>${sp.xi}</b>, N = <b>${sp.N}</b></span>`
+      : `<span>${STK[which][0]} at φ = <b>${sp.phi}°</b>${sp.phi === 0 ? ' (in-plane → pure p-pol)' : ''}</span><span>${STK[which][1]}</span>`;
+  }
+
+  // ── SP-solution diagram (Fig. 1c / 2a): sin θ_{n,ℓ} vs ℓ ──
+  function drawEmission() {
+    const c = ctx2d($('sp-chart') as HTMLCanvasElement); if (!c) return;
+    const { ctx, w, h } = c, N = sp.N, beta = sp.vc, aol = aOverLambda();
+    const ymin = -1.6, ymax = 1.6, xmin = -0.5, xmax = N - 0.5;
+    const xticks = N <= 21 ? Array.from({ length: N }, (_, i) => i) : [0, Math.round(N / 4), Math.round(N / 2), Math.round(3 * N / 4), N - 1];
+    const p = axes(ctx, w, h, xmin, xmax, ymin, ymax, 'Fourier mode index ℓ', 'sin θₙ,ₗ', [-1.5, -1, -0.5, 0, 0.5, 1, 1.5], xticks);
+    // forbidden |sin|>1 bands
+    ctx.fillStyle = 'rgba(130,130,140,0.13)';
+    ctx.fillRect(p.px(xmin), p.py(ymax), p.px(xmax) - p.px(xmin), p.py(1) - p.py(ymax));
+    ctx.fillRect(p.px(xmin), p.py(-1), p.px(xmax) - p.px(xmin), p.py(ymin) - p.py(-1));
+    ctx.strokeStyle = 'rgba(130,130,140,0.55)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(p.px(xmin), p.py(1)); ctx.lineTo(p.px(xmax), p.py(1)); ctx.moveTo(p.px(xmin), p.py(-1)); ctx.lineTo(p.px(xmax), p.py(-1)); ctx.stroke();
+    clipPlot(ctx, w, h, p);
+    for (let n = -2; n <= 2; n++) {
+      ctx.strokeStyle = NCOL[n + 2]; ctx.lineWidth = 1.4; ctx.beginPath();
+      for (let ell = 0; ell < N; ell++) { const s = gspCondition(n, ell, N, beta, aol); const X = p.px(ell), Y = p.py(s); ell ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+      ctx.stroke();
+      const dotR = Math.max(1.1, Math.min(2.8, (w - p.m.l - p.m.r) / N * 0.42));   // shrink dots for large N so they don't merge
+      for (let ell = 0; ell < N; ell++) { const s = gspCondition(n, ell, N, beta, aol); if (Math.abs(s) <= 1) { ctx.fillStyle = NCOL[n + 2]; ctx.beginPath(); ctx.arc(p.px(ell), p.py(s), dotR, 0, 2 * PI); ctx.fill(); } }
+    }
+    // highlight steered channel (n=1, ℓ=ξ)
+    const sXi = gspCondition(1, sp.xi, N, beta, aol);
+    if (sp.xi > 0 && Math.abs(sXi) <= 1) { ctx.strokeStyle = cvar('--text'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(p.px(sp.xi), p.py(sXi), 5.5, 0, 2 * PI); ctx.stroke(); }
+    ctx.restore();
+    // legend
+    ctx.font = '10px ' + (cvar('--font') || 'sans-serif'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ['n=−2', 'n=−1', 'n=0', 'n=1', 'n=2'].forEach((t, i) => { const X = p.m.l + 8 + i * 52, Y = p.m.t + 10; ctx.fillStyle = NCOL[i]; ctx.fillRect(X, Y - 4, 9, 8); ctx.fillStyle = cvar('--text-soft'); ctx.fillText(t, X + 12, Y); });
+    const th = gspAngleDeg(1, sp.xi, N, beta, aol);
+    $('sp-readout').innerHTML = `<span>steered channel (n=1, ℓ=ξ): <b>${Number.isFinite(th) ? th.toFixed(1) + '°' : 'forbidden'}</b></span><span>radiative modes ℓ for n=1: <b>${countRadiative(1)}</b></span>`;
+  }
+  const countRadiative = (n: number) => { let c = 0; for (let ell = 0; ell < sp.N; ell++) if (Math.abs(gspCondition(n, ell, sp.N, sp.vc, aOverLambda())) <= 1) c++; return c; };
+
+
+  // ── Far-field rosette: semicircle polar plot at azimuth φ, weighted by a Stokes component ──
+  function drawRosette(which: string) {
+    const c = ctx2d($('sp-chart') as HTMLCanvasElement); if (!c) return;
+    const { ctx, w, h } = c, vec = buildDipoles(), aol = aOverLambda(), beta = sp.vc, phi = sp.phi * PI / 180;
+    const cbReserve = 48;
+    const cx = (w - cbReserve) / 2, cy = h - 26, R = Math.min((w - cbReserve) / 2 - 24, h - 50);
+    const M = 721, S0: number[] = [], val: number[] = [], ths: number[] = [];
+    let s0max = 1e-30;
+    for (let i = 0; i < M; i++) {
+      const t = (-90 + 180 * i / (M - 1)) * PI / 180;
+      const f = farFieldVector(t, phi, vec, aol, beta);
+      const { fTheta, fPhi } = sphericalComponents(t, phi, f);
+      const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+      ths.push(t); S0.push(s0); s0max = Math.max(s0max, s0);
+      val.push(which === 's0' ? 1 : (which === 's1' ? s1 : which === 's2' ? s2 : s3) / (s0 || 1));
+    }
+    // grid: semicircle + angle spokes
+    ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.fillStyle = cvar('--text-muted'); ctx.font = '10px ' + (cvar('--font') || 'sans-serif');
+    for (const rr of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.arc(cx, cy, R * rr, PI, 2 * PI); ctx.stroke(); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const adeg of [-90, -60, -30, 0, 30, 60, 90]) { const a = adeg * PI / 180, dx = Math.sin(a), dy = -Math.cos(a); ctx.strokeStyle = 'rgba(140,140,150,0.25)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + dx * R, cy + dy * R); ctx.stroke(); ctx.fillStyle = cvar('--text-muted'); ctx.fillText(adeg + '°', cx + dx * (R + 13), cy + dy * (R + 13)); }
+    // emission lobes: radius ∝ amplitude √(S0); colour by chosen Stokes (diverging) or single hue
+    const diverge = (v: number) => { const t = Math.max(-1, Math.min(1, v)); return t >= 0 ? `rgba(220,38,38,${0.25 + 0.7 * t})` : `rgba(37,99,235,${0.25 - 0.7 * t})`; };
+    ctx.lineWidth = 2;
+    for (let i = 1; i < M; i++) {
+      const r0 = Math.sqrt(S0[i - 1] / s0max), r1 = Math.sqrt(S0[i] / s0max);
+      const a0 = ths[i - 1], a1 = ths[i];
+      ctx.strokeStyle = which === 's0' ? cvar('--primary') : diverge((val[i - 1] + val[i]) / 2);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.sin(a0) * R * r0, cy - Math.cos(a0) * R * r0);
+      ctx.lineTo(cx + Math.sin(a1) * R * r1, cy - Math.cos(a1) * R * r1);
+      ctx.stroke();
+    }
+    // colorbar (right): diverging −1..+1 for the Stokes views, single-hue |f| 0..1 for intensity
+    const cbW = 11, cbTop = cy - R, cbH = R, cbx = w - 34, NB = 44;
+    for (let i = 0; i < NB; i++) {
+      const tt = i / (NB - 1);
+      if (which === 's0') { ctx.globalAlpha = 0.15 + 0.85 * tt; ctx.fillStyle = cvar('--primary'); }
+      else { ctx.globalAlpha = 1; ctx.fillStyle = diverge(tt * 2 - 1); }
+      ctx.fillRect(cbx, cbTop + cbH - (i + 1) / NB * cbH, cbW, cbH / NB + 1);
+    }
+    ctx.globalAlpha = 1; ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(cbx, cbTop, cbW, cbH);
+    ctx.fillStyle = cvar('--text-muted'); ctx.font = '9px ' + (cvar('--font') || 'sans-serif'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const cbTitle = which === 's0' ? '|f|' : which === 's1' ? 'S₁/S₀' : which === 's2' ? 'S₂/S₀' : 'S₃/S₀';
+    if (which === 's0') { ctx.fillText('1', cbx + cbW + 3, cbTop); ctx.fillText('0', cbx + cbW + 3, cbTop + cbH); }
+    else { ctx.fillText('+1', cbx + cbW + 3, cbTop); ctx.fillText('0', cbx + cbW + 3, cbTop + cbH / 2); ctx.fillText('−1', cbx + cbW + 3, cbTop + cbH); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(cbTitle, cbx + cbW / 2, cbTop - 4);
+    const peak = ths[S0.indexOf(Math.max(...S0))] * 180 / PI;
+    $('sp-readout').innerHTML = `<span>peak emission at θ = <b>${peak.toFixed(1)}°</b></span><span>φ = <b>${sp.phi}°</b> · dipole: <b>${sp.orient}</b></span>`;
+  }
+
+  // ── geometry schematic (oblique projection, port of figures/_geometry.py) ──
+  const EX = [-0.82, -0.46], EY = [1.0, -0.10], EZ = [0.0, 1.0];
+  function drawGeometry(canvas: HTMLCanvasElement) {
+    const cc = ctx2d(canvas); if (!cc) return; const { ctx, w, h } = cc;   // not `c` — that's the complex constructor used below
+    const nSide = 3, a = 1.0, bRel = Math.max(0.6, Math.min(2.4, (sp.b / sp.a) * 6 + 0.6));
+    const th = 40 * PI / 180, ph = (Number.isFinite(sp.phi) ? sp.phi : 30) * PI / 180;   // φ=0 is valid — don't fall back to 30°
+    const proj = (x: number, y: number, z: number) => [x * EX[0] + y * EY[0] + z * EZ[0], x * EX[1] + y * EY[1] + z * EZ[1]];
+    // collect for autoscale
+    const pts: number[][] = [];
+    const xmax = (nSide + 1.4) * a;
+    const R = 2.3 * a, r3 = [Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th)];
+    // dipole-oscillation axis: along the (|px|,|py|,|pz|) magnitudes of the active orientation (x/z/electron/α)
+    let dvec: Vec3c;
+    if (sp.orient === 'x') dvec = [c(1, 0), c(0, 0), c(0, 0)];
+    else if (sp.orient === 'z') dvec = [c(0, 0), c(0, 0), c(1, 0)];
+    else if (isAlphaSource()) dvec = spAlpha ? inputDir(omegaFromEV(sp.E)) : [c(0, 0), c(0, 0), c(1, 0)];
+    else { const g = 1 / Math.sqrt(1 - sp.vc * sp.vc); dvec = dipoleOrientation(omegaFromEV(sp.E), sp.b, sp.vc * C_NM_S, g, true); }
+    const dm = [cabs(dvec[0]), cabs(dvec[1]), cabs(dvec[2])], dn = Math.hypot(dm[0], dm[1], dm[2]) || 1;
+    const dax = [dm[0] / dn, dm[1] / dn, dm[2] / dn];
+    const dl = dax[0] > 0.01 ? Math.min(0.62, 0.42 / dax[0]) : 0.62;   // cap x-extent so neighbouring arrows don't overlap
+    const dvx = dl * dax[0], dvy = dl * dax[1], dvz = dl * dax[2];
+    [[-xmax * 0.85, 0, bRel], [xmax, 0, 0], [0, 0, 2.5], [0, xmax * 0.62, 0], r3.map(v => v * R) as number[],
+     [nSide * a + dvx, dvy, dvz], [nSide * a - dvx, -dvy, -dvz], [-nSide * a + dvx, dvy, dvz], [-nSide * a - dvx, -dvy, -dvz]].forEach(q => pts.push(proj(q[0], q[1], q[2])));
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const q of pts) { minx = Math.min(minx, q[0]); maxx = Math.max(maxx, q[0]); miny = Math.min(miny, q[1]); maxy = Math.max(maxy, q[1]); }
+    minx -= 0.4; maxx += 0.5; miny -= 0.5; maxy += 0.4;
+    const sc = Math.min((w - 8) / (maxx - minx), (h - 8) / (maxy - miny));
+    const ox = (w - sc * (maxx - minx)) / 2, oy = (h - sc * (maxy - miny)) / 2;
+    const P = (x: number, y: number, z: number) => { const q = proj(x, y, z); return [ox + (q[0] - minx) * sc, h - (oy + (q[1] - miny) * sc)]; };
+    const hs = Math.max(1, w / 280);   // scale arrowheads / strokes / labels up on the enlarged canvas
+    const arrow = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, col: string, lw: number, head = 6) => {
+      const A = P(x0, y0, z0), B = P(x1, y1, z1), hd = head * hs; ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw * hs;
+      ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+      const ang = Math.atan2(B[1] - A[1], B[0] - A[0]);   // apex sits ½·head beyond the segment end so the tip clears the line
+      const tx = B[0] + hd * 0.5 * Math.cos(ang), ty = B[1] + hd * 0.5 * Math.sin(ang);
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - hd * Math.cos(ang - 0.4), ty - hd * Math.sin(ang - 0.4)); ctx.lineTo(tx - hd * Math.cos(ang + 0.4), ty - hd * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fill();
+    };
+    // double-headed arrow (heads at both ends) — for the dipole-oscillation indicators
+    const dArrow = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, col: string, lw: number, head = 6) => {
+      const A = P(x0, y0, z0), B = P(x1, y1, z1), hd = head * hs; ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw * hs;
+      ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+      const ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
+      const headTo = (T: number[], a: number) => { const tx = T[0] + hd * 0.5 * Math.cos(a), ty = T[1] + hd * 0.5 * Math.sin(a); ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - hd * Math.cos(a - 0.4), ty - hd * Math.sin(a - 0.4)); ctx.lineTo(tx - hd * Math.cos(a + 0.4), ty - hd * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); };
+      headTo(B, ang); headTo(A, ang + PI);
+    };
+    const ax = cvar('--text-muted');
+    arrow(-xmax * 0.78, 0, 0, xmax, 0, 0, ax, 1.4); arrow(0, 0, 0, 0, xmax * 0.62, 0, ax, 1.4); arrow(0, 0, 0, 0, 0, 2.5, ax, 1.4);
+    ctx.font = 'italic ' + Math.round(12 * hs) + 'px ' + (cvar('--font') || 'serif'); ctx.fillStyle = ax; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let q = P(xmax, 0, 0); ctx.fillText('x', q[0] + 6 * hs, q[1] + 6 * hs); q = P(0, xmax * 0.62, 0); ctx.fillText('y', q[0] + 8 * hs, q[1]); q = P(0, 0, 2.5); ctx.fillText('z', q[0], q[1] - 8 * hs);
+    // electron beam — travels toward +x (head at the +x end)
+    arrow(-xmax * 0.85, 0, bRel, xmax * 0.95, 0, bRel, '#2b35c8', 2.4, 9);
+    q = P(-xmax * 0.8, 0, bRel); ctx.fillStyle = '#2b35c8'; ctx.fillText('e⁻', q[0] + 4 * hs, q[1] - 8 * hs);
+    // impact b
+    arrow(1.7, 0, 0, 1.7, 0, bRel, ax, 1.2, 5); arrow(1.7, 0, bRel, 1.7, 0, 0, ax, 1.2, 5);
+    q = P(1.7, 0, bRel / 2); ctx.fillStyle = ax; ctx.fillText('b', q[0] + 9 * hs, q[1]);
+    // array dots + red dipole arrows
+    for (let j = -nSide; j <= nSide; j++) {
+      dArrow(j * a - dvx, -dvy, -dvz, j * a + dvx, dvy, dvz, '#d11', 2.4, 6.5);   // oscillation along the selected dipole direction
+      const cdot = P(j * a, 0, 0); ctx.fillStyle = cvar('--text'); ctx.beginPath(); ctx.arc(cdot[0], cdot[1], 4 * hs, 0, 2 * PI); ctx.fill();
+    }
+    q = P(2.5, 0, 0); ctx.fillStyle = ax; ctx.fillText('a', q[0], q[1] + 14 * hs);
+    // r vector + arcs
+    arrow(0, 0, 0, r3[0] * R, r3[1] * R, r3[2] * R, '#0a7d2c', 2.2, 8);
+    q = P(r3[0] * R, r3[1] * R, r3[2] * R); ctx.fillStyle = '#0a7d2c'; ctx.font = 'bold italic ' + Math.round(13 * hs) + 'px ' + (cvar('--font') || 'serif'); ctx.fillText('r', q[0] + 7 * hs, q[1] - 6 * hs);
+    ctx.strokeStyle = '#0a7d2c'; ctx.lineWidth = 1.2 * hs; const u = [Math.cos(ph), Math.sin(ph), 0];
+    ctx.beginPath(); for (let i = 0; i <= 30; i++) { const t = th * i / 30, pp = P(0.85 * (Math.sin(t) * u[0]), 0.85 * (Math.sin(t) * u[1]), 0.85 * Math.cos(t)); i ? ctx.lineTo(pp[0], pp[1]) : ctx.moveTo(pp[0], pp[1]); } ctx.stroke();
+    ctx.beginPath(); for (let i = 0; i <= 30; i++) { const s = ph * i / 30, pp = P(Math.cos(s), Math.sin(s), 0); i ? ctx.lineTo(pp[0], pp[1]) : ctx.moveTo(pp[0], pp[1]); } ctx.stroke();
+    ctx.font = 'italic ' + Math.round(12 * hs) + 'px ' + (cvar('--font') || 'serif'); ctx.fillStyle = '#0a7d2c';
+    let m = P(0.85 * Math.sin(th / 2) * u[0], 0.85 * Math.sin(th / 2) * u[1], 0.85 * Math.cos(th / 2)); ctx.fillText('θ', m[0] + 9 * hs, m[1]);
+    m = P(Math.cos(ph / 2), Math.sin(ph / 2), 0); ctx.fillText('φ', m[0], m[1] + 11 * hs);
+  }
+
+  // ── steering-mode box: induced-dipole profile |pⱼ|/p₀ = 1 + sin(2πξj/N) (Fig. 2b) ──
+  function drawSteer() {
+    const c = ctx2d($('sp-steer-chart') as HTMLCanvasElement); if (!c) return;
+    const { ctx, w, h } = c, N = sp.N;
+    const xticks = N <= 21 ? Array.from({ length: N }, (_, i) => i) : [0, Math.round(N / 4), Math.round(N / 2), Math.round(3 * N / 4), N - 1];
+    const mag = dipoleDistribution(N, sp.xi, 1.0);
+    const p = axes(ctx, w, h, -0.5, N - 0.5, 0, 2.1, 'array index j', '|pⱼ|/p₀', [0, 1, 2], xticks);
+    clipPlot(ctx, w, h, p);
+    ctx.strokeStyle = 'rgba(140,140,150,0.45)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(p.px(-0.5), p.py(1)); ctx.lineTo(p.px(N - 0.5), p.py(1)); ctx.stroke();
+    const col = cvar('--primary'); ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.beginPath();
+    mag.forEach((y, j) => { const X = p.px(j), Y = p.py(y); j ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.stroke();
+    const dotR = Math.max(1, Math.min(1.9, (w - p.m.l - p.m.r) / N * 0.42));
+    ctx.fillStyle = col; mag.forEach((y, j) => { ctx.beginPath(); ctx.arc(p.px(j), p.py(y), dotR, 0, 2 * PI); ctx.fill(); });
+    ctx.restore();
+  }
+
+  // ── sub-tabs / view dispatch ──
+  const SUBTABS: Record<string, { id: string; label: string }[]> = {
+    spectrum: [{ id: 'spectral', label: 'Spectral dependence' }, { id: 'polarization', label: 'Polarization' }],
+    farfield: [{ id: 'emission', label: 'SP emission' }, { id: 'intensity', label: 'Intensity' }, { id: 'polarization', label: 'Polarization' }],
+    materials: [{ id: 'alpha', label: 'Polarizability α(ω)' }],
+  };
+  function renderSubTabs() {
+    const box = $('sp-sub-tabs'); box.innerHTML = '';
+    for (const t of SUBTABS[sp.view]) {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'sp-sub-tab' + (sp.sub === t.id ? ' active' : ''); btn.textContent = t.label; btn.dataset.sub = t.id;
+      btn.addEventListener('click', () => { sp.sub = t.id; renderSubTabs(); renderSP(); });
+      box.appendChild(btn);
+    }
+  }
+  function setViewTabsActive() {
+    $('sp-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === sp.view; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
+  }
+  // Materials view tab only exists while an α-based source (Plasmonic NPs / Input polarizability) is loaded
+  function updateMaterialsTabVis() {
+    const show = isAlphaSource() && !!spAlpha;
+    ($('sp-view-materials') as HTMLElement).hidden = !show;
+    if (!show && sp.view === 'materials') { sp.view = 'spectrum'; sp.sub = SUBTABS.spectrum[0].id; setViewTabsActive(); renderSubTabs(); }
+  }
+  function niceTicks(lo: number, hi: number, n = 5): number[] {
+    const span = (hi - lo) || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag, step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    const out: number[] = []; const start = Math.ceil(lo / step - 1e-9) * step;
+    for (let v = start; v <= hi + step * 0.5; v += step) out.push(+v.toPrecision(4));
+    return out;
+  }
+  const SUP = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+  const supStr = (p: number) => (p < 0 ? '⁻' : '') + String(Math.abs(p)).split('').map(d => SUP[+d]).join('');
+  // Polarizability viewer over the chosen spectral range (λ or eV). Linear: Re (solid)/Im (dashed)/|·| (faint), normalized.
+  // Log: |α| only on a log₁₀ axis with 10ⁿ ticks.
+  function drawMaterials() {
+    const cc = ctx2d($('sp-chart') as HTMLCanvasElement); if (!cc || !spAlpha) return;
+    const { ctx, w, h } = cc, A = spAlpha, n = A.eV.length;
+    const nz = (arr: Cpx[]) => arr.some(z => z.re !== 0 || z.im !== 0);
+    const eq = (a: Cpx[], b: Cpx[]) => a.every((z, i) => Math.abs(z.re - b[i].re) < 1e-300 && Math.abs(z.im - b[i].im) < 1e-300);
+    const comps: { label: string; arr: Cpx[]; color: string }[] = [];
+    if (nz(A.ax) && !nz(A.ay) && eq(A.ax, A.az)) comps.push({ label: 'α', arr: A.ax, color: '#2563eb' });   // isotropic scalar
+    else { if (nz(A.ax)) comps.push({ label: 'αx', arr: A.ax, color: '#dc2626' }); if (nz(A.ay)) comps.push({ label: 'αy', arr: A.ay, color: '#16a34a' }); if (nz(A.az)) comps.push({ label: 'αz', arr: A.az, color: '#2563eb' }); }
+    if (!comps.length) comps.push({ label: 'α', arr: A.ax, color: '#2563eb' });
+
+    // x-axis range = (shared spectral range) ∩ (α data range), in the active unit (λ nm or E eV)
+    const unit = sp.specUnit;
+    const lo = Math.min(sp.specMin, sp.specMax), hi = Math.max(sp.specMin, sp.specMax);
+    const uEvLo = unit === 'nm' ? eVFromWavelengthNm(hi) : lo, uEvHi = unit === 'nm' ? eVFromWavelengthNm(lo) : hi;
+    const evLo = Math.max(A.eV[0], uEvLo), evHi = Math.min(A.eV[n - 1], uEvHi);
+    const xlabel = unit === 'nm' ? 'Wavelength (nm)' : 'Photon energy (eV)';
+    const xOf = (i: number) => unit === 'nm' ? wavelengthNmFromEV(A.eV[i]) : A.eV[i];
+    if (!(evHi > evLo)) {
+      axes(ctx, w, h, 0, 1, 0, 1, xlabel, 'α', [], []);
+      ctx.fillStyle = cvar('--text-muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('No α data in the selected range', w / 2, h / 2);
+      $('sp-readout').innerHTML = '<span>No α(ω) data within the selected range.</span>';
+      return;
+    }
+    let i0 = 0; while (i0 < n - 1 && A.eV[i0] < evLo) i0++;
+    let i1 = n - 1; while (i1 > 0 && A.eV[i1] > evHi) i1--;
+    if (i1 < i0) i1 = i0;
+    const xmin = Math.min(xOf(i0), xOf(i1)), xmax = Math.max(xOf(i0), xOf(i1));
+    const drawLine = (p: Plot, val: (i: number) => number, color: string, lw: number, dash: number[], alpha: number) => {
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.globalAlpha = alpha; ctx.setLineDash(dash); ctx.beginPath();
+      for (let i = i0; i <= i1; i++) { const X = p.px(xOf(i)), Y = p.py(val(i)); i === i0 ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y); } ctx.stroke();
+      ctx.globalAlpha = 1; ctx.setLineDash([]);
+    };
+
+    if (sp.matLog) {
+      // log₁₀ |α| only — vertical axis at powers of ten (10ⁿ)
+      let mn = Infinity, mx = 1e-300;
+      for (let i = i0; i <= i1; i++) for (const cmp of comps) { const v = cabs(cmp.arr[i]); if (v > 0) { mn = Math.min(mn, v); mx = Math.max(mx, v); } }
+      if (!isFinite(mn) || mn <= 0) mn = mx / 10;
+      const lyMin = Math.floor(Math.log10(mn) - 1e-9), lyMax = Math.max(lyMin + 1, Math.ceil(Math.log10(mx) + 1e-9));
+      const p = axes(ctx, w, h, xmin, xmax, lyMin, lyMax, xlabel, '|α(ω)|', [], niceTicks(xmin, xmax));
+      ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      for (let pw = lyMin; pw <= lyMax; pw++) {
+        const Y = p.py(pw); ctx.strokeStyle = 'rgba(140,140,150,0.18)'; ctx.beginPath(); ctx.moveTo(p.m.l, Y); ctx.lineTo(w - p.m.r, Y); ctx.stroke();
+        ctx.fillStyle = cvar('--text-muted'); ctx.fillText('10' + supStr(pw), p.m.l - 6, Y);
+      }
+      clipPlot(ctx, w, h, p);
+      for (const cmp of comps) drawLine(p, i => Math.log10(Math.max(1e-300, cabs(cmp.arr[i]))), cmp.color, 1.8, [], 1);
+      ctx.restore();
+      ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      const lx = w - p.m.r - 64; let ly = p.m.t + 12;
+      for (const cmp of comps) { ctx.strokeStyle = cmp.color; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 16, ly); ctx.stroke(); ctx.fillStyle = cmp.color; ctx.fillText(`|${cmp.label}|`, lx + 20, ly); ly += 16; }
+    } else {
+      // linear: normalized Re/Im/|α| (units arbitrary → divide by peak |α|)
+      let scale = 1e-300;
+      for (let i = i0; i <= i1; i++) for (const cmp of comps) scale = Math.max(scale, cabs(cmp.arr[i]));
+      const sv = (x: number) => x / scale;
+      let ymin = 0, ymax = 1e-300;
+      for (let i = i0; i <= i1; i++) for (const cmp of comps) { const z = cmp.arr[i]; ymin = Math.min(ymin, sv(z.re), sv(z.im)); ymax = Math.max(ymax, sv(z.re), sv(z.im), sv(cabs(z))); }
+      const pad = (ymax - ymin) * 0.06 || 0.1; ymin -= pad; ymax += pad;
+      const p = axes(ctx, w, h, xmin, xmax, ymin, ymax, xlabel, 'α(ω) / max |α|', niceTicks(ymin, ymax), niceTicks(xmin, xmax));
+      if (ymin < 0 && ymax > 0) { ctx.strokeStyle = 'rgba(140,140,150,0.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.m.l, p.py(0)); ctx.lineTo(w - p.m.r, p.py(0)); ctx.stroke(); }
+      clipPlot(ctx, w, h, p);
+      for (const cmp of comps) {
+        drawLine(p, i => sv(cabs(cmp.arr[i])), cmp.color, 2.6, [], 0.28);
+        drawLine(p, i => sv(cmp.arr[i].re), cmp.color, 1.6, [], 1);
+        drawLine(p, i => sv(cmp.arr[i].im), cmp.color, 1.4, [5, 3], 1);
+      }
+      ctx.restore();
+      ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      const lx = w - p.m.r - 92; let ly = p.m.t + 12;
+      for (const cmp of comps) {
+        const seg = (yy: number, dash: number[], lw: number, alpha: number) => { ctx.strokeStyle = cmp.color; ctx.lineWidth = lw; ctx.globalAlpha = alpha; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(lx, yy); ctx.lineTo(lx + 16, yy); ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]); };
+        ctx.fillStyle = cmp.color;
+        seg(ly, [], 1.6, 1); ctx.fillText(`Re ${cmp.label}`, lx + 20, ly);
+        seg(ly + 14, [5, 3], 1.4, 1); ctx.fillText(`Im ${cmp.label}`, lx + 20, ly + 14);
+        seg(ly + 28, [], 2.6, 0.28); ctx.fillText(`|${cmp.label}|`, lx + 20, ly + 28);
+        ly += 42;
+      }
+    }
+    // readout: peak |α| within the displayed range
+    let pkE = A.eV[i0], pkVal = -1;
+    for (let i = i0; i <= i1; i++) for (const cmp of comps) { const m = cabs(cmp.arr[i]); if (m > pkVal) { pkVal = m; pkE = A.eV[i]; } }
+    const pkLam = wavelengthNmFromEV(pkE);
+    const srcEl = spAlphaSource === 'plasmonic'
+      ? `<a class="sp-readout-link" href="/lab/plasmonic-nanoparticles${A.permalink ? '#' + A.permalink : ''}" title="Open the Plasmonic NPs lab">source: Plasmonic NP ↗</a>`
+      : `<span>source: <b>imported α</b></span>`;
+    $('sp-readout').innerHTML = `<span>peak |α| at <b>${pkE.toFixed(2)} eV</b> (${pkLam < 1000 ? pkLam.toFixed(0) + ' nm' : (pkLam / 1000).toFixed(2) + ' µm'})</span>${srcEl}`;
+  }
+  function renderSP() {
+    updateMaterialsTabVis();
+    updateSpControlVis();
+    updateDipoleDisplay();
+    const lam = wavelengthNmFromEV(sp.E);
+    $('sp-aol').innerHTML = `a/λ = <b>${aOverLambda().toFixed(3)}</b> · λ = ${lam < 1000 ? lam.toFixed(0) + ' nm' : (lam / 1000).toFixed(2) + ' µm'} · β = ${sp.vc.toFixed(3)}`;
+    drawGeometry($('sp-geo-canvas') as HTMLCanvasElement);
+    drawSteer(); $('sp-steer-sub').innerHTML = 'ξ = ' + sp.xi;
+    const title = $('sp-chart-title');
+    ($('sp-stokes-sel') as HTMLElement).hidden = sp.view === 'materials' || sp.sub !== 'polarization';
+    ($('sp-mat-scale') as HTMLElement).hidden = sp.view !== 'materials';
+    const stk = sp.stokesSel as 's1' | 's2' | 's3';
+    const stkLbl = ({ s1: 'S₁/S₀ (p vs s linear)', s2: 'S₂/S₀ (±45° linear)', s3: 'circular degree S₃/S₀' } as Record<string, string>)[sp.stokesSel];
+    if (sp.view === 'materials') {
+      title.textContent = sp.matLog ? 'Polarizability |α(ω)| — log₁₀ scale' : 'Polarizability α(ω) — real, imaginary, magnitude';
+      drawMaterials();
+    } else if (sp.view === 'spectrum') {
+      if (sp.sub === 'spectral') { title.textContent = 'Spectral dependence — total far-field |f|²'; drawSpectralMap('amplitude'); }
+      else { title.textContent = `Polarization — ${stkLbl}`; drawSpectralMap(stk); }
+    } else {
+      if (sp.sub === 'emission') { title.textContent = 'SP-solution diagram — sin θₙ,ₗ vs ℓ'; drawEmission(); }
+      else if (sp.sub === 'intensity') { title.textContent = `Far-field rosette — intensity at φ = ${sp.phi}°`; drawRosette('s0'); }
+      else { title.textContent = `Far-field rosette — ${stkLbl} at φ = ${sp.phi}°`; drawRosette(stk); }
+    }
+  }
+
+  // ── controls wiring ──
+  function bindNum(id: string, key: 'a' | 'b' | 'N' | 'E' | 'xi' | 'phi', isInt = false) {
+    const num = $(id) as HTMLInputElement;
+    const slider = document.getElementById(id + '-slider') as HTMLInputElement;
+    const apply = (raw: string, src: HTMLInputElement) => {
+      let v = parseFloat(raw); if (!Number.isFinite(v)) return; if (isInt) v = Math.round(v);
+      (sp as any)[key] = v;
+      if (key === 'N' || key === 'xi') $('sp-xi-slider').setAttribute('max', String(Math.floor(sp.N / 2)));
+      const other = src === num ? slider : num; if (other) other.value = String(v); renderSP();
+    };
+    num.addEventListener('input', () => apply(num.value, num));
+    if (slider) slider.addEventListener('input', () => apply(slider.value, slider));
+  }
+  // same 6-significant-figure formatting as the Fields module's fmt()
+  const spFmt = (v: number) => { if (!Number.isFinite(v)) return ''; if (v === 0) return '0'; const a = Math.abs(v); if (a < 1e-3 || a >= 1e6) return v.toExponential(3); return parseFloat(v.toPrecision(6)).toString(); };
+  function syncBetaK(beta: number, src?: string) {
+    sp.vc = Math.max(0.001, Math.min(0.999, beta));
+    if (src !== 'vc') ($('sp-vc') as HTMLInputElement).value = spFmt(sp.vc);
+    if (src !== 'kev') ($('sp-kev') as HTMLInputElement).value = spFmt(betaToK(sp.vc));
+  }
+  ($('sp-vc') as HTMLInputElement).addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0 && v < 1) { syncBetaK(v, 'vc'); renderSP(); } });
+  ($('sp-kev') as HTMLInputElement).addEventListener('input', e => { const k = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(k) && k > 0) { syncBetaK(kToBeta(k), 'kev'); renderSP(); } });
+  bindNum('sp-a', 'a'); bindNum('sp-b', 'b'); bindNum('sp-N', 'N', true); bindNum('sp-xi', 'xi', true); bindNum('sp-phi', 'phi');
+
+  // Far-field single wavelength — dual λ ⇄ E entry + slider with a λ/eV switch (sp.E in eV is canonical)
+  const fmtE = (e: number) => String(+e.toFixed(3));
+  function setWavelengthE(E: number, src: 'nm' | 'ev' | 'slider') {
+    sp.E = Math.max(0.01, E);
+    if (src !== 'nm') ($('sp-wl-nm') as HTMLInputElement).value = String(Math.round(wavelengthNmFromEV(sp.E)));
+    if (src !== 'ev') ($('sp-wl-ev') as HTMLInputElement).value = fmtE(sp.E);
+    if (src !== 'slider') ($('sp-wl-slider') as HTMLInputElement).value = sp.wlUnit === 'nm' ? String(Math.round(wavelengthNmFromEV(sp.E))) : fmtE(sp.E);
+    renderSP();
+  }
+  ($('sp-wl-nm') as HTMLInputElement).addEventListener('input', e => { const nm = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(nm) && nm > 0) setWavelengthE(eVFromWavelengthNm(nm), 'nm'); });
+  ($('sp-wl-ev') as HTMLInputElement).addEventListener('input', e => { const ev = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(ev) && ev > 0) setWavelengthE(ev, 'ev'); });
+  ($('sp-wl-slider') as HTMLInputElement).addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) setWavelengthE(sp.wlUnit === 'nm' ? eVFromWavelengthNm(v) : v, 'slider'); });
+  $('sp-wl-unit').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-wu]') as HTMLButtonElement | null; if (!btn) return;
+    const unit = btn.dataset.wu!; if (unit === sp.wlUnit) return;
+    sp.wlUnit = unit;
+    const sl = $('sp-wl-slider') as HTMLInputElement;
+    if (unit === 'nm') { sl.min = '200'; sl.max = '2000'; sl.step = '5'; sl.value = String(Math.round(wavelengthNmFromEV(sp.E))); }
+    else { sl.min = '0.1'; sl.max = '6'; sl.step = '0.01'; sl.value = fmtE(sp.E); }
+    $('sp-wl-unit').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.wu === unit; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+  });
+
+  // ranges (Spectrum) vs single wavelength (Far-field) shown per active view
+  function updateSpControlVis() {
+    const isFF = sp.view === 'farfield', isMat = sp.view === 'materials';
+    ($('sp-wl-field') as HTMLElement).hidden = !isFF;
+    ($('sp-th-field') as HTMLElement).hidden = isFF || isMat;       // angle range: Spectrum only
+    ($('sp-spec-field') as HTMLElement).hidden = isFF;             // wavelength/energy range + λ/eV toggle: Spectrum and Materials
+    ($('sp-aol') as HTMLElement).hidden = !isFF;   // a/λ · λ · β line only meaningful at a single wavelength (Far-field)
+  }
+
+  // spectral-map axis ranges (emission angle θ, wavelength/energy) + unit toggle
+  const bindRange = (id: string, key: 'thMin' | 'thMax' | 'specMin' | 'specMax') =>
+    ($(id) as HTMLInputElement).addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v)) { (sp as any)[key] = v; renderSP(); } });
+  bindRange('sp-th-min', 'thMin'); bindRange('sp-th-max', 'thMax'); bindRange('sp-spec-min', 'specMin'); bindRange('sp-spec-max', 'specMax');
+  $('sp-spec-unit').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-su]') as HTMLButtonElement | null; if (!btn) return;
+    const unit = btn.dataset.su!; if (unit === sp.specUnit) return;
+    const lo = Math.min(sp.specMin, sp.specMax), hi = Math.max(sp.specMin, sp.specMax);
+    if (unit === 'eV') { sp.specMin = eVFromWavelengthNm(hi); sp.specMax = eVFromWavelengthNm(lo); }   // smaller λ → larger E
+    else { sp.specMin = wavelengthNmFromEV(hi); sp.specMax = wavelengthNmFromEV(lo); }
+    sp.specUnit = unit;
+    const round = (v: number) => unit === 'eV' ? +v.toFixed(3) : Math.round(v);
+    const mn = $('sp-spec-min') as HTMLInputElement, mxEl = $('sp-spec-max') as HTMLInputElement;
+    mn.value = String(round(sp.specMin)); mxEl.value = String(round(sp.specMax));
+    mn.step = mxEl.step = unit === 'eV' ? '0.05' : '10';
+    $('sp-spec-label').textContent = unit === 'eV' ? 'Energy (eV)' : 'Wavelength (nm)';
+    $('sp-spec-unit').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.su === unit; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+    renderSP();
+  });
+  const DIP_IDS = ['sp-px-re', 'sp-px-im', 'sp-py-re', 'sp-py-im', 'sp-pz-re', 'sp-pz-im'];
+  const updateDipoleMag = () => { $('sp-dipole-mag').textContent = '|p| = ' + dipoleMag().toFixed(3); };
+  function setDipoleFields(d: Vec3c) {
+    const f = (x: number) => String(+x.toFixed(4));
+    ($('sp-px-re') as HTMLInputElement).value = f(d[0].re); ($('sp-px-im') as HTMLInputElement).value = f(d[0].im);
+    ($('sp-py-re') as HTMLInputElement).value = f(d[1].re); ($('sp-py-im') as HTMLInputElement).value = f(d[1].im);
+    ($('sp-pz-re') as HTMLInputElement).value = f(d[2].re); ($('sp-pz-im') as HTMLInputElement).value = f(d[2].im);
+    $('sp-dipole-mag').textContent = '|p| = ' + Math.sqrt(cabs(d[0]) ** 2 + cabs(d[1]) ** 2 + cabs(d[2]) ** 2).toFixed(3);
+  }
+  const DIP_CAP: Record<string, string> = {
+    electron: 'Induced dipole direction — electron-driven (λ-dependent)',
+    x: 'Induced dipole direction — x (∥ v)', z: 'Induced dipole direction — z (⊥)',
+    custom: 'Custom dipole direction (editable)',
+    input: 'Induced dipole direction — α(ω)·E_ext at λ (unit)',
+    plasmonic: 'Induced dipole direction — plasmonic α(ω)·E_ext at λ (unit)',
+  };
+  const unitVec = (v: Vec3c): Vec3c => { const n = Math.sqrt(cabs(v[0]) ** 2 + cabs(v[1]) ** 2 + cabs(v[2]) ** 2); return n > 1e-300 ? (v.map(z => ({ re: z.re / n, im: z.im / n })) as Vec3c) : [c(0, 0), c(0, 0), c(0, 0)]; };
+  // Always reflect the dipole in use: editable for Custom, read-only computed value otherwise.
+  function updateDipoleDisplay() {
+    const editable = sp.orient === 'custom';
+    DIP_IDS.forEach(id => { ($(id) as HTMLInputElement).readOnly = !editable; });
+    ($('sp-normalize') as HTMLElement).style.display = editable ? '' : 'none';
+    ($('sp-dipole') as HTMLElement).classList.toggle('sp-dipole--readonly', !editable);
+    $('sp-dipole-cap').textContent = DIP_CAP[sp.orient] || 'Induced dipole direction';
+    if (editable) { updateDipoleMag(); return; }
+    let d: Vec3c;
+    if (sp.orient === 'x') d = [c(1, 0), c(0, 0), c(0, 0)];
+    else if (sp.orient === 'z') d = [c(0, 0), c(0, 0), c(1, 0)];
+    else if (isAlphaSource()) d = spAlpha ? unitVec(inputDir(omegaFromEV(sp.E))) : [c(0, 0), c(0, 0), c(0, 0)];
+    else { const g = 1 / Math.sqrt(1 - sp.vc * sp.vc); d = dipoleOrientation(omegaFromEV(sp.E), sp.b, sp.vc * C_NM_S, g, true); }
+    setDipoleFields(d);
+  }
+  let prevOrient = 'electron';   // restore if an α import is cancelled
+  function updateAlphaChipVis() {
+    const show = isAlphaSource();
+    ($('sp-alpha-chip') as HTMLElement).hidden = !show;
+    if (show) $('sp-alpha-chip-label').textContent = (spAlpha && spAlphaSource === sp.orient) ? spAlpha.label : 'No α loaded — click Edit';
+  }
+  ($('sp-orient') as HTMLSelectElement).addEventListener('change', e => {
+    const val = (e.target as HTMLSelectElement).value;
+    if (val === 'input' || val === 'plasmonic') {
+      prevOrient = sp.orient;
+      if (spAlpha && spAlphaSource === val) { sp.orient = val; updateAlphaChipVis(); updateDipoleDisplay(); renderSP(); }
+      else if (val === 'plasmonic') openPlasDialog();   // Accept commits sp.orient = 'plasmonic'
+      else openAlphaDialog('', '');                      // Accept commits sp.orient = 'input'
+      return;
+    }
+    sp.orient = val;
+    updateAlphaChipVis();
+    updateDipoleDisplay();
+    renderSP();
+  });
+  DIP_IDS.forEach(id => ($(id) as HTMLInputElement).addEventListener('input', () => { updateDipoleMag(); renderSP(); }));
+  $('sp-normalize').addEventListener('click', () => {
+    const m = dipoleMag(); if (m < 1e-12) return;
+    DIP_IDS.forEach(id => { const el = $(id) as HTMLInputElement; el.value = String(+((parseFloat(el.value || '0') || 0) / m).toFixed(4)); });
+    updateDipoleMag(); renderSP();
+  });
+
+  // ── α(ω) import dialog: map file columns → spectral axis + Re/Im of αx,αy,αz ──
+  const alphaDlg = $('sp-alpha-dialog') as HTMLDialogElement;
+  const ROLE_DEFS = [
+    { key: 'axis', label: 'Spectral axis' }, { key: 'axre', label: 'Re αx' }, { key: 'axim', label: 'Im αx' },
+    { key: 'ayre', label: 'Re αy' }, { key: 'ayim', label: 'Im αy' }, { key: 'azre', label: 'Re αz' }, { key: 'azim', label: 'Im αz' },
+  ];
+  let pendingRows: number[][] = [], pendingName = '';
+  const fmtCompact = (x: number) => { if (!Number.isFinite(x)) return '–'; const a = Math.abs(x); return (a !== 0 && (a < 1e-3 || a >= 1e5)) ? x.toExponential(2) : String(+x.toFixed(4)); };
+  const ncols = () => pendingRows.reduce((m, r) => Math.max(m, r.length), 0);
+  function parseAlphaText(text: string): number[][] {
+    const out: number[][] = [];
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim(); if (!line || /^[#%;/]/.test(line)) continue;
+      const parts = line.split(/[\s,;\t]+/).map(Number);
+      if (parts.length >= 2 && parts.every(n => Number.isFinite(n))) out.push(parts);
+    }
+    return out;
+  }
+  const axisToEv = (x: number, unit: string): number =>
+    unit === 'thz' ? x * 1e12 * 2 * Math.PI * HBAR_EVS : unit === 'nm' ? eVFromWavelengthNm(x) : unit === 'um' ? eVFromWavelengthNm(x * 1000) : x;
+  function defaultRoles(n: number): Record<string, number> {
+    const r: Record<string, number> = { axis: 0, axre: -1, axim: -1, ayre: -1, ayim: -1, azre: -1, azim: -1 };
+    if (n === 5) { r.axre = 1; r.axim = 2; r.azre = 3; r.azim = 4; }
+    else if (n >= 7) { r.axre = 1; r.axim = 2; r.ayre = 3; r.ayim = 4; r.azre = 5; r.azim = 6; }
+    else { if (n > 1) r.axre = 1; if (n > 2) r.axim = 2; if (n > 3) r.azre = 3; if (n > 4) r.azim = 4; }
+    return r;
+  }
+  function renderRoleSelects() {
+    const n = ncols(), defs = defaultRoles(n);
+    $('sp-alpha-roles').innerHTML = ROLE_DEFS.map(rd => {
+      const sel = defs[rd.key];
+      const opts = ['<option value="-1">—</option>'].concat(
+        Array.from({ length: n }, (_, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>col ${i + 1}</option>`)).join('');
+      return `<label data-role="${rd.key}"><span>${rd.label}</span><select>${opts}</select></label>`;
+    }).join('');
+    $('sp-alpha-roles').querySelectorAll('select').forEach(s => s.addEventListener('change', refreshAlphaPreview));
+  }
+  function currentRoles(): Record<string, number> {
+    const m: Record<string, number> = {};
+    $('sp-alpha-roles').querySelectorAll('label').forEach(l => { m[(l as HTMLElement).dataset.role!] = parseInt((l.querySelector('select') as HTMLSelectElement).value); });
+    return m;
+  }
+  function buildAlpha(): AlphaData | { error: string } {
+    if (!pendingRows.length) return { error: 'No numeric rows — load a file or paste data.' };
+    const roles = currentRoles(), unit = ($('sp-alpha-unit') as HTMLSelectElement).value;
+    if (roles.axis < 0) return { error: 'Map the spectral-axis column.' };
+    if (['axre', 'axim', 'ayre', 'ayim', 'azre', 'azim'].every(k => roles[k] < 0)) return { error: 'Map at least one α component.' };
+    const get = (row: number[], col: number) => (col >= 0 && col < row.length && Number.isFinite(row[col])) ? row[col] : 0;
+    const recs = pendingRows
+      .filter(r => r.length > roles.axis && Number.isFinite(r[roles.axis]))
+      .map(r => ({ eV: axisToEv(r[roles.axis], unit), ax: c(get(r, roles.axre), get(r, roles.axim)), ay: c(get(r, roles.ayre), get(r, roles.ayim)), az: c(get(r, roles.azre), get(r, roles.azim)) }))
+      .filter(p => Number.isFinite(p.eV) && p.eV > 0)
+      .sort((a, b) => a.eV - b.eV);
+    if (recs.length < 2) return { error: 'Need ≥ 2 rows with a valid positive energy.' };
+    return { eV: recs.map(p => p.eV), ax: recs.map(p => p.ax), ay: recs.map(p => p.ay), az: recs.map(p => p.az), label: `${pendingName || 'pasted'} · ${recs.length} pts` };
+  }
+  function drawAlphaPreview(a: AlphaData, canvasId = 'sp-alpha-preview') {
+    const cc = ctx2d($(canvasId) as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc, m = { l: 40, r: 8, t: 8, b: 22 };
+    const mags = [a.ax, a.az].map(arr => arr.map(cabs)), COLS = ['#dc2626', '#2563eb'], LBL = ['|αx|', '|αz|'];
+    const ymax = Math.max(1e-300, ...mags.flat()), xmin = a.eV[0], xmax = a.eV[a.eV.length - 1];
+    const px = (x: number) => m.l + (x - xmin) / (xmax - xmin || 1) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - y / ymax * (h - m.t - m.b);
+    ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.fillStyle = cvar('--text-muted'); ctx.font = '9px ' + (cvar('--font') || 'sans-serif');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('E (eV)', (m.l + w - m.r) / 2, h - 11);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(ymax.toExponential(1), m.l - 3, m.t + 5);
+    let lx = m.l + 6;
+    mags.forEach((mg, k) => {
+      if (mg.every(v => v === 0)) return;
+      ctx.strokeStyle = COLS[k]; ctx.lineWidth = 1.5; ctx.beginPath();
+      a.eV.forEach((e, i) => { const X = px(e), Y = py(mg[i]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+      ctx.fillStyle = COLS[k]; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(LBL[k], lx, m.t + 2); lx += 32;
+    });
+  }
+  function refreshAlphaPreview() {
+    const n = ncols(), accept = $('sp-alpha-accept') as HTMLButtonElement, status = $('sp-alpha-status');
+    $('sp-alpha-thead').innerHTML = '<tr>' + Array.from({ length: n }, (_, i) => `<th>col ${i + 1}</th>`).join('') + '</tr>';
+    $('sp-alpha-rows').innerHTML = pendingRows.slice(0, 8).map(r => '<tr>' + Array.from({ length: n }, (_, i) => `<td>${r[i] !== undefined ? fmtCompact(r[i]) : ''}</td>`).join('') + '</tr>').join('');
+    const built = buildAlpha();
+    if ('error' in built) { status.textContent = built.error; status.classList.add('error'); accept.disabled = true; const cc = ctx2d($('sp-alpha-preview') as HTMLCanvasElement); return; }
+    const lamHi = wavelengthNmFromEV(built.eV[0]), lamLo = wavelengthNmFromEV(built.eV[built.eV.length - 1]);
+    status.textContent = `${built.eV.length} points · ${built.eV[0].toFixed(3)}–${built.eV[built.eV.length - 1].toFixed(3)} eV (${lamLo.toFixed(0)}–${lamHi.toFixed(0)} nm)`;
+    status.classList.remove('error'); accept.disabled = false; drawAlphaPreview(built);
+  }
+  function openAlphaDialog(text: string, name: string) {
+    if (text) { pendingRows = parseAlphaText(text); pendingName = name; renderRoleSelects(); }
+    else if (!pendingRows.length) { renderRoleSelects(); }
+    $('sp-alpha-file').textContent = pendingRows.length ? `${pendingName || 'pasted data'} — ${pendingRows.length} numeric rows` : 'Load a file or paste the data below.';
+    if (typeof alphaDlg.showModal === 'function') { if (!alphaDlg.open) alphaDlg.showModal(); } else alphaDlg.setAttribute('open', '');
+    requestAnimationFrame(refreshAlphaPreview);
+  }
+  function finishAlpha(commit: boolean) {
+    if (commit) {
+      const built = buildAlpha();
+      if ('error' in built) { $('sp-alpha-status').textContent = built.error; $('sp-alpha-status').classList.add('error'); return; }
+      spAlpha = built; spAlphaSource = 'input'; sp.orient = 'input'; ($('sp-orient') as HTMLSelectElement).value = 'input';
+    } else if (!(spAlpha && spAlphaSource === 'input')) { sp.orient = prevOrient; ($('sp-orient') as HTMLSelectElement).value = prevOrient; }
+    alphaDlg.close(); updateAlphaChipVis(); updateDipoleDisplay(); renderSP();
+  }
+  ($('sp-alpha-file-input') as HTMLInputElement).addEventListener('change', e => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
+    f.text().then(t => openAlphaDialog(t, f.name));
+  });
+  $('sp-alpha-parse').addEventListener('click', () => openAlphaDialog(($('sp-alpha-paste') as HTMLTextAreaElement).value, 'pasted'));
+  $('sp-alpha-unit').addEventListener('change', refreshAlphaPreview);
+  $('sp-alpha-accept').addEventListener('click', () => finishAlpha(true));
+  $('sp-alpha-cancel').addEventListener('click', () => finishAlpha(false));
+  $('sp-alpha-x').addEventListener('click', () => finishAlpha(false));
+  alphaDlg.addEventListener('cancel', ev => { ev.preventDefault(); finishAlpha(false); });
+  alphaDlg.addEventListener('click', ev => { if (ev.target === alphaDlg) finishAlpha(false); });
+  $('sp-alpha-edit').addEventListener('click', () => { if (sp.orient === 'plasmonic') openPlasDialog(); else openAlphaDialog('', pendingName); });
+
+  // ── Plasmonic NPs: embed the REAL nanoparticle lab; on "Use α" read its controls and recompute α(ω) via the shared lib ──
+  const plasDlg = $('sp-plas-dialog') as HTMLDialogElement;
+  let plasInited = false, plasFrameSet = false;
+  function initPlas() {
+    if (plasInited) return; plasInited = true;
+    $('sp-plas-accept').addEventListener('click', () => finishPlas(true));
+    $('sp-plas-cancel').addEventListener('click', () => finishPlas(false));
+    plasDlg.addEventListener('cancel', ev => { ev.preventDefault(); finishPlas(false); });
+    plasDlg.addEventListener('click', ev => { if (ev.target === plasDlg) finishPlas(false); });
+  }
+  function plasDoc(): Document | null {
+    const f = $('sp-plas-iframe') as HTMLIFrameElement;
+    try { return f.contentDocument || (f.contentWindow ? f.contentWindow.document : null); } catch { return null; }
+  }
+  // Read the lab's 2D (nonlinear-plasmonics) controls and compute the linear α(1,1) spectrum via the nl-graphene lib
+  function computePlas2D(doc: Document): AlphaData | { error: string } {
+    const gv = (id: string) => { const el = doc.getElementById(id) as HTMLInputElement | HTMLSelectElement | null; return el ? el.value : ''; };
+    const gnum = (id: string, d: number) => { const v = parseFloat(gv(id)); return Number.isFinite(v) ? v : d; };
+    const activeData = (sel: string, attr: string, d: string) => { const b = doc.querySelector(sel + ' .seg-btn.active') as HTMLElement | null; return b ? (b.dataset[attr] || d) : d; };
+    const geo = (gv('nl-geo') || 'triangle') as any;
+    const material = gv('nl-material') || 'graphene';
+    const EF = gnum('nl-ef', 1.0), gamma = gnum('nl-gamma', 0.05), D = gnum('nl-d', 20), thickness = gnum('nl-thickness', 2);
+    const modes = Math.max(1, parseInt(activeData('#nl-modes', 'modes', '1')) || 1);
+    const gmodel = activeData('#nl-gmodel', 'gmodel', 'bte'), temperature = gnum('nl-temp', 300), epsBar = 1.0;
+    let sigma2d: (E: number) => { re: number; im: number };
+    if (material === 'graphene') sigma2d = (E) => gmodel === 'rpa' ? grapheneSigma2dRPA(E, EF, gamma, temperature) : grapheneSigma2d(E, EF, gamma);
+    else if (material === 'drude') { const ei = gnum('nl-drude-einf', 9.5), wp = gnum('nl-drude-wp', 9.06), dg = gnum('nl-drude-g', 0.071); sigma2d = (E) => { const e = drudeEpsilon(wavelengthNmFromEV(E), ei, wp, dg); return metalSigma2d(E, e.re, e.im, thickness); }; }
+    else if (['au', 'ag', 'cu', 'al'].includes(material)) sigma2d = (E) => { const e = epsilonFromMaterial(material, wavelengthNmFromEV(E)); return metalSigma2d(E, e.re, e.im, thickness); };
+    else return { error: '2D file-based materials (σ/ε upload) can’t be imported — pick graphene, a metal, or Drude in the lab.' };
+    const mat = { sigma2d, nlEF: EF, nlGamma: gamma, doping: 1 } as any;
+    const Np = 400, Elo = 0.02, Ehi = 4.0, Eev = new Float64Array(Np);
+    for (let i = 0; i < Np; i++) Eev[i] = Elo + (Ehi - Elo) * i / (Np - 1);
+    let spec: { re: Float64Array; im: Float64Array };
+    try { spec = geometrySpectrumMulti(geo, '11', D, epsBar, mat, Eev, modes); }
+    catch (err) { return { error: '2D compute failed: ' + (err as Error).message }; }
+    const eV: number[] = [], ax: Cpx[] = [];
+    for (let i = 0; i < Np; i++) if (Number.isFinite(spec.re[i]) && Number.isFinite(spec.im[i])) { eV.push(Eev[i]); ax.push(c(spec.re[i], spec.im[i])); }
+    if (eV.length < 2) return { error: 'No valid 2D α spectrum for this configuration.' };
+    return { eV, ax, ay: ax.map(() => c(0, 0)), az: ax.map(z => c(z.re, z.im)), label: `${material.toUpperCase()} ${geo} (2D), D=${D} nm · ${eV.length} pts` };
+  }
+  // Read the lab's linear-plasmonic (3D) controls and recompute the matching α(ω) (lib only — the lab itself is never modified)
+  function computePlas(): AlphaData | { error: string } {
+    const doc = plasDoc();
+    if (!doc) return { error: 'Lab still loading — wait a moment, then Use α.' };
+    const ncb = doc.getElementById('nl-controls-box') as HTMLElement | null;
+    if (ncb && !ncb.hidden) return computePlas2D(doc);       // lab is in 2D (nonlinear) mode
+    if (!doc.getElementById('shape-select')) return { error: 'Lab still loading — wait a moment, then Use α.' };
+    const gv = (id: string) => { const el = doc.getElementById(id) as HTMLInputElement | HTMLSelectElement | null; return el ? el.value : ''; };
+    const shape = gv('shape-select') as any;
+    const materialId = gv('material-select') || 'au';
+    const lengthNm = parseFloat(gv('length-num')) || 50;
+    const aspectRatio = parseFloat(gv('aspect-num')) || 4;
+    const hostIndex = parseFloat(gv('host-num')) || 1.33;
+    const lmin = parseFloat(gv('lambda-min')) || 550;
+    const lmax = parseFloat(gv('lambda-max')) || 1250;
+    if (!(lmax > lmin)) return { error: 'Set λ max > λ min in the lab.' };
+    // permalink hash to reopen the lab with this exact structure (matches the lab's serializeState keys)
+    const hp = new URLSearchParams();
+    hp.set('mat', String(materialId));
+    let epsilonAt: ((lam: number) => { re: number; im: number }) | undefined;
+    if (materialId === 'drude') {
+      const epsb = parseFloat(gv('drude-epsb')) || 9.5, wp = parseFloat(gv('drude-wp')) || 9.06, gamma = parseFloat(gv('drude-gamma')) || 0.071;
+      epsilonAt = (lam: number) => drudeEpsilon(lam, epsb, wp, gamma);
+      hp.set('epsb', String(epsb)); hp.set('wp', String(wp)); hp.set('gamma', String(gamma));
+    } else if (materialId === 'file' || materialId === 'rii') {
+      return { error: 'Set the lab Material to a built-in metal (Au/Ag/Cu/Al) or Drude to import α.' };
+    }
+    hp.set('shape', String(shape)); hp.set('L', String(lengthNm)); hp.set('R', String(aspectRatio));
+    hp.set('nh', String(hostIndex)); hp.set('min', String(lmin)); hp.set('max', String(lmax)); hp.set('view', 'material');
+    try {
+      const spec = computePlasmonSpectrum({ shape, materialId, lengthNm, aspectRatio, hostIndex, lambdaMinNm: lmin, lambdaMaxNm: lmax, points: 360, epsilonAt });
+      const recs = Array.from(spec.wavelengthNm, (lam, i) => ({ eV: eVFromWavelengthNm(lam), re: spec.alpha[i].re, im: spec.alpha[i].im }))
+        .filter(r => Number.isFinite(r.eV) && r.eV > 0 && Number.isFinite(r.re) && Number.isFinite(r.im))
+        .sort((x, y) => x.eV - y.eV);
+      if (recs.length < 2) return { error: 'No valid spectrum for this configuration.' };
+      const shapeLbl = SHAPE_OPTIONS.find(o => o.id === shape)?.label || shape;
+      return { eV: recs.map(r => r.eV), ax: recs.map(r => c(r.re, r.im)), ay: recs.map(() => c(0, 0)), az: recs.map(r => c(r.re, r.im)),
+        label: `${String(materialId).toUpperCase()} ${shapeLbl}, L=${lengthNm} nm · ${recs.length} pts`, permalink: hp.toString() };
+    } catch (err) { return { error: 'Compute failed: ' + (err as Error).message }; }
+  }
+  function openPlasDialog() {
+    initPlas();
+    const f = $('sp-plas-iframe') as HTMLIFrameElement;
+    if (!plasFrameSet) { f.src = '/lab/plasmonic-nanoparticles'; plasFrameSet = true; }
+    const s = $('sp-plas-status'); s.classList.remove('error'); s.textContent = 'Configure the lab, then “Use α”.';
+    if (typeof plasDlg.showModal === 'function') { if (!plasDlg.open) plasDlg.showModal(); } else plasDlg.setAttribute('open', '');
+  }
+  function finishPlas(commit: boolean) {
+    if (commit) {
+      const built = computePlas();
+      if ('error' in built) { const s = $('sp-plas-status'); s.textContent = built.error; s.classList.add('error'); return; }
+      spAlpha = built; spAlphaSource = 'plasmonic'; sp.orient = 'plasmonic'; ($('sp-orient') as HTMLSelectElement).value = 'plasmonic';
+    } else if (!(spAlpha && spAlphaSource === 'plasmonic')) { sp.orient = prevOrient; ($('sp-orient') as HTMLSelectElement).value = prevOrient; }
+    plasDlg.close(); updateAlphaChipVis(); updateDipoleDisplay(); renderSP();
+  }
+
+  $('sp-view-tabs').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('.sp-view-tab') as HTMLButtonElement | null; if (!btn) return;
+    sp.view = btn.dataset.view!; sp.sub = SUBTABS[sp.view][0].id;
+    $('sp-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === sp.view; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
+    renderSubTabs(); renderSP();
+  });
+  $('sp-stokes-sel').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-stk]') as HTMLButtonElement | null; if (!btn) return;
+    sp.stokesSel = btn.dataset.stk!;
+    $('sp-stokes-sel').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.stk === sp.stokesSel; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+    renderSP();
+  });
+  $('sp-mat-scale').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-ms]') as HTMLButtonElement | null; if (!btn) return;
+    sp.matLog = btn.dataset.ms === 'log';
+    $('sp-mat-scale').querySelectorAll('button').forEach(b => { const a = ((b as HTMLElement).dataset.ms === 'log') === sp.matLog; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+    renderSP();
+  });
+
+  // geometry dialog
+  const dlg = $('sp-geo-dialog') as HTMLDialogElement;
+  const openDlg = () => { dlg.showModal(); requestAnimationFrame(() => drawGeometry($('sp-geo-canvas-big') as HTMLCanvasElement)); };
+  $('sp-geo-open').addEventListener('click', openDlg);
+  $('sp-geo-open').addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') { e.preventDefault(); openDlg(); } });
+  $('sp-geo-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+  // ── PNG / CSV export ──
+  function exportPng(src: HTMLCanvasElement, name: string) {
+    if (!src.width) return;
+    const off = document.createElement('canvas'); off.width = src.width; off.height = src.height;
+    const o = off.getContext('2d')!; o.fillStyle = cvar('--bg') || '#ffffff'; o.fillRect(0, 0, off.width, off.height); o.drawImage(src, 0, 0);
+    off.toBlob(b => { if (b) downloadBlob(b, name); }, 'image/png');
+  }
+  $('sp-geo-png').addEventListener('click', e => { e.stopPropagation(); exportPng($('sp-geo-canvas') as HTMLCanvasElement, 'sp_geometry.png'); });
+  $('sp-geo-png-big').addEventListener('click', () => exportPng($('sp-geo-canvas-big') as HTMLCanvasElement, 'sp_geometry.png'));
+
+  function spChartName(): string {
+    if (sp.view === 'materials') return 'sp_polarizability';
+    if (sp.view === 'spectrum') return `sp_spectrum_${sp.sub === 'spectral' ? 'intensity' : sp.stokesSel}`;
+    return `sp_farfield_${sp.sub}`;
+  }
+  function spResultCSV(): { name: string; csv: string } {
+    const beta = sp.vc, N = sp.N, phi = sp.phi * PI / 180, mag = dipoleDistribution(N, sp.xi, 1.0);
+    const head = `# Smith-Purcell — N=${N}, a=${sp.a} nm, b=${sp.b} nm, beta=${beta.toFixed(4)}, xi=${sp.xi}, orient=${sp.orient}`;
+    const p6 = (v: number) => Number.isFinite(v) ? v.toPrecision(6) : 'nan';
+    if (sp.view === 'materials' && spAlpha) {
+      const A = spAlpha, nz = (arr: Cpx[]) => arr.some(z => z.re !== 0 || z.im !== 0);
+      const comps = ([['ax', 'ax'], ['ay', 'ay'], ['az', 'az']] as [keyof typeof A, string][]).filter(([k]) => nz(A[k] as Cpx[]));
+      const hdr = ['E_eV', 'lambda_nm', ...comps.flatMap(([, l]) => [`Re_${l}`, `Im_${l}`, `abs_${l}`])].join(',');
+      const rows = A.eV.map((e, i) => [p6(e), p6(wavelengthNmFromEV(e)), ...comps.flatMap(([k]) => { const z = (A[k] as Cpx[])[i]; return [p6(z.re), p6(z.im), p6(cabs(z))]; })].join(','));
+      return { name: 'sp_polarizability.csv', csv: [head, hdr, ...rows].join('\n') + '\n' };
+    }
+    if (sp.view === 'spectrum') {
+      const which = sp.sub === 'spectral' ? 'amplitude' : sp.stokesSel, NX = 121, NU = 61;
+      const yMin = Math.min(sp.specMin, sp.specMax), yMax = Math.max(sp.specMin, sp.specMax), isEv = sp.specUnit === 'eV';
+      const lines = [head, `theta_deg,${isEv ? 'E_eV' : 'lambda_nm'},${which === 'amplitude' ? 'intensity_S0' : which.toUpperCase() + '_over_S0'}`];
+      for (let iu = 0; iu < NU; iu++) {
+        const yv = yMin + (yMax - yMin) * iu / (NU - 1), E = isEv ? yv : eVFromWavelengthNm(yv), aol = sp.a / wavelengthNmFromEV(E), dip = dipolesAtOmega(omegaFromEV(E), mag);
+        for (let ix = 0; ix < NX; ix++) {
+          const thd = sp.thMin + (sp.thMax - sp.thMin) * ix / (NX - 1), t = thd * PI / 180;
+          const { fTheta, fPhi } = sphericalComponents(t, phi, farFieldVector(t, phi, dip, aol, beta)); const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+          const v = which === 'amplitude' ? s0 : (s0 > 1e-12 ? (which === 's1' ? s1 : which === 's2' ? s2 : s3) / s0 : NaN);
+          lines.push(`${thd.toFixed(2)},${p6(yv)},${p6(v)}`);
+        }
+      }
+      return { name: `sp_spectrum_${which}.csv`, csv: lines.join('\n') + '\n' };
+    }
+    if (sp.sub === 'emission') {
+      const aol = aOverLambda(), lines = [head, `# SP-solution diagram at lambda=${wavelengthNmFromEV(sp.E).toFixed(1)} nm`, 'n,ell,sin_theta,theta_deg'];
+      for (let n = -2; n <= 2; n++) for (let ell = 0; ell < N; ell++) { const s = gspCondition(n, ell, N, beta, aol); if (Math.abs(s) <= 1) lines.push(`${n},${ell},${p6(s)},${(Math.asin(s) * 180 / PI).toFixed(3)}`); }
+      return { name: 'sp_emission_channels.csv', csv: lines.join('\n') + '\n' };
+    }
+    const aol = aOverLambda(), vec = buildDipoles(), which = sp.sub === 'intensity' ? 's0' : sp.stokesSel, NT = 721;
+    const lines = [head, `# Far-field at lambda=${wavelengthNmFromEV(sp.E).toFixed(1)} nm, phi=${sp.phi} deg`, `theta_deg,${which === 's0' ? 'intensity_S0' : which.toUpperCase() + '_over_S0'}`];
+    for (let i = 0; i < NT; i++) {
+      const thd = -180 + 360 * i / (NT - 1), t = thd * PI / 180;
+      const { fTheta, fPhi } = sphericalComponents(t, phi, farFieldVector(t, phi, vec, aol, beta)); const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+      const v = which === 's0' ? s0 : (s0 > 1e-12 ? (which === 's1' ? s1 : which === 's2' ? s2 : s3) / s0 : NaN);
+      lines.push(`${thd.toFixed(2)},${p6(v)}`);
+    }
+    return { name: `sp_farfield_${which}.csv`, csv: lines.join('\n') + '\n' };
+  }
+  $('sp-export-png').addEventListener('click', () => exportPng($('sp-chart') as HTMLCanvasElement, spChartName() + '.png'));
+  $('sp-export-csv').addEventListener('click', () => { const { name, csv } = spResultCSV(); downloadBlob(new Blob([csv], { type: 'text/csv' }), name); });
+
+  // ── module switching (Fields / Smith–Purcell / PINEM) ──
+  let spReady = false;
+  function setModule(id: string) {
+    if (id === 'pinem') return;   // disabled placeholder
+    const isSP = id === 'smith-purcell';
+    if (isSP) {
+      // adopt the electron velocity currently set in the Fields module (kept in sync there)
+      const fb = parseFloat(($('vc') as HTMLInputElement).value || ($('vc') as HTMLInputElement).placeholder || '');
+      if (fb > 0 && fb < 1) sp.vc = fb;
+    } else if (id === 'fields') {
+      (window as any).__electronFieldsSetBeta?.(sp.vc);   // push the SP velocity back into Fields
+    }
+    ($('panel-fields') as HTMLElement).hidden = isSP;
+    ($('panel-sp') as HTMLElement).hidden = !isSP;
+    document.querySelectorAll('.module-card').forEach(b => { const a = b.id === 'module-' + id; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
+    if (isSP) { if (!spReady) { spReady = true; renderSubTabs(); } syncBetaK(sp.vc); renderSP(); }
+  }
+  $('module-fields').addEventListener('click', () => setModule('fields'));
+  $('module-smith-purcell').addEventListener('click', () => setModule('smith-purcell'));
+
+  // re-render the SP charts on resize when visible
+  let rT: number; window.addEventListener('resize', () => { clearTimeout(rT); rT = window.setTimeout(() => { if (!($('panel-sp') as HTMLElement).hidden) renderSP(); }, 120); });
 </script>
