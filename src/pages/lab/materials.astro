@@ -309,6 +309,43 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       <!-- References — full page width, like the Mie-scattering lab -->
       <div class="references card" id="mat-refs"></div>
     </div>
+
+    <!-- Confirm-file-import dialog (like the Mie-scattering lab): map the column interpretation before applying -->
+    <dialog class="mat-import-dialog" id="mat-import-dialog" aria-labelledby="mat-import-title">
+      <div class="mat-import-dialog__panel">
+        <div class="mat-import-dialog__header">
+          <div>
+            <h3 id="mat-import-title">Confirm file import</h3>
+            <p id="mat-import-file">No file selected</p>
+          </div>
+          <button type="button" class="icon-btn" id="mat-import-close" aria-label="Cancel import">&times;</button>
+        </div>
+        <div class="mat-import-dialog__grid">
+          <label><span>First column (x)</span>
+            <select id="mat-import-axis" class="field-input">
+              <option value="nm">Wavelength (nm)</option>
+              <option value="um">Wavelength (&micro;m)</option>
+              <option value="eV">Photon energy (eV)</option>
+            </select>
+          </label>
+          <label><span>Columns 2 &amp; 3</span>
+            <select id="mat-import-values" class="field-input">
+              <option value="nk">n, k</option>
+              <option value="eps">Re &epsilon;, Im &epsilon;</option>
+            </select>
+          </label>
+        </div>
+        <div class="mat-import-dialog__preview"><canvas id="mat-import-preview" aria-label="Import preview"></canvas></div>
+        <div class="mat-import-dialog__table-wrap">
+          <table class="mat-import-dialog__table"><thead><tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr></thead><tbody id="mat-import-rows"></tbody></table>
+        </div>
+        <p class="mat-import-dialog__status" id="mat-import-status"></p>
+        <div class="mat-import-dialog__actions">
+          <button type="button" class="share-btn" id="mat-import-cancel">Cancel</button>
+          <button type="button" class="share-btn share-btn--primary" id="mat-import-accept">Use material</button>
+        </div>
+      </div>
+    </dialog>
   </section>
 </Layout>
 
@@ -523,6 +560,28 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     transition: border-color 0.15s, color 0.15s;
   }
   .share-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .share-btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .share-btn--primary:hover { color: #fff; opacity: 0.92; }
+  .share-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+  /* confirm-file-import dialog */
+  .mat-import-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 94vw; width: 540px; color: var(--text); }
+  .mat-import-dialog::backdrop { background: rgba(15, 18, 30, 0.5); }
+  .mat-import-dialog__panel { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.7rem; }
+  .mat-import-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+  .mat-import-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .mat-import-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+  .mat-import-dialog__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  .mat-import-dialog__grid label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+  .mat-import-dialog__preview canvas { width: 100%; height: 130px; display: block; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .mat-import-dialog__table-wrap { max-height: 130px; overflow: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .mat-import-dialog__table { width: 100%; border-collapse: collapse; font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+  .mat-import-dialog__table th, .mat-import-dialog__table td { padding: 0.2rem 0.5rem; text-align: right; border-bottom: 1px solid var(--bg-muted); white-space: nowrap; }
+  .mat-import-dialog__table th { position: sticky; top: 0; background: var(--bg-soft, var(--bg)); color: var(--text-soft); font-weight: 700; }
+  .mat-import-dialog__status { margin: 0; font-size: 0.74rem; color: var(--text-muted); min-height: 1em; }
+  .mat-import-dialog__status.err { color: var(--rose, #e11d48); }
+  .mat-import-dialog__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  @media (max-width: 480px) { .mat-import-dialog__grid { grid-template-columns: 1fr; } }
 </style>
 
 <script>
@@ -657,14 +716,16 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       const f = fileInput.files?.[0]; if (!f) return;
       f.text().then(text => {
         const parsed = parseOpticalFile(text);
-        if ('error' in parsed) { fileStatus.textContent = parsed.error; fileStatus.classList.add('err'); return; }
-        const modes = inferModes(parsed.rows);
-        const data = rowsToData(parsed.rows, modes);
-        if (data.length < 2) { fileStatus.textContent = 'No valid optical rows'; fileStatus.classList.add('err'); return; }
-        slot.custom = { label: f.name.replace(/\.[^.]+$/, ''), ref: `uploaded · ${modes.values === 'eps' ? 'ε' : 'n,k'} vs ${modes.axis}`, data };
-        fileStatus.classList.remove('err');
-        fileStatus.textContent = `${f.name}: ${data.length} rows · ${modes.values === 'eps' ? 'ε' : 'n,k'} vs ${modes.axis}`;
-        refreshMatRef(); render();
+        if ('error' in parsed) { fileStatus.textContent = parsed.error; fileStatus.classList.add('err'); fileInput.value = ''; return; }
+        // confirm the column interpretation before applying (like the Mie-scattering lab)
+        openImportDialog({
+          rows: parsed.rows, fileName: f.name, statusEl: fileStatus, inputEl: fileInput,
+          onAccept: (data, modeLabel) => {
+            slot.custom = { label: f.name.replace(/\.[^.]+$/, ''), ref: `uploaded · ${modeLabel}`, data };
+            fileStatus.classList.remove('err'); fileStatus.textContent = `${f.name}: ${data.length} rows · ${modeLabel}`;
+            refreshMatRef(); render();
+          },
+        });
       });
     });
 
@@ -672,6 +733,73 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   const slot1 = setupSlot('mat1', matSelect);
   const slot2 = setupSlot('mat2', mat2Select);
+
+  // ── confirm-file-import dialog (map column interpretation before applying) ──
+  type ImportTarget = { rows: FileRow[]; fileName: string; statusEl: HTMLElement; inputEl: HTMLInputElement; onAccept: (data: number[][], modeLabel: string) => void };
+  let pendingImport: ImportTarget | null = null;
+  const importDlg = $('mat-import-dialog') as HTMLDialogElement;
+  const importAxis = $('mat-import-axis') as HTMLSelectElement;
+  const importValues = $('mat-import-values') as HTMLSelectElement;
+  const importRowsEl = $('mat-import-rows');
+  const importStatus = $('mat-import-status');
+  const importPreview = $('mat-import-preview') as HTMLCanvasElement;
+  const importFileEl = $('mat-import-file');
+  const importAccept = $('mat-import-accept') as HTMLButtonElement;
+  const cvarM = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+  const fmtCell = (x: number) => { const a = Math.abs(x); return (a !== 0 && (a < 1e-3 || a >= 1e5)) ? x.toExponential(2) : String(+x.toFixed(4)); };
+  const curModes = () => ({ axis: importAxis.value as 'nm' | 'um' | 'eV', values: importValues.value as 'nk' | 'eps' });
+  const modeLabel = (m: { axis: string; values: string }) => `${m.values === 'eps' ? 'ε' : 'n,k'} vs ${m.axis}`;
+  function drawImportPreview(data: number[][]) {
+    const cv = importPreview, r = cv.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return;
+    const dpr = window.devicePixelRatio || 1; cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    const g = cv.getContext('2d')!; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+    const w = r.width, h = r.height, m = { l: 40, r: 8, t: 8, b: 20 };
+    g.strokeStyle = cvarM('--bg-muted'); g.lineWidth = 1; g.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    if (data.length < 2) { g.fillStyle = cvarM('--text-muted'); g.font = '10px ' + (cvarM('--font') || 'sans-serif'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('No valid data for this interpretation', w / 2, h / 2); return; }
+    const ns = data.map(d => d[1]), ks = data.map(d => d[2]), xs = data.map(d => d[0]);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs), ymax = Math.max(1e-6, ...ns, ...ks), ymin = Math.min(0, ...ns, ...ks);
+    const px = (x: number) => m.l + (x - xmin) / ((xmax - xmin) || 1) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / ((ymax - ymin) || 1) * (h - m.t - m.b);
+    const line = (vals: number[], dash: number[]) => { g.strokeStyle = COLORS[0]; g.lineWidth = 1.6; g.setLineDash(dash); g.beginPath(); data.forEach((d, i) => { const X = px(d[0]), Y = py(vals[i]); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.stroke(); g.setLineDash([]); };
+    line(ns, []); line(ks, [4, 3]);
+    g.fillStyle = cvarM('--text-muted'); g.font = '9px ' + (cvarM('--font') || 'sans-serif');
+    g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText('n (—)   k (- -)  vs λ (µm)', m.l + 4, m.t + 2);
+    g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(ymax.toFixed(2), m.l - 3, py(ymax));
+  }
+  function renderImportPreview() {
+    if (!pendingImport) return;
+    const data = rowsToData(pendingImport.rows, curModes());
+    importAccept.disabled = data.length < 2;
+    importStatus.classList.toggle('err', data.length < 2);
+    importStatus.textContent = data.length < 2 ? 'No valid optical rows for this interpretation.' : `${data.length} rows · ${modeLabel(curModes())}`;
+    drawImportPreview(data);
+  }
+  function openImportDialog(t: ImportTarget) {
+    pendingImport = t;
+    const inf = inferModes(t.rows); importAxis.value = inf.axis; importValues.value = inf.values;
+    importFileEl.textContent = `${t.fileName} — ${t.rows.length} numeric rows`;
+    importRowsEl.innerHTML = t.rows.slice(0, 8).map(rw => `<tr><td>${fmtCell(rw[0])}</td><td>${fmtCell(rw[1])}</td><td>${fmtCell(rw[2])}</td></tr>`).join('');
+    if (typeof importDlg.showModal === 'function') { if (!importDlg.open) importDlg.showModal(); } else importDlg.setAttribute('open', '');
+    requestAnimationFrame(renderImportPreview);
+  }
+  function closeImport(applied: boolean) {
+    if (!applied && pendingImport) pendingImport.inputEl.value = '';   // reset the file picker on cancel
+    pendingImport = null; importDlg.close();
+  }
+  importAxis.addEventListener('change', renderImportPreview);
+  importValues.addEventListener('change', renderImportPreview);
+  $('mat-import-cancel').addEventListener('click', () => closeImport(false));
+  $('mat-import-close').addEventListener('click', () => closeImport(false));
+  importDlg.addEventListener('cancel', e => { e.preventDefault(); closeImport(false); });
+  importDlg.addEventListener('click', e => { if (e.target === importDlg) closeImport(false); });
+  importAccept.addEventListener('click', () => {
+    if (!pendingImport) return;
+    const m = curModes(), data = rowsToData(pendingImport.rows, m);
+    if (data.length < 2) { importStatus.textContent = 'No valid optical rows for this interpretation.'; importStatus.classList.add('err'); return; }
+    pendingImport.onAccept(data, modeLabel(m));
+    closeImport(true);
+  });
 
   const num = (id: string, def: number): number => {
     const v = parseFloat(($(id) as HTMLInputElement).value);
