@@ -444,7 +444,7 @@ const cylPresets = [
           <div class="disp-dialog__grid">
             <div class="disp-dialog__cell">
               <div class="plot-panel-toolbar"><span class="plot-panel-title">Dispersion relation</span></div>
-              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-chart" aria-label="Dispersion relation, enlarged"></canvas></div>
+              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-chart" aria-label="Dispersion relation, enlarged"></canvas><div class="chart-tooltip" id="disp-modal-chart-tt"></div></div>
             </div>
             <div class="disp-dialog__cell">
               <div class="plot-panel-toolbar">
@@ -454,7 +454,7 @@ const cylPresets = [
                   <button class="view-tab" data-phase-axis="energy" role="radio" aria-checked="false">&hbar;&omega;</button>
                 </div>
               </div>
-              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-phase" aria-label="Group velocity, enlarged"></canvas></div>
+              <div class="disp-dialog__canvas-box"><canvas id="disp-modal-phase" aria-label="Group velocity, enlarged"></canvas><div class="chart-tooltip" id="disp-modal-phase-tt"></div></div>
             </div>
           </div>
           <div class="download-bar">
@@ -1279,6 +1279,9 @@ initPermalinks({
   }
   let groupVelocityPointHits: GroupVelocityPointHit[] = [];
   let groupVelocityPointsCache: Omit<GroupVelocityPointHit, 'x' | 'y'>[] = [];
+  // hit boxes for the enlarged (modal) plots, in that canvas's own coordinates
+  let modalDispHits: DispersionPointHit[] = [];
+  let modalPhaseHits: GroupVelocityPointHit[] = [];
   let selectedFieldPoint: FieldSelection | null = null;
 
   function clampFinite(value: number, min: number, max: number, fallback: number): number {
@@ -1878,7 +1881,36 @@ initPermalinks({
     return { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xTo, invTx, yTo, xLabel, yLabel, logY };
   }
 
-  function drawAxesFrame(ax: Axes, xTicks: number, yTicks: number, xFmt: (v: number) => string, yFmt: (v: number) => string) {
+  // Draw a label centered at (cx, cy) rendering `_x` as subscript and `^x` as superscript
+  // (e.g. "q_z", "v_g", "nm^-1"), since canvas fillText has no rich text and Unicode lacks a subscript z.
+  function drawLabelRich(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number) {
+    const base = ctx.font, size = parseInt(base, 10) || 13, rest = base.replace(/^\s*\d+(?:\.\d+)?px\s*/, '');
+    const subFont = `${Math.round(size * 0.72)}px ${rest}`, dy = size * 0.26;
+    const segs: { t: string; k: 0 | 1 | -1 }[] = [];   // k: 0 normal, 1 subscript, -1 superscript
+    for (let i = 0; i < text.length;) {
+      const ch = text[i];
+      if ((ch === '_' || ch === '^') && i + 1 < text.length) {
+        const k = ch === '_' ? 1 : -1 as 1 | -1; i++;
+        let tok = ''; while (i < text.length && /[A-Za-z0-9-]/.test(text[i])) tok += text[i++];
+        segs.push(tok ? { t: tok, k: k as 1 | -1 } : { t: ch, k: 0 });
+      } else {
+        let tok = ''; while (i < text.length && text[i] !== '_' && text[i] !== '^') tok += text[i++];
+        segs.push({ t: tok, k: 0 });
+      }
+    }
+    let total = 0;
+    for (const s of segs) { ctx.font = s.k === 0 ? base : subFont; total += ctx.measureText(s.t).width; }
+    const prevAlign = ctx.textAlign; ctx.textAlign = 'left';
+    let x = cx - total / 2;
+    for (const s of segs) {
+      ctx.font = s.k === 0 ? base : subFont;
+      ctx.fillText(s.t, x, cy + (s.k === 1 ? dy : s.k === -1 ? -dy : 0));
+      x += ctx.measureText(s.t).width;
+    }
+    ctx.font = base; ctx.textAlign = prevAlign;
+  }
+
+  function drawAxesFrame(ax: Axes, xTicks: number, yTicks: number, xFmt: (v: number) => string, yFmt: (v: number) => string, xTickVals?: number[]) {
     const { ctx, m, pw, ph, w, h, xMin, xMax, yMin, yMax, xLabel, yLabel } = ax;
     const ct = chartTheme();
 
@@ -1887,9 +1919,13 @@ initPermalinks({
 
     ctx.strokeStyle = ct.grid;
     ctx.lineWidth = 1;
-    for (let i = 0; i <= xTicks; i++) {
-      const x = m.left + pw * i / xTicks;
-      ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+    if (xTickVals) {
+      for (const v of xTickVals) { if (v < xMin || v > xMax) continue; const x = ax.xTo(v); ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke(); }
+    } else {
+      for (let i = 0; i <= xTicks; i++) {
+        const x = m.left + pw * i / xTicks;
+        ctx.beginPath(); ctx.moveTo(x, m.top); ctx.lineTo(x, m.top + ph); ctx.stroke();
+      }
     }
     const yTickVals: number[] = [];
     if (ax.logY) {
@@ -1924,13 +1960,17 @@ initPermalinks({
     ctx.font = '12px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    for (let i = 0; i <= xTicks; i++) {
-      const v = xMin + (xMax - xMin) * i / xTicks;
-      ctx.fillText(xFmt(v), m.left + pw * i / xTicks, m.top + ph + 4);
+    if (xTickVals) {
+      for (const v of xTickVals) { if (v < xMin || v > xMax) continue; ctx.fillText(xFmt(v), ax.xTo(v), m.top + ph + 4); }
+    } else {
+      for (let i = 0; i <= xTicks; i++) {
+        const v = xMin + (xMax - xMin) * i / xTicks;
+        ctx.fillText(xFmt(v), m.left + pw * i / xTicks, m.top + ph + 4);
+      }
     }
     ctx.fillStyle = ct.text;
     ctx.font = '13px Inter, system-ui, sans-serif';
-    ctx.fillText(xLabel, m.left + pw / 2, h - 16);
+    drawLabelRich(ctx, xLabel, m.left + pw / 2, h - 16);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -1945,7 +1985,7 @@ initPermalinks({
     ctx.textAlign = 'center';
     ctx.fillStyle = ct.text;
     ctx.font = '13px Inter, system-ui, sans-serif';
-    ctx.fillText(yLabel, 0, 0);
+    drawLabelRich(ctx, yLabel, 0, 0);
     ctx.restore();
   }
 
@@ -2443,15 +2483,10 @@ initPermalinks({
     const referenceEnergy = selectedFieldPoint?.w ?? 0.5 * (state.w_min + state.w_max);
     const hostVg = lineGroupVelocityAtEnergy(referenceEnergy, () => state.eps_h);
     const materialVg = materialGroupVelocityAtEnergy(referenceEnergy);
-    const pointMin = points.length ? Math.min(...points.map(p => p.vg)) : 0;
-    const xMin = Math.min(0, pointMin) * 1.08;
-    const xMax = Math.max(
-      0.2,
-      Number.isFinite(hostVg) ? hostVg : 0,
-      Number.isFinite(materialVg) ? materialVg : 0,
-      points.length ? Math.max(...points.map(p => p.vg)) : 0,
-      target && state.dispCustomSlopeOn ? state.dispCustomSlope : 0,
-    ) * 1.08;
+    // Group velocity is physically 0 ≤ v_g/c ≤ 1; pin the axis to [0, 1.05] so occasional
+    // numerical artifacts (points far outside this range) can't blow up the view.
+    const xMin = 0;
+    const xMax = 1.05;
     const yMin = yIsQ ? 0 : state.w_min;
     const yMax = yIsQ ? Math.max(0.01, qMaxAuto) : state.w_max;
     const ax = makeAxes(
@@ -2465,7 +2500,7 @@ initPermalinks({
       'v_g / c',
       yIsQ ? 'q_z (nm^-1)' : '\u210F\u03C9 (eV)',
     );
-    drawAxesFrame(ax, 5, 6, v => v.toFixed(2), yIsQ ? v => v.toFixed(3) : v => v.toFixed(1));
+    drawAxesFrame(ax, 5, 6, v => v.toFixed(1), yIsQ ? v => v.toFixed(3) : v => v.toFixed(1), [0, 0.2, 0.4, 0.6, 0.8, 1.0]);
 
     ctx.save();
     ctx.beginPath();
@@ -2529,7 +2564,7 @@ initPermalinks({
     }
 
     ctx.restore();
-    if (!target) groupVelocityPointHits = velHits;
+    if (!target) groupVelocityPointHits = velHits; else modalPhaseHits = velHits;
   }
 
   function drawDispersionWQ(target?: HTMLCanvasElement) {
@@ -2615,7 +2650,7 @@ initPermalinks({
       }
     }
     ctx.restore();
-    if (!target) dispersionPointHits = pointHits;
+    if (!target) dispersionPointHits = pointHits; else modalDispHits = pointHits;
 
     // Line labels
     drawLineLabel(ax, 'light line', qLightMax, '#94A3B8');
@@ -3111,10 +3146,10 @@ initPermalinks({
     if (fieldModalOpen) renderFieldModal();
   }
 
-  function nearestDispersionPointHit(x: number, y: number, radius = 8): DispersionPointHit | null {
+  function nearestDispersionPointHit(x: number, y: number, radius = 8, hits: DispersionPointHit[] = dispersionPointHits): DispersionPointHit | null {
     let best: DispersionPointHit | null = null;
     let bestD2 = radius * radius;
-    for (const hit of dispersionPointHits) {
+    for (const hit of hits) {
       const dx = hit.x - x;
       const dy = hit.y - y;
       const d2 = dx * dx + dy * dy;
@@ -3126,10 +3161,10 @@ initPermalinks({
     return best;
   }
 
-  function nearestGroupVelocityPointHit(x: number, y: number, radius = 8): GroupVelocityPointHit | null {
+  function nearestGroupVelocityPointHit(x: number, y: number, radius = 8, hits: GroupVelocityPointHit[] = groupVelocityPointHits): GroupVelocityPointHit | null {
     let best: GroupVelocityPointHit | null = null;
     let bestD2 = radius * radius;
-    for (const hit of groupVelocityPointHits) {
+    for (const hit of hits) {
       const dx = hit.x - x;
       const dy = hit.y - y;
       const d2 = dx * dx + dy * dy;
@@ -4108,6 +4143,52 @@ initPermalinks({
   });
   $('disp-modal-dl-csv').addEventListener('click', () => $('dl-csv').click());
   $('disp-modal-share').addEventListener('click', () => $('share-btn').click());
+
+  // ── enlarged (modal) plots: same hover-tooltip + click-to-select as the inline charts ──
+  const posModalTT = (tt: HTMLElement, canvas: HTMLCanvasElement, ox: number, oy: number) => {
+    const rect = canvas.getBoundingClientRect();
+    let tL = ox + 12, tT = oy - 30;
+    if (tL + tt.offsetWidth > rect.width - 4) tL = ox - tt.offsetWidth - 12;
+    if (tT < 4) tT = oy + 12;
+    tt.style.left = `${Math.max(4, Math.min(tL, rect.width - tt.offsetWidth - 4))}px`;
+    tt.style.top = `${Math.max(4, Math.min(tT, rect.height - tt.offsetHeight - 4))}px`;
+  };
+  const modalPhaseCanvas = $<HTMLCanvasElement>('disp-modal-phase'), modalPhaseTT = $('disp-modal-phase-tt');
+  modalPhaseCanvas.addEventListener('mousemove', (e: MouseEvent) => {
+    const hit = nearestGroupVelocityPointHit(e.offsetX, e.offsetY, 10, modalPhaseHits);
+    modalPhaseCanvas.style.cursor = hit ? 'pointer' : 'crosshair';
+    if (!hit) { modalPhaseTT.classList.remove('visible'); return; }
+    modalPhaseTT.innerHTML = `${hit.modeLabel}<br>ℏω = ${hit.w.toFixed(3)} eV<br>q_z = ${hit.q.toFixed(5)} nm^-1<br>v_g/c = ${hit.vg.toFixed(3)}`;
+    modalPhaseTT.classList.add('visible');
+    posModalTT(modalPhaseTT, modalPhaseCanvas, e.offsetX, e.offsetY);
+  });
+  modalPhaseCanvas.addEventListener('mouseleave', () => { modalPhaseCanvas.style.cursor = ''; modalPhaseTT.classList.remove('visible'); });
+  modalPhaseCanvas.addEventListener('click', (e: MouseEvent) => {
+    const hit = nearestGroupVelocityPointHit(e.offsetX, e.offsetY, 10, modalPhaseHits);
+    if (!hit) return;
+    selectedFieldPoint = makeFieldSelection(hit.m, hit.w, hit.q);
+    modalPhaseTT.classList.remove('visible');
+    drawChart();
+  });
+  const modalDChart = $<HTMLCanvasElement>('disp-modal-chart'), modalDTT = $('disp-modal-chart-tt');
+  modalDChart.addEventListener('mousemove', (e: MouseEvent) => {
+    const hit = nearestDispersionPointHit(e.offsetX, e.offsetY, 10, modalDispHits);
+    modalDChart.style.cursor = hit ? 'pointer' : 'crosshair';
+    if (!hit) { modalDTT.classList.remove('visible'); return; }
+    const sel = makeFieldSelection(hit.m, hit.w, hit.q), vg = groupVelocityForPoint(hit);
+    const vgLine = Number.isFinite(vg) ? `<br>v_g/c = ${vg.toFixed(3)}` : '';
+    modalDTT.innerHTML = `${sel.modeLabel}<br>ℏω = ${hit.w.toFixed(3)} eV<br>q_z = ${hit.q.toFixed(5)} nm^-1${vgLine}`;
+    modalDTT.classList.add('visible');
+    posModalTT(modalDTT, modalDChart, e.offsetX, e.offsetY);
+  });
+  modalDChart.addEventListener('mouseleave', () => { modalDChart.style.cursor = ''; modalDTT.classList.remove('visible'); });
+  modalDChart.addEventListener('click', (e: MouseEvent) => {
+    const hit = nearestDispersionPointHit(e.offsetX, e.offsetY, 10, modalDispHits);
+    if (!hit) return;
+    selectedFieldPoint = makeFieldSelection(hit.m, hit.w, hit.q);
+    modalDTT.classList.remove('visible');
+    drawChart();
+  });
 
   // ===== Full-width field-profile dialog =====
   const fieldDialog = $<HTMLDialogElement>('field-dialog');
