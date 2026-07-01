@@ -27,6 +27,9 @@ MieShells/
 # local Claude Code harness config
 .claude/
 
+# paper working folder (private correspondence + manuscript drafts)
+paper/
+
 # python venv for scripts/
 scripts/.venv/
 scripts/out/
