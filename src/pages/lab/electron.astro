@@ -241,6 +241,16 @@ import ToolMeta from '../../components/ToolMeta.astro';
               <button type="button" id="sp-alpha-edit" title="Load / edit polarizability data">Edit&hellip;</button>
             </div>
 
+            <!-- Plasmonic NPs: real orientation weights — dipole p(ω) = α(ω)·(pₓ, p_y, p_z) -->
+            <div class="sp-plas-dir" id="sp-plas-dir" hidden>
+              <span class="sp-plas-dir__cap">Response weights p = (p<sub>x</sub>, p<sub>y</sub>, p<sub>z</sub>)</span>
+              <div class="sp-plas-dir__row">
+                <label>p<sub>x</sub><input type="text" class="field-input sp-cnum" id="sp-pw-x" inputmode="decimal" value="1"></label>
+                <label>p<sub>y</sub><input type="text" class="field-input sp-cnum" id="sp-pw-y" inputmode="decimal" value="0"></label>
+                <label>p<sub>z</sub><input type="text" class="field-input sp-cnum" id="sp-pw-z" inputmode="decimal" value="0"></label>
+              </div>
+            </div>
+
             <!-- Complex dipole oscillation direction p = (px, py, pz): always shown; editable only for Custom -->
             <div class="sp-dipole" id="sp-dipole">
               <div class="sp-dipole__cap" id="sp-dipole-cap">Induced dipole direction</div>
@@ -661,6 +671,12 @@ initPermalinks({ kev: 'kev' });
   .sp-alpha-chip #sp-alpha-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sp-alpha-chip button { flex: none; padding: 0.15rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-size: 0.68rem; font-family: var(--font); cursor: pointer; }
   .sp-alpha-chip button:hover { border-color: var(--primary); color: var(--primary); }
+  .sp-plas-dir { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.4rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); }
+  .sp-plas-dir[hidden] { display: none; }
+  .sp-plas-dir__cap { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+  .sp-plas-dir__row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  .sp-plas-dir__row label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; font-weight: 600; color: var(--text); }
+  .sp-plas-dir__row label input { min-width: 0; }
 
   /* α(ω) import dialog */
   .sp-alpha-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 94vw; width: 560px; color: var(--text); }
@@ -1776,7 +1792,8 @@ initPermalinks({ kev: 'kev' });
 
   const sp = { vc: 0.5, a: 200, b: 50, N: 51, E: 2.0, xi: 0, orient: 'electron', phi: 30,
                thMin: -45, thMax: 225, specUnit: 'nm', specMin: 400, specMax: 800,
-               wlUnit: 'nm', stokesSel: 's3', view: 'spectrum', sub: 'spectral', matLog: false };
+               wlUnit: 'nm', stokesSel: 's3', view: 'spectrum', sub: 'spectral', matLog: false,
+               plasWx: 1, plasWy: 0, plasWz: 0 };   // Plasmonic-NP response-direction weights: p = α·(px,py,pz)
 
   const betaToK = (beta: number) => { const g = 1 / Math.sqrt(1 - beta * beta); return (g - 1) * MEC2_KEV; };
   const kToBeta = (K: number) => { const g = 1 + K / MEC2_KEV; return Math.sqrt(Math.max(0, 1 - 1 / (g * g))); };
@@ -1801,11 +1818,15 @@ initPermalinks({ kev: 'kev' });
     return { x: lerp(spAlpha!.ax), z: lerp(spAlpha!.az) };             // E_ext has no y-component → α_y inert
   }
   // un-normalized: |p| carries |α(ω)·E_ext(ω)| so the spectral map is weighted by |α(ω)|² (README §α)
+  const cw = (z: Cpx, w: number): Cpx => ({ re: z.re * w, im: z.im * w });   // complex × real weight
   function inputDir(omega: number): Vec3c {
     const gamma = 1 / Math.sqrt(1 - sp.vc * sp.vc);
     if (!spAlpha) return dipoleOrientation(omega, sp.b, sp.vc * C_NM_S, gamma, true);   // graceful fallback
-    const { Ex, Ez } = externalFieldOnArray(omega, sp.b, sp.vc * C_NM_S, gamma);
     const a = alphaAt(omega);
+    // Plasmonic NPs: scalar α(ω) sets the spectral response; the induced dipole points along the chosen weights.
+    if (spAlphaSource === 'plasmonic') return [cw(a.x, sp.plasWx), cw(a.x, sp.plasWy), cw(a.x, sp.plasWz)];
+    // Input polarizability: tensor α·E_ext (electron near-field has no y-component)
+    const { Ex, Ez } = externalFieldOnArray(omega, sp.b, sp.vc * C_NM_S, gamma);
     return [cmul(a.x, Ex), c(0), cmul(a.z, Ez)];
   }
 
@@ -2355,7 +2376,7 @@ initPermalinks({ kev: 'kev' });
     x: 'Induced dipole direction — x (∥ v)', z: 'Induced dipole direction — z (⊥)',
     custom: 'Custom dipole direction (editable)',
     input: 'Induced dipole direction — α(ω)·E_ext at λ (unit)',
-    plasmonic: 'Induced dipole direction — plasmonic α(ω)·E_ext at λ (unit)',
+    plasmonic: 'Induced dipole direction — α(ω)·(pₓ, p_y, p_z) at λ (unit)',
   };
   const unitVec = (v: Vec3c): Vec3c => { const n = Math.sqrt(cabs(v[0]) ** 2 + cabs(v[1]) ** 2 + cabs(v[2]) ** 2); return n > 1e-300 ? (v.map(z => ({ re: z.re / n, im: z.im / n })) as Vec3c) : [c(0, 0), c(0, 0), c(0, 0)]; };
   // Always reflect the dipole in use: editable for Custom, read-only computed value otherwise.
@@ -2377,8 +2398,15 @@ initPermalinks({ kev: 'kev' });
   function updateAlphaChipVis() {
     const show = isAlphaSource();
     ($('sp-alpha-chip') as HTMLElement).hidden = !show;
+    ($('sp-plas-dir') as HTMLElement).hidden = sp.orient !== 'plasmonic';   // direction weights: plasmonic only
     if (show) $('sp-alpha-chip-label').textContent = (spAlpha && spAlphaSource === sp.orient) ? spAlpha.label : 'No α loaded — click Edit';
   }
+  ([['sp-pw-x', 'plasWx'], ['sp-pw-y', 'plasWy'], ['sp-pw-z', 'plasWz']] as [string, 'plasWx' | 'plasWy' | 'plasWz'][]).forEach(([id, key]) => {
+    ($(id) as HTMLInputElement).addEventListener('input', e => {
+      const v = parseFloat((e.target as HTMLInputElement).value);
+      if (Number.isFinite(v)) { sp[key] = v; renderSP(); }
+    });
+  });
   ($('sp-orient') as HTMLSelectElement).addEventListener('change', e => {
     const val = (e.target as HTMLSelectElement).value;
     if (val === 'input' || val === 'plasmonic') {
