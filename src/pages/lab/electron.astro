@@ -357,7 +357,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
                   <button type="button" data-ms="log" aria-pressed="false">log |&alpha;|</button>
                 </div>
               </div>
-              <div class="chart-wrap sp-chart-wrap"><canvas id="sp-chart" aria-label="Smith–Purcell result plot"></canvas></div>
+              <div class="chart-wrap sp-chart-wrap"><canvas id="sp-chart" aria-label="Smith–Purcell result plot"></canvas><div class="sp-map-tt" id="sp-map-tt" hidden></div></div>
               <div class="sp-readout" id="sp-readout"></div>
               <div class="sp-export-bar">
                 <button type="button" class="tool-btn" id="sp-export-png" title="Download the plot as PNG">
@@ -399,6 +399,13 @@ import ToolMeta from '../../components/ToolMeta.astro';
                 purely p-polarized; off-plane (&phi;&nbsp;&ne;&nbsp;0) it becomes elliptical, with
                 wavelength- and angle-dependent handedness (Stokes S<sub>3</sub>).
               </p>
+              <div class="sp-examples">
+                <button type="button" class="sp-example" id="sp-ex-1" aria-pressed="false">
+                  <span class="sp-example__head">Example 1 &mdash; SP dispersion</span>
+                  <span class="sp-example__params">K&nbsp;=&nbsp;30&nbsp;keV (v/c&nbsp;=&nbsp;0.328) &middot; a&nbsp;=&nbsp;300&nbsp;nm &middot; b&nbsp;=&nbsp;10&nbsp;nm &middot; N&nbsp;=&nbsp;11 &middot; &xi;&nbsp;=&nbsp;0 &middot; dipole&nbsp;&#8741;&nbsp;x (parallel) &middot; E&nbsp;=&nbsp;3.2&nbsp;&rarr;&nbsp;1.65&nbsp;eV &middot; &theta;&nbsp;=&nbsp;&minus;180&hellip;&minus;55&deg;</span>
+                  <span class="sp-example__hint">Click to load these parameters and show the spectral-dependence map &rarr;</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -737,6 +744,10 @@ initPermalinks({ kev: 'kev' });
   .sp-stokes-sel button + button { border-left: 1px solid var(--bg-muted); }
   .sp-stokes-sel button.active { background: var(--primary); color: #fff; }
   .sp-chart-wrap canvas { aspect-ratio: 16 / 11; }
+  .sp-map-tt { position: absolute; z-index: 5; pointer-events: none; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 11px; line-height: 1.4; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.18); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
+  .sp-map-tt[hidden] { display: none; }
+  .sp-map-tt b { color: var(--text-soft); font-weight: 600; }
+  .sp-map-tt .k { color: var(--text-muted); }
   /* small steering-mode box (Fig. 2b induced-dipole profile) below the result box */
   .sp-steer-card { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
   .sp-steer-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); }
@@ -750,6 +761,13 @@ initPermalinks({ kev: 'kev' });
 
   .notes-card { padding: var(--space-md); }
   .notes-card h4 { font-size: 0.875rem; margin: 0 0 var(--space-sm); }
+  .sp-examples { margin-top: var(--space-sm); }
+  .sp-example { display: flex; flex-direction: column; gap: 0.28rem; width: 100%; text-align: left; padding: 0.6rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); cursor: pointer; font-family: var(--font); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+  .sp-example:hover { border-color: var(--primary-light); }
+  .sp-example.active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); box-shadow: inset 0 0 0 1px var(--primary); }
+  .sp-example__head { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+  .sp-example__params { font-size: 0.74rem; color: var(--text-soft); line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .sp-example__hint { font-size: 0.72rem; font-weight: 600; color: var(--primary); }
   .notes-card p { font-size: 0.8125rem; line-height: 1.55; color: var(--text-soft); margin: 0; max-width: none; }
   .notes-card p + p { margin-top: var(--space-sm); }
 
@@ -1795,6 +1813,10 @@ initPermalinks({ kev: 'kev' });
                wlUnit: 'nm', stokesSel: 's3', view: 'spectrum', sub: 'spectral', matLog: false,
                plasWx: 1, plasWy: 0, plasWz: 0 };   // Plasmonic-NP response-direction weights: p = α·(px,py,pz)
 
+  // coordinate transform + data of the last-drawn spectral map, for the cursor read-out (null when not shown)
+  type SpMapState = { ml: number; mr: number; mt: number; mb: number; w: number; h: number; thMin: number; thMax: number; y0: number; y1: number; isEv: boolean; NX: number; NU: number; M: Float64Array; S0: Float64Array; mx: number; which: string };
+  let spMapState: SpMapState | null = null;
+
   const betaToK = (beta: number) => { const g = 1 / Math.sqrt(1 - beta * beta); return (g - 1) * MEC2_KEV; };
   const kToBeta = (K: number) => { const g = 1 + K / MEC2_KEV; return Math.sqrt(Math.max(0, 1 - 1 / (g * g))); };
   const aOverLambda = () => sp.a / wavelengthNmFromEV(sp.E);
@@ -1937,21 +1959,31 @@ initPermalinks({ kev: 'kev' });
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const x of xt) ctx.fillText(x + '°', px(x), h - m.b + 6);
     ctx.fillStyle = cvar('--text-soft'); ctx.fillText('emission angle θ', (m.l + w - m.r) / 2, h - 14);
     ctx.save(); ctx.translate(13, (m.t + h - m.b) / 2); ctx.rotate(-PI / 2); ctx.fillText(isEv ? 'E (eV)' : 'λ (nm)', 0, 0); ctx.restore();
-    // GSP dispersion overlay (n=1, ℓ = 0, ξ, −ξ)
+    // analytical SP/GSP dispersion overlay (solid): sin θ_{n,ℓ} = 1/β − (n − ℓ/N) λ/a
     ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, w - m.l - m.r, h - m.t - m.b); ctx.clip();
-    for (const ell of [...new Set([0, sp.xi, -sp.xi])]) {
-      ctx.strokeStyle = which === 'amplitude' ? 'rgba(255,255,255,0.65)' : 'rgba(60,60,70,0.6)'; ctx.lineWidth = ell === 0 ? 1.1 : 0.8; ctx.beginPath(); let started = false;
-      for (let ix = 0; ix <= 240; ix++) {
-        const td = thMin + (thMax - thMin) * ix / 240, s = Math.sin(td * PI / 180) * Math.cos(phi);
-        const lamNm = sp.a * (1 / sp.vc - s) / (1 - ell / sp.N);
+    const curves: { n: number; ell: number; label: string; main: boolean }[] = [];
+    for (const n of [1, 2, 3, 4]) curves.push({ n, ell: 0, label: 'n=' + n, main: n === 1 });   // ordinary SP orders
+    if (sp.xi > 0) { curves.push({ n: 1, ell: sp.xi, label: 'ℓ=' + sp.xi, main: false }); curves.push({ n: 1, ell: -sp.xi, label: 'ℓ=−' + sp.xi, main: false }); }   // steered GSP channels
+    const analytic = which === 'amplitude' ? 'rgba(56,232,225,0.95)' : 'rgba(12,105,120,0.95)';
+    ctx.font = '10px ' + (cvar('--font') || 'sans-serif'); ctx.textBaseline = 'middle';
+    for (const { n, ell, label, main } of curves) {
+      ctx.strokeStyle = analytic; ctx.lineWidth = main ? 2 : (ell === 0 ? 1.5 : 1.2); ctx.setLineDash([]); ctx.beginPath();
+      let started = false, lx = 0, ly = 0, drew = false;
+      for (let ix = 0; ix <= 300; ix++) {
+        const td = thMin + (thMax - thMin) * ix / 300, s = Math.sin(td * PI / 180) * Math.cos(phi);
+        const lamNm = sp.a * (1 / sp.vc - s) / (n - ell / sp.N);
         if (lamNm <= 0) { started = false; continue; }
         const yval = isEv ? eVFromWavelengthNm(lamNm) : lamNm;
         if (yval < ylo || yval > yhi) { started = false; continue; }
         const X = px(td), Y = py(yval); started ? ctx.lineTo(X, Y) : (ctx.moveTo(X, Y), started = true);
+        lx = X; ly = Y; drew = true;
       }
       ctx.stroke();
+      if (drew) { ctx.fillStyle = analytic; ctx.textAlign = lx > w - m.r - 22 ? 'right' : 'left'; ctx.fillText(label, lx > w - m.r - 22 ? lx - 3 : lx + 3, Math.max(m.t + 7, Math.min(h - m.b - 7, ly))); }
     }
     ctx.restore();
+    // stash map state for the hover read-out
+    spMapState = { ml: m.l, mr: m.r, mt: m.t, mb: m.b, w, h, thMin, thMax, y0, y1, isEv, NX, NU, M, S0, mx, which };
     // colorbar
     const cbx = w - m.r + 20, cbh = h - m.t - m.b; const NB = 48;
     for (let i = 0; i < NB; i++) { const t = i / (NB - 1), rgb = which === 'amplitude' ? cmapInt(t) : cmapDiv(t * 2 - 1); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(cbx, m.t + cbh - (i + 1) / NB * cbh, 11, cbh / NB + 1); }
@@ -2264,6 +2296,7 @@ initPermalinks({ kev: 'kev' });
     $('sp-readout').innerHTML = `<span>peak |α| at <b>${pkE.toFixed(2)} eV</b> (${pkLam < 1000 ? pkLam.toFixed(0) + ' nm' : (pkLam / 1000).toFixed(2) + ' µm'})</span>${srcEl}`;
   }
   function renderSP() {
+    spMapState = null;                       // invalidated on every redraw; drawSpectralMap re-arms it
     updateMaterialsTabVis();
     updateSpControlVis();
     updateDipoleDisplay();
@@ -2644,6 +2677,69 @@ initPermalinks({ kev: 'kev' });
     $('sp-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === sp.view; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
     renderSubTabs(); renderSP();
   });
+
+  // ── worked example: MATLAB Hollie_v1 SP-dispersion cross-check ──
+  const setNumField = (id: string, key: 'a' | 'b' | 'N' | 'xi' | 'phi', v: number) => {
+    (sp as any)[key] = v;
+    ($(id) as HTMLInputElement).value = String(v);
+    const sl = document.getElementById(id + '-slider') as HTMLInputElement | null; if (sl) sl.value = String(v);
+  };
+  function loadExample1() {
+    syncBetaK(kToBeta(30));                                // exactly 30 keV → sets v/c and K
+    setNumField('sp-a', 'a', 300); setNumField('sp-b', 'b', 10);
+    setNumField('sp-N', 'N', 11); $('sp-xi-slider').setAttribute('max', String(Math.floor(sp.N / 2))); setNumField('sp-xi', 'xi', 0);
+    setNumField('sp-phi', 'phi', 0);                      // principal plane (φ = 0)
+    sp.orient = 'x'; ($('sp-orient') as HTMLSelectElement).value = 'x'; updateAlphaChipVis();   // parallel (x) dipole
+    // spectral range 3.2 → 1.65 eV (reversed order → reversed axis)
+    sp.specUnit = 'eV'; sp.specMin = 3.2; sp.specMax = 1.65;
+    const mn = $('sp-spec-min') as HTMLInputElement, mxEl = $('sp-spec-max') as HTMLInputElement;
+    mn.value = '3.2'; mxEl.value = '1.65'; mn.step = mxEl.step = '0.05';
+    $('sp-spec-label').textContent = 'Energy (eV)';
+    $('sp-spec-unit').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.su === 'eV'; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+    // emission-angle range −180…−55°
+    sp.thMin = -180; sp.thMax = -55; ($('sp-th-min') as HTMLInputElement).value = '-180'; ($('sp-th-max') as HTMLInputElement).value = '-55';
+    // show Spectrum → Spectral dependence
+    sp.view = 'spectrum'; sp.sub = 'spectral';
+    $('sp-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === 'spectrum'; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
+    renderSubTabs(); renderSP();
+    ($('sp-ex-1') as HTMLElement).classList.add('active'); $('sp-ex-1').setAttribute('aria-pressed', 'true');
+    ($('sp-ex-1') as HTMLElement).scrollIntoView({ block: 'nearest' });
+  }
+  $('sp-ex-1').addEventListener('click', loadExample1);
+  // spectral-map cursor read-out: θ, energy/wavelength and the plotted value under the pointer
+  (() => {
+    const cv = $('sp-chart') as HTMLCanvasElement, tt = $('sp-map-tt') as HTMLElement;
+    const hide = () => { tt.hidden = true; };
+    cv.addEventListener('mouseleave', hide);
+    cv.addEventListener('mousemove', e => {
+      const s = spMapState;
+      if (!s || sp.view !== 'spectrum') { hide(); return; }
+      const ox = e.offsetX, oy = e.offsetY, pw = s.w - s.ml - s.mr, ph = s.h - s.mt - s.mb;
+      if (ox < s.ml || ox > s.w - s.mr || oy < s.mt || oy > s.h - s.mb) { hide(); return; }
+      const thd = s.thMin + (ox - s.ml) / pw * (s.thMax - s.thMin);
+      const yval = s.y0 + (s.h - s.mb - oy) / ph * (s.y1 - s.y0);
+      const ix = Math.min(s.NX - 1, Math.max(0, Math.round((ox - s.ml) / pw * (s.NX - 1))));
+      const iu = Math.min(s.NU - 1, Math.max(0, Math.round((yval - s.y0) / (s.y1 - s.y0) * (s.NU - 1))));
+      const idx = iu * s.NX + ix;
+      const eV = s.isEv ? yval : eVFromWavelengthNm(yval), lam = s.isEv ? wavelengthNmFromEV(yval) : yval;
+      const lamStr = lam < 1000 ? lam.toFixed(0) + ' nm' : (lam / 1000).toFixed(3) + ' µm';
+      let valRow: string;
+      if (s.which === 'amplitude') valRow = `<span class="k">|f|²/max</span> <b>${(s.M[idx] / s.mx).toFixed(3)}</b>`;
+      else {
+        const r = s.M[idx], lbl = ({ s1: 'S₁/S₀', s2: 'S₂/S₀', s3: 'S₃/S₀' } as Record<string, string>)[s.which] || s.which;
+        valRow = Number.isNaN(r) ? `<span class="k">${lbl}</span> <b>—</b>`
+          : `<span class="k">${lbl}</span> <b>${r.toFixed(3)}</b> · <span class="k">|f|²/max</span> ${(s.S0[idx] / s.mx).toFixed(3)}`;
+      }
+      tt.innerHTML = `<div><span class="k">θ</span> <b>${thd.toFixed(1)}°</b> · <span class="k">E</span> <b>${eV.toFixed(3)} eV</b> <span class="k">(${lamStr})</span></div><div>${valRow}</div>`;
+      tt.style.left = ox + 'px'; tt.style.top = oy + 'px';
+      tt.style.transform = oy < 56 ? 'translate(-50%, 12px)' : 'translate(-50%, calc(-100% - 10px))';
+      tt.hidden = false;
+    });
+  })();
+  // clear the highlight once the user edits a parameter by hand (programmatic sets above don't fire these)
+  const clearEx = () => { const b = $('sp-ex-1'); b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); };
+  ($('panel-sp') as HTMLElement).addEventListener('input', clearEx);
+  ($('panel-sp') as HTMLElement).addEventListener('change', clearEx);
   $('sp-stokes-sel').addEventListener('click', e => {
     const btn = (e.target as HTMLElement).closest('button[data-stk]') as HTMLButtonElement | null; if (!btn) return;
     sp.stokesSel = btn.dataset.stk!;
