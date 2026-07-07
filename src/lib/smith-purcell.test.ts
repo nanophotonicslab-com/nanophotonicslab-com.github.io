@@ -5,6 +5,7 @@ import {
   spCondition, gspCondition, gspAngleDeg, radiativeChannels, wavelengthRatioForAngle,
   dipoleDistribution, fourierModes, farFieldVector, farFieldAmplitudePhi0,
   sphericalComponents, stokes, dipoleOrientation, xPolarized, yPolarized, zPolarized, oriented,
+  ellipseTrace, polarizationEllipse,
   eVFromWavelengthNm, omegaFromEV, cabs, C_NM_S, type Vec3c,
 } from './smith-purcell';
 
@@ -139,5 +140,57 @@ describe('Polarization (Stokes) identities', () => {
     expect(cabs(d[1])).toBe(0);
     expect(Math.abs(d[0].re)).toBeLessThan(1e-12 * cabs(d[0]));
     expect(Math.abs(d[2].im)).toBeLessThan(1e-12 * cabs(d[2]));
+  });
+});
+
+// ── rosette-plot outputs (README "Rosette plots" §; test_gsp.py lines 181–235) ──
+// Shoelace area enclosed by the ellipse trace (∝ |S3|; ~0 for linear polarization).
+const ellipseArea = (u: number[], v: number[]) => {
+  let s = 0; const n = u.length;
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; s += u[i] * v[j] - u[j] * v[i]; }
+  return 0.5 * Math.abs(s);
+};
+// Electron-driven rosette dipoles (β=0.1, λ=5000 nm, b=10 nm, N=51, ξ=7) sampled at θ=40°.
+const stokesMaps = (phis: number[]) => {
+  const g = 1 / Math.sqrt(1 - 0.1 ** 2);
+  const d = dipoleOrientation(omegaFromEV(eVFromWavelengthNm(5000)), 10.0, 0.1 * C_NM_S, g);
+  const vec = oriented(dipoleDistribution(51, 7, 1.0), d);
+  return phis.map(ph => {
+    const { fTheta, fPhi } = sphericalComponents(rad(40), ph, farFieldVector(rad(40), ph, vec, 0.09, 0.1));
+    return stokes(fTheta, fPhi);
+  });
+};
+
+describe('Rosette-plot outputs', () => {
+  it('ellipse trace of a linear state is degenerate (zero enclosed area)', () => {
+    const { u, v } = ellipseTrace({ re: 1, im: 0 }, { re: 0.5, im: 0 });
+    expect(ellipseArea(u, v)).toBeLessThan(1e-9);
+  });
+  it('ellipse trace of a circular state (f_φ = i f_θ) is a unit circle of area π', () => {
+    const { u, v } = ellipseTrace({ re: 1, im: 0 }, { re: 0, im: 1 }, 4000);
+    for (let i = 0; i < u.length; i++) expect(u[i] * u[i] + v[i] * v[i]).toBeCloseTo(1, 9);
+    expect(ellipseArea(u, v)).toBeCloseTo(Math.PI, 2);   // ~π for a fine polygon
+  });
+  it('polarization ellipse of a circular state: |χ|=π/4, DoP=1, sign(χ)=sign(S3)', () => {
+    const { chi, dop } = polarizationEllipse({ re: 1, im: 0 }, { re: 0, im: 1 });
+    expect(Math.abs(chi)).toBeCloseTo(Math.PI / 4, 9);
+    expect(dop).toBeCloseTo(1, 9);
+    expect(Math.sign(chi)).toBe(Math.sign(stokes({ re: 1, im: 0 }, { re: 0, im: 1 })[3]));
+  });
+  it('handedness is antisymmetric in φ: S3 & S2 odd, S1 & S0 even', () => {
+    const phis = [15, 40, 75, 115, 160].map(rad);
+    const P = stokesMaps(phis), M = stokesMaps(phis.map(p => -p));
+    phis.forEach((_, i) => {
+      expect(P[i][3]).toBeCloseTo(-M[i][3], 9);   // circular handedness flips
+      expect(P[i][2]).toBeCloseTo(-M[i][2], 9);   // ±45° linear flips
+      expect(P[i][1]).toBeCloseTo(M[i][1], 9);    // p-vs-s linear symmetric
+      expect(P[i][0]).toBeCloseTo(M[i][0], 9);    // intensity symmetric
+    });
+  });
+  it('the φ=0 meridian is purely linearly polarized: S2 = S3 = 0', () => {
+    for (const [, , S2, S3] of stokesMaps([0, 0, 0, 0])) {
+      expect(Math.abs(S2)).toBeLessThan(1e-12);
+      expect(Math.abs(S3)).toBeLessThan(1e-12);
+    }
   });
 });

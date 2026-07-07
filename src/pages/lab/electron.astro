@@ -280,7 +280,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
               </div>
             </div>
 
-            <div class="sp-param">
+            <div class="sp-param" id="sp-phi-field">
               <div class="sp-param__head"><label for="sp-phi">Azimuth &phi; (&deg;)</label><input type="number" class="field-input sp-num" id="sp-phi" value="30" step="5" min="0" max="90"></div>
               <input type="range" class="sp-slider" id="sp-phi-slider" min="0" max="90" step="1" value="30">
             </div>
@@ -614,6 +614,7 @@ initPermalinks({ kev: 'kev' });
 
   /* ===================== Smith–Purcell module ===================== */
   .sp-param { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sp-param[hidden] { display: none; }
   .sp-param__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
   .sp-param__head label { font-size: 0.8125rem; font-weight: 500; color: var(--text); }
   .sp-num { width: 5.2rem; text-align: right; }
@@ -1797,7 +1798,7 @@ initPermalinks({ kev: 'kev' });
 <script>
   import {
     gspCondition, gspAngleDeg, dipoleDistribution, farFieldVector, sphericalComponents,
-    stokes, dipoleOrientation, externalFieldOnArray, xPolarized, zPolarized, oriented, c,
+    stokes, ellipseTrace, dipoleOrientation, externalFieldOnArray, xPolarized, zPolarized, oriented, c,
     wavelengthNmFromEV, eVFromWavelengthNm, omegaFromEV, HBAR_EVS, C_NM_S, cabs, type Vec3c, type Cpx,
   } from '../../lib/smith-purcell';
   import { computePlasmonSpectrum, SHAPE_OPTIONS, drudeEpsilon, epsilonFromMaterial } from '../../lib/plasmonic-nanoparticles';
@@ -2082,6 +2083,109 @@ initPermalinks({ kev: 'kev' });
     $('sp-readout').innerHTML = `<span>peak emission at θ = <b>${peak.toFixed(1)}°</b></span><span>φ = <b>${sp.phi}°</b> · dipole: <b>${sp.orient}</b></span>`;
   }
 
+  // ── Polarization rosette (README "Rosette plots"): full-hemisphere polar maps of the four
+  //    Stokes parameters (θ radial from normal, φ azimuth, φ=0 = beam/plane of incidence = East),
+  //    plus polarization-ellipse glyphs on the S₀ panel coloured by handedness. ──
+  function drawRosetteHemisphere() {
+    const c = ctx2d($('sp-chart') as HTMLCanvasElement); if (!c) return;
+    const { ctx, w, h } = c, vec = buildDipoles(), aol = aOverLambda(), beta = sp.vc;
+    // hemisphere grid: φ ∈ [0,360], θ ∈ [1,89] (θ=0 removed — φ ill-defined at the pole)
+    const NPH = 168, NTH = 60, NG = NPH * NTH;
+    const S0g = new Float64Array(NG), S1g = new Float64Array(NG), S2g = new Float64Array(NG), S3g = new Float64Array(NG);
+    let s0max = 1e-30;
+    for (let ip = 0; ip < NPH; ip++) {
+      const phi = 2 * PI * ip / (NPH - 1);
+      for (let it = 0; it < NTH; it++) {
+        const th = (1 + 88 * it / (NTH - 1)) * PI / 180;
+        const { fTheta, fPhi } = sphericalComponents(th, phi, farFieldVector(th, phi, vec, aol, beta));
+        const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+        const k = ip * NTH + it; S0g[k] = s0; S1g[k] = s1; S2g[k] = s2; S3g[k] = s3;
+        if (s0 > s0max) s0max = s0;
+      }
+    }
+    const sample = (arr: Float64Array, thDeg: number, phiRad: number) => {
+      let ph = phiRad % (2 * PI); if (ph < 0) ph += 2 * PI;
+      const ip = Math.min(NPH - 1, Math.max(0, Math.round(ph / (2 * PI) * (NPH - 1))));
+      const it = Math.min(NTH - 1, Math.max(0, Math.round((thDeg - 1) / 88 * (NTH - 1))));
+      return arr[ip * NTH + it];
+    };
+    // 2×2 layout, one polar disk per panel, colour-bar strip along the bottom
+    const pad = 6, gap = 16, legendH = 30, titleH = 15;
+    const cellW = (w - 2 * pad - gap) / 2, cellH = (h - 2 * pad - gap - legendH) / 2;
+    const PANELS: { key: 'S0' | 'S1' | 'S2' | 'S3'; arr: Float64Array; title: string; div: boolean }[] = [
+      { key: 'S0', arr: S0g, title: 'S₀  √intensity + ellipses', div: false },
+      { key: 'S1', arr: S1g, title: 'S₁  (p vs s)', div: true },
+      { key: 'S2', arr: S2g, title: 'S₂  (±45°)', div: true },
+      { key: 'S3', arr: S3g, title: 'S₃  (circular)', div: true },
+    ];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    PANELS.forEach((pan, idx) => {
+      const cc = idx % 2, rr = (idx / 2) | 0;
+      const cellX = pad + cc * (cellW + gap), cellY = pad + rr * (cellH + gap);
+      const Rp = Math.min(cellW, cellH - titleH) / 2 - 6;
+      const pcx = cellX + cellW / 2, pcy = cellY + titleH + (cellH - titleH) / 2;
+      // panel title
+      ctx.font = '10px ' + (cvar('--font') || 'sans-serif'); ctx.fillStyle = cvar('--text-soft');
+      ctx.fillText(pan.title, pcx, cellY + 11);
+      // rasterize the polar disk into an offscreen buffer, then scale it onto the panel
+      const S = Math.max(16, Math.round(2 * Rp)), off = document.createElement('canvas');
+      off.width = S; off.height = S; const octx = off.getContext('2d')!, img = octx.createImageData(S, S);
+      for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+        const dx = px - S / 2 + 0.5, dy = py - S / 2 + 0.5, rrad = Math.hypot(dx, dy) / (S / 2);
+        const pi = (py * S + px) * 4;
+        if (rrad > 1) { img.data[pi + 3] = 0; continue; }
+        let phi = Math.atan2(-dy, dx); if (phi < 0) phi += 2 * PI;   // φ=0 East, CCW
+        const thDeg = Math.max(1, rrad * 90), s0 = sample(S0g, thDeg, phi);
+        let rgb: number[];
+        if (!pan.div) rgb = cmapInt(Math.sqrt(Math.max(0, s0) / s0max));
+        // intensity-weighted Stokes: Sᵢ/max(S₀) = (S₀/max)·(Sᵢ/S₀) — component shown only where the array emits
+        else rgb = cmapDiv(Math.max(-1, Math.min(1, sample(pan.arr, thDeg, phi) / s0max)));
+        img.data[pi] = rgb[0]; img.data[pi + 1] = rgb[1]; img.data[pi + 2] = rgb[2]; img.data[pi + 3] = 255;
+      }
+      octx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(off, pcx - Rp, pcy - Rp, 2 * Rp, 2 * Rp);
+      // polar grid: θ rings (30/60/90) + φ spokes (0/90/180/270), φ=0 marked
+      ctx.strokeStyle = 'rgba(140,140,150,0.45)'; ctx.lineWidth = 0.8;
+      for (const t of [30, 60, 90]) { ctx.beginPath(); ctx.arc(pcx, pcy, Rp * t / 90, 0, 2 * PI); ctx.stroke(); }
+      for (const ad of [0, 90, 180, 270]) { const a = ad * PI / 180; ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(pcx + Rp * Math.cos(a), pcy - Rp * Math.sin(a)); ctx.stroke(); }
+      ctx.fillStyle = cvar('--text-muted'); ctx.font = '8px ' + (cvar('--font') || 'sans-serif');
+      ctx.fillText('φ=0', pcx + Rp + 9, pcy + 3);
+      // polarization-ellipse glyphs on the S₀ panel
+      if (pan.key === 'S0') {
+        for (const th0 of [26, 46, 66, 82]) for (let pd = 0; pd < 360; pd += 30) {
+          const phi0 = pd * PI / 180, th0r = th0 * PI / 180;
+          const { fTheta, fPhi } = sphericalComponents(th0r, phi0, farFieldVector(th0r, phi0, vec, aol, beta));
+          const [s0, , , s3] = stokes(fTheta, fPhi); if (!(s0 / s0max > 0.03)) continue;
+          const { u, v } = ellipseTrace(fTheta, fPhi); let mmax = 1e-30;
+          for (let i = 0; i < u.length; i++) mmax = Math.max(mmax, Math.hypot(u[i], v[i]));
+          const gs = 8, sinth = Math.max(0.25, Math.sin(th0r));
+          ctx.strokeStyle = s3 >= 0 ? '#0891b2' : '#c026d3'; ctx.lineWidth = 1; ctx.beginPath();
+          for (let i = 0; i < u.length; i++) {
+            const thp = th0 + gs * u[i] / mmax, php = phi0 + (gs * v[i] / mmax / sinth) * PI / 180;
+            const rad = Rp * Math.max(0, thp) / 90, X = pcx + rad * Math.cos(php), Y = pcy - rad * Math.sin(php);
+            i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+          }
+          ctx.closePath(); ctx.stroke();
+        }
+      }
+    });
+    // bottom legend: diverging bar (S₁₋₃) + sequential note + ellipse handedness swatches
+    const ly = h - legendH + 8, barW = 120, bx = pad + 74, NB = 60;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '9px ' + (cvar('--font') || 'sans-serif');
+    ctx.fillStyle = cvar('--text-muted'); ctx.fillText('S₁₋₃ / max S₀', pad, ly + 5);
+    for (let i = 0; i < NB; i++) { const rgb = cmapDiv(i / (NB - 1) * 2 - 1); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(bx + i / NB * barW, ly, barW / NB + 1, 9); }
+    ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(bx, ly, barW, 9);
+    ctx.fillStyle = cvar('--text-muted'); ctx.textAlign = 'center';
+    ctx.fillText('−1', bx, ly + 18); ctx.fillText('0', bx + barW / 2, ly + 18); ctx.fillText('+1', bx + barW, ly + 18);
+    // handedness swatches
+    let hx = bx + barW + 30; ctx.textAlign = 'left';
+    ctx.strokeStyle = '#0891b2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx, ly + 4); ctx.lineTo(hx + 14, ly + 4); ctx.stroke();
+    ctx.fillStyle = cvar('--text-muted'); ctx.fillText('right-handed', hx + 18, ly + 5);
+    hx += 100; ctx.strokeStyle = '#c026d3'; ctx.beginPath(); ctx.moveTo(hx, ly + 4); ctx.lineTo(hx + 14, ly + 4); ctx.stroke();
+    ctx.fillText('left-handed', hx + 18, ly + 5);
+    $('sp-readout').innerHTML = `<span>hemisphere Stokes maps at λ = <b>${wavelengthNmFromEV(sp.E).toFixed(0)} nm</b> · a/λ = <b>${aol.toFixed(3)}</b></span><span>θ radial (centre = normal, edge = 90°), φ = 0 = plane of incidence · dipole: <b>${sp.orient}</b></span>`;
+  }
+
   // ── geometry schematic (oblique projection, port of figures/_geometry.py) ──
   const EX = [-0.82, -0.46], EY = [1.0, -0.10], EZ = [0.0, 1.0];
   function drawGeometry(canvas: HTMLCanvasElement) {
@@ -2174,7 +2278,7 @@ initPermalinks({ kev: 'kev' });
   // ── sub-tabs / view dispatch ──
   const SUBTABS: Record<string, { id: string; label: string }[]> = {
     spectrum: [{ id: 'spectral', label: 'Spectral dependence' }, { id: 'polarization', label: 'Polarization' }],
-    farfield: [{ id: 'emission', label: 'SP emission' }, { id: 'intensity', label: 'Intensity' }, { id: 'polarization', label: 'Polarization' }],
+    farfield: [{ id: 'emission', label: 'SP emission' }, { id: 'intensity', label: 'Intensity' }, { id: 'polarization', label: 'Polarization' }, { id: 'rosette', label: 'Rosette' }],
     materials: [{ id: 'alpha', label: 'Polarizability α(ω)' }],
   };
   function renderSubTabs() {
@@ -2318,6 +2422,7 @@ initPermalinks({ kev: 'kev' });
     } else {
       if (sp.sub === 'emission') { title.textContent = 'SP-solution diagram — sin θₙ,ₗ vs ℓ'; drawEmission(); }
       else if (sp.sub === 'intensity') { title.textContent = `Far-field rosette — intensity at φ = ${sp.phi}°`; drawRosette('s0'); }
+      else if (sp.sub === 'rosette') { title.textContent = 'Polarization rosette — hemisphere Stokes maps'; drawRosetteHemisphere(); }
       else { title.textContent = `Far-field rosette — ${stkLbl} at φ = ${sp.phi}°`; drawRosette(stk); }
     }
   }
@@ -2372,6 +2477,7 @@ initPermalinks({ kev: 'kev' });
   function updateSpControlVis() {
     const isFF = sp.view === 'farfield', isMat = sp.view === 'materials';
     ($('sp-wl-field') as HTMLElement).hidden = !isFF;
+    ($('sp-phi-field') as HTMLElement).hidden = isFF && sp.sub === 'rosette';   // full-hemisphere rosette sweeps all φ
     ($('sp-th-field') as HTMLElement).hidden = isFF || isMat;       // angle range: Spectrum only
     ($('sp-spec-field') as HTMLElement).hidden = isFF;             // wavelength/energy range + λ/eV toggle: Spectrum and Materials
     ($('sp-aol') as HTMLElement).hidden = !isFF;   // a/λ · λ · β line only meaningful at a single wavelength (Far-field)
@@ -2806,6 +2912,22 @@ initPermalinks({ kev: 'kev' });
       const aol = aOverLambda(), lines = [head, `# SP-solution diagram at lambda=${wavelengthNmFromEV(sp.E).toFixed(1)} nm`, 'n,ell,sin_theta,theta_deg'];
       for (let n = -2; n <= 2; n++) for (let ell = 0; ell < N; ell++) { const s = gspCondition(n, ell, N, beta, aol); if (Math.abs(s) <= 1) lines.push(`${n},${ell},${p6(s)},${(Math.asin(s) * 180 / PI).toFixed(3)}`); }
       return { name: 'sp_emission_channels.csv', csv: lines.join('\n') + '\n' };
+    }
+    if (sp.sub === 'rosette') {
+      const aol = aOverLambda(), vec = buildDipoles(), NPH = 73, NTH = 45;
+      // first pass: max S0 for the intensity-weighted normalization Sᵢ/max(S₀)
+      let s0max = 1e-30;
+      for (let ip = 0; ip < NPH; ip++) { const phr = 360 * ip / (NPH - 1) * PI / 180; for (let it = 0; it < NTH; it++) { const t = (1 + 88 * it / (NTH - 1)) * PI / 180; const { fTheta, fPhi } = sphericalComponents(t, phr, farFieldVector(t, phr, vec, aol, beta)); const s0 = stokes(fTheta, fPhi)[0]; if (s0 > s0max) s0max = s0; } }
+      const lines = [head, `# Hemisphere polarization rosette at lambda=${wavelengthNmFromEV(sp.E).toFixed(1)} nm (intensity-weighted: Si/max(S0))`, 'phi_deg,theta_deg,S0_over_max,S1_over_max,S2_over_max,S3_over_max'];
+      for (let ip = 0; ip < NPH; ip++) {
+        const phd = 360 * ip / (NPH - 1), phr = phd * PI / 180;
+        for (let it = 0; it < NTH; it++) {
+          const thd = 1 + 88 * it / (NTH - 1), t = thd * PI / 180;
+          const { fTheta, fPhi } = sphericalComponents(t, phr, farFieldVector(t, phr, vec, aol, beta)); const [s0, s1, s2, s3] = stokes(fTheta, fPhi);
+          lines.push(`${phd.toFixed(1)},${thd.toFixed(2)},${p6(s0 / s0max)},${p6(s1 / s0max)},${p6(s2 / s0max)},${p6(s3 / s0max)}`);
+        }
+      }
+      return { name: 'sp_farfield_rosette.csv', csv: lines.join('\n') + '\n' };
     }
     const aol = aOverLambda(), vec = buildDipoles(), which = sp.sub === 'intensity' ? 's0' : sp.stokesSel, NT = 721;
     const lines = [head, `# Far-field at lambda=${wavelengthNmFromEV(sp.E).toFixed(1)} nm, phi=${sp.phi} deg`, `theta_deg,${which === 's0' ? 'intensity_S0' : which.toUpperCase() + '_over_S0'}`];
