@@ -2719,6 +2719,7 @@ initPermalinks({
   let dipoleDistUnit: 'norm' | 'abs' = 'norm';     // unit of the distance-range entries (d/a or nm)
   let dipoleDistRef: 'centre' | 'surface' = 'centre';   // reference point for the distance entries/axis
   let dipoleEpsOverride: { re: number; im: number } | null = null;   // reference ε set by a figure preset (else use the material selector)
+  let dipoleCavity = false;                        // Fig. 2: dipole in a vacuum cavity, material = the surrounding dielectric
   let activeDipolePreset: string | null = null;
   let applyingDipolePreset = false;
   let dipoleInitialized = false;                    // apply sensible defaults the first time dipole mode is opened
@@ -2865,7 +2866,7 @@ initPermalinks({
     return dipoleDistUnit === 'abs' ? distNm : distNm / R;
   }
 
-  function clearDipolePreset() { if (!applyingDipolePreset) { activeDipolePreset = null; dipoleEpsOverride = null; } }
+  function clearDipolePreset() { if (!applyingDipolePreset) { activeDipolePreset = null; dipoleEpsOverride = null; dipoleCavity = false; } }
   function dipoleParamChanged() { clearDipolePreset(); resetAndUpdate(); }
   [dipoleDMinInput, dipoleDMaxInput, dipoleFInput].forEach(el => el.addEventListener('change', dipoleParamChanged));
   // τ₀ only rescales the y-axis (no recompute); zoom is reset because the scale changes
@@ -3374,8 +3375,10 @@ initPermalinks({
     dipoleFGroup.style.display = lossyInside ? '' : 'none';
     dipoleRefGroup.style.display = dipoleEpsOverride ? '' : 'none';
     const lam = dipoleLambdaParam.value;
-    dipoleEvEcho.innerHTML = `&#8462;&omega; = <b>${(HC_EV_NM / lam).toFixed(3)} eV</b> &middot; &epsilon; = <b>${fmtEps(eps)}</b>`;
-    if (dipoleEpsOverride) dipoleRefEl.innerHTML = `reference &epsilon; = <b>${fmtEps(dipoleEpsOverride)}</b> &middot; &lambda; = <b>${lam.toFixed(1)} nm</b>`;
+    dipoleEvEcho.innerHTML = dipoleCavity
+      ? `&#8462;&omega; = <b>${(HC_EV_NM / lam).toFixed(3)} eV</b> &middot; vacuum cavity in &epsilon; = <b>${fmtEps(eps)}</b>`
+      : `&#8462;&omega; = <b>${(HC_EV_NM / lam).toFixed(3)} eV</b> &middot; &epsilon; = <b>${fmtEps(eps)}</b>`;
+    if (dipoleEpsOverride) dipoleRefEl.innerHTML = `${dipoleCavity ? 'cavity — outer' : 'reference'} &epsilon; = <b>${fmtEps(dipoleEpsOverride)}</b> &middot; &lambda; = <b>${lam.toFixed(1)} nm</b>`;
     const yUnit = dipoleYUnitTabs.value;
     dipoleTau0Group.style.display = yUnit === 'norm' ? 'none' : '';
     if (yUnit !== 'norm') {
@@ -3750,10 +3753,12 @@ initPermalinks({
   }
 
   // ── dipole figure-reproduction presets (Kim 1988 + Carella thesis) ──
-  interface DipolePreset { label: string; tip: string; region: 'outside' | 'inside'; eps: { re: number; im: number }; mat: string; customEps?: number; lambda: number; aNm: number; dMin: number; dMax: number; lmax: number; f?: number; logY: boolean; yTop?: number; }
+  interface DipolePreset { label: string; tip: string; region: 'outside' | 'inside'; cavity?: boolean; eps: { re: number; im: number }; mat: string; customEps?: number; lambda: number; aNm: number; dMin: number; dMax: number; lmax: number; f?: number; logY: boolean; yBot?: number; yTop?: number; }
   const DIPOLE_PRESETS: Record<string, DipolePreset> = {
     kim1: { label: 'Kim Fig. 1 · outside Ag', tip: 'Kim et al. 1988, Fig. 1 — dipole outside a 10 nm Ag sphere (ε = −4.42 + 0.73i), λ = 413.3 nm, ℓmax = 20',
             region: 'outside', eps: { re: -4.42, im: 0.73 }, mat: 'ag', lambda: 413.3, aNm: 10, dMin: 1.02, dMax: 9, lmax: 20, logY: false, yTop: 2 },
+    kim2: { label: 'Kim Fig. 2 · cavity', tip: 'Kim et al. 1988, Fig. 2 — dipole in a 400 nm vacuum cavity in a dielectric (ε = 2.16), λ = 413.3 nm, ℓmax = 30',
+            region: 'inside', cavity: true, eps: { re: 2.16, im: 0 }, mat: 'custom', customEps: 2.16, lambda: 413.3, aNm: 400, dMin: 0, dMax: 1, lmax: 30, logY: false, yBot: 0.8, yTop: 2.2 },
     kim4: { label: 'Kim Fig. 4 · inside (transparent)', tip: 'Kim et al. 1988, Fig. 4 — dipole inside a 400 nm transparent sphere (ε = 2.16), λ = 413.3 nm, ℓmax = 30',
             region: 'inside', eps: { re: 2.16, im: 0 }, mat: 'custom', customEps: 2.16, lambda: 413.3, aNm: 400, dMin: 0, dMax: 1, lmax: 30, logY: false, yTop: 1.25 },
     kim5: { label: 'Kim Fig. 5 · inside (dissipative)', tip: 'Kim et al. 1988, Fig. 5 — dipole inside a 100 nm Ag sphere (ε = −4.42 + 0.73i), f(ω) = 6.88×10⁻⁸, ℓmax = 10',
@@ -3770,6 +3775,7 @@ initPermalinks({
       excitation = 'dipole';
       document.querySelector<HTMLButtonElement>('#view-tabs [data-view="spectrum"]')?.click();
       dipoleEpsOverride = { ...p.eps };            // exact reference permittivity (used for the curve)
+      dipoleCavity = p.cavity === true;            // Fig. 2 = vacuum cavity in a dielectric
       dipoleRegionTabs.select(p.region, true);
       dipoleRegion = p.region;
       // pick a matching material so the Material view shows a coherent ε(λ)
@@ -3787,7 +3793,7 @@ initPermalinks({
       dipoleLmaxParam.setValue(p.lmax);
       if (p.f !== undefined) dipoleFInput.value = String(p.f);
       // fill the manual y-window to the figure's paper window (blank = auto for figures without one)
-      dipoleYMinInput.value = p.yTop !== undefined ? '0' : '';
+      dipoleYMinInput.value = p.yTop !== undefined ? String(p.yBot ?? 0) : '';
       dipoleYMaxInput.value = p.yTop !== undefined ? String(p.yTop) : '';
       logY = p.logY; logToggle.classList.toggle('active', logY);
       dipoleChannelTabs.select('total', true);
@@ -4160,7 +4166,10 @@ initPermalinks({
         c.tanTot[i] = r.gammaPerp; c.tanRad[i] = r.gammaPerpRad; c.tanNr[i] = r.gammaPerpNr;
       } else {
         // radial = Kim γ_⊥ (perp*), tangential = Kim γ_∥ (par*)
-        const r = insideDecay(lambdaNm, eps, R, dNm, lmax, fOmega);
+        // cavity (Fig. 2): dipole in a vacuum cavity, `eps` = surrounding dielectric (outer medium)
+        const r = dipoleCavity
+          ? insideDecay(lambdaNm, { re: 1, im: 0 }, R, dNm, lmax, undefined, eps)
+          : insideDecay(lambdaNm, eps, R, dNm, lmax, fOmega);
         c.radTot[i] = r.perpTot; c.radRad[i] = r.perpRad; c.radNr[i] = r.perpNr;
         c.tanTot[i] = r.parTot; c.tanRad[i] = r.parRad; c.tanNr[i] = r.parNr;
       }
@@ -4493,22 +4502,22 @@ initPermalinks({
     return [bot, Math.max(top, bot + 1e-12)];
   }
 
-  function renderDipole() {
-    if (!dipoleData) return;
-    const d = dipoleData;
+  // Build the dipole decay-rate plot (display arrays in the current units/reference) — shared by
+  // the on-screen render and the PNG export.
+  interface DipolePlot { xArr: Float64Array; series: PlotSeries[]; xLabel: string; yLabel: string; yRange: [number, number]; bands?: { x0: number; x1: number; color: string }[]; bDisp: number; fromCentre: boolean; }
+  function getDipolePlotData(): DipolePlot {
+    const d = dipoleData!;
     const ch = dipoleChannelTabs.value;   // total | rad | nr | all
     const xUnit = dipoleXUnitTabs.value;  // norm | abs
     const yUnit = dipoleYUnitTabs.value;  // norm | inv_s | inv_fs
     const yScale = dipoleYScale(yUnit);
     // x-axis: distance from centre or surface, in d/a or nm.
-    //   d/a-from-centre = dOverA; from-surface = |dOverA − 1|; ×R for nm.
     const R = rParam.value;
     const ref = dipoleDistRef;
     const dispX = (da: number) => { const d0 = ref === 'surface' ? Math.abs(da - 1) : da; return xUnit === 'abs' ? d0 * R : d0; };
     const xArr = d.dOverA.map(dispX) as Float64Array;
     const refWord = ref === 'surface' ? 'surface' : 'centre';
     const xLabel = xUnit === 'abs' ? `d  (distance from ${refWord}, nm)` : `d / a  (distance from ${refWord})`;
-    // y-axis: normalized γ/γ₀, or absolute rate γ = (γ/γ₀)·γ₀ in s⁻¹ / fs⁻¹
     const yLabel = yUnit === 'inv_s' ? 'γ  (decay rate, s⁻¹)' : yUnit === 'inv_fs' ? 'γ  (decay rate, fs⁻¹)' : 'γ / γ₀  (decay rate)';
     const scale = (a: Float64Array): Float64Array => yScale === 1 ? a : (a.map(v => v * yScale) as Float64Array);
     const series: PlotSeries[] = [];
@@ -4519,40 +4528,45 @@ initPermalinks({
     if (ch === 'total' || ch === 'all') push(d.radTot, d.tanTot, PLOT_COLORS.cext, 'total');
     if (ch === 'rad' || ch === 'all') push(d.radRad, d.tanRad, PLOT_COLORS.csca, 'radiative');
     if (ch === 'nr' || ch === 'all') push(d.radNr, d.tanNr, PLOT_COLORS.cabs, 'non-radiative');
-    currentXArr = xArr; currentSeries = series;
-    const opts: ChartOpts = { logY };
-    // when measuring from the centre, shade the sphere interior (d/a < 1) behind the curves.
-    // x0 is bounded (one boundary-width left of 0, clipped to the plot) — NOT a huge value,
-    // which would make fillRect crawl on GPU-accelerated canvases.
     const fromCentre = ref === 'centre';
     const bDisp = xUnit === 'abs' ? R : 1;   // sphere surface: d/a = 1 (→ d = R in nm)
-    if (fromCentre) opts.bands = [{ x0: -bDisp, x1: bDisp, color: 'rgba(99,102,241,0.10)' }];
-    // manual y-window (in the current y-unit) if both entries valid, else auto
+    // bounded band (clipped to the plot) — a huge x0 makes fillRect crawl on GPU canvases
+    const bands = fromCentre ? [{ x0: -bDisp, x1: bDisp, color: 'rgba(99,102,241,0.10)' }] : undefined;
     const ylo = parseFloat(dipoleYMinInput.value), yhi = parseFloat(dipoleYMaxInput.value);
-    if (!logY) opts.yRange = (Number.isFinite(ylo) && Number.isFinite(yhi) && yhi > ylo) ? [ylo, yhi] : dipoleYRange(series);
+    const yRange: [number, number] = (Number.isFinite(ylo) && Number.isFinite(yhi) && yhi > ylo) ? [ylo, yhi] : dipoleYRange(series);
+    return { xArr, series, xLabel, yLabel, yRange, bands, bDisp, fromCentre };
+  }
+
+  function renderDipole() {
+    if (!dipoleData) return;
+    const p = getDipolePlotData();
+    currentXArr = p.xArr; currentSeries = p.series;
+    const opts: ChartOpts = { logY };
+    if (p.bands) opts.bands = p.bands;
+    if (!logY) opts.yRange = p.yRange;
     if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
-    chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, opts);
-    if (fromCentre) drawDipoleInsideOverlay(bDisp);   // dashed surface boundary + "inside" label
+    chartXforms = drawChart(canvas, p.xArr, p.series, p.xLabel, p.yLabel, opts);
+    if (p.fromCentre) drawDipoleInsideOverlay(canvas, chartXforms, p.bDisp);   // dashed surface boundary + "inside" label
     zoomHint.classList.toggle('visible', !!zoomBounds);
     clearOverlay();
   }
 
   // Dashed vertical line at the sphere surface (d/a = 1) plus an "inside sphere" label over the
-  // shaded interior. Drawn on the main canvas (survives overlay/hover clears).
-  function drawDipoleInsideOverlay(bDisp: number): void {
-    if (!chartXforms) return;
-    const { tx, pL, pT, pW, pH } = chartXforms;
+  // shaded interior. Drawn on the given canvas so it also works for the PNG export.
+  function drawDipoleInsideOverlay(cvs: HTMLCanvasElement, xf: ChartXforms | null, bDisp: number, fontScale = 1): void {
+    if (!xf) return;
+    const { tx, pL, pT, pW, pH } = xf;
     const bx = tx(bDisp);
-    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    const ctx = cvs.getContext('2d'); if (!ctx) return;
     ctx.save();
     const left = pL, right = Math.min(bx, pL + pW);
-    if (right - left > 46) {
-      ctx.fillStyle = 'rgba(99,102,241,0.8)'; ctx.font = '11px Inter, system-ui, sans-serif';
+    if (right - left > 46 * fontScale) {
+      ctx.fillStyle = 'rgba(99,102,241,0.8)'; ctx.font = `${Math.round(11 * fontScale)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText('inside sphere', (left + right) / 2, pT + 5);
+      ctx.fillText('inside sphere', (left + right) / 2, pT + 5 * fontScale);
     }
     if (bx >= pL && bx <= pL + pW) {
-      ctx.strokeStyle = 'rgba(99,102,241,0.6)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(99,102,241,0.6)'; ctx.setLineDash([5 * fontScale, 4 * fontScale]); ctx.lineWidth = 1.2 * fontScale;
       ctx.beginPath(); ctx.moveTo(bx, pT); ctx.lineTo(bx, pT + pH); ctx.stroke();
     }
     ctx.restore();
@@ -5329,6 +5343,16 @@ initPermalinks({
     if (excitation !== 'electron') {
       s += `<text x="${cx + circR/2}" y="${arrowY + 9}" text-anchor="middle" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">${maxR} nm</text>`;
     }
+    // Dipole-emitter position: a red dot inside (region=inside) or just outside (region=outside) the sphere.
+    if (excitation === 'dipole') {
+      const outside = dipoleRegion === 'outside';
+      const rad = outside ? circR + 12 : circR * 0.55;   // dot above the surface, or inside
+      const dyDot = cy - rad;
+      s += `<text x="8" y="14" fill="${ct.textMuted}" font-size="7.5" font-weight="700" font-family="Inter,system-ui">R=${maxR} nm</text>`;
+      s += `<line x1="${cx}" y1="${dyDot - 5}" x2="${cx}" y2="${dyDot + 5}" stroke="#dc2626" stroke-width="1.4" stroke-linecap="round"/>`;
+      s += `<circle cx="${cx}" cy="${dyDot}" r="3.4" fill="#dc2626" stroke="#fff" stroke-width="1"/>`;
+      s += `<text x="${cx + 7}" y="${dyDot + 3}" fill="#dc2626" stroke="${ct.grid}" stroke-width="2" paint-order="stroke" font-size="7.5" font-weight="700" font-family="Inter,system-ui">dipole (${outside ? 'outside' : 'inside'})</text>`;
+    }
     s += '</svg>';
     configCheckEl.innerHTML = withSvgMarkerId(s, 'mie-config-radius-arrow');
     configCheckEl.setAttribute('aria-label', `Open enlarged structure drawing for ${geometry === 'coreshell' ? 'core-shell particle' : 'sphere'}`);
@@ -5351,6 +5375,7 @@ initPermalinks({
     const m = materialSelect.value;
     const matPart = m === 'custom' ? 'eps' + epsParam.value : m === 'drude' ? `drude_wp${readDrude(drudeHandle).wp}` : m;
     if (excitation === 'electron') return `electron_sphere_${matPart}_R${rParam.value}nm_b${electronBParam.value}nm`;
+    if (excitation === 'dipole') return `dipole_decay_${matPart}_R${rParam.value}nm_${dipoleRegion}_${dipoleLambdaParam.value.toFixed(0)}nm`;
     if (geometry === 'coreshell') {
       const nLayers = 1 + 1 + extraShells.length; // core + shell1 + extras
       return `mie_${nLayers}layer_n${nhParam.value}`;
@@ -5461,20 +5486,23 @@ initPermalinks({
       ec.toBlob(b => { if (b) downloadBlob(b, filenameStem() + '_thermal.png'); }, 'image/png');
       return;
     }
+    const dipolePlot = excitation === 'dipole' && viewTabs.value !== 'material' && dipoleData ? getDipolePlotData() : null;
     const materialPlot = viewTabs.value === 'material' ? getMaterialPlotData() : null;
-    const electronPlot = !materialPlot && excitation === 'electron' ? getElectronPlotData() : null;
-    const spectrumPlot = materialPlot || electronPlot ? null : getPlotData();
-    const xArr = materialPlot?.xArr ?? electronPlot?.xArr ?? spectrumPlot!.xArr;
-    const series = materialPlot?.series ?? electronPlot?.series ?? spectrumPlot!.series;
-    const xLabel = materialPlot?.xLabel ?? electronPlot?.xLabel ?? spectrumPlot!.xLabel;
-    const yLabel = materialPlot?.yLabel ?? electronPlot?.yLabel ?? spectrumPlot!.yLabel;
+    const electronPlot = !materialPlot && !dipolePlot && excitation === 'electron' ? getElectronPlotData() : null;
+    const spectrumPlot = materialPlot || electronPlot || dipolePlot ? null : getPlotData();
+    const xArr = dipolePlot?.xArr ?? materialPlot?.xArr ?? electronPlot?.xArr ?? spectrumPlot!.xArr;
+    const series = dipolePlot?.series ?? materialPlot?.series ?? electronPlot?.series ?? spectrumPlot!.series;
+    const xLabel = dipolePlot?.xLabel ?? materialPlot?.xLabel ?? electronPlot?.xLabel ?? spectrumPlot!.xLabel;
+    const yLabel = dipolePlot?.yLabel ?? materialPlot?.yLabel ?? electronPlot?.yLabel ?? spectrumPlot!.yLabel;
     const opts: ChartOpts = { logY: materialPlot ? false : logY, fontScale: w / canvas.getBoundingClientRect().width };
     if (materialPlot) opts.yRange = materialPlot.yRange;
     if (electronPlot && !logY) opts.yRange = seriesRange(electronPlot.series);
+    if (dipolePlot) { if (dipolePlot.bands) opts.bands = dipolePlot.bands; if (!logY) opts.yRange = dipolePlot.yRange; }
     if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
     const sd = window.devicePixelRatio;
     Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true, configurable: true });
-    drawChart(ec, xArr, series, xLabel, yLabel, opts);
+    const xf = drawChart(ec, xArr, series, xLabel, yLabel, opts);
+    if (dipolePlot?.fromCentre) drawDipoleInsideOverlay(ec, xf, dipolePlot.bDisp, opts.fontScale);
     Object.defineProperty(window, 'devicePixelRatio', { value: sd, writable: true, configurable: true });
     ec.toBlob(b => { if (b) downloadBlob(b, filenameStem() + '.png'); }, 'image/png');
   });
@@ -5516,6 +5544,24 @@ initPermalinks({
         ].join(','));
       }
       downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_material.csv');
+      return;
+    }
+
+    if (excitation === 'dipole' && dipoleData) {
+      const eps = currentDipoleEps();
+      const d = dipoleData;
+      const lines = [
+        `# Dipole decay rates near a sphere — ${materialLabelForExport(materialSelect.value, epsParam.value, drudeHandle, materialRefEl.textContent || '')}, R=${rParam.value} nm, n_host=${nhParam.value}, lambda=${dipoleLambdaParam.value} nm`,
+        `# region=${dipoleRegion}, eps_sphere=${eps.re.toFixed(4)}${eps.im >= 0 ? '+' : ''}${eps.im.toFixed(4)}i, lmax=${Math.round(dipoleLmaxParam.value)}${dipoleRegion === 'inside' && Math.abs(eps.im) > 1e-9 ? `, f_omega=${dipoleFInput.value}` : ''}`,
+        '# gamma normalized to the free-space rate (gamma/gamma_0). d/a = distance from the sphere centre / radius.',
+        '# radial = dipole ⟂ surface; tangential = dipole ∥ surface. Reference: Kim, Leung & George, Surf. Sci. 195, 1 (1988).',
+        '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+        'd_over_a,radial_total,radial_radiative,radial_nonradiative,tangential_total,tangential_radiative,tangential_nonradiative',
+      ];
+      const f = (v: number) => Number.isFinite(v) ? v.toExponential(8) : '';
+      for (let i = 0; i < d.dOverA.length; i++)
+        lines.push([d.dOverA[i].toFixed(6), f(d.radTot[i]), f(d.radRad[i]), f(d.radNr[i]), f(d.tanTot[i]), f(d.tanRad[i]), f(d.tanNr[i])].join(','));
+      downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '_dipole.csv');
       return;
     }
 
@@ -5598,6 +5644,17 @@ initPermalinks({
     p.set('pol', polTabs.value);
     p.set('al', angularLambdaInput.value);
     if (logY) p.set('logY', '1');
+    if (excitation === 'dipole') {
+      p.set('dreg', dipoleRegion); p.set('dref', dipoleDistRef);
+      p.set('dxu', dipoleXUnitTabs.value); p.set('dyu', dipoleYUnitTabs.value); p.set('dch', dipoleChannelTabs.value);
+      p.set('dlam', dipoleLambdaParam.value.toString()); p.set('dlmax', dipoleLmaxParam.value.toString());
+      p.set('ddmin', dipoleDMinInput.value); p.set('ddmax', dipoleDMaxInput.value);
+      if (dipoleYMinInput.value) p.set('dymin', dipoleYMinInput.value);
+      if (dipoleYMaxInput.value) p.set('dymax', dipoleYMaxInput.value);
+      p.set('df', dipoleFInput.value); p.set('dtau', dipoleTau0Input.value);
+      if (dipoleEpsOverride) { p.set('depsr', dipoleEpsOverride.re.toString()); p.set('depsi', dipoleEpsOverride.im.toString()); }
+      if (dipoleCavity) p.set('dcav', '1');
+    }
     if (geometry === 'coreshell') {
       p.set('cmat', coreMaterialSelect.value);
       if (coreMaterialSelect.value === 'custom') p.set('ceps', coreEpsParam.value.toString());
@@ -5630,6 +5687,7 @@ initPermalinks({
     const p = new URLSearchParams(hash);
     const ex = p.get('exc');
     if (ex === 'electron') { excitation = 'electron'; excitationTabs.select('electron', true); }
+    if (ex === 'dipole') { excitation = 'dipole'; excitationTabs.select('dipole', true); dipoleInitialized = true; }
     const g = p.get('geo');
     if (g === 'coreshell') geoTabs.select('coreshell');
     const mat = p.get('mat');
@@ -5657,6 +5715,23 @@ initPermalinks({
     if (p.has('eqc')) electronQcParam.setValue(parseFloat(p.get('eqc')!));
     if (p.has('enz')) electronNzParam.setValue(parseFloat(p.get('enz')!));
     if (p.get('logY') === '1') { logY = true; logToggle.classList.add('active'); }
+    if (ex === 'dipole') {
+      if (p.has('dreg')) { dipoleRegionTabs.select(p.get('dreg')!, true); dipoleRegion = p.get('dreg') as 'outside' | 'inside'; }
+      if (p.has('dref')) { dipoleDistRef = p.get('dref') as 'centre' | 'surface'; dipoleRefSel.value = dipoleDistRef; }
+      if (p.has('dxu')) { dipoleXUnitTabs.select(p.get('dxu')!, true); dipoleDistUnit = p.get('dxu') as 'norm' | 'abs'; }
+      if (p.has('dyu')) { dipoleYUnitTabs.select(p.get('dyu')!, true); dipoleYUnitPrev = p.get('dyu')!; }
+      if (p.has('dch')) dipoleChannelTabs.select(p.get('dch')!, true);
+      if (p.has('dtau')) dipoleTau0Input.value = p.get('dtau')!;
+      if (p.has('df')) dipoleFInput.value = p.get('df')!;
+      if (p.has('dlam')) dipoleLambdaParam.setValue(parseFloat(p.get('dlam')!));
+      if (p.has('dlmax')) dipoleLmaxParam.setValue(parseFloat(p.get('dlmax')!));
+      if (p.has('ddmin')) dipoleDMinInput.value = p.get('ddmin')!;
+      if (p.has('ddmax')) dipoleDMaxInput.value = p.get('ddmax')!;
+      dipoleYMinInput.value = p.get('dymin') ?? ''; dipoleYMaxInput.value = p.get('dymax') ?? '';
+      // reference ε override + cavity flag last — the setValue calls above clear them via clearDipolePreset
+      if (p.has('depsr') && p.has('depsi')) dipoleEpsOverride = { re: parseFloat(p.get('depsr')!), im: parseFloat(p.get('depsi')!) };
+      if (p.get('dcav') === '1') dipoleCavity = true;
+    }
     if (g === 'coreshell') {
       const cm = p.get('cmat');
       if (cm && !['file', 'rii'].includes(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }

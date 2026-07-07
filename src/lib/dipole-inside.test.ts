@@ -1,7 +1,42 @@
-// Invariants for the dipole-INSIDE-sphere decay rates (Kim 1988 Figs. 4 & 5).
+// Invariants for the dipole-INSIDE-sphere decay rates (Kim 1988 Figs. 2, 4 & 5).
 // Ported from the Spheres_dipoles validation package.
 import { describe, it, expect } from 'vitest';
 import { insideDecay, insideCoeffs, csqrt, type Cx } from './dipole-inside';
+
+describe('Dipole in a vacuum cavity — Kim (1988) Fig. 2', () => {
+  // Cavity: dipole in a vacuum cavity (ε₂ = 1) surrounded by a dielectric ε₁ = 2.16;
+  // a = 400 nm, λ = 413.3 nm, ℓ_max = 30. Purely radiative (total = radiative).
+  const VAC: Cx = { re: 1, im: 0 };
+  const OUTER: Cx = { re: 2.16, im: 0 };
+  const cav = (dOverA: number) => insideDecay(413.3, VAC, 400, dOverA * 400, 30, undefined, OUTER);
+
+  it('matches the published Fig. 2 reference table (radial γ_⊥ and tangential γ_∥)', () => {
+    // [d/a, radial, tangential] from the README reference-values table
+    const TABLE: [number, number, number][] = [
+      [0.20, 1.269, 1.118],
+      [0.35, 1.045, 0.906],
+      [0.50, 0.939, 1.012],
+      [0.70, 1.062, 1.079],
+      [0.85, 1.346, 1.007],
+      [0.95, 1.751, 1.198],
+      [0.99, 2.019, 1.393],
+    ];
+    for (const [da, radial, tangential] of TABLE) {
+      const r = cav(da);
+      expect(r.perpTot).toBeCloseTo(radial, 2);
+      expect(r.parTot).toBeCloseTo(tangential, 2);
+    }
+  });
+  it('centre value = 1 + Re(E₁) ≈ 1.447, both orientations equal', () => {
+    const r = insideDecay(413.3, VAC, 400, 1e-3, 30, undefined, OUTER);
+    expect(r.perpTot).toBeCloseTo(1.447, 2);
+    expect(r.perpTot).toBeCloseTo(r.parTot, 3);
+  });
+  it('radial dips below 1 near mid-radius then climbs above 2 at the wall', () => {
+    expect(cav(0.5).perpTot).toBeLessThan(1);       // ≈ 0.939
+    expect(cav(0.99).perpTot).toBeGreaterThan(1.9); // ≈ 2.019
+  });
+});
 
 describe('Dipole inside a sphere — Kim (1988) Figs. 4 & 5', () => {
   // Fig. 4: transparent sphere ε₂ = 2.16, a = 400 nm, λ = 413.3 nm, ℓ_max = 30.

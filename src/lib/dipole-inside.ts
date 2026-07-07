@@ -130,18 +130,21 @@ export interface InsideRates {
 
 /**
  * @param lambdaNm  vacuum wavelength (nm)
- * @param eps2      sphere permittivity (complex); host is vacuum ε₁=1
- * @param aNm       sphere radius a (nm)
+ * @param eps2      permittivity of the medium the dipole is IN (the inner sphere).
+ *                  Aerosol (Figs 4,5): ε₂ = the sphere. Cavity (Fig 2): ε₂ = 1 (vacuum).
+ * @param aNm       sphere/cavity radius a (nm)
  * @param dNm       dipole distance from centre d (nm), 0 ≤ d < a
  * @param nmax      multipole truncation
- * @param fOmega    f(ω)=γ_sp/γ₀ for the DISSIPATIVE case (Eq. 28). Omit/undefined
- *                  for the transparent case (real ε₂), where total = radiative and
+ * @param fOmega    f(ω)=γ_sp/γ₀ for a DISSIPATIVE inner medium (Eq. 28). Omit/undefined
+ *                  for a transparent inner medium, where total = radiative and
  *                  Eqs. (21,22) are used directly.
+ * @param eps1      permittivity of the OUTER medium. Aerosol → vacuum (default {1,0}).
+ *                  Cavity (Fig 2) → the surrounding dielectric (e.g. 2.16).
  */
 export function insideDecay(
-  lambdaNm: number, eps2: Cx, aNm: number, dNm: number, nmax: number, fOmega?: number,
+  lambdaNm: number, eps2: Cx, aNm: number, dNm: number, nmax: number,
+  fOmega?: number, eps1: Cx = C(1, 0),
 ): InsideRates {
-  const eps1 = C(1, 0);
   const k0 = 2 * Math.PI / lambdaNm;
   const sq2 = csqrt(eps2);
   const rho1 = scale(csqrt(eps1), k0 * aNm);       // k₁ a = (2πa/λ)√ε₁
