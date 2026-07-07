@@ -346,7 +346,49 @@ import ToolMeta from '../../components/ToolMeta.astro';
             <div class="result-panel card sp-result-card">
               <div class="sp-sub-tabs" id="sp-sub-tabs" role="tablist" aria-label="Sub-view"></div>
               <div class="sp-chart-head">
-                <div class="sp-chart-title" id="sp-chart-title">&mdash;</div>
+                <div class="sp-title-wrap">
+                  <div class="sp-chart-title" id="sp-chart-title">&mdash;</div>
+                  <button type="button" class="sp-info-btn" id="sp-rosette-info" aria-label="How to read the rosette" title="How to read the rosette" aria-expanded="false" hidden>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  </button>
+                  <div class="sp-info-pop" id="sp-rosette-pop" role="dialog" aria-label="Rosette coordinate guide" hidden>
+                    <div class="sp-info-pop__head">
+                      <span>Reading the rosette</span>
+                      <button type="button" class="sp-info-pop__close" id="sp-rosette-pop-close" aria-label="Close">&times;</button>
+                    </div>
+                    <svg class="sp-info-pop__svg" viewBox="0 0 260 236" role="img" aria-label="Empty rosette showing polar angle θ (radial) and azimuth φ (angular) labelling">
+                      <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.55">
+                        <circle cx="130" cy="118" r="90"/>
+                        <circle cx="130" cy="118" r="60"/>
+                        <circle cx="130" cy="118" r="30"/>
+                        <line x1="40" y1="118" x2="220" y2="118"/>
+                        <line x1="130" y1="28" x2="130" y2="208"/>
+                      </g>
+                      <!-- azimuth φ direction (CCW) -->
+                      <path d="M 196 78 A 82 82 0 0 0 182 62" fill="none" stroke="var(--primary)" stroke-width="1.6" marker-end="url(#sp-rose-arr)"/>
+                      <defs><marker id="sp-rose-arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--primary)"/></marker></defs>
+                      <!-- centre + edge markers -->
+                      <circle cx="130" cy="118" r="2.6" fill="currentColor"/>
+                      <g font-size="10.5" font-style="italic" fill="currentColor">
+                        <text x="130" y="112" text-anchor="middle">θ=0</text>
+                        <text x="130" y="132" text-anchor="middle" font-style="normal" font-size="8.5" opacity="0.7">normal</text>
+                        <text x="171" y="114" font-size="8.5" font-style="normal" opacity="0.75">30°</text>
+                        <text x="201" y="114" font-size="8.5" font-style="normal" opacity="0.75">60°</text>
+                      </g>
+                      <!-- θ edge label -->
+                      <text x="130" y="228" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.85">θ = 90° (grazing) at rim &middot; radial = polar angle from normal</text>
+                      <!-- azimuth labels -->
+                      <g font-size="10" fill="currentColor">
+                        <text x="226" y="121" font-weight="600">φ=0</text>
+                        <text x="226" y="133" font-size="7.5" opacity="0.7">beam →</text>
+                        <text x="130" y="22" text-anchor="middle">φ=90°</text>
+                        <text x="34" y="121" text-anchor="end">180°</text>
+                        <text x="130" y="220" text-anchor="middle">270°</text>
+                      </g>
+                    </svg>
+                    <p class="sp-info-pop__note"><b>Radial</b> = polar angle θ from the surface normal (centre) out to 90° grazing (rim). <b>Angular</b> = azimuth φ, with φ=0 (East) the plane of incidence / beam direction, increasing counter-clockwise. φ=0 is the pure-p meridian where the ellipses collapse to radial segments.</p>
+                  </div>
+                </div>
                 <div class="sp-stokes-sel" id="sp-stokes-sel" role="radiogroup" aria-label="Stokes parameter" hidden>
                   <button type="button" data-stk="s1" aria-pressed="false">S<sub>1</sub></button>
                   <button type="button" data-stk="s2" aria-pressed="false">S<sub>2</sub></button>
@@ -738,7 +780,19 @@ initPermalinks({ kev: 'kev' });
   :global(#sp-sub-tabs .sp-sub-tab.active) { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   :global(#sp-sub-tabs .sp-sub-tab:hover:not(.active)) { color: var(--text); }
   .sp-chart-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .sp-title-wrap { position: relative; display: flex; align-items: center; gap: 0.35rem; }
   .sp-chart-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+  .sp-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; padding: 0; border: none; border-radius: var(--radius-full); background: none; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .sp-info-btn[hidden] { display: none; }
+  .sp-info-btn:hover, .sp-info-btn[aria-expanded="true"] { background: var(--bg-muted); color: var(--primary); }
+  .sp-info-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 300px; max-width: 88vw; padding: 0.7rem 0.8rem 0.8rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md); box-shadow: var(--shadow-lg, 0 8px 28px rgba(0,0,0,0.18)); }
+  .sp-info-pop[hidden] { display: none; }
+  .sp-info-pop__head { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+  .sp-info-pop__close { border: none; background: none; color: var(--text-soft); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.15rem; }
+  .sp-info-pop__close:hover { color: var(--text); }
+  .sp-info-pop__svg { display: block; width: 100%; height: auto; color: var(--text-muted); margin: 0.1rem 0 0.35rem; }
+  .sp-info-pop__note { font-size: 0.72rem; line-height: 1.45; color: var(--text-soft); margin: 0; }
+  .sp-info-pop__note b { color: var(--text); font-weight: 600; }
   .sp-stokes-sel { display: inline-flex; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); overflow: hidden; }
   .sp-stokes-sel[hidden] { display: none; }
   .sp-stokes-sel button { padding: 0.2rem 0.7rem; border: none; background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.78rem; font-weight: 700; cursor: pointer; }
@@ -2410,6 +2464,9 @@ initPermalinks({ kev: 'kev' });
     drawSteer(); $('sp-steer-sub').innerHTML = 'ξ = ' + sp.xi;
     const title = $('sp-chart-title');
     ($('sp-stokes-sel') as HTMLElement).hidden = sp.view === 'materials' || sp.sub !== 'polarization';
+    const isRosette = sp.view === 'farfield' && sp.sub === 'rosette';
+    ($('sp-rosette-info') as HTMLElement).hidden = !isRosette;
+    if (!isRosette) closeRosettePop();
     ($('sp-mat-scale') as HTMLElement).hidden = sp.view !== 'materials';
     const stk = sp.stokesSel as 's1' | 's2' | 's3';
     const stkLbl = ({ s1: 'S₁/S₀ (p vs s linear)', s2: 'S₂/S₀ (±45° linear)', s3: 'circular degree S₃/S₀' } as Record<string, string>)[sp.stokesSel];
@@ -2852,6 +2909,17 @@ initPermalinks({ kev: 'kev' });
     $('sp-stokes-sel').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.stk === sp.stokesSel; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
     renderSP();
   });
+  // rosette coordinate-guide popover
+  function closeRosettePop() { ($('sp-rosette-pop') as HTMLElement).hidden = true; $('sp-rosette-info').setAttribute('aria-expanded', 'false'); }
+  $('sp-rosette-info').addEventListener('click', e => {
+    e.stopPropagation();
+    const pop = $('sp-rosette-pop') as HTMLElement, open = pop.hidden;
+    pop.hidden = !open; $('sp-rosette-info').setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  $('sp-rosette-pop-close').addEventListener('click', e => { e.stopPropagation(); closeRosettePop(); });
+  $('sp-rosette-pop').addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => closeRosettePop());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRosettePop(); });
   $('sp-mat-scale').addEventListener('click', e => {
     const btn = (e.target as HTMLElement).closest('button[data-ms]') as HTMLButtonElement | null; if (!btn) return;
     sp.matLog = btn.dataset.ms === 'log';
