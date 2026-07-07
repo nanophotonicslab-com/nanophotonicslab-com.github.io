@@ -1900,12 +1900,13 @@ initPermalinks({ kev: 'kev' });
     const cc = ctx2d($('sp-chart') as HTMLCanvasElement); if (!cc) return;
     const { ctx, w, h } = cc, m = { l: 56, r: 66, t: 14, b: 38 };
     const thMin = sp.thMin, thMax = sp.thMax, NX = 150, NU = 78;
-    const yMin = Math.min(sp.specMin, sp.specMax), yMax = Math.max(sp.specMin, sp.specMax), isEv = sp.specUnit === 'eV';
+    // respect the entered order (first field → bottom, second → top) so swapping reverses the axis
+    const y0 = sp.specMin, y1 = sp.specMax, ylo = Math.min(y0, y1), yhi = Math.max(y0, y1), isEv = sp.specUnit === 'eV';
     const toE = (v: number) => isEv ? v : eVFromWavelengthNm(v);
     const phi = sp.phi * PI / 180, mag = dipoleDistribution(sp.N, sp.xi, 1.0);
     const M = new Float64Array(NX * NU), S0 = new Float64Array(NX * NU); let mx = 1e-30;
     for (let iu = 0; iu < NU; iu++) {
-      const E = toE(yMin + (yMax - yMin) * iu / (NU - 1)), aol = sp.a / wavelengthNmFromEV(E);
+      const E = toE(y0 + (y1 - y0) * iu / (NU - 1)), aol = sp.a / wavelengthNmFromEV(E);
       const dip = dipolesAtOmega(omegaFromEV(E), mag);
       for (let ix = 0; ix < NX; ix++) {
         const t = (thMin + (thMax - thMin) * ix / (NX - 1)) * PI / 180;
@@ -1926,12 +1927,12 @@ initPermalinks({ kev: 'kev' });
     }
     octx.putImageData(img, 0, 0);
     const px = (x: number) => m.l + (x - thMin) / (thMax - thMin) * (w - m.l - m.r);
-    const py = (y: number) => h - m.b - (y - yMin) / (yMax - yMin) * (h - m.t - m.b);
+    const py = (y: number) => h - m.b - (y - y0) / (y1 - y0) * (h - m.t - m.b);
     ctx.imageSmoothingEnabled = true; ctx.drawImage(off, m.l, m.t, w - m.l - m.r, h - m.t - m.b);
     ctx.strokeStyle = cvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
     ctx.font = '11px ' + (cvar('--font') || 'sans-serif'); ctx.fillStyle = cvar('--text-muted');
     const fmtY = (v: number) => isEv ? v.toFixed(2) : String(Math.round(v));
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const y of [yMin, (yMin + yMax) / 2, yMax]) ctx.fillText(fmtY(y), m.l - 6, py(y));
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const y of [y0, (y0 + y1) / 2, y1]) ctx.fillText(fmtY(y), m.l - 6, py(y));
     const xt = [...new Set([Math.round(thMin), ...[-90, -45, 0, 45, 90, 135, 180, 225].filter(x => x > thMin + 8 && x < thMax - 8), Math.round(thMax)])];
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const x of xt) ctx.fillText(x + '°', px(x), h - m.b + 6);
     ctx.fillStyle = cvar('--text-soft'); ctx.fillText('emission angle θ', (m.l + w - m.r) / 2, h - 14);
@@ -1945,7 +1946,7 @@ initPermalinks({ kev: 'kev' });
         const lamNm = sp.a * (1 / sp.vc - s) / (1 - ell / sp.N);
         if (lamNm <= 0) { started = false; continue; }
         const yval = isEv ? eVFromWavelengthNm(lamNm) : lamNm;
-        if (yval < yMin || yval > yMax) { started = false; continue; }
+        if (yval < ylo || yval > yhi) { started = false; continue; }
         const X = px(td), Y = py(yval); started ? ctx.lineTo(X, Y) : (ctx.moveTo(X, Y), started = true);
       }
       ctx.stroke();
@@ -2350,9 +2351,9 @@ initPermalinks({ kev: 'kev' });
   $('sp-spec-unit').addEventListener('click', e => {
     const btn = (e.target as HTMLElement).closest('button[data-su]') as HTMLButtonElement | null; if (!btn) return;
     const unit = btn.dataset.su!; if (unit === sp.specUnit) return;
-    const lo = Math.min(sp.specMin, sp.specMax), hi = Math.max(sp.specMin, sp.specMax);
-    if (unit === 'eV') { sp.specMin = eVFromWavelengthNm(hi); sp.specMax = eVFromWavelengthNm(lo); }   // smaller λ → larger E
-    else { sp.specMin = wavelengthNmFromEV(hi); sp.specMax = wavelengthNmFromEV(lo); }
+    // convert each field in place so the entered order (and any reversed axis) is preserved across units
+    const conv = unit === 'eV' ? eVFromWavelengthNm : wavelengthNmFromEV;
+    sp.specMin = conv(sp.specMin); sp.specMax = conv(sp.specMax);
     sp.specUnit = unit;
     const round = (v: number) => unit === 'eV' ? +v.toFixed(3) : Math.round(v);
     const mn = $('sp-spec-min') as HTMLInputElement, mxEl = $('sp-spec-max') as HTMLInputElement;
