@@ -2264,7 +2264,23 @@ initPermalinks({
     const fs = opts.fontScale || 1;
     ctx.fillStyle = ct.textSoft; ctx.font = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (const v of xTicks) ctx.fillText(fmtTick(v), tx(v), PAD.top + ph + 6 * fs);
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (const v of yTicks) { const y = ty(v); if (y < PAD.top - 5 || y > PAD.top + ph + 5) continue; if (yTickLabeler(v)) ctx.fillText(fmtTick(v), PAD.left - 8 * fs, y); }
+    ctx.textBaseline = 'middle';
+    const baseFont = `${Math.round(11 * fs)}px Inter, system-ui, sans-serif`, expFont = `${Math.round(8 * fs)}px Inter, system-ui, sans-serif`;
+    for (const v of yTicks) {
+      const y = ty(v); if (y < PAD.top - 5 || y > PAD.top + ph + 5 || !yTickLabeler(v)) continue;
+      if (opts.logY) {
+        // powers of ten: "10" with a raised exponent, right-aligned at PAD.left − 8·fs
+        const exp = String(Math.round(Math.log10(v)));
+        ctx.font = baseFont; const baseW = ctx.measureText('10').width;
+        ctx.font = expFont; const expW = ctx.measureText(exp).width;
+        const x0 = PAD.left - 8 * fs - baseW - expW;
+        ctx.textAlign = 'left';
+        ctx.font = baseFont; ctx.fillText('10', x0, y);
+        ctx.font = expFont; ctx.fillText(exp, x0 + baseW, y - Math.round(4 * fs));
+      } else {
+        ctx.font = baseFont; ctx.textAlign = 'right'; ctx.fillText(fmtTick(v), PAD.left - 8 * fs, y);
+      }
+    }
     ctx.fillStyle = ct.text; ctx.font = `${Math.round(14 * fs)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(xLabel, PAD.left + pw / 2, H - 16 * fs);
     ctx.save(); ctx.translate(14 * fs, PAD.top + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(yLabel, 0, 0); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.rect(PAD.left, PAD.top, pw, ph); ctx.clip();
