@@ -35,7 +35,13 @@ const miePresets = [
       <dt>Limitations</dt>
       <dd>No non-local or quantum-size corrections. EELS uses the non-retarded analytical model for the homogeneous sphere (retardation effects missing for large particles or high energies).</dd>
       <dt>References</dt>
-      <dd>Bohren &amp; Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983); F. J. García de Abajo, Rev. Mod. Phys. <strong>82</strong>, 209 (2010).</dd>
+      <dd>
+        <ol class="ref-list">
+          <li>C. F. Bohren &amp; D. R. Huffman, <em>Absorption and Scattering of Light by Small Particles</em> (Wiley, 1983).</li>
+          <li>F. J. García de Abajo, <em>Optical excitations in electron microscopy</em>, Rev. Mod. Phys. <strong>82</strong>, 209 (2010).</li>
+          <li>Y. S. Kim, P. T. Leung &amp; T. F. George, <em>Classical decay rates for molecules in the presence of a spherical surface: A complete treatment</em>, Surf. Sci. <strong>195</strong>, 1 (1988).</li>
+        </ol>
+      </dd>
     </dl>
   </ModelInfo>
 
@@ -47,14 +53,20 @@ const miePresets = [
           <div class="plot-tabs" id="excitation-tabs" role="radiogroup">
             <button class="plot-tab active" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
             <button class="plot-tab" data-excitation="electron" role="radio" aria-checked="false">Electrons</button>
-            <button class="plot-tab" data-excitation="dipole" role="radio" aria-checked="false" aria-disabled="true" disabled>Dipoles</button>
+            <button class="plot-tab" data-excitation="dipole" role="radio" aria-checked="false">Dipoles</button>
           </div>
         </div>
       </div>
       <div class="widget-layout">
         <div class="widget-column widget-column--controls">
           <div class="controls card">
-          <h3>Parameters</h3>
+          <div class="params-head">
+            <h3>Parameters</h3>
+            <div class="plot-tabs plot-tabs--sm params-head__toggle dipole-only" id="dipole-region-tabs" role="radiogroup" aria-label="Dipole position" style="display:none">
+              <button class="plot-tab active" data-dregion="outside" role="radio" aria-checked="true">Outside</button>
+              <button class="plot-tab" data-dregion="inside" role="radio" aria-checked="false">Inside</button>
+            </div>
+          </div>
 
           <!-- Geometry type -->
           <div class="param">
@@ -348,6 +360,89 @@ const miePresets = [
             </div>
           </details>
 
+          <!-- ============ Dipole-emitter controls ============ -->
+          <div class="param dipole-only" id="dipole-lambda-group" style="display:none">
+            <div class="param-header">
+              <label>Emission wavelength (nm)</label>
+              <input type="number" class="param-number" id="dipole-lambda-num" value="413.3" step="1" min="100">
+            </div>
+            <input type="range" class="param-slider" id="dipole-lambda-slider" min="300" max="900" step="0.1" value="413.3">
+            <div class="param-limits">
+              <input type="number" class="param-limit" id="dipole-lambda-min" value="300" step="10" min="100">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit" id="dipole-lambda-max" value="900" step="10" min="120">
+            </div>
+            <div class="dipole-ev-echo" id="dipole-ev-echo"></div>
+          </div>
+
+          <!-- Range / axis controls -->
+          <div class="param dipole-only" id="dipole-range-group" style="display:none">
+            <div class="param-header">
+              <label>Distance range (from
+                <select id="dipole-ref-sel" class="dipole-ref-sel" aria-label="Distance reference point">
+                  <option value="centre">centre</option>
+                  <option value="surface">surface</option>
+                </select>)</label>
+              <div class="plot-tabs plot-tabs--sm dipole-unit-toggle" id="dipole-xunit-tabs" role="radiogroup" aria-label="Distance unit">
+                <button class="plot-tab active" data-dxunit="norm" role="radio" aria-checked="true">d/a</button>
+                <button class="plot-tab" data-dxunit="abs" role="radio" aria-checked="false">nm</button>
+              </div>
+            </div>
+            <div class="param-range-row">
+              <input type="number" class="param-number param-number--sm" id="dipole-dmin" value="1.02" step="0.05" min="0">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-number param-number--sm" id="dipole-dmax" value="9" step="0.1" min="0.01">
+            </div>
+          </div>
+
+          <div class="param dipole-only" id="dipole-yunit-group" style="display:none">
+            <div class="param-header"><label>Rate axis (y)</label></div>
+            <div class="plot-tabs" id="dipole-yunit-tabs" role="radiogroup">
+              <button class="plot-tab active" data-dyunit="norm" role="radio" aria-checked="true">&gamma;/&gamma;<sub>0</sub></button>
+              <button class="plot-tab" data-dyunit="inv_s" role="radio" aria-checked="false">1/s</button>
+              <button class="plot-tab" data-dyunit="inv_fs" role="radio" aria-checked="false">1/fs</button>
+            </div>
+            <div class="param-range-row dipole-yrange-row">
+              <input type="number" class="param-number param-number--sm" id="dipole-ymin" placeholder="auto" step="any" title="y-axis minimum (blank = auto)">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-number param-number--sm" id="dipole-ymax" placeholder="auto" step="any" title="y-axis maximum (blank = auto)">
+            </div>
+          </div>
+
+          <div class="param dipole-only" id="dipole-tau0-group" style="display:none">
+            <div class="param-header">
+              <label title="Free-space radiative lifetime of the emitter; sets the absolute scale γ₀ = 1/τ₀">Free-space lifetime &tau;<sub>0</sub> (ns)</label>
+              <input type="number" class="param-number" id="dipole-tau0-num" value="1" step="0.1" min="0.001">
+            </div>
+            <div class="dipole-ev-echo" id="dipole-gamma0-echo"></div>
+          </div>
+
+          <div class="param dipole-only" id="dipole-ref-group" style="display:none">
+            <div class="dipole-ref" id="dipole-ref"></div>
+          </div>
+
+          <details class="layer-details dipole-only" id="dipole-numerics" style="display:none">
+            <summary>Numerics</summary>
+            <div class="param">
+              <div class="param-header">
+                <label>Multipole cutoff &ell;<sub>max</sub></label>
+                <input type="number" class="param-number" id="dipole-lmax-num" value="20" step="1" min="1" max="60">
+              </div>
+              <input type="range" class="param-slider" id="dipole-lmax-slider" min="1" max="60" step="1" value="20">
+              <div class="param-limits">
+                <input type="number" class="param-limit" id="dipole-lmax-min" value="1" step="1" min="1">
+                <span class="param-limit-dash">&mdash;</span>
+                <input type="number" class="param-limit" id="dipole-lmax-max" value="60" step="1" min="2">
+              </div>
+            </div>
+            <div class="param" id="dipole-f-group">
+              <div class="param-header">
+                <label title="γ_sp/γ₀ scale for a dissipative sphere (Kim Eq. 28); ignored for a lossless sphere">f(&omega;) &mdash; dissipative scale</label>
+                <input type="number" class="param-number" id="dipole-f-num" value="6.88e-8" step="1e-8" min="0">
+              </div>
+            </div>
+          </details>
+
           <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
 
           <button type="button" class="config-check" id="config-check" aria-haspopup="dialog" aria-controls="structure-dialog" title="Open structure drawing"></button>
@@ -410,6 +505,18 @@ const miePresets = [
                   <button class="plot-tab" data-electron-decomp="multipole" role="radio" aria-checked="false">Multipoles</button>
                 </div>
               </div>
+            </div>
+            <div class="dipole-controls" id="dipole-controls" style="display:none">
+              <div class="toolbar-control">
+                <span class="toolbar-label">Rate channel</span>
+                <div class="plot-tabs plot-tabs--toolbar" id="dipole-channel-tabs" role="radiogroup">
+                  <button class="plot-tab active" data-dchannel="total" role="radio" aria-checked="true">Total</button>
+                  <button class="plot-tab" data-dchannel="rad" role="radio" aria-checked="false">Radiative</button>
+                  <button class="plot-tab" data-dchannel="nr" role="radio" aria-checked="false">Non-rad.</button>
+                  <button class="plot-tab" data-dchannel="all" role="radio" aria-checked="false">All</button>
+                </div>
+              </div>
+              <span class="dipole-orient-key">solid = radial &nbsp;·&nbsp; dashed = tangential</span>
             </div>
             <div class="material-controls" id="material-controls" style="display:none">
               <span class="toolbar-label">Display</span>
@@ -607,6 +714,15 @@ initPermalinks({
   .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .controls { display: flex; flex-direction: column; gap: 0.85rem; }
   .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
+  .params-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .params-head h3 { margin: 0; }
+  .params-head__toggle { flex: 0 0 auto; }
+  .params-head__toggle .plot-tab { padding: 0.28rem 0.7rem; font-size: 0.74rem; font-weight: 700; }
+  .dipole-unit-toggle { flex: 0 0 auto; }
+  .dipole-unit-toggle .plot-tab { padding: 0.12rem 0.5rem; font-size: 0.7rem; font-weight: 700; }
+  .dipole-yrange-row { margin-top: 0.4rem; }
+  .dipole-ref-sel { font-family: var(--font); font-size: inherit; font-weight: 700; color: var(--primary); background: transparent; border: none; border-bottom: 1px dotted var(--primary-light); padding: 0 0.1rem; margin: 0 0.05rem; cursor: pointer; }
+  .dipole-ref-sel:focus { outline: none; border-bottom-style: solid; }
   .param { display: flex; flex-direction: column; gap: 0.28rem; }
   .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
   .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
@@ -719,12 +835,22 @@ initPermalinks({
   .plot-tabs--toolbar .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .spectrum-controls,
   .material-controls,
+  .dipole-controls,
   .electron-controls {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     flex-wrap: wrap;
   }
+  .dipole-orient-key { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+  .dipole-ev-echo { margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted); }
+  .dipole-ref { font-size: 0.72rem; line-height: 1.4; color: var(--text-soft); background: var(--bg-soft); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); padding: 0.4rem 0.55rem; }
+  .dipole-ref b { color: var(--text); font-weight: 700; }
+  :global(.dipole-fig-btn) { font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.22rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+  :global(.dipole-fig-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  :global(.dipole-fig-btn.active) { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
+  :global(.dipole-fig-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  :global(.dipole-fig-label) { font-size: 0.7rem; font-weight: 700; color: var(--text-soft); margin: 0.6rem 0 0.35rem; }
   .toolbar-control {
     display: inline-flex;
     align-items: center;
@@ -961,6 +1087,9 @@ initPermalinks({
   .plot-tab:disabled:hover,
   .plot-tab[aria-disabled="true"]:hover { color: var(--text-soft); }
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
+  .ref-list { margin: 0; padding-left: 1.35em; }
+  .ref-list li { margin-bottom: 0.25rem; padding-left: 0.15em; }
+  .ref-list li:last-child { margin-bottom: 0; }
   .theory-note strong { color: var(--text-soft); }
   .chart-panel { padding: var(--space-md); }
   .chart-toolbar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap; }
@@ -1029,9 +1158,11 @@ initPermalinks({
 </style>
 
 <script>
-  import { MATERIALS, interpolateNK } from '../../lib/materials';
+  import { MATERIALS, interpolateNK, nkToEpsilon } from '../../lib/materials';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
   import { computeElectronSphereSpectrum, type ElectronSpectrum } from '../../lib/electron-sphere';
+  import { decayRatesAt } from '../../lib/dipole-decay';
+  import { insideDecay } from '../../lib/dipole-inside';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
@@ -2581,6 +2712,16 @@ initPermalinks({
   let radiusOrderNormalizing = false;
   let activeThermalPreset: string | null = null;   // highlighted figure button
   let applyingThermalPreset = false;               // suppress highlight-clearing while a preset loads
+  // ── dipole-emitter (decay-rate) mode state ──
+  interface DipoleCurves { dOverA: Float64Array; radTot: Float64Array; radRad: Float64Array; radNr: Float64Array; tanTot: Float64Array; tanRad: Float64Array; tanNr: Float64Array; }
+  let dipoleData: DipoleCurves | null = null;
+  let dipoleRegion: 'outside' | 'inside' = 'outside';
+  let dipoleDistUnit: 'norm' | 'abs' = 'norm';     // unit of the distance-range entries (d/a or nm)
+  let dipoleDistRef: 'centre' | 'surface' = 'centre';   // reference point for the distance entries/axis
+  let dipoleEpsOverride: { re: number; im: number } | null = null;   // reference ε set by a figure preset (else use the material selector)
+  let activeDipolePreset: string | null = null;
+  let applyingDipolePreset = false;
+  let dipoleInitialized = false;                    // apply sensible defaults the first time dipole mode is opened
   const RADIUS_GAP_NM = 5;
   function runScheduledUpdate() {
     if (rafPending) return;
@@ -2597,6 +2738,8 @@ initPermalinks({
       window.clearTimeout(updateTimer);
       updateTimer = null;
     }
+    // Electron EELS/CL is genuinely expensive → debounce. Plane wave and the dipole
+    // decay-rate solver are both fast (~tens of ms) → update immediately (rAF-coalesced).
     if (excitation === 'electron') {
       updateTimer = window.setTimeout(() => {
         updateTimer = null;
@@ -2638,7 +2781,7 @@ initPermalinks({
       radiusOrderNormalizing = false;
     }
   }
-  function resetAndUpdate() { if (!applyingThermalPreset) activeThermalPreset = null; zoomBounds = null; normalizeRadiusOrder(); updateElectronRadiusMarker(); scheduleUpdate(); }
+  function resetAndUpdate() { if (!applyingThermalPreset) activeThermalPreset = null; if (!applyingDipolePreset) clearDipolePreset(); zoomBounds = null; normalizeRadiusOrder(); updateElectronRadiusMarker(); scheduleUpdate(); }
   function radiusChanged(layerIndex: number) { zoomBounds = null; normalizeRadiusOrder(layerIndex); updateElectronRadiusMarker(); scheduleUpdate(); }
 
   function drudeHandleFromIds(groupId: string, epsBId: string, wpId: string, gammaId: string): DrudeHandle {
@@ -2688,6 +2831,61 @@ initPermalinks({
   const electronLmaxParam = setupParam('electron-lmax-num', 'electron-lmax-slider', 'electron-lmax-min', 'electron-lmax-max', v => v.toFixed(0), resetAndUpdate);
   const electronQcParam = setupParam('electron-qc-num', 'electron-qc-slider', 'electron-qc-min', 'electron-qc-max', v => v.toFixed(2), resetAndUpdate);
   const electronNzParam = setupParam('electron-nz-num', 'electron-nz-slider', 'electron-nz-min', 'electron-nz-max', v => v.toFixed(0), resetAndUpdate);
+
+  // ── dipole-mode controls ──
+  const dipoleControls = document.getElementById('dipole-controls')!;
+  const dipoleEvEcho = document.getElementById('dipole-ev-echo')!;
+  const dipoleRefEl = document.getElementById('dipole-ref')!;
+  const dipoleRefGroup = document.getElementById('dipole-ref-group')!;
+  const dipoleFGroup = document.getElementById('dipole-f-group')!;
+  const dipoleDMinInput = document.getElementById('dipole-dmin') as HTMLInputElement;
+  const dipoleDMaxInput = document.getElementById('dipole-dmax') as HTMLInputElement;
+  const dipoleFInput = document.getElementById('dipole-f-num') as HTMLInputElement;
+  const dipoleTau0Input = document.getElementById('dipole-tau0-num') as HTMLInputElement;
+  const dipoleTau0Group = document.getElementById('dipole-tau0-group')!;
+  const dipoleGamma0Echo = document.getElementById('dipole-gamma0-echo')!;
+  const dipoleRefSel = document.getElementById('dipole-ref-sel') as HTMLSelectElement;
+  const dipoleYMinInput = document.getElementById('dipole-ymin') as HTMLInputElement;
+  const dipoleYMaxInput = document.getElementById('dipole-ymax') as HTMLInputElement;
+  let dipoleYUnitPrev = 'norm';   // to convert the manual y-range when the y-unit changes
+  const dipoleLambdaParam = setupParam('dipole-lambda-num', 'dipole-lambda-slider', 'dipole-lambda-min', 'dipole-lambda-max', v => v.toFixed(1), dipoleParamChanged);
+  const dipoleLmaxParam = setupParam('dipole-lmax-num', 'dipole-lmax-slider', 'dipole-lmax-min', 'dipole-lmax-max', v => v.toFixed(0), dipoleParamChanged);
+
+  // Distance-entry conversions between the on-screen frame (unit d/a|nm × reference centre|surface)
+  // and the d_c/a the physics uses (d_c = distance from the sphere centre).
+  //   from surface:  d_c = R + d_surface (outside)  or  R − d_surface (inside).
+  function dipoleEntryToDaC(v: number, R: number): number {
+    const distNm = dipoleDistUnit === 'abs' ? v : v * R;                 // d_c or d_surface, in nm
+    const dc = dipoleDistRef === 'centre' ? distNm : (dipoleRegion === 'outside' ? R + distNm : R - distNm);
+    return dc / R;
+  }
+  function dipoleDaCToEntry(daC: number, R: number): number {
+    const dc = daC * R;
+    const distNm = dipoleDistRef === 'centre' ? dc : (dipoleRegion === 'outside' ? dc - R : R - dc);
+    return dipoleDistUnit === 'abs' ? distNm : distNm / R;
+  }
+
+  function clearDipolePreset() { if (!applyingDipolePreset) { activeDipolePreset = null; dipoleEpsOverride = null; } }
+  function dipoleParamChanged() { clearDipolePreset(); resetAndUpdate(); }
+  [dipoleDMinInput, dipoleDMaxInput, dipoleFInput].forEach(el => el.addEventListener('change', dipoleParamChanged));
+  // τ₀ only rescales the y-axis (no recompute); zoom is reset because the scale changes
+  dipoleTau0Input.addEventListener('change', () => { zoomBounds = null; if (excitation === 'dipole') render(); });
+  // manual y-axis (rate) range — display only, blank = auto
+  [dipoleYMinInput, dipoleYMaxInput].forEach(el => el.addEventListener('change', () => { zoomBounds = null; if (excitation === 'dipole') render(); }));
+  // reference toggle: convert the entries so the physical range is preserved, then relabel the x-axis
+  dipoleRefSel.addEventListener('change', () => {
+    const R = rParam.value || 1;
+    const daMin = dipoleEntryToDaC(parseFloat(dipoleDMinInput.value), R);
+    const daMax = dipoleEntryToDaC(parseFloat(dipoleDMaxInput.value), R);
+    dipoleDistRef = dipoleRefSel.value as 'centre' | 'surface';
+    if (Number.isFinite(daMin) && Number.isFinite(daMax)) {
+      const a = dipoleDaCToEntry(daMin, R), b = dipoleDaCToEntry(daMax, R);
+      const dp = dipoleDistUnit === 'abs' ? 1 : 2;
+      dipoleDMinInput.value = Math.min(a, b).toFixed(dp); dipoleDMaxInput.value = Math.max(a, b).toFixed(dp);
+    }
+    zoomBounds = null;
+    if (excitation === 'dipole') render();
+  });
 
   function updateElectronRadiusMarker(): void {
     const slider = document.getElementById('electron-b-slider') as HTMLInputElement;
@@ -2795,6 +2993,8 @@ initPermalinks({
     thermalResultHeader.style.display = isThermal && excitation === 'plane' ? '' : 'none';
     thermalResultFooter.style.display = isThermal && excitation === 'plane' ? '' : 'none';
     zoomBounds = null;
+    // dipole mode skips the Mie spectrum on the decay view → recompute it when the Material tab opens
+    if (v === 'material' && excitation === 'dipole') { recompute(); }
     render();
   });
 
@@ -3008,20 +3208,74 @@ initPermalinks({
   }
 
   notesBody.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.thermal-preset-btn') as HTMLElement | null;
-    if (btn && btn.dataset.preset) applyThermalPreset(btn.dataset.preset);
+    const thermalBtn = (e.target as HTMLElement).closest('.thermal-preset-btn') as HTMLElement | null;
+    if (thermalBtn && thermalBtn.dataset.preset) { applyThermalPreset(thermalBtn.dataset.preset); return; }
+    const dipoleBtn = (e.target as HTMLElement).closest('.dipole-fig-btn') as HTMLElement | null;
+    if (dipoleBtn && dipoleBtn.dataset.preset) applyDipolePreset(dipoleBtn.dataset.preset);
+  });
+
+  // write d/a values into the two range entries, honouring the current unit (d/a or nm)
+  // loDa/hiDa are d_c/a (from centre); written into the entries honouring the current unit + reference
+  // (the surface reference reverses direction for the inside region, so keep min ≤ max).
+  function setDipoleRangeEntries(loDa: number, hiDa: number): void {
+    const R = rParam.value || 1;
+    const a = dipoleDaCToEntry(loDa, R), b = dipoleDaCToEntry(hiDa, R);
+    const dp = dipoleDistUnit === 'abs' ? 1 : 2;
+    dipoleDMinInput.value = Math.min(a, b).toFixed(dp); dipoleDMaxInput.value = Math.max(a, b).toFixed(dp);
+  }
+  const dipoleRegionTabs = setupTabs('dipole-region-tabs', 'dregion', 'outside', (v: string) => {
+    // Move the dipole in/out but KEEP the current material, radius and wavelength — only reset
+    // the scan window to the region's sensible default. (The figure buttons remain the way to
+    // load a full reference figure, including its material.)
+    dipoleRegion = v as 'outside' | 'inside';
+    if (dipoleRegion === 'outside') setDipoleRangeEntries(1.02, 9);
+    else setDipoleRangeEntries(0, 1);
+    clearDipolePreset();          // switching region deviates from the exact figure; keep the user's material
+    updateDipoleControlVis();
+    resetAndUpdate();
+  });
+  const dipoleChannelTabs = setupTabs('dipole-channel-tabs', 'dchannel', 'total', () => { zoomBounds = null; render(); });
+  // axis-unit toggles are pure display transforms → no recompute, just redraw
+  // Distance-unit toggle: converts the two range entries between d/a and nm (physical
+  // range preserved) and relabels the x-axis. No recompute — the d/a grid is unchanged.
+  const dipoleXUnitTabs = setupTabs('dipole-xunit-tabs', 'dxunit', 'norm', (v: string) => {
+    if (v === dipoleDistUnit) return;
+    const R = rParam.value || 1;
+    const dmin = parseFloat(dipoleDMinInput.value), dmax = parseFloat(dipoleDMaxInput.value);
+    if (v === 'abs') {   // d/a → nm
+      if (Number.isFinite(dmin)) dipoleDMinInput.value = (dmin * R).toFixed(1);
+      if (Number.isFinite(dmax)) dipoleDMaxInput.value = (dmax * R).toFixed(1);
+      dipoleDMinInput.step = '1'; dipoleDMaxInput.step = '1';
+    } else {             // nm → d/a
+      if (Number.isFinite(dmin)) dipoleDMinInput.value = (dmin / R).toFixed(3);
+      if (Number.isFinite(dmax)) dipoleDMaxInput.value = (dmax / R).toFixed(3);
+      dipoleDMinInput.step = '0.05'; dipoleDMaxInput.step = '0.1';
+    }
+    dipoleDistUnit = v as 'norm' | 'abs';
+    zoomBounds = null;
+    if (excitation === 'dipole') render();
+  });
+  const fmtYVal = (val: number, unit: string) => unit === 'norm' ? String(+val.toPrecision(6)) : val.toExponential(3);
+  const dipoleYUnitTabs = setupTabs('dipole-yunit-tabs', 'dyunit', 'norm', (v: string) => {
+    // convert any manual y-range so the physical window is preserved across unit changes
+    const ratio = dipoleYScale(v) / dipoleYScale(dipoleYUnitPrev);
+    const ymin = parseFloat(dipoleYMinInput.value), ymax = parseFloat(dipoleYMaxInput.value);
+    if (Number.isFinite(ymin)) dipoleYMinInput.value = fmtYVal(ymin * ratio, v);
+    if (Number.isFinite(ymax)) dipoleYMaxInput.value = fmtYVal(ymax * ratio, v);
+    dipoleYUnitPrev = v;
+    zoomBounds = null; updateDipoleControlVis(); if (excitation === 'dipole') render();
   });
 
   const polTabs = setupTabs('pol-tabs', 'pol', 'total', () => render());
   const excitationTabs = setupTabs('excitation-tabs', 'excitation', 'plane', (v: string) => {
     excitation = v as 'plane' | 'electron' | 'dipole';
-    if (excitation === 'dipole') {
-      excitation = 'plane';
-      excitationTabs.select('plane', true);
-    }
     if (excitation === 'electron') {
       axisTabs.select('energy', true);
       if (geometry === 'coreshell') geoTabs.select('sphere');
+    }
+    if (excitation === 'dipole') {
+      if (geometry === 'coreshell') geoTabs.select('sphere');
+      if (!dipoleInitialized) { dipoleInitialized = true; applyDipoleDefaultState(); return; }
     }
     updateExcitationUI();
     zoomBounds = null;
@@ -3053,16 +3307,32 @@ initPermalinks({
   });
 
   function updateTheoryNote() {
+    if (excitation === 'dipole') {
+      theoryNote.innerHTML = '<strong>Dipole excitation</strong> gives the normalized decay rate &gamma;/&gamma;<sub>0</sub> of a point electric dipole near (or inside) the sphere, from the Mie multipole expansion&nbsp;[3]. <strong>Solid = radial</strong>, <strong>dashed = tangential</strong>; the total splits into radiative and non-radiative channels.';
+      return;
+    }
     if (excitation === 'electron') {
-      theoryNote.innerHTML = '<strong>Electron excitation</strong> uses the analytical sphere formalism for EELS and CL. The total EELS signal is split into surface, bulk, and Begrenzung terms; CL can be inspected by multipole order.';
+      theoryNote.innerHTML = '<strong>Electron excitation</strong> uses the analytical sphere formalism for EELS and CL&nbsp;[2]. The total EELS signal is split into surface, bulk, and Begrenzung terms; CL can be inspected by multipole order.';
       return;
     }
     theoryNote.innerHTML = geometry === 'coreshell'
-      ? '<strong>Multi-shell Mie</strong> extends Mie theory to layered spheres with up to ' + MAX_SHELLS + ' concentric shells. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.'
-      : '<strong>Mie theory</strong> gives exact solutions for light scattering by spherical particles. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>. Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.';
+      ? '<strong>Multi-shell Mie</strong> extends Mie theory to layered spheres with up to ' + MAX_SHELLS + ' concentric shells&nbsp;[1]. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>.'
+      : '<strong>Mie theory</strong> gives exact solutions for light scattering by spherical particles&nbsp;[1]. C<sub>ext</sub>&nbsp;=&nbsp;C<sub>sca</sub>&nbsp;+&nbsp;C<sub>abs</sub>. Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.';
   }
 
   function updateNotes() {
+    if (excitation === 'dipole') {
+      notesBody.innerHTML = `
+        <ul>
+          <li><strong>Dipole decay rates</strong> &gamma;/&gamma;<sub>0</sub> for a point electric dipole near a sphere [3]. <strong>Radial</strong> (solid) and <strong>tangential</strong> (dashed) orientations; Total, Radiative, Non-radiative channels.</li>
+          <li>Near the surface the <em>totals</em> diverge (a truncated near-field sum) &mdash; use <strong>Log&nbsp;Y</strong> to see them. The radiative curves are &ell;-converged.</li>
+        </ul>
+        <div class="dipole-fig-label">Reproduce reference figures [3]</div>
+        <div class="dipole-fig-grid">
+          ${Object.entries(DIPOLE_PRESETS).map(([k, p]) => `<button type="button" class="dipole-fig-btn${k === activeDipolePreset ? ' active' : ''}" data-preset="${k}" title="${p.tip}" aria-pressed="${k === activeDipolePreset ? 'true' : 'false'}">${p.label}</button>`).join('')}
+        </div>`;
+      return;
+    }
     if (excitation === 'electron') {
       notesBody.innerHTML = `
         <ul>
@@ -3077,31 +3347,76 @@ initPermalinks({
       : '<ul><li><strong>Plane-wave mode</strong> uses the standard homogeneous-sphere Mie solution for the selected material and host index.</li></ul>';
   }
 
+  const fmtEps = (e: { re: number; im: number }): string =>
+    `${e.re.toFixed(2)} ${e.im >= 0 ? '+' : '−'} ${Math.abs(e.im).toFixed(2)}i`;
+
+
+  /** ε of the sphere for the dipole calculation: reference override (preset) or the live material. */
+  function currentDipoleEps(): { re: number; im: number } {
+    if (dipoleEpsOverride) return { ...dipoleEpsOverride };
+    const [n, k] = getDielectric(dipoleLambdaParam.value);
+    return nkToEpsilon(n, k);
+  }
+
+  // free-space decay rate γ₀ = 1/τ₀ from the emitter lifetime, and the y-axis scale factor
+  // (multiply the normalized γ/γ₀ curves by this to get absolute rates).
+  const dipoleTau0Ns = (): number => { const v = parseFloat(dipoleTau0Input.value); return Number.isFinite(v) && v > 0 ? v : 1; };
+  function dipoleYScale(unit: string): number {
+    const tau0 = dipoleTau0Ns();
+    if (unit === 'inv_s') return 1e9 / tau0;     // γ₀ in s⁻¹
+    if (unit === 'inv_fs') return 1e-6 / tau0;   // γ₀ in fs⁻¹
+    return 1;                                    // normalized (γ/γ₀)
+  }
+
+  function updateDipoleControlVis(): void {
+    const eps = currentDipoleEps();
+    const lossyInside = dipoleRegion === 'inside' && Math.abs(eps.im) > 1e-9;
+    dipoleFGroup.style.display = lossyInside ? '' : 'none';
+    dipoleRefGroup.style.display = dipoleEpsOverride ? '' : 'none';
+    const lam = dipoleLambdaParam.value;
+    dipoleEvEcho.innerHTML = `&#8462;&omega; = <b>${(HC_EV_NM / lam).toFixed(3)} eV</b> &middot; &epsilon; = <b>${fmtEps(eps)}</b>`;
+    if (dipoleEpsOverride) dipoleRefEl.innerHTML = `reference &epsilon; = <b>${fmtEps(dipoleEpsOverride)}</b> &middot; &lambda; = <b>${lam.toFixed(1)} nm</b>`;
+    const yUnit = dipoleYUnitTabs.value;
+    dipoleTau0Group.style.display = yUnit === 'norm' ? 'none' : '';
+    if (yUnit !== 'norm') {
+      const g0s = 1e9 / dipoleTau0Ns();
+      dipoleGamma0Echo.innerHTML = `&gamma;<sub>0</sub> = <b>${g0s.toExponential(2)} s⁻¹</b> = ${(g0s * 1e-15).toExponential(2)} fs⁻¹`;
+    }
+  }
+
   function updateExcitationUI() {
     const electronMode = excitation === 'electron';
+    const dipoleMode = excitation === 'dipole';
+    const restrict = electronMode || dipoleMode;    // homogeneous-sphere, spectrum-only modes
     document.querySelectorAll<HTMLElement>('.electron-only').forEach(el => { el.style.display = electronMode ? '' : 'none'; });
-    planeRangeGroup.style.display = (electronMode || viewTabs.value === 'thermal') ? 'none' : '';
+    document.querySelectorAll<HTMLElement>('.dipole-only').forEach(el => { el.style.display = dipoleMode ? '' : 'none'; });
+    planeRangeGroup.style.display = (restrict || viewTabs.value === 'thermal') ? 'none' : '';
     const coreShellBtn = document.querySelector<HTMLButtonElement>('#geo-tabs [data-geo="coreshell"]');
     if (coreShellBtn) {
-      coreShellBtn.disabled = electronMode;
-      coreShellBtn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
-      coreShellBtn.title = electronMode ? 'Electron EELS/CL currently supports homogeneous spheres.' : '';
+      coreShellBtn.disabled = restrict;
+      coreShellBtn.setAttribute('aria-disabled', restrict ? 'true' : 'false');
+      coreShellBtn.title = restrict ? 'Electron and dipole modes currently support homogeneous spheres.' : '';
     }
+    // angular / near-field / thermal disabled for electron & dipole; Material stays enabled everywhere
     document.querySelectorAll<HTMLButtonElement>('#view-tabs [data-view="angular"], #view-tabs [data-view="nearfield"], #view-tabs [data-view="thermal"]').forEach(btn => {
-      btn.disabled = electronMode;
-      btn.setAttribute('aria-disabled', electronMode ? 'true' : 'false');
+      btn.disabled = restrict;
+      btn.setAttribute('aria-disabled', restrict ? 'true' : 'false');
     });
-    if (electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield' || viewTabs.value === 'thermal')) viewTabs.select('spectrum', true);
-    spectrumControls.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
-    electronControls.style.display = viewTabs.value === 'spectrum' && electronMode ? '' : 'none';
-    colorSwatches.style.display = viewTabs.value === 'spectrum' && !electronMode ? '' : 'none';
-    axisOverlay.style.display = (viewTabs.value === 'spectrum' || viewTabs.value === 'material') ? '' : 'none';
-    angularControls.style.display = !electronMode && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield') ? '' : 'none';
-    angularPolWrap.style.display = !electronMode && viewTabs.value === 'angular' ? '' : 'none';
-    thermalParams.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
-    thermalSpectrumWrap.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
-    thermalResultHeader.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
-    thermalResultFooter.style.display = !electronMode && viewTabs.value === 'thermal' ? '' : 'none';
+    if (restrict && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield' || viewTabs.value === 'thermal')) viewTabs.select('spectrum', true);
+    const spectrum = viewTabs.value === 'spectrum';
+    spectrumControls.style.display = spectrum && excitation === 'plane' ? '' : 'none';
+    electronControls.style.display = spectrum && electronMode ? '' : 'none';
+    dipoleControls.style.display = spectrum && dipoleMode ? '' : 'none';
+    colorSwatches.style.display = spectrum && excitation === 'plane' ? '' : 'none';
+    // the λ/E x-axis toggle is meaningless for the dipole d/a axis
+    axisOverlay.style.display = ((spectrum && !dipoleMode) || viewTabs.value === 'material') ? '' : 'none';
+    angularControls.style.display = !restrict && (viewTabs.value === 'angular' || viewTabs.value === 'nearfield') ? '' : 'none';
+    angularPolWrap.style.display = !restrict && viewTabs.value === 'angular' ? '' : 'none';
+    thermalParams.style.display = !restrict && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalSpectrumWrap.style.display = !restrict && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalResultHeader.style.display = !restrict && viewTabs.value === 'thermal' ? '' : 'none';
+    thermalResultFooter.style.display = !restrict && viewTabs.value === 'thermal' ? '' : 'none';
+    if (dipoleMode) updateDipoleControlVis();
     updateTheoryNote();
     updateNotes();
   }
@@ -3434,9 +3749,77 @@ initPermalinks({
     resetAndUpdate();
   }
 
-  // Reset button — reset within the active excitation mode (plane or electron).
+  // ── dipole figure-reproduction presets (Kim 1988 + Carella thesis) ──
+  interface DipolePreset { label: string; tip: string; region: 'outside' | 'inside'; eps: { re: number; im: number }; mat: string; customEps?: number; lambda: number; aNm: number; dMin: number; dMax: number; lmax: number; f?: number; logY: boolean; yTop?: number; }
+  const DIPOLE_PRESETS: Record<string, DipolePreset> = {
+    kim1: { label: 'Kim Fig. 1 · outside Ag', tip: 'Kim et al. 1988, Fig. 1 — dipole outside a 10 nm Ag sphere (ε = −4.42 + 0.73i), λ = 413.3 nm, ℓmax = 20',
+            region: 'outside', eps: { re: -4.42, im: 0.73 }, mat: 'ag', lambda: 413.3, aNm: 10, dMin: 1.02, dMax: 9, lmax: 20, logY: false, yTop: 2 },
+    kim4: { label: 'Kim Fig. 4 · inside (transparent)', tip: 'Kim et al. 1988, Fig. 4 — dipole inside a 400 nm transparent sphere (ε = 2.16), λ = 413.3 nm, ℓmax = 30',
+            region: 'inside', eps: { re: 2.16, im: 0 }, mat: 'custom', customEps: 2.16, lambda: 413.3, aNm: 400, dMin: 0, dMax: 1, lmax: 30, logY: false, yTop: 1.25 },
+    kim5: { label: 'Kim Fig. 5 · inside (dissipative)', tip: 'Kim et al. 1988, Fig. 5 — dipole inside a 100 nm Ag sphere (ε = −4.42 + 0.73i), f(ω) = 6.88×10⁻⁸, ℓmax = 10',
+            region: 'inside', eps: { re: -4.42, im: 0.73 }, mat: 'ag', lambda: 413.3, aNm: 100, dMin: 0, dMax: 1, lmax: 10, f: 6.88e-8, logY: false },
+  };
+
+  function applyDipolePreset(key: string): void {
+    const p = DIPOLE_PRESETS[key];
+    if (!p) return;
+    applyingDipolePreset = true;
+    activeDipolePreset = key;
+    try {
+      excitationTabs.select('dipole', true);
+      excitation = 'dipole';
+      document.querySelector<HTMLButtonElement>('#view-tabs [data-view="spectrum"]')?.click();
+      dipoleEpsOverride = { ...p.eps };            // exact reference permittivity (used for the curve)
+      dipoleRegionTabs.select(p.region, true);
+      dipoleRegion = p.region;
+      // pick a matching material so the Material view shows a coherent ε(λ)
+      setSelectValue(materialSelect, p.mat);
+      if (p.mat === 'custom' && p.customEps !== undefined) {
+        relaxStepSlider(document.getElementById('eps-slider') as HTMLInputElement);
+        epsParam.setValue(p.customEps);
+      }
+      relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
+      rParam.setValue(p.aNm);
+      nhParam.setValue(1.0);                        // all reference figures use a vacuum host
+      dipoleLambdaParam.setValue(p.lambda);
+      dipoleDMinInput.value = String(p.dMin);
+      dipoleDMaxInput.value = String(p.dMax);
+      dipoleLmaxParam.setValue(p.lmax);
+      if (p.f !== undefined) dipoleFInput.value = String(p.f);
+      // fill the manual y-window to the figure's paper window (blank = auto for figures without one)
+      dipoleYMinInput.value = p.yTop !== undefined ? '0' : '';
+      dipoleYMaxInput.value = p.yTop !== undefined ? String(p.yTop) : '';
+      logY = p.logY; logToggle.classList.toggle('active', logY);
+      dipoleChannelTabs.select('total', true);
+      dipoleXUnitTabs.select('norm', true); dipoleDistUnit = 'norm';   // reference figures are in normalized units
+      dipoleDistRef = 'centre'; dipoleRefSel.value = 'centre';         // …measured from the centre
+      dipoleDMinInput.step = '0.05'; dipoleDMaxInput.step = '0.1';
+      dipoleYUnitTabs.select('norm', true); dipoleYUnitPrev = 'norm';
+      updateExcitationUI();
+    } finally {
+      applyingDipolePreset = false;
+    }
+    zoomBounds = null;
+    recompute();
+    render();
+  }
+
+  function applyDipoleDefaultState(): void {
+    // Default dipole scene = Kim Fig. 1 (dipole outside a silver sphere).
+    while (extraShells.length > 0) removeShellSection(extraShells[0]);
+    geoTabs.select('sphere');
+    drudeGroup.style.display = 'none';
+    fileUploadGroup.style.display = 'none';
+    riiSearchGroup.style.display = 'none';
+    uploadedMaterial = null;
+    dipoleTau0Input.value = '1';
+    applyDipolePreset('kim1');
+  }
+
+  // Reset button — reset within the active excitation mode (plane, electron or dipole).
   document.getElementById('reset-btn')!.addEventListener('click', () => {
     if (excitation === 'electron') applyElectronDefaultState();
+    else if (excitation === 'dipole') applyDipoleDefaultState();
     else applyPlaneDefaultState();
   });
 
@@ -3715,10 +4098,15 @@ initPermalinks({
         lMin = HC_EV_NM / eMax;
         lMax = HC_EV_NM / eMin;
       }
-      if (geometry === 'coreshell') {
-        data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
-      } else {
-        data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+      // the 500-pt Mie spectrum (`data`) drives the plane/electron plots and the Material
+      // view; the dipole decay-rate view never uses it, so skip it there (recomputed when
+      // the Material tab is opened, see the view-tabs handler).
+      if (excitation !== 'dipole' || viewTabs.value === 'material' || !data) {
+        if (geometry === 'coreshell') {
+          data = computeMieMultiShell(buildLayers(), nhParam.value, lMin, lMax);
+        } else {
+          data = computeMie(getDielectric, rParam.value, nhParam.value, lMin, lMax);
+        }
       }
       if (excitation === 'electron') {
         electronData = computeElectronSphereSpectrum(getDielectric, {
@@ -3732,10 +4120,52 @@ initPermalinks({
       } else {
         electronData = null;
       }
+      dipoleData = excitation === 'dipole' ? computeDipoleCurves() : null;
     } catch (e) {
       console.error('Mie recompute error:', e);
       theoryNote.textContent = 'Error: ' + (e instanceof Error ? e.message : String(e));
     }
+  }
+
+  // Decay-rate curves γ/γ₀ vs d/a for the current dipole configuration.
+  function computeDipoleCurves(): DipoleCurves {
+    const lambdaNm = dipoleLambdaParam.value;
+    const eps = currentDipoleEps();
+    const R = rParam.value;
+    const lmax = Math.round(clampFinite(dipoleLmaxParam.value, 1, 60, 20));
+    const N = 260;
+    const eMin = parseFloat(dipoleDMinInput.value), eMax = parseFloat(dipoleDMaxInput.value);
+    // interpret the entries (their unit d/a|nm and reference centre|surface) as d_c/a
+    let dMin = Number.isFinite(eMin) ? dipoleEntryToDaC(eMin, R || 1) : (dipoleRegion === 'outside' ? 1.02 : 0);
+    let dMax = Number.isFinite(eMax) ? dipoleEntryToDaC(eMax, R || 1) : (dipoleRegion === 'outside' ? 9 : 1);
+    if (dMin > dMax) { const t = dMin; dMin = dMax; dMax = t; }   // surface reference reverses the order
+    if (dipoleRegion === 'outside') { dMin = Math.max(1.0001, dMin); dMax = Math.max(dMin + 0.01, dMax); }
+    else { dMin = Math.max(0, dMin); dMax = Math.min(0.9999, Math.max(dMin + 1e-3, dMax)); }
+    const c: DipoleCurves = {
+      dOverA: new Float64Array(N),
+      radTot: new Float64Array(N), radRad: new Float64Array(N), radNr: new Float64Array(N),
+      tanTot: new Float64Array(N), tanRad: new Float64Array(N), tanNr: new Float64Array(N),
+    };
+    const fUser = parseFloat(dipoleFInput.value);
+    const fOmega = dipoleRegion === 'inside' && Math.abs(eps.im) > 1e-9
+      ? (Number.isFinite(fUser) && fUser > 0 ? fUser : 6.88e-8) : undefined;
+    for (let i = 0; i < N; i++) {
+      const da = dMin + (dMax - dMin) * i / (N - 1);
+      c.dOverA[i] = da;
+      const dNm = da * R;
+      if (dipoleRegion === 'outside') {
+        // radial = γ_∥ (gammaPar), tangential = γ_⊥ (gammaPerp) per Kim/thesis mapping
+        const r = decayRatesAt(lambdaNm, eps, nhParam.value, R, dNm, lmax);
+        c.radTot[i] = r.gammaPar; c.radRad[i] = r.gammaParRad; c.radNr[i] = r.gammaParNr;
+        c.tanTot[i] = r.gammaPerp; c.tanRad[i] = r.gammaPerpRad; c.tanNr[i] = r.gammaPerpNr;
+      } else {
+        // radial = Kim γ_⊥ (perp*), tangential = Kim γ_∥ (par*)
+        const r = insideDecay(lambdaNm, eps, R, dNm, lmax, fOmega);
+        c.radTot[i] = r.perpTot; c.radRad[i] = r.perpRad; c.radNr[i] = r.perpNr;
+        c.tanTot[i] = r.parTot; c.tanRad[i] = r.parRad; c.tanNr[i] = r.parNr;
+      }
+    }
+    return c;
   }
 
   const PLOT_COLORS = {
@@ -4026,6 +4456,7 @@ initPermalinks({
     if (viewTabs.value === 'nearfield') { renderNearField(); return; }
     if (viewTabs.value === 'thermal') { renderThermal(); return; }
     if (viewTabs.value === 'material') { renderMaterial(); return; }
+    if (excitation === 'dipole') { renderDipole(); return; }
     if (excitation === 'electron') { renderElectron(); return; }
     const { xArr, series, xLabel, yLabel } = getPlotData();
     currentXArr = xArr; currentSeries = series;
@@ -4049,12 +4480,119 @@ initPermalinks({
     clearOverlay();
   }
 
+  function dipoleYRange(series: PlotSeries[]): [number, number] {
+    // robust auto-window: ignore the diverging near-surface spike via a high percentile
+    const vals: number[] = [];
+    for (const s of series) for (let i = 0; i < s.y.length; i++) { const v = s.y[i]; if (Number.isFinite(v)) vals.push(v); }
+    if (!vals.length) return [0, 1];
+    vals.sort((a, b) => a - b);
+    const lo = vals[0];
+    const hi = vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.94))];
+    const bot = Math.min(0, lo);
+    const top = hi > lo ? hi + 0.08 * (hi - lo) : hi * 1.1 + 1e-12;
+    return [bot, Math.max(top, bot + 1e-12)];
+  }
+
+  function renderDipole() {
+    if (!dipoleData) return;
+    const d = dipoleData;
+    const ch = dipoleChannelTabs.value;   // total | rad | nr | all
+    const xUnit = dipoleXUnitTabs.value;  // norm | abs
+    const yUnit = dipoleYUnitTabs.value;  // norm | inv_s | inv_fs
+    const yScale = dipoleYScale(yUnit);
+    // x-axis: distance from centre or surface, in d/a or nm.
+    //   d/a-from-centre = dOverA; from-surface = |dOverA − 1|; ×R for nm.
+    const R = rParam.value;
+    const ref = dipoleDistRef;
+    const dispX = (da: number) => { const d0 = ref === 'surface' ? Math.abs(da - 1) : da; return xUnit === 'abs' ? d0 * R : d0; };
+    const xArr = d.dOverA.map(dispX) as Float64Array;
+    const refWord = ref === 'surface' ? 'surface' : 'centre';
+    const xLabel = xUnit === 'abs' ? `d  (distance from ${refWord}, nm)` : `d / a  (distance from ${refWord})`;
+    // y-axis: normalized γ/γ₀, or absolute rate γ = (γ/γ₀)·γ₀ in s⁻¹ / fs⁻¹
+    const yLabel = yUnit === 'inv_s' ? 'γ  (decay rate, s⁻¹)' : yUnit === 'inv_fs' ? 'γ  (decay rate, fs⁻¹)' : 'γ / γ₀  (decay rate)';
+    const scale = (a: Float64Array): Float64Array => yScale === 1 ? a : (a.map(v => v * yScale) as Float64Array);
+    const series: PlotSeries[] = [];
+    const push = (radial: Float64Array, tangential: Float64Array, color: string, label: string) => {
+      series.push({ y: scale(radial), color, label: `${label} · radial` });
+      series.push({ y: scale(tangential), color, label: `${label} · tangential`, dash: [5, 4] });
+    };
+    if (ch === 'total' || ch === 'all') push(d.radTot, d.tanTot, PLOT_COLORS.cext, 'total');
+    if (ch === 'rad' || ch === 'all') push(d.radRad, d.tanRad, PLOT_COLORS.csca, 'radiative');
+    if (ch === 'nr' || ch === 'all') push(d.radNr, d.tanNr, PLOT_COLORS.cabs, 'non-radiative');
+    currentXArr = xArr; currentSeries = series;
+    const opts: ChartOpts = { logY };
+    // when measuring from the centre, shade the sphere interior (d/a < 1) behind the curves.
+    // x0 is bounded (one boundary-width left of 0, clipped to the plot) — NOT a huge value,
+    // which would make fillRect crawl on GPU-accelerated canvases.
+    const fromCentre = ref === 'centre';
+    const bDisp = xUnit === 'abs' ? R : 1;   // sphere surface: d/a = 1 (→ d = R in nm)
+    if (fromCentre) opts.bands = [{ x0: -bDisp, x1: bDisp, color: 'rgba(99,102,241,0.10)' }];
+    // manual y-window (in the current y-unit) if both entries valid, else auto
+    const ylo = parseFloat(dipoleYMinInput.value), yhi = parseFloat(dipoleYMaxInput.value);
+    if (!logY) opts.yRange = (Number.isFinite(ylo) && Number.isFinite(yhi) && yhi > ylo) ? [ylo, yhi] : dipoleYRange(series);
+    if (zoomBounds) { opts.xRange = zoomBounds.xRange; opts.yRange = zoomBounds.yRange; }
+    chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, opts);
+    if (fromCentre) drawDipoleInsideOverlay(bDisp);   // dashed surface boundary + "inside" label
+    zoomHint.classList.toggle('visible', !!zoomBounds);
+    clearOverlay();
+  }
+
+  // Dashed vertical line at the sphere surface (d/a = 1) plus an "inside sphere" label over the
+  // shaded interior. Drawn on the main canvas (survives overlay/hover clears).
+  function drawDipoleInsideOverlay(bDisp: number): void {
+    if (!chartXforms) return;
+    const { tx, pL, pT, pW, pH } = chartXforms;
+    const bx = tx(bDisp);
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    ctx.save();
+    const left = pL, right = Math.min(bx, pL + pW);
+    if (right - left > 46) {
+      ctx.fillStyle = 'rgba(99,102,241,0.8)'; ctx.font = '11px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('inside sphere', (left + right) / 2, pT + 5);
+    }
+    if (bx >= pL && bx <= pL + pW) {
+      ctx.strokeStyle = 'rgba(99,102,241,0.6)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(bx, pT); ctx.lineTo(bx, pT + pH); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function renderMaterial() {
     chartXforms = null;
     const { xArr, series, xLabel, yLabel, yRange } = getMaterialPlotData();
     currentXArr = xArr; currentSeries = series;
     chartXforms = drawChart(canvas, xArr, series, xLabel, yLabel, { yRange });
+    // in dipole mode a single emission wavelength is selected — mark it with a red dot
+    if (excitation === 'dipole') drawDipoleWavelengthMarker();
     clearOverlay();
+  }
+
+  // Red marker at the selected emission wavelength on the material (ε / n,k) plot.
+  // Drawn on the main canvas so it survives overlay clears (hover crosshair sits above it).
+  function drawDipoleWavelengthMarker(): void {
+    if (!chartXforms || !currentXArr.length) return;
+    const isEnergy = axisTabs.value === 'energy';
+    const lamNm = dipoleLambdaParam.value;
+    const xVal = isEnergy ? HC_EV_NM / lamNm : lamNm;
+    let xmin = Infinity, xmax = -Infinity;
+    for (const v of currentXArr) { if (v < xmin) xmin = v; if (v > xmax) xmax = v; }
+    if (xVal < xmin || xVal > xmax) return;   // emission λ outside the plotted range
+    const { tx, ty, pT, pH } = chartXforms;
+    const idx = nearestIdx(currentXArr, xVal);
+    const px = tx(xVal);
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(220,38,38,0.6)'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, pT); ctx.lineTo(px, pT + pH); ctx.stroke(); ctx.setLineDash([]);
+    for (const s of currentSeries) {
+      if (s.hidden) continue;
+      const v = s.y[idx]; if (!Number.isFinite(v)) continue;
+      const py = ty(v);
+      ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function renderAngular() {
@@ -4663,7 +5201,9 @@ initPermalinks({
       c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.stroke();
     }
     const isElectronSpectrum = excitation === 'electron' && viewTabs.value === 'spectrum';
-    const xS = viewTabs.value === 'thermal'
+    const xS = excitation === 'dipole' && viewTabs.value !== 'material'
+      ? (dipoleXUnitTabs.value === 'abs' ? `d = ${dX.toFixed(1)} nm` : `d / a = ${dX.toFixed(3)}`)
+      : viewTabs.value === 'thermal'
       ? `r = ${dX.toFixed(1)} nm`
       : isElectronSpectrum && axisTabs.value === 'lambda'
       ? `\u03BB = ${dX.toFixed(1)} nm`
