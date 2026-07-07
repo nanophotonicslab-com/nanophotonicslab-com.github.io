@@ -714,10 +714,13 @@ initPermalinks({
   .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .controls { display: flex; flex-direction: column; gap: 0.85rem; }
   .controls h3 { font-size: 1rem; margin-bottom: -0.2rem; }
+  /* header is exactly one h3-line tall in every mode; the (taller) region toggle is centered
+     on that line via negative vertical margins so it never pushes the "Parameters" label or the
+     controls below it down — keeping the dipole layout consistent with plane-wave / electron. */
   .params-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
   .params-head h3 { margin: 0; }
-  .params-head__toggle { flex: 0 0 auto; }
-  .params-head__toggle .plot-tab { padding: 0.28rem 0.7rem; font-size: 0.74rem; font-weight: 700; }
+  .params-head__toggle { flex: 0 0 auto; margin: -0.6rem 0; }
+  .params-head__toggle .plot-tab { padding: 0.22rem 0.6rem; font-size: 0.72rem; font-weight: 700; }
   .dipole-unit-toggle { flex: 0 0 auto; }
   .dipole-unit-toggle .plot-tab { padding: 0.12rem 0.5rem; font-size: 0.7rem; font-weight: 700; }
   .dipole-yrange-row { margin-top: 0.4rem; }
@@ -3307,7 +3310,11 @@ initPermalinks({
     resetAndUpdate();
   });
 
+  let _theoryNoteKey = '', _notesKey = '';
   function updateTheoryNote() {
+    const key = excitation + '|' + geometry;               // content only depends on mode + geometry
+    if (key === _theoryNoteKey) return;                    // skip the innerHTML rebuild on every recompute
+    _theoryNoteKey = key;
     if (excitation === 'dipole') {
       theoryNote.innerHTML = '<strong>Dipole excitation</strong> gives the normalized decay rate &gamma;/&gamma;<sub>0</sub> of a point electric dipole near (or inside) the sphere, from the Mie multipole expansion&nbsp;[3]. <strong>Solid = radial</strong>, <strong>dashed = tangential</strong>; the total splits into radiative and non-radiative channels.';
       return;
@@ -3322,6 +3329,12 @@ initPermalinks({
   }
 
   function updateNotes() {
+    // notes only change with mode, geometry, view, and (dipole) the highlighted figure button —
+    // not on every recompute; skip the innerHTML rebuild when nothing relevant changed. (The
+    // thermal view overwrites notesBody itself, so the view is part of the key.)
+    const key = excitation + '|' + geometry + '|' + viewTabs.value + '|' + (activeDipolePreset || '');
+    if (key === _notesKey) return;
+    _notesKey = key;
     if (excitation === 'dipole') {
       notesBody.innerHTML = `
         <ul>
@@ -3806,8 +3819,9 @@ initPermalinks({
       applyingDipolePreset = false;
     }
     zoomBounds = null;
-    recompute();
-    render();
+    // the setValue calls above already scheduled one rAF update; coalesce into it instead of
+    // recomputing synchronously (which would do the whole compute+draw twice).
+    scheduleUpdate();
   }
 
   function applyDipoleDefaultState(): void {
