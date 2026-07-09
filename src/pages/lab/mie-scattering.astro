@@ -627,6 +627,7 @@ const miePresets = [
           <li><span class="ref-index">[3]</span><span>P. E. Stamatopoulou, W. Zhao, A. Rodr&iacute;guez Echarri, N. A. Mortensen, K. Busch, C. Tserkezis &amp; C. Wolff, <em>Electron beams traversing spherical nanoparticles: analytic and numerical treatment</em>, Phys. Rev. Research <strong>6</strong>, 013239 (2024), <a href="https://doi.org/10.1103/PhysRevResearch.6.013239" target="_blank" rel="noopener">doi:10.1103/PhysRevResearch.6.013239</a>.</span></li>
           <li><span class="ref-index">[4]</span><span>Optical constants: <a href="https://refractiveindex.info" target="_blank" rel="noopener">refractiveindex.info</a>. Au, Ag: Johnson &amp; Christy (1972); Si: Aspnes &amp; Studna (1983); Al: Raki&cacute; (1995); TiO<sub>2</sub>: Sarkar et al. (2019).</span></li>
           <li><span class="ref-index">[5]</span><span>L. Meng, R. Yu, M. Qiu &amp; F. J. Garc&iacute;a de Abajo, <em>Plasmonic nano-oven by concatenation of multishell photothermal enhancement</em> (Thermal view), ACS Nano <strong>11</strong>, 7915&ndash;7924 (2017), <a href="https://doi.org/10.1021/acsnano.7b02426" target="_blank" rel="noopener">doi:10.1021/acsnano.7b02426</a>.</span></li>
+          <li><span class="ref-index">[6]</span><span>Y. S. Kim, P. T. Leung &amp; T. F. George, <em>Classical decay rates for molecules in the presence of a spherical surface: A complete treatment</em>, Surf. Sci. <strong>195</strong>, 1 (1988), <a href="https://doi.org/10.1016/0039-6028(88)90776-5" target="_blank" rel="noopener">doi:10.1016/0039-6028(88)90776-5</a>.</span></li>
         </ul>
       </div>
 
@@ -3336,7 +3337,7 @@ initPermalinks({
     if (key === _theoryNoteKey) return;                    // skip the innerHTML rebuild on every recompute
     _theoryNoteKey = key;
     if (excitation === 'dipole') {
-      theoryNote.innerHTML = '<strong>Dipole excitation</strong> gives the normalized decay rate &gamma;/&gamma;<sub>0</sub> of a point electric dipole near (or inside) the sphere, from the Mie multipole expansion&nbsp;[3]. <strong>Solid = radial</strong>, <strong>dashed = tangential</strong>; the total splits into radiative and non-radiative channels.';
+      theoryNote.innerHTML = '<strong>Dipole excitation</strong> gives the normalized decay rate &gamma;/&gamma;<sub>0</sub> of a point electric dipole near (or inside) the sphere, from the Mie multipole expansion&nbsp;[6]. <strong>Solid = radial</strong>, <strong>dashed = tangential</strong>; the total splits into radiative and non-radiative channels.';
       return;
     }
     if (excitation === 'electron') {
@@ -3358,10 +3359,10 @@ initPermalinks({
     if (excitation === 'dipole') {
       notesBody.innerHTML = `
         <ul>
-          <li><strong>Dipole decay rates</strong> &gamma;/&gamma;<sub>0</sub> for a point electric dipole near a sphere [3]. <strong>Radial</strong> (solid) and <strong>tangential</strong> (dashed) orientations; Total, Radiative, Non-radiative channels.</li>
+          <li><strong>Dipole decay rates</strong> &gamma;/&gamma;<sub>0</sub> for a point electric dipole near a sphere [6]. <strong>Radial</strong> (solid) and <strong>tangential</strong> (dashed) orientations; Total, Radiative, Non-radiative channels.</li>
           <li>Near the surface the <em>totals</em> diverge (a truncated near-field sum) &mdash; use <strong>Log&nbsp;Y</strong> to see them. The radiative curves are &ell;-converged.</li>
         </ul>
-        <div class="dipole-fig-label">Reproduce reference figures from Ref. [3]</div>
+        <div class="dipole-fig-label">Reproduce reference figures from Ref. [6]</div>
         <div class="dipole-fig-grid">
           ${Object.entries(DIPOLE_PRESETS).map(([k, p]) => `<button type="button" class="dipole-fig-btn${k === activeDipolePreset ? ' active' : ''}" data-preset="${k}" title="${p.tip}" aria-pressed="${k === activeDipolePreset ? 'true' : 'false'}">${p.label}</button>`).join('')}
         </div>`;
