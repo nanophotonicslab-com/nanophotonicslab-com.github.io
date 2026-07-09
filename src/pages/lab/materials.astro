@@ -83,6 +83,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                   <option value="file">Upload file&hellip;</option>
                   <option value="rii">Search database&hellip;</option>
                 </select>
+                <button type="button" class="icon-btn" id="mat1-remove" title="Remove material 1" aria-label="Remove material 1" hidden>&times;</button>
               </div>
               <div class="mat-extra" id="mat1-rii" hidden>
                 <input type="text" class="field-input rii-input" id="mat1-rii-input" placeholder="Search refractiveindex.info&hellip;" autocomplete="off">
@@ -125,6 +126,60 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                 <input type="range" class="vo2-slider" id="mat2-vo2-fm" min="0" max="1" step="0.01" value="0">
                 <div class="vo2-tbox"><canvas id="mat2-vo2-tplot" aria-label="Metallic fraction vs temperature"></canvas></div>
                 <span class="ctrl-note" id="mat2-vo2-tnote"></span>
+              </div>
+
+              <!-- Material 3 -->
+              <div class="field" id="mat3-row" hidden>
+                <label for="mat3-select">Material 3</label>
+                <select class="field-input" id="mat3-select">
+                  {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="vo2">Vanadium dioxide (VO&#8322;)</option>
+                  <option value="file">Upload file&hellip;</option>
+                  <option value="rii">Search database&hellip;</option>
+                </select>
+                <button type="button" class="icon-btn" id="mat3-remove" title="Remove material 3" aria-label="Remove material 3">&times;</button>
+              </div>
+              <div class="mat-extra" id="mat3-rii" hidden>
+                <input type="text" class="field-input rii-input" id="mat3-rii-input" placeholder="Search refractiveindex.info&hellip;" autocomplete="off">
+                <div class="rii-results" id="mat3-rii-results"></div>
+                <span class="ctrl-note rii-status" id="mat3-rii-status"></span>
+              </div>
+              <div class="mat-extra" id="mat3-file" hidden>
+                <input type="file" class="file-input" id="mat3-file-input" accept=".csv,.tsv,.txt,.dat">
+                <span class="ctrl-note" id="mat3-file-status">Columns: x, n, k or x, ε′, ε″.</span>
+              </div>
+              <div class="mat-extra mat-vo2" id="mat3-vo2" hidden>
+                <div class="vo2-head"><label for="mat3-vo2-fm">Metallic fraction f<sub>m</sub></label><span class="vo2-fm-val" id="mat3-vo2-fm-val">0.00</span></div>
+                <input type="range" class="vo2-slider" id="mat3-vo2-fm" min="0" max="1" step="0.01" value="0">
+                <div class="vo2-tbox"><canvas id="mat3-vo2-tplot" aria-label="Metallic fraction vs temperature"></canvas></div>
+                <span class="ctrl-note" id="mat3-vo2-tnote"></span>
+              </div>
+
+              <!-- Material 4 -->
+              <div class="field" id="mat4-row" hidden>
+                <label for="mat4-select">Material 4</label>
+                <select class="field-input" id="mat4-select">
+                  {materialOptions.map(o => (<option value={o.key}>{o.label}</option>))}
+                  <option value="vo2">Vanadium dioxide (VO&#8322;)</option>
+                  <option value="file">Upload file&hellip;</option>
+                  <option value="rii">Search database&hellip;</option>
+                </select>
+                <button type="button" class="icon-btn" id="mat4-remove" title="Remove material 4" aria-label="Remove material 4">&times;</button>
+              </div>
+              <div class="mat-extra" id="mat4-rii" hidden>
+                <input type="text" class="field-input rii-input" id="mat4-rii-input" placeholder="Search refractiveindex.info&hellip;" autocomplete="off">
+                <div class="rii-results" id="mat4-rii-results"></div>
+                <span class="ctrl-note rii-status" id="mat4-rii-status"></span>
+              </div>
+              <div class="mat-extra" id="mat4-file" hidden>
+                <input type="file" class="file-input" id="mat4-file-input" accept=".csv,.tsv,.txt,.dat">
+                <span class="ctrl-note" id="mat4-file-status">Columns: x, n, k or x, ε′, ε″.</span>
+              </div>
+              <div class="mat-extra mat-vo2" id="mat4-vo2" hidden>
+                <div class="vo2-head"><label for="mat4-vo2-fm">Metallic fraction f<sub>m</sub></label><span class="vo2-fm-val" id="mat4-vo2-fm-val">0.00</span></div>
+                <input type="range" class="vo2-slider" id="mat4-vo2-fm" min="0" max="1" step="0.01" value="0">
+                <div class="vo2-tbox"><canvas id="mat4-vo2-tplot" aria-label="Metallic fraction vs temperature"></canvas></div>
+                <span class="ctrl-note" id="mat4-vo2-tnote"></span>
               </div>
             </div>
             <button type="button" class="add-mat-btn" id="mat-add" title="Compare a second material">+ Add material</button>
@@ -286,13 +341,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <div class="mat-results-col">
           <div class="mat-results card">
             <div class="chart-header">
-              <span class="chart-title-wrap">
-                <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
-                <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
-              </span>
-              <span class="chart-header__right">
-                <span class="mat-legend" id="mat-legend"></span>
-              </span>
+              <div class="chart-header__top">
+                <span class="chart-title-wrap">
+                  <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
+                  <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
+                </span>
+                <span class="mat-legend mat-legend--style" id="mat-legend-style"></span>
+              </div>
+              <div class="mat-legend mat-legend--names" id="mat-legend-names"></div>
             </div>
             <div class="chart-wrap">
               <canvas id="mat-canvas" aria-label="Optical constants plot"></canvas>
@@ -448,7 +504,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   /* right column: result card + Notes card stacked as independent cards (like the Mie lab) */
   .mat-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; overflow: visible; }
-  .chart-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  .chart-header { display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; }
+  .chart-header__top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
   .chart-title-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
   .chart-title { font-weight: 600; font-size: 0.95rem; }
   .header-toggle {
@@ -492,8 +549,11 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
   .mat-legend { display: inline-flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
   :global(.mat-legend-item) { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; font-weight: 600; color: var(--text-soft); }
+  :global(.mat-legend-item--toggle) { cursor: pointer; user-select: none; }
+  :global(.mat-legend-item--off) { opacity: 0.4; }
   :global(.mat-legend-swatch) { width: 16px; height: 0; border-top: 2.6px solid var(--text-muted); border-radius: 2px; flex: 0 0 auto; }
-  :global(.ml-dashed) { border-top-style: dashed; }
+  /* draw explicit dashes: a `dashed` border is too coarse to read on a 16px swatch */
+  :global(.ml-dashed) { height: 2.6px; border-top: none; border-radius: 1px; background: repeating-linear-gradient(90deg, var(--text-muted) 0 3px, transparent 3px 5.5px); }
 
   /* Add / remove material controls */
   .add-mat-btn {
@@ -510,6 +570,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     font-size: 1.1rem; line-height: 1; cursor: pointer; transition: border-color 0.15s, color 0.15s;
   }
   .icon-btn:hover { border-color: #F43F5E; color: #F43F5E; }
+  .icon-btn[hidden] { display: none; }
 
   /* Database search + file upload */
   .mat-extra { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -650,7 +711,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     return data;
   }
 
-  const COLORS = ['#6366F1', '#F59E0B'];   // one colour per material; solid = real part, dashed = imaginary
+  const COLORS = ['#6366F1', '#F59E0B', '#10B981', '#EC4899'];   // one colour per material (up to 4); solid = real part, dashed = imaginary
 
   interface Source { label: string; color: string; nk: (lamNm: number) => { re: number; im: number; n: number; k: number }; dataLo: number; dataHi: number; }
 
@@ -664,7 +725,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   let waveUnit: 'nm' | 'um' = 'nm';
   let energyUnit: 'eV' | 'meV' | 'THz' | 'EF' = 'eV';
   let grQUnit: 'nm' | 'kf' = 'nm';   // colormap Q axis: nm⁻¹ or normalized Q/k_F
-  let mat2On = false;                       // second material in the Materials module
+  let matCount = 1;                         // number of materials being compared (1–4)
+  const MAX_MATERIALS = 4;
+  let showReal = true, showImag = true;     // legend toggles: show/hide real & imaginary curves
+  const hiddenMat = new Set<number>();      // legend: series indices hidden by clicking their name
   // canonical plotting window, always stored as wavelength in nm (lo < hi)
   let rangeLoNm = 200, rangeHiNm = 2000;
 
@@ -673,14 +737,18 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   const ctx = canvas.getContext('2d')!;
   const matSelect = $('mat-select') as HTMLSelectElement;
   const mat2Select = $('mat2-select') as HTMLSelectElement;
+  const mat3Select = $('mat3-select') as HTMLSelectElement;
+  const mat4Select = $('mat4-select') as HTMLSelectElement;
 
   // ── a material slot: built-in table, uploaded file, or database (RII) result ──
   interface Slot {
     select: HTMLSelectElement;
+    prefix: string;
     custom: { label: string; ref: string; data: number[][] } | null;
     catalog: RIIMaterial[] | null;
     vo2fm: number;
     resolve: () => { label: string; ref: string; data: number[][] } | null;
+    sync: () => void;   // re-apply this slot's sub-group visibility from its current select value
   }
   // ── VO₂: build an n,k table from the Bruggeman mixed-phase ε(E, fm), plus the fm↔T mini plot ──
   const cvarV = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
@@ -727,7 +795,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const fileStatus = $(`${prefix}-file-status`);
     const vo2Group = $(`${prefix}-vo2`), vo2Slider = $(`${prefix}-vo2-fm`) as HTMLInputElement;
     const vo2Val = $(`${prefix}-vo2-fm-val`), vo2Tplot = $(`${prefix}-vo2-tplot`) as HTMLCanvasElement, vo2Tnote = $(`${prefix}-vo2-tnote`);
-    const slot: Slot = { select, custom: null, catalog: null, vo2fm: 0, resolve: () => null };
+    const slot: Slot = { select, prefix, custom: null, catalog: null, vo2fm: 0, resolve: () => null, sync: () => {} };
 
     slot.resolve = () => {
       const v = select.value;
@@ -740,12 +808,16 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const updateVo2 = () => { vo2Val.textContent = slot.vo2fm.toFixed(2); vo2Tnote.textContent = vo2TempLabel(slot.vo2fm); drawVo2Tplot(vo2Tplot, slot.vo2fm); };
     vo2Slider.addEventListener('input', () => { slot.vo2fm = parseFloat(vo2Slider.value); updateVo2(); refreshMatRef(); updateNotes(); render(); });
 
-    select.addEventListener('change', () => {
+    // re-apply this slot's sub-group visibility from its current value (used after slot shuffles)
+    slot.sync = () => {
       riiGroup.hidden = select.value !== 'rii';
       fileGroup.hidden = select.value !== 'file';
       vo2Group.hidden = select.value !== 'vo2';
+      if (select.value === 'vo2') requestAnimationFrame(updateVo2);
+    };
+    select.addEventListener('change', () => {
+      slot.sync();
       if (select.value === 'rii') runSearch();
-      if (select.value === 'vo2') requestAnimationFrame(updateVo2);   // draw once the group is laid out
       refreshMatRef(); updateNotes(); render();
     });
 
@@ -801,6 +873,10 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   const slot1 = setupSlot('mat1', matSelect);
   const slot2 = setupSlot('mat2', mat2Select);
+  const slot3 = setupSlot('mat3', mat3Select);
+  const slot4 = setupSlot('mat4', mat4Select);
+  const SLOTS = [slot1, slot2, slot3, slot4];
+  const activeSlots = (): Slot[] => SLOTS.slice(0, matCount);
 
   // ── confirm-file-import dialog (map column interpretation before applying) ──
   type ImportTarget = { rows: FileRow[]; fileName: string; statusEl: HTMLElement; inputEl: HTMLInputElement; onAccept: (data: number[][], modeLabel: string) => void };
@@ -1152,7 +1228,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         dataLo: -Infinity, dataHi: Infinity,
       }];
     }
-    const slots = mat2On ? [slot1, slot2] : [slot1];
+    const slots = activeSlots();
     const out: Source[] = [];
     for (const sl of slots) {
       const r = sl.resolve(); if (!r) continue;
@@ -1238,7 +1314,11 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
     const xs = current.xs;
     let ymin = Infinity, ymax = -Infinity;
-    for (const s of current.series) for (const arr of [s.real, s.imag]) for (const v of arr) { if (Number.isFinite(v)) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; } }
+    current.series.forEach((s, i) => {
+      if (hiddenMat.has(i)) return;
+      const visible = [showReal ? s.real : null, showImag ? s.imag : null].filter(Boolean) as Float64Array[];
+      for (const arr of visible) for (const v of arr) { if (Number.isFinite(v)) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; } }
+    });
     if (!Number.isFinite(ymin)) { ymin = 0; ymax = 1; }
     let xmin = xs[0], xmax = xs[xs.length - 1];
     if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) { xmin = 0; xmax = 1; }
@@ -1291,7 +1371,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       ctx.stroke(); ctx.setLineDash([]);
     };
     // each material: real part solid, imaginary part dashed, in the material colour
-    for (const s of current.series) { drawLine(s.real, s.color, []); drawLine(s.imag, s.color, [5, 4]); }
+    current.series.forEach((s, i) => { if (hiddenMat.has(i)) return; if (showReal) drawLine(s.real, s.color, []); if (showImag) drawLine(s.imag, s.color, [5, 4]); });
 
     // graphene: mark the E_F and 2E_F energies (interband onset)
     if (isSigma()) {
@@ -1316,10 +1396,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     if (hoverIdx >= 0 && hoverIdx < xs.length && Number.isFinite(xs[hoverIdx])) {
       const hx = tx(xs[hoverIdx]); ctx.save(); ctx.strokeStyle = t.textMuted; ctx.globalAlpha = 0.6; ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, PAD.t + ph); ctx.stroke(); ctx.restore();
-      for (const s of current.series) for (const arr of [s.real, s.imag]) {
-        const v = arr[hoverIdx]; if (!Number.isFinite(v)) continue;
-        ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(hx, ty(v), 3.2, 0, 2 * Math.PI); ctx.fill();
-      }
+      current.series.forEach((s, i) => {
+        if (hiddenMat.has(i)) return;
+        for (const arr of [showReal ? s.real : null, showImag ? s.imag : null]) {
+          if (!arr) continue;
+          const v = arr[hoverIdx]; if (!Number.isFinite(v)) continue;
+          ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(hx, ty(v), 3.2, 0, 2 * Math.PI); ctx.fill();
+        }
+      });
     }
 
     // axis labels
@@ -1508,16 +1592,18 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     });
   }
 
-  // Legend: a solid/dashed style key + one coloured entry per material.
+  // Legend: fixed Re/Im style key (top-right) + one coloured entry per material (below the title).
   function buildLegend(src: Source[]) {
     const realLab = isSigma() ? (grNL ? 'Re' : 'Re σ') : quantity === 'eps' ? 'Re ε' : 'n';
     const imagLab = isSigma() ? (grNL ? 'Im' : 'Im σ') : quantity === 'eps' ? 'Im ε' : 'k';
-    let h = `<span class="mat-legend-item"><span class="mat-legend-swatch ml-solid"></span>${realLab}</span>`
-          + `<span class="mat-legend-item"><span class="mat-legend-swatch ml-dashed"></span>${imagLab}</span>`;
-    // single graphene source needs no name chip (we already know it's graphene)
+    $('mat-legend-style').innerHTML =
+        `<span class="mat-legend-item mat-legend-item--toggle${showReal ? '' : ' mat-legend-item--off'}" data-toggle="real" role="button" tabindex="0" aria-pressed="${showReal}" title="Show/hide the real part"><span class="mat-legend-swatch ml-solid"></span>${realLab}</span>`
+      + `<span class="mat-legend-item mat-legend-item--toggle${showImag ? '' : ' mat-legend-item--off'}" data-toggle="imag" role="button" tabindex="0" aria-pressed="${showImag}" title="Show/hide the imaginary part"><span class="mat-legend-swatch ml-dashed"></span>${imagLab}</span>`;
+    // material names: single graphene source needs no name chip (we already know it's graphene)
     const showNames = !(isSigma() && src.length === 1);
-    if (showNames) for (const s of src) h += `<span class="mat-legend-item"><span class="mat-legend-swatch" style="border-top-color:${s.color}"></span>${s.label}</span>`;
-    $('mat-legend').innerHTML = h;
+    $('mat-legend-names').innerHTML = showNames
+      ? src.map((s, i) => `<span class="mat-legend-item mat-legend-item--toggle${hiddenMat.has(i) ? ' mat-legend-item--off' : ''}" data-mat-idx="${i}" role="button" tabindex="0" aria-pressed="${!hiddenMat.has(i)}" title="Show/hide this material"><span class="mat-legend-swatch" style="border-top-color:${s.color}"></span>${s.label}</span>`).join('')
+      : '';
   }
 
   function render(hoverIdx = -1) {
@@ -1555,6 +1641,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   let grSeeded = false, tmdcSeeded = false;
   function selectModule(m: Mod) {
     mod = m;
+    hiddenMat.clear();   // series set differs per module; avoid stale hidden indices
     (Object.keys(moduleBtns) as Mod[]).forEach(k => {
       const b = $(moduleBtns[k]); const on = k === m;
       b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on));
@@ -1592,7 +1679,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
 
   // Notes box — defines the models for the active module.
-  const vo2ActiveSlots = (): Slot[] => (mat2On ? [slot1, slot2] : [slot1]).filter(s => s.select.value === 'vo2');
+  const vo2ActiveSlots = (): Slot[] => activeSlots().filter(s => s.select.value === 'vo2');
   const vo2NoteText = (s: Slot): string => `Vanadium dioxide (VO₂) — mixed-phase Bruggeman EMA · ${vo2TempLabel(s.vo2fm)} · calibrated Drude–Lorentz model`;
   function updateNotes() {
     let html = '';
@@ -1643,7 +1730,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       html = `<h4>Tabulated optical constants</h4><ul>
         <li>ε = (n + ik)². Tabulated n(λ), k(λ) are <b>linearly</b> interpolated in wavelength.</li>
         <li>Built-in tables, an uploaded file, or a refractiveindex.info database entry. Values are clamped to each material's measured range (no extrapolation).</li>
-        <li>Compare two materials with “+ Add material”: solid = real part, dashed = imaginary part, one colour per material.</li>
+        <li>Compare up to four materials with “+ Add material”; each row's “×” removes it and the rest shift up. Solid = real part, dashed = imaginary part, one colour per material.</li>
+        <li>Click <b>Re</b> or <b>Im</b> in the legend (top-right) to hide/show that part for all materials; the material colour keys sit under the title.</li>
         ${vo2ActiveSlots().length ? `<li>VO₂ is a Bruggeman effective-medium average of the <b>insulating (fₘ = 0)</b> and <b>metallic (fₘ = 1)</b> phases; the metallic fraction fₘ ∈ [0, 1] is set by temperature through the transition law (midpoint T<sub>M</sub> = 341 K, width ΔT = 2 K).</li>` : ''}
         ${vo2ActiveSlots().map(s => `<li>${vo2NoteText(s)}</li>`).join('')}
       </ul>`;
@@ -1730,31 +1818,92 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   // ── inputs ──
   function refreshMatRef() {
     if (mod !== 'materials') { $('mat-ref').textContent = ''; return; }
-    const slots = mat2On ? [slot1, slot2] : [slot1];
+    const slots = activeSlots();
     const refs = slots.filter(s => s.select.value !== 'vo2')   // VO₂ description lives in the Notes box instead
       .map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
     $('mat-ref').textContent = refs.join('  ·  ');
   }
 
-  // ── add / remove a second material ──
-  function setMat2(on: boolean) {
-    mat2On = on;
-    $('mat2-row').hidden = !on;
-    $('mat2-rii').hidden = !on || mat2Select.value !== 'rii';
-    $('mat2-file').hidden = !on || mat2Select.value !== 'file';
-    $('mat-add').hidden = on;
-    $('mat1-label').textContent = on ? 'Material 1' : 'Material';
+  // ── add / remove materials (compare up to MAX_MATERIALS) ──
+  // Apply the current matCount to the DOM: row/label/button visibility, then render.
+  function applyMatCount() {
+    hiddenMat.clear();   // indices shift when materials are added/removed
+    for (let i = 0; i < SLOTS.length; i++) {
+      const on = i < matCount, p = SLOTS[i].prefix;
+      if (i >= 1) $(`${p}-row`).hidden = !on;   // Material 1's row is always visible
+      if (on) SLOTS[i].sync();                  // let each active slot show its own sub-groups
+      else { $(`${p}-rii`).hidden = true; $(`${p}-file`).hidden = true; $(`${p}-vo2`).hidden = true; }
+      const rm = document.getElementById(`${p}-remove`);
+      if (rm) (rm as HTMLElement).hidden = !(on && matCount > 1);   // removable only while comparing ≥2
+    }
+    $('mat1-label').textContent = matCount > 1 ? 'Material 1' : 'Material';
+    $('mat-add').hidden = matCount >= MAX_MATERIALS;
     refreshMatRef();
     render();
   }
+  // Copy slot `si` (state + visible sub-controls) into slot `di`.
+  function copySlotState(di: number, si: number) {
+    const d = SLOTS[di], s = SLOTS[si], dp = d.prefix, sp = s.prefix;
+    d.select.value = s.select.value;
+    d.custom = s.custom;
+    d.catalog = s.catalog ?? d.catalog;
+    d.vo2fm = s.vo2fm;
+    ($(`${dp}-vo2-fm`) as HTMLInputElement).value = String(s.vo2fm);
+    $(`${dp}-vo2-fm-val`).textContent = s.vo2fm.toFixed(2);
+    ($(`${dp}-rii-input`) as HTMLInputElement).value = ($(`${sp}-rii-input`) as HTMLInputElement).value;
+    $(`${dp}-rii-status`).textContent = $(`${sp}-rii-status`).textContent ?? '';
+    $(`${dp}-file-status`).textContent = $(`${sp}-file-status`).textContent ?? '';
+  }
+  function removeMaterial(k: number) {
+    if (matCount <= 1 || k < 0 || k >= matCount) return;
+    for (let i = k; i < matCount - 1; i++) copySlotState(i, i + 1);   // shift the rest up into the gap
+    matCount--;
+    applyMatCount();
+  }
   $('mat-add').addEventListener('click', () => {
-    if (mat2Select.value === matSelect.value) {
-      const alt = Object.keys(MATERIALS).find(k => k !== matSelect.value);
-      if (alt) mat2Select.value = alt;
-    }
-    setMat2(true);
+    if (matCount >= MAX_MATERIALS) return;
+    const sel = SLOTS[matCount].select, used = activeSlots().map(s => s.select.value);
+    if (used.includes(sel.value)) { const alt = Object.keys(MATERIALS).find(k => !used.includes(k)); if (alt) sel.value = alt; }
+    matCount++;
+    applyMatCount();
   });
-  $('mat2-remove').addEventListener('click', () => setMat2(false));
+  SLOTS.forEach((_, i) => {
+    const rm = document.getElementById(`${SLOTS[i].prefix}-remove`);
+    if (rm) rm.addEventListener('click', () => removeMaterial(i));
+  });
+
+  // legend: click Re/Im to show/hide the real/imaginary curves of all materials
+  const toggleLegendPart = (which: string | undefined) => {
+    if (which === 'real') showReal = !showReal;
+    else if (which === 'imag') showImag = !showImag;
+    else return;
+    render();
+  };
+  $('mat-legend-style').addEventListener('click', e => {
+    const item = (e.target as HTMLElement).closest('.mat-legend-item--toggle') as HTMLElement | null;
+    if (item) toggleLegendPart(item.dataset.toggle);
+  });
+  $('mat-legend-style').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = (e.target as HTMLElement).closest('.mat-legend-item--toggle') as HTMLElement | null;
+    if (item) { e.preventDefault(); toggleLegendPart(item.dataset.toggle); }
+  });
+  // legend: click a material name to show/hide that material's curves
+  const toggleMatVisible = (idxStr: string | undefined) => {
+    const i = Number(idxStr);
+    if (!Number.isInteger(i)) return;
+    if (hiddenMat.has(i)) hiddenMat.delete(i); else hiddenMat.add(i);
+    render();
+  };
+  $('mat-legend-names').addEventListener('click', e => {
+    const item = (e.target as HTMLElement).closest('.mat-legend-item--toggle') as HTMLElement | null;
+    if (item) toggleMatVisible(item.dataset.matIdx);
+  });
+  $('mat-legend-names').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = (e.target as HTMLElement).closest('.mat-legend-item--toggle') as HTMLElement | null;
+    if (item) { e.preventDefault(); toggleMatVisible(item.dataset.matIdx); }
+  });
 
   [rminEl, rmaxEl].forEach(el => el.addEventListener('input', () => { readRangeInputs(); render(); }));
 
