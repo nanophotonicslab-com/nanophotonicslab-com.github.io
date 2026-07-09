@@ -4438,6 +4438,7 @@ initPermalinks({
 
   const MATERIAL_LAYER_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EC4899', '#14B8A6', '#8B5CF6'] as const;
   const hiddenMaterialSeries = new Set<string>();
+  const hiddenDipoleSeries = new Set<string>();   // dipole decay-rate curves hidden by clicking the legend
   function materialEntries(): { label: string; getDielectric: (lambdaNm: number) => [number, number] }[] {
     if (geometry !== 'coreshell') return [{ label: 'Particle', getDielectric }];
     const entries = [
@@ -4621,8 +4622,9 @@ initPermalinks({
     const scale = (a: Float64Array): Float64Array => yScale === 1 ? a : (a.map(v => v * yScale) as Float64Array);
     const series: PlotSeries[] = [];
     const push = (radial: Float64Array, tangential: Float64Array, color: string, label: string) => {
-      series.push({ y: scale(radial), color, label: `${label} · radial` });
-      series.push({ y: scale(tangential), color, label: `${label} · tangential`, dash: [5, 4] });
+      const lr = `${label} · radial`, lt = `${label} · tangential`;
+      series.push({ y: scale(radial), color, label: lr, hidden: hiddenDipoleSeries.has(lr) });
+      series.push({ y: scale(tangential), color, label: lt, dash: [5, 4], hidden: hiddenDipoleSeries.has(lt) });
     };
     if (ch === 'total' || ch === 'all') push(d.radTot, d.tanTot, PLOT_COLORS.cext, 'total');
     if (ch === 'rad' || ch === 'all') push(d.radRad, d.tanRad, PLOT_COLORS.csca, 'radiative');
@@ -4632,7 +4634,7 @@ initPermalinks({
     // bounded band (clipped to the plot) — a huge x0 makes fillRect crawl on GPU canvases
     const bands = fromCentre ? [{ x0: -bDisp, x1: bDisp, color: 'rgba(99,102,241,0.10)' }] : undefined;
     const ylo = parseFloat(dipoleYMinInput.value), yhi = parseFloat(dipoleYMaxInput.value);
-    const yRange: [number, number] = (Number.isFinite(ylo) && Number.isFinite(yhi) && yhi > ylo) ? [ylo, yhi] : dipoleYRange(series);
+    const yRange: [number, number] = (Number.isFinite(ylo) && Number.isFinite(yhi) && yhi > ylo) ? [ylo, yhi] : dipoleYRange(series.filter(s => !s.hidden));
     return { xArr, series, xLabel, yLabel, yRange, bands, bDisp, fromCentre };
   }
 
@@ -5257,14 +5259,24 @@ initPermalinks({
     if (viewTabs.value !== 'material' || !chartXforms) return null;
     return chartXforms.legendItems.find(item => mx >= item.x && mx <= item.x + item.w && my >= item.y && my <= item.y + item.h) ?? null;
   }
+  function dipoleLegendHit(mx: number, my: number): ChartLegendItem | null {
+    if (!(excitation === 'dipole' && viewTabs.value !== 'material') || !chartXforms) return null;
+    return chartXforms.legendItems.find(item => mx >= item.x && mx <= item.x + item.w && my >= item.y && my <= item.y + item.h) ?? null;
+  }
+  // whichever chart legend is clickable in the current view, with its hidden-set
+  function activeLegendHit(mx: number, my: number): { item: ChartLegendItem; set: Set<string> } | null {
+    const mat = materialLegendHit(mx, my); if (mat) return { item: mat, set: hiddenMaterialSeries };
+    const dip = dipoleLegendHit(mx, my); if (dip) return { item: dip, set: hiddenDipoleSeries };
+    return null;
+  }
 
   let dragStart: { x: number; y: number } | null = null, isDragging = false;
   chartWrap.addEventListener('mousedown', (e: MouseEvent) => {
     if (e.button !== 0) return;
-    const hit = materialLegendHit(e.offsetX, e.offsetY);
+    const hit = activeLegendHit(e.offsetX, e.offsetY);
     if (hit) {
-      if (hiddenMaterialSeries.has(hit.label)) hiddenMaterialSeries.delete(hit.label);
-      else hiddenMaterialSeries.add(hit.label);
+      if (hit.set.has(hit.item.label)) hit.set.delete(hit.item.label);
+      else hit.set.add(hit.item.label);
       dragStart = null;
       isDragging = false;
       clearOverlay();
@@ -5279,7 +5291,7 @@ initPermalinks({
     if (!chartXforms || !data) return;
     const { tx, ty, invTx, pL, pT, pW, pH } = chartXforms;
     const mx = e.offsetX, my = e.offsetY;
-    if (materialLegendHit(mx, my)) {
+    if (activeLegendHit(mx, my)) {
       chartWrap.style.cursor = 'pointer';
       clearOverlay();
       return;
