@@ -366,12 +366,28 @@ import ToolMeta from '../../../components/ToolMeta.astro';
               <span>Notes</span>
               <span id="tmm-model-summary">Bragg mirror</span>
             </div>
-            <p id="tmm-note-text">
-              Build a stack of homogeneous layers between a semi-infinite substrate
-              (incidence side) and cladding (exit side). The spectrum shows reflectance
-              and transmittance versus wavelength; the field view reconstructs the
-              standing-wave amplitude through the structure at a single wavelength.
-            </p>
+            <ul class="tmm-note-list">
+              <li id="tmm-note-text">
+                Build a stack of homogeneous layers between a semi-infinite substrate
+                (incidence side) and cladding (exit side). The spectrum shows reflectance
+                and transmittance versus wavelength; the field view reconstructs the
+                standing-wave amplitude through the structure at a single wavelength.
+              </li>
+              <li>
+                <strong>Editing layers.</strong> Set each layer's thickness,
+                <em>n</em> and &kappa; in its box. The <strong>+</strong> button adds a
+                copy directly below, the <strong>&uarr;/&darr;</strong> buttons reorder
+                it, and <strong>&times;</strong> removes it.
+              </li>
+              <li>
+                <strong>Layer groups.</strong> Layers that share the same thickness,
+                <em>n</em> and &kappa; form a <em>group</em> with the same colour. Click a
+                layer's colour circle to <em>lock</em> the whole group &mdash; a black ring
+                marks every member &mdash; so any edit to one entry applies to all of them
+                at once. Click the same circle again to unlock, or click a different
+                group's circle to switch the selection.
+              </li>
+            </ul>
             <p class="tmm-theory">
               <strong>Method.</strong> The transfer-matrix method propagates the
               tangential field through each homogeneous layer. The scalar field
@@ -1281,6 +1297,22 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   }
 
   :global(.tmm-theory em) {
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .tmm-note-list {
+    margin: 0;
+    list-style: disc;
+    padding-left: 1.1rem;
+    font-size: 0.8125rem;
+    color: var(--text-soft);
+    line-height: 1.6;
+  }
+  :global(.tmm-note-list li + li) {
+    margin-top: var(--space-xs, 0.4rem);
+  }
+  :global(.tmm-note-list em) {
     font-style: italic;
     color: var(--text);
   }
