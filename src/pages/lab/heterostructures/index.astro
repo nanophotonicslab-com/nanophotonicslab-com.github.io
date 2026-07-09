@@ -381,7 +381,9 @@ import ToolMeta from '../../../components/ToolMeta.astro';
               Each layer uses &epsilon; = (n + i&kappa;)<sup>2</sup> and a normal
               wavevector k<sub>z</sub> = &radic;(k<sub>0</sub><sup>2</sup>&epsilon; &minus; k<sub>x</sub><sup>2</sup>),
               with k<sub>0</sub> = 2&pi;/&lambda; and the transverse wavevector
-              k<sub>x</sub> = k<sub>0</sub> sin&theta; conserved across the stack.
+              k<sub>x</sub> = n<sub>s</sub> k<sub>0</sub> sin&theta; conserved across the stack.
+              The angle of incidence &theta; is measured <em>inside</em> the incidence
+              (substrate) medium n<sub>s</sub>.
               The 2&times;2 stack matrix M = m<sub>N</sub>&middot;&middot;&middot;m<sub>1</sub>
               yields the amplitude coefficients R, T and the powers
               &rho; = |R|<sup>2</sup> and &tau;. For a lossless stack &tau; + &rho; = 1.
@@ -957,6 +959,21 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     border: 1px solid rgba(255, 255, 255, 0.7);
   }
 
+  :global(.layer-swatch--btn) {
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  :global(.layer-swatch--btn:hover),
+  :global(.layer-swatch--btn:focus-visible) {
+    transform: scale(1.18);
+    outline: none;
+  }
+  /* selected group: black outer ring (with a bg gap so it reads on the coloured dot) */
+  :global(.layer-swatch--sel) {
+    box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3.5px var(--text);
+  }
+
   .layer-boundary {
     color: var(--text-muted);
     font-size: 0.6875rem;
@@ -1211,7 +1228,14 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     padding-left: 0.3rem;
   }
 
-  :global(.tmm-layer-remove) {
+  :global(.layer-row__actions) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  :global(.tmm-layer-btn) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1226,15 +1250,21 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     cursor: pointer;
   }
 
+  :global(.tmm-layer-btn:hover:not(:disabled)) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  :global(.tmm-layer-btn:disabled) {
+    opacity: 0.35;
+    cursor: default;
+  }
+
   :global(.tmm-layer-remove:hover:not(:disabled)) {
     border-color: #EF4444;
     color: #EF4444;
     background: rgba(239, 68, 68, 0.08);
-  }
-
-  :global(.tmm-layer-remove:disabled) {
-    opacity: 0.35;
-    cursor: default;
   }
 
   .tmm-mode-tabs {
@@ -4192,7 +4222,9 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     const alphaC = pol === 'TE' ? 1 : 1 / epsC;
     const EPS = Number.EPSILON;
     const k0 = (2 * Math.PI) / lam;
-    const kx = k0 * Math.sin((Math.PI * angleDeg) / 180);
+    // angle of incidence is measured inside the incidence (substrate) medium:
+    // kx = n_sub k0 sinθ  (θ = θ_sub, not a vacuum-referenced angle)
+    const kx = nSub * k0 * Math.sin((Math.PI * angleDeg) / 180);
     const M = transferMatrix(epsArr, dArr, pol, lam, kx);
     const kzS = cSqrt(cx(epsS * k0 * k0 - kx * kx));
     const kzC = cSqrt(cx(epsC * k0 * k0 - kx * kx));
@@ -4249,7 +4281,8 @@ import ToolMeta from '../../../components/ToolMeta.astro';
 
     const alphaC = pol === 'TE' ? cx(1) : cDiv(cx(1), epsC);
     const k0 = (2 * Math.PI) / lam;
-    const kx = k0 * Math.sin((Math.PI * angleDeg) / 180);
+    // angle of incidence measured inside the incidence (substrate) medium: kx = n_sub k0 sinθ
+    const kx = nSub * k0 * Math.sin((Math.PI * angleDeg) / 180);
     const kzC = cSqrt(cSub(cScale(epsC, k0 * k0), cx(kx * kx)));
     // known transmitted vector (unit transmitted amplitude): [1, -i alphaC kzC]
     const incident: [Cx, Cx] = [cx(1), cMulNegI(cMul(alphaC, kzC))];
@@ -4359,8 +4392,30 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   function isMetalLike(layer: TmmLayer): boolean { return layer.kappa > 0.05; }
   function layerLabel(layer: TmmLayer): string { return `n=${tfmt(layer.n, 3)}`; }
 
+  // Colour layers by "group": identical (thickness, n, κ) → same colour; any
+  // difference → a new colour. Assigned in first-appearance order so the palette
+  // stays stable. Called before every stack/editor render (idempotent).
+  const tmmGroupKey = (l: TmmLayer): string => `${l.thicknessNm}|${l.n}|${l.kappa}`;
+  function assignTmmGroupColors() {
+    const colorForKey = new Map<string, string>();
+    let next = 0;
+    for (const layer of tmm.layers) {
+      const key = tmmGroupKey(layer);
+      let col = colorForKey.get(key);
+      if (col === undefined) { col = palette[next % palette.length]; next++; colorForKey.set(key, col); }
+      layer.color = col;
+    }
+  }
+  // Lightweight swatch refresh for the layer editor (avoids a full re-render that
+  // would steal focus while the user is editing fields).
+  function refreshTmmSwatches() {
+    const swatches = tLayerEditor.querySelectorAll<HTMLElement>('.layer-swatch');
+    tmm.layers.forEach((l, i) => { if (swatches[i]) swatches[i].style.background = l.color; });
+  }
+
   // ---- rendering ----------------------------------------------------------
   function renderTmmStack() {
+    assignTmmGroupColors();
     const total = tmm.layers.reduce((s, l) => s + Math.max(1e-6, l.thicknessNm), 0) || 1;
     const inner = tmm.layers.map(layer => {
       const pct = (Math.max(1e-6, layer.thicknessNm) / total) * 100;
@@ -4379,14 +4434,28 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   }
 
   function renderTmmLayerEditor() {
+    assignTmmGroupColors();
     const removable = tmm.layers.length > TMM_MIN_LAYERS;
+    const canAdd = tmm.layers.length < TMM_MAX_LAYERS;
+    const last = tmm.layers.length - 1;
     tLayerEditor.innerHTML = tmm.layers.map((layer, index) => `
       <div class="layer-row" data-tmm-row="${index}">
         <div class="layer-row__header">
-          <span class="layer-chip"><span class="layer-swatch" style="background:${layer.color}"></span>Layer ${index + 1}</span>
-          <button type="button" class="tmm-layer-remove" data-tmm-remove="${index}" title="Remove layer" aria-label="Remove layer ${index + 1}"${removable ? '' : ' disabled'}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-          </button>
+          <span class="layer-chip"><button type="button" class="layer-swatch layer-swatch--btn${isTmmGroupSelected(index) ? ' layer-swatch--sel' : ''}" data-tmm-swatch="${index}" style="background:${layer.color}" title="Click to lock this group — edits then apply to all its layers" aria-label="Select layer group" aria-pressed="${isTmmGroupSelected(index)}"></button>Layer ${index + 1}</span>
+          <span class="layer-row__actions">
+            <button type="button" class="tmm-layer-btn" data-tmm-dup="${index}" title="Add a copy of this layer below" aria-label="Duplicate layer ${index + 1}"${canAdd ? '' : ' disabled'}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn" data-tmm-up="${index}" title="Move layer up" aria-label="Move layer ${index + 1} up"${index === 0 ? ' disabled' : ''}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn" data-tmm-down="${index}" title="Move layer down" aria-label="Move layer ${index + 1} down"${index === last ? ' disabled' : ''}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn tmm-layer-remove" data-tmm-remove="${index}" title="Remove layer" aria-label="Remove layer ${index + 1}"${removable ? '' : ' disabled'}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </span>
         </div>
         <div class="tmm-layer-fields">
           <label class="layer-field">
@@ -5065,6 +5134,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
 
   // ---- mutations ----------------------------------------------------------
   function tmmAddLayer() {
+    clearGroupSelection();
     if (tmm.layers.length >= TMM_MAX_LAYERS) return;
     const idx = tmm.layers.length;
     tmm.layers.push({ n: 2.0, kappa: 0, thicknessNm: 75, color: palette[idx % palette.length] });
@@ -5075,6 +5145,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   }
 
   function tmmRemoveLayer() {
+    clearGroupSelection();
     if (tmm.layers.length <= TMM_MIN_LAYERS) return;
     tmm.layers.pop();
     tmm.preset = 'custom';
@@ -5084,6 +5155,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   }
 
   function tmmRemoveLayerAt(index: number) {
+    clearGroupSelection();
     if (tmm.layers.length <= TMM_MIN_LAYERS) return;
     if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length) return;
     tmm.layers.splice(index, 1);          // re-enumeration is automatic on re-render
@@ -5099,16 +5171,52 @@ import ToolMeta from '../../../components/ToolMeta.astro';
     if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length || !key) return;
     const value = Number.parseFloat(input.value);
     if (!Number.isFinite(value)) return;
-    if (key === 'n') tmm.layers[index].n = Math.max(0.05, value);
-    else if (key === 'kappa') tmm.layers[index].kappa = Math.max(0, value);
-    else tmm.layers[index].thicknessNm = Math.max(0, value);
+    const v = key === 'n' ? Math.max(0.05, value) : Math.max(0, value);
+    // if this layer's group is locked (selected), the edit applies to the whole group
+    const targets = isTmmGroupSelected(index) ? selectedGroup! : [index];
+    for (const i of targets) {
+      tmm.layers[i][key] = v;
+      if (i !== index) {   // keep the other group members' inputs in sync
+        const inp = tLayerEditor.querySelector<HTMLInputElement>(`input[data-tmm-layer="${i}"][data-key="${key}"]`);
+        if (inp) inp.value = tfmt(v, 6);
+      }
+    }
     tmm.preset = 'custom';
     markActiveTmmPreset();
     renderTmmStack();
+    refreshTmmSwatches();       // recolour editor dots if this edit changed the grouping
+    refreshTmmSelectionRings(); // keep the black rings on the (still-locked) group
     drawTmm();
   }
 
+  // ---- group selection ("lock") ------------------------------------------
+  // Clicking a layer's colour swatch selects (black ring) every layer in that
+  // group; while selected, editing any of its entries changes them all. Clicking
+  // again deselects; clicking another group's swatch switches the selection.
+  let selectedGroup: number[] | null = null;   // physical indices locked together
+  function isTmmGroupSelected(i: number): boolean { return selectedGroup !== null && selectedGroup.includes(i); }
+  function clearGroupSelection() { selectedGroup = null; }
+  function refreshTmmSelectionRings() {
+    tLayerEditor.querySelectorAll<HTMLElement>('[data-tmm-swatch]').forEach(el => {
+      const i = Number.parseInt(el.dataset.tmmSwatch ?? '-1', 10);
+      const on = isTmmGroupSelected(i);
+      el.classList.toggle('layer-swatch--sel', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function toggleGroupSelection(index: number) {
+    if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length) return;
+    if (isTmmGroupSelected(index)) {
+      selectedGroup = null;                             // click same group → deselect
+    } else {
+      const key = tmmGroupKey(tmm.layers[index]);       // select (or switch to) this group
+      selectedGroup = tmm.layers.reduce<number[]>((acc, l, i) => { if (tmmGroupKey(l) === key) acc.push(i); return acc; }, []);
+    }
+    refreshTmmSelectionRings();
+  }
+
   function applyTmmPreset(preset: Preset) {
+    clearGroupSelection();
     tmm.preset = preset;
     tmm.mode = 'spectrum';
     tmm.xUnit = 'nm';
@@ -5129,6 +5237,29 @@ import ToolMeta from '../../../components/ToolMeta.astro';
       tmm.marginSub = 300; tmm.marginClad = 300;
     }
     tHover = null; tTooltip.hidden = true;
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  function tmmDuplicateLayerAt(index: number) {
+    clearGroupSelection();
+    if (tmm.layers.length >= TMM_MAX_LAYERS) return;
+    if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length) return;
+    tmm.layers.splice(index + 1, 0, { ...tmm.layers[index] });   // copy inserted directly below
+    tmm.preset = 'custom';
+    renderTmmLayerEditor();
+    drawTmm();
+    markActiveTmmPreset();
+  }
+
+  function tmmMoveLayer(index: number, dir: -1 | 1) {
+    clearGroupSelection();
+    const j = index + dir;
+    if (!Number.isInteger(index) || index < 0 || index >= tmm.layers.length) return;
+    if (j < 0 || j >= tmm.layers.length) return;
+    [tmm.layers[index], tmm.layers[j]] = [tmm.layers[j], tmm.layers[index]];   // swap with neighbour
+    tmm.preset = 'custom';
     renderTmmLayerEditor();
     drawTmm();
     markActiveTmmPreset();
@@ -5165,7 +5296,16 @@ import ToolMeta from '../../../components/ToolMeta.astro';
   });
 
   tLayerEditor.addEventListener('click', event => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-tmm-remove]');
+    const target = event.target as HTMLElement;
+    const sw = target.closest<HTMLButtonElement>('[data-tmm-swatch]');
+    if (sw) { toggleGroupSelection(Number.parseInt(sw.dataset.tmmSwatch ?? '-1', 10)); return; }
+    const dup = target.closest<HTMLButtonElement>('[data-tmm-dup]');
+    if (dup) { tmmDuplicateLayerAt(Number.parseInt(dup.dataset.tmmDup ?? '-1', 10)); return; }
+    const up = target.closest<HTMLButtonElement>('[data-tmm-up]');
+    if (up) { tmmMoveLayer(Number.parseInt(up.dataset.tmmUp ?? '-1', 10), -1); return; }
+    const down = target.closest<HTMLButtonElement>('[data-tmm-down]');
+    if (down) { tmmMoveLayer(Number.parseInt(down.dataset.tmmDown ?? '-1', 10), 1); return; }
+    const btn = target.closest<HTMLButtonElement>('[data-tmm-remove]');
     if (!btn) return;
     tmmRemoveLayerAt(Number.parseInt(btn.dataset.tmmRemove ?? '-1', 10));
   });
