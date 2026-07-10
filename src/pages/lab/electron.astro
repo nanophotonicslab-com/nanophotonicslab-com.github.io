@@ -3492,7 +3492,7 @@ initPermalinks({ kev: 'kev' });
   });
 
   $p('pn-ex-1').addEventListener('click', () => {
-    pnSyncBeta(0.5867); pn.absg = 5.7; pn.phaseDeg = 0; pn.zMaxMm = 5; pn.fullTalbot = false; pn.method = 'exact';
+    pnSyncBeta(keVToBeta(120)); pn.absg = 5.7; pn.phaseDeg = 0; pn.zMaxMm = 5; pn.fullTalbot = false; pn.method = 'exact';
     ($p('pn-g') as HTMLInputElement).value = '5.7'; ($p('pn-g-slider') as HTMLInputElement).value = '5.7';
     ($p('pn-zmax') as HTMLInputElement).value = '5'; ($p('pn-zmax') as HTMLInputElement).disabled = false;
     $p('pn-zt-btn').setAttribute('aria-pressed', 'false');

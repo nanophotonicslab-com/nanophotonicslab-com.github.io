@@ -37,9 +37,6 @@ const laserPresets = [
 
   <section class="section">
     <div class="container">
-      <div class="card" style="margin-bottom: var(--space-lg);">
-        <PresetStrip presets={laserPresets} canvasId="tbp-chart-time" />
-      </div>
       <!-- Tabs -->
       <div class="calc-tabs-row">
         <div class="calc-tabs" id="calc-tabs">
@@ -848,6 +845,14 @@ const laserPresets = [
           </div>
         </div>
       </div>
+
+      <!-- Examples — below the result box, aligned to the result-box width (as in the Mie scattering lab) -->
+      <div class="widget-layout examples-row">
+        <div class="examples-spacer" aria-hidden="true"></div>
+        <div class="card">
+          <PresetStrip presets={laserPresets} showCopy={false} />
+        </div>
+      </div>
     </div>
   </section>
 <script>
@@ -909,8 +914,15 @@ initPermalinks({
   }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
+  /* Examples strip — sits below and matches the width of the result box */
+  .examples-row { margin-top: var(--space-lg); }
+  .examples-row :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  @media (max-width: 900px) { .examples-spacer { display: none; } }
+
   /* ---- Controls ---- */
-  .controls { position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px); }
+  /* Not sticky: the controls card is shorter than the results, so pinning it
+     made the results appear to slide/detach on scroll. Scroll as one unit. */
+  .controls { align-self: start; }
   .controls h3 { margin-bottom: var(--space-md); }
   .param-group {
     margin-bottom: var(--space-md); padding-top: var(--space-sm);
