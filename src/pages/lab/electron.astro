@@ -42,8 +42,8 @@ import ToolMeta from '../../components/ToolMeta.astro';
             <span class="module-card__name">Smith&ndash;Purcell</span>
             <span class="module-card__desc">Light emission from an electron over a grating</span>
           </button>
-          <button type="button" class="module-card" id="module-pinem" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
-            <span class="module-card__name">PINEM <span class="module-card__badge">Soon</span></span>
+          <button type="button" class="module-card" id="module-pinem" role="radio" aria-checked="false">
+            <span class="module-card__name">PINEM</span>
             <span class="module-card__desc">Photon-induced near-field electron microscopy</span>
           </button>
         </div>
@@ -527,6 +527,162 @@ import ToolMeta from '../../components/ToolMeta.astro';
           </div>
         </dialog>
       </div><!-- /#panel-sp -->
+
+      <div id="panel-pinem" hidden>
+        <div class="widget-layout">
+          <!-- ===== Controls ===== -->
+          <div class="controls card">
+            <h3>Parameters</h3>
+
+            <div class="fields">
+              <div class="field"><label for="pn-vc">v / c</label><input type="text" class="field-input" id="pn-vc" inputmode="decimal" value="0.5867"></div>
+              <div class="field"><label for="pn-kev">K (keV)</label><input type="text" class="field-input" id="pn-kev" inputmode="decimal"></div>
+            </div>
+
+            <div class="sp-param">
+              <div class="sp-param__head"><label for="pn-g">Coupling |g|</label><input type="number" class="field-input sp-num" id="pn-g" value="5" step="0.1" min="0" max="12"></div>
+              <input type="range" class="sp-slider" id="pn-g-slider" min="0" max="10" step="0.05" value="5">
+            </div>
+
+            <!-- Excitation wavelength — dual λ ⇄ E entry + slider with a λ/eV switch -->
+            <div id="pn-wl-field">
+              <label class="pn-sec-label">Excitation</label>
+              <div class="fields">
+                <div class="field"><label for="pn-wl-nm">&lambda; (nm)</label><input type="text" class="field-input" id="pn-wl-nm" inputmode="decimal" value="800"></div>
+                <div class="field"><label for="pn-wl-ev">&#8463;&omega; (eV)</label><input type="text" class="field-input" id="pn-wl-ev" inputmode="decimal" value="1.550"></div>
+              </div>
+              <div class="sp-wl-slider-row">
+                <input type="range" class="sp-slider" id="pn-wl-slider" min="200" max="2000" step="5" value="800">
+                <div class="sp-unit-toggle" id="pn-wl-unit" role="radiogroup" aria-label="Slider unit">
+                  <button type="button" data-wu="nm" class="active" aria-pressed="true">&lambda;</button>
+                  <button type="button" data-wu="eV" aria-pressed="false">eV</button>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Range controls (context-dependent) -->
+            <div class="sp-range" id="pn-range-N">
+              <label>Sideband range &plusmn;N</label>
+              <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-nshow" value="15" step="1" min="2" max="60"></div>
+            </div>
+
+            <div id="pn-range-eels" hidden>
+              <div class="sp-param">
+                <div class="sp-param__head"><label for="pn-fwhm">Lorentzian FWHM &Gamma; (eV)</label><input type="number" class="field-input sp-num" id="pn-fwhm" value="0.5" step="0.05" min="0.01" max="3"></div>
+                <input type="range" class="sp-slider" id="pn-fwhm-slider" min="0.05" max="3" step="0.05" value="0.5">
+              </div>
+              <div class="sp-range">
+                <label>Energy-loss axis (eV)</label>
+                <div class="sp-range__row">
+                  <input type="number" class="field-input sp-rnum" id="pn-emin" value="-20" step="1">
+                  <span class="sp-range__dash">to</span>
+                  <input type="number" class="field-input sp-rnum" id="pn-emax" value="20" step="1">
+                </div>
+              </div>
+            </div>
+
+            <div class="sp-range" id="pn-range-prop" hidden>
+              <label>Retarded time &tau; (&plusmn; periods T)</label>
+              <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-taurange" value="1.5" step="0.5" min="0.5"></div>
+              <div class="sp-range__head" style="margin-top:0.4rem">
+                <label id="pn-zrange-label">Distance z (mm)</label>
+                <button type="button" class="pn-zt-btn" id="pn-zt-btn" title="Plot up to the Talbot distance to see the whole carpet" aria-pressed="false">z<sub>T</sub></button>
+              </div>
+              <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-zmax" value="5" step="0.5" min="0.1"></div>
+              <label style="margin-top:0.4rem">Coherence length (nm, 0 = coherent)</label>
+              <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-coh" value="0" step="500" min="0"></div>
+            </div>
+
+            <div class="sp-range" id="pn-range-billiard" hidden>
+              <label>Coupling axis |g|: 0 to</label>
+              <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-gmax" value="6" step="0.5" min="1"></div>
+            </div>
+
+            <details class="pn-adv">
+              <summary>Numerics</summary>
+              <div class="sp-range">
+                <label>Sidebands retained n<sub>max</sub></label>
+                <div class="sp-range__row"><input type="number" class="field-input sp-rnum" id="pn-nmax" value="40" step="5" min="10" max="120"></div>
+                <label style="margin-top:0.4rem">Dispersion</label>
+                <div class="sp-unit-toggle" id="pn-method" role="radiogroup" aria-label="Dispersion model">
+                  <button type="button" data-dm="exact" class="active" aria-pressed="true">exact</button>
+                  <button type="button" data-dm="talbot" aria-pressed="false">Talbot</button>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <!-- ===== Results ===== -->
+          <div class="sp-results-col">
+            <div class="sp-view-tabs" id="pn-view-tabs" role="tablist" aria-label="View">
+              <button type="button" class="sp-view-tab active" data-view="spectrum" role="tab" aria-selected="true">Spectrum</button>
+              <button type="button" class="sp-view-tab" data-view="billiard" role="tab" aria-selected="false">Billiard</button>
+            </div>
+
+            <div class="result-panel card sp-result-card" id="pn-result-card">
+              <div class="sp-sub-tabs" id="pn-sub-tabs" role="tablist" aria-label="Sub-view"></div>
+              <div class="sp-chart-head">
+                <div class="sp-chart-title" id="pn-chart-title">&mdash;</div>
+              </div>
+              <div class="chart-wrap sp-chart-wrap"><canvas id="pn-chart" aria-label="PINEM result plot"></canvas><div class="sp-map-tt" id="pn-map-tt" hidden></div></div>
+              <div class="sp-readout" id="pn-readout"></div>
+              <div class="sp-export-bar">
+                <button type="button" class="tool-btn" id="pn-export-png" title="Download the plot as PNG">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  PNG
+                </button>
+                <button type="button" class="tool-btn" id="pn-export-csv" title="Download the plotted data as CSV">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Attosecond-pulse metrics -->
+            <div class="pn-metrics card" id="pn-metrics">
+              <div class="pn-metrics__grid" id="pn-metrics-grid"></div>
+            </div>
+
+            <div class="notes-card card" id="pn-notes">
+              <h4>Notes</h4>
+              <p>
+                <strong>PINEM</strong>&nbsp;[1]. An optical near field of amplitude set by the complex coupling
+                <em>g</em> imprints a phase on a swift electron, splitting it into a comb of energy
+                sidebands spaced by the photon energy &#8463;&omega;. In the quantum treatment&nbsp;[2] the
+                populations are Bessel: P<sub>N</sub>&nbsp;=&nbsp;J<sub>N</sub>(2|g|)<sup>2</sup>, with
+                2|g| the Rabi phase&nbsp;[3].
+              </p>
+              <p>
+                <strong>Spectrum</strong> selects a single |g|: <em>Probability</em> shows the bare
+                P<sub>N</sub>, <em>EELS</em> broadens them by a Lorentzian of width &Gamma;, and
+                <em>Propagation</em> shows the co-moving density &rho;(z,&tau;) reshaping into an
+                attosecond pulse train.
+              </p>
+              <p>
+                <strong>Billiard</strong> maps P<sub>N</sub> versus the
+                coupling |g| (the multilevel Rabi / quantum-walk map).
+              </p>
+              <div class="sp-examples">
+                <button type="button" class="sp-example" id="pn-ex-1" aria-pressed="false">
+                  <span class="sp-example__head">Example &mdash; Feist et al. attosecond train</span>
+                  <span class="sp-example__params">120&nbsp;keV (v/c&nbsp;=&nbsp;0.587) &middot; &lambda;&nbsp;=&nbsp;800&nbsp;nm (&#8463;&omega;&nbsp;=&nbsp;1.55&nbsp;eV) &middot; |g|&nbsp;=&nbsp;5.7 &middot; Propagation 0&ndash;5&nbsp;mm</span>
+                  <span class="sp-example__hint">Click to load and show the pulse-train focus near z&nbsp;&approx;&nbsp;1.8&nbsp;mm &rarr;</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="references card">
+          <h4>References</h4>
+          <ul class="reference-list">
+            <li><span class="ref-index">[1]</span><span>B. Barwick, D. J. Flannigan &amp; A. H. Zewail, <em>Photon-induced near-field electron microscopy</em>, Nature <strong>462</strong>, 902&ndash;906 (2009), <a href="https://doi.org/10.1038/nature08662" target="_blank" rel="noopener">doi:10.1038/nature08662</a>.</span></li>
+            <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, A. Asenjo-Garcia &amp; M. Kociak, <em>Multiphoton absorption and emission by interaction of swift electrons and photons in a near field</em>, Nano Letters <strong>10</strong>, 1859&ndash;1863 (2010), <a href="https://doi.org/10.1021/nl100613s" target="_blank" rel="noopener">doi:10.1021/nl100613s</a>.</span></li>
+            <li><span class="ref-index">[3]</span><span>A. Feist, K. E. Echternkamp, J. Schauss, S. V. Yalunin, S. Sch&auml;fer &amp; C. Ropers, <em>Quantum coherent optical phase modulation in an ultrafast transmission electron microscope</em>, Nature <strong>521</strong>, 200&ndash;203 (2015), <a href="https://doi.org/10.1038/nature14463" target="_blank" rel="noopener">doi:10.1038/nature14463</a>.</span></li>
+          </ul>
+        </div>
+      </div><!-- /#panel-pinem -->
     </div>
   </section>
 <script>
@@ -667,6 +823,7 @@ initPermalinks({ kev: 'kev' });
 
   /* spectral-map axis ranges (emission angle / wavelength) */
   .sp-range { display: flex; flex-direction: column; gap: 0.3rem; }
+  .sp-range[hidden] { display: none; }
   .sp-range__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
   .sp-range > label, .sp-range__head label { font-size: 0.8125rem; font-weight: 500; color: var(--text); }
   .sp-range__row { display: flex; align-items: center; gap: 0.4rem; }
@@ -776,9 +933,9 @@ initPermalinks({ kev: 'kev' });
   .sp-view-tab:hover:not(.active) { color: var(--text); }
   /* sub-view selector — full-width segmented bar inside the result box (created at runtime → :global) */
   .sp-sub-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
-  :global(#sp-sub-tabs .sp-sub-tab) { flex: 1; padding: 0.45rem 0.85rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.2s; white-space: nowrap; text-align: center; }
-  :global(#sp-sub-tabs .sp-sub-tab.active) { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
-  :global(#sp-sub-tabs .sp-sub-tab:hover:not(.active)) { color: var(--text); }
+  :global(#sp-sub-tabs .sp-sub-tab), :global(#pn-sub-tabs .sp-sub-tab) { flex: 1; padding: 0.45rem 0.85rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.2s; white-space: nowrap; text-align: center; }
+  :global(#sp-sub-tabs .sp-sub-tab.active), :global(#pn-sub-tabs .sp-sub-tab.active) { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  :global(#sp-sub-tabs .sp-sub-tab:hover:not(.active)), :global(#pn-sub-tabs .sp-sub-tab:hover:not(.active)) { color: var(--text); }
   .sp-chart-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
   .sp-title-wrap { position: relative; display: flex; align-items: center; gap: 0.35rem; }
   .sp-chart-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
@@ -836,6 +993,22 @@ initPermalinks({ kev: 'kev' });
     .controls { position: static; }
     .fields { grid-template-columns: 1fr; }
   }
+
+  /* ── PINEM module ── */
+  .pn-sec-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-soft); margin-bottom: 0.3rem; }
+  .pn-zt-btn { font-family: var(--font); font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .pn-zt-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .pn-zt-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .pn-adv { margin-top: 0.4rem; }
+  .pn-adv > summary { cursor: pointer; font-size: 0.75rem; font-weight: 700; color: var(--text-soft); padding: 0.2rem 0; }
+  .pn-adv > summary:hover { color: var(--text); }
+  /* numerical-results box — same tile style as the Materials calculator result box */
+  .pn-metrics { padding: var(--space-md); display: flex; flex-direction: column; gap: 0.5rem; }
+  .pn-metrics__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 0.5rem; align-items: stretch; }
+  :global(.pn-metric) { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding: 0.45rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg-soft); }
+  :global(.pn-metric__label) { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+  :global(.pn-metric__val) { font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.2; overflow-wrap: anywhere; }
+  :global(.pn-metric__val em) { font-style: normal; font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
 </style>
 
 <!-- ===== Script ===== -->
@@ -3013,23 +3186,340 @@ initPermalinks({ kev: 'kev' });
   // ── module switching (Fields / Smith–Purcell / PINEM) ──
   let spReady = false;
   function setModule(id: string) {
-    if (id === 'pinem') return;   // disabled placeholder
-    const isSP = id === 'smith-purcell';
-    if (isSP) {
-      // adopt the electron velocity currently set in the Fields module (kept in sync there)
-      const fb = parseFloat(($('vc') as HTMLInputElement).value || ($('vc') as HTMLInputElement).placeholder || '');
-      if (fb > 0 && fb < 1) sp.vc = fb;
-    } else if (id === 'fields') {
-      (window as any).__electronFieldsSetBeta?.(sp.vc);   // push the SP velocity back into Fields
-    }
-    ($('panel-fields') as HTMLElement).hidden = isSP;
+    const isSP = id === 'smith-purcell', isPinem = id === 'pinem';
+    // current shared electron velocity (Fields' vc, else the SP value)
+    const fb = parseFloat(($('vc') as HTMLInputElement).value || ($('vc') as HTMLInputElement).placeholder || '');
+    const betaNow = (fb > 0 && fb < 1) ? fb : sp.vc;
+    if (isSP) sp.vc = betaNow;
+    else if (id === 'fields') (window as any).__electronFieldsSetBeta?.(sp.vc);   // push velocity back into Fields
+    ($('panel-fields') as HTMLElement).hidden = isSP || isPinem;
     ($('panel-sp') as HTMLElement).hidden = !isSP;
+    ($('panel-pinem') as HTMLElement).hidden = !isPinem;
     document.querySelectorAll('.module-card').forEach(b => { const a = b.id === 'module-' + id; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
     if (isSP) { if (!spReady) { spReady = true; renderSubTabs(); } syncBetaK(sp.vc); renderSP(); }
+    if (isPinem) (window as any).__pinemActivate?.(betaNow);
   }
   $('module-fields').addEventListener('click', () => setModule('fields'));
   $('module-smith-purcell').addEventListener('click', () => setModule('smith-purcell'));
+  $('module-pinem').addEventListener('click', () => setModule('pinem'));
 
   // re-render the SP charts on resize when visible
   let rT: number; window.addEventListener('resize', () => { clearTimeout(rT); rT = window.setTimeout(() => { if (!($('panel-sp') as HTMLElement).hidden) renderSP(); }, 120); });
+</script>
+
+<!-- ===================== PINEM module ===================== -->
+<script>
+  import {
+    sidebandProbabilities, pinemSpectrum, chargeDensity, analyzeFocus, talbotDistanceM,
+    beamPhotonEV, beamPeriodS, beamGamma, betaToEnergyEV, energyEVToBeta,
+    eVFromWavelengthNm, wavelengthNmFromEV, type Beam, type DispMethod,
+  } from '../../lib/pinem';
+  import { downloadBlob as pnDownload } from '../../lib/download';
+
+  const $p = (id: string) => document.getElementById(id) as HTMLElement;
+  const PIp = Math.PI;
+  const cvarp = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+
+  const pn = {
+    beta: 0.5867, absg: 5, phaseDeg: 0, wavelengthNm: 800, wlUnit: 'nm' as 'nm' | 'eV',
+    nmax: 40, nshow: 15, method: 'exact' as DispMethod,
+    view: 'spectrum' as 'spectrum' | 'billiard', sub: 'probability' as 'probability' | 'eels' | 'propagation',
+    fwhmEV: 0.5, eMinEV: -20, eMaxEV: 20,
+    tauRange: 1.5, zMaxMm: 5, cohNm: 0, fullTalbot: false,
+    gMax: 6,
+  };
+  const pnBeam = (): Beam => ({ energyEV: betaToEnergyEV(pn.beta), wavelengthNm: pn.wavelengthNm });
+
+  // canvas helpers
+  function ctx2dP(canvas: HTMLCanvasElement) {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return null;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    return { ctx, w: r.width, h: r.height };
+  }
+  type Frame = { px: (x: number) => number; py: (y: number) => number; m: { l: number; r: number; t: number; b: number }; w: number; h: number };
+  function frameP(ctx: CanvasRenderingContext2D, w: number, h: number, xmin: number, xmax: number, ymin: number, ymax: number, xlabel: string, ylabel: string, xticks: number[], yticks: number[], fmtX = (v: number) => String(v), fmtY = (v: number) => String(v)): Frame {
+    const m = { l: 58, r: 30, t: 14, b: 40 };
+    const px = (x: number) => m.l + (x - xmin) / (xmax - xmin) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / (ymax - ymin) * (h - m.t - m.b);
+    ctx.font = '11px ' + (cvarp('--font') || 'sans-serif'); ctx.fillStyle = cvarp('--text-muted');
+    ctx.strokeStyle = cvarp('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const y of yticks) { const Y = py(y); if (Y < m.t - 1 || Y > h - m.b + 1) continue; ctx.strokeStyle = 'rgba(140,140,150,0.14)'; ctx.beginPath(); ctx.moveTo(m.l, Y); ctx.lineTo(w - m.r, Y); ctx.stroke(); ctx.fillStyle = cvarp('--text-muted'); ctx.fillText(fmtY(y), m.l - 6, Y); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const x of xticks) { const X = px(x); if (X < m.l - 1 || X > w - m.r + 1) continue; ctx.fillText(fmtX(x), X, h - m.b + 6); }
+    ctx.fillStyle = cvarp('--text-soft'); ctx.fillText(xlabel, (m.l + w - m.r) / 2, h - 13);
+    ctx.save(); ctx.translate(13, (m.t + h - m.b) / 2); ctx.rotate(-PIp / 2); ctx.fillText(ylabel, 0, 0); ctx.restore();
+    return { px, py, m, w, h };
+  }
+  function ticksNice(min: number, max: number, n = 6): number[] {
+    const span = max - min; if (span <= 0) return [min];
+    const raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
+    const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    const out: number[] = []; for (let v = Math.ceil(min / step) * step; v <= max + step * 0.01; v += step) out.push(Math.abs(v) < step * 1e-6 ? 0 : v);
+    return out;
+  }
+  const HOT = (t: number): number[] => { t = Math.max(0, Math.min(1, t)); const r = Math.min(1, t * 3), g = Math.min(1, Math.max(0, t * 3 - 1)), b = Math.min(1, Math.max(0, t * 3 - 2)); return [r * 255, g * 255, b * 255]; };
+  const MAGMA_STOPS = [[0, 0, 4], [40, 11, 84], [101, 21, 110], [159, 42, 99], [212, 72, 66], [245, 125, 21], [250, 193, 39], [252, 253, 191]];
+  const MAGMA = (t: number): number[] => { t = Math.max(0, Math.min(1, t)); const x = t * (MAGMA_STOPS.length - 1), i = Math.min(MAGMA_STOPS.length - 2, Math.floor(x)), f = x - i, a = MAGMA_STOPS[i], b = MAGMA_STOPS[i + 1]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; };
+  function heatmap(ctx: CanvasRenderingContext2D, fr: Frame, nx: number, ny: number, data: Float64Array, cmap: (t: number) => number[], smooth = true) {
+    const off = document.createElement('canvas'); off.width = nx; off.height = ny; const octx = off.getContext('2d')!; const img = octx.createImageData(nx, ny);
+    for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
+      const t = data[iy * nx + ix], pi = ((ny - 1 - iy) * nx + ix) * 4; const rgb = Number.isFinite(t) ? cmap(t) : [0, 0, 0];
+      img.data[pi] = rgb[0]; img.data[pi + 1] = rgb[1]; img.data[pi + 2] = rgb[2]; img.data[pi + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
+    const { m, w, h } = fr; ctx.imageSmoothingEnabled = smooth; ctx.drawImage(off, m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.strokeStyle = cvarp('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+  }
+  function colorbar(ctx: CanvasRenderingContext2D, fr: Frame, cmap: (t: number) => number[], loLabel: string, hiLabel: string) {
+    const { m, w, h } = fr, cbx = w - m.r + 6, cbh = h - m.t - m.b, NB = 48;
+    for (let i = 0; i < NB; i++) { const rgb = cmap(i / (NB - 1)); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(cbx, m.t + cbh - (i + 1) / NB * cbh, 8, cbh / NB + 1); }
+    ctx.strokeStyle = cvarp('--bg-muted'); ctx.strokeRect(cbx, m.t, 8, cbh);
+    ctx.fillStyle = cvarp('--text-muted'); ctx.font = '9px ' + (cvarp('--font') || 'sans-serif'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(hiLabel, cbx + 11, m.t + 4); ctx.fillText(loLabel, cbx + 11, m.t + cbh - 4);
+  }
+
+  // sub-tabs
+  const PN_SUBTABS: Record<string, { id: string; label: string }[]> = {
+    spectrum: [{ id: 'probability', label: 'Probability' }, { id: 'eels', label: 'EELS' }, { id: 'propagation', label: 'Propagation' }],
+    billiard: [],
+  };
+  function renderPnSubTabs() {
+    const box = $p('pn-sub-tabs'); box.innerHTML = '';
+    const subs = PN_SUBTABS[pn.view];
+    box.style.display = subs.length ? '' : 'none';
+    for (const t of subs) {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'sp-sub-tab' + (pn.sub === t.id ? ' active' : ''); btn.textContent = t.label; btn.dataset.sub = t.id;
+      btn.addEventListener('click', () => { pn.sub = t.id as any; renderPnSubTabs(); renderPn(); });
+      box.appendChild(btn);
+    }
+  }
+
+  // render dispatch
+  function updatePnControlVis() {
+    const isBill = pn.view === 'billiard';
+    ($p('pn-range-N') as HTMLElement).hidden = !(pn.sub === 'probability' || isBill);
+    ($p('pn-range-eels') as HTMLElement).hidden = isBill || pn.sub !== 'eels';
+    ($p('pn-range-prop') as HTMLElement).hidden = isBill || pn.sub !== 'propagation';
+    ($p('pn-range-billiard') as HTMLElement).hidden = !isBill;
+  }
+  let pnPropRaf = 0, pnChart = '';
+  const setPnComputing = (on: boolean) => $p('pn-result-card').classList.toggle('is-computing', on);
+  function renderPn() {
+    updatePnControlVis();
+    const title = $p('pn-chart-title');
+    const isProp = pn.view !== 'billiard' && pn.sub === 'propagation';
+    // navigating away from propagation cancels any pending compute + clears the loading rim
+    if (pnPropRaf && !isProp) { cancelAnimationFrame(pnPropRaf); pnPropRaf = 0; setPnComputing(false); }
+    if (pn.view === 'billiard') { title.textContent = 'Billiard — Pₙ vs coupling |g| (Rabi / quantum walk)'; drawBilliard(); updateMetrics(); pnChart = 'billiard'; }
+    else if (pn.sub === 'probability') { title.textContent = `Sideband probabilities Pₙ = Jₙ(2|g|)²  ·  |g| = ${pn.absg}`; drawProbability(); updateMetrics(); pnChart = 'prob'; }
+    else if (pn.sub === 'eels') { title.textContent = `EELS spectrum  ·  |g| = ${pn.absg}, Γ = ${pn.fwhmEV} eV`; drawEELS(); updateMetrics(); pnChart = 'eels'; }
+    else {
+      // Propagation is expensive — paint an empty frame + spin the loading rim first,
+      // then compute the carpet on a later frame so the page stays responsive.
+      title.textContent = `Co-moving charge density ρ(z, τ)  ·  |g| = ${pn.absg}`;
+      if (pnChart !== 'prop') drawPropagation(false);   // fresh entry → instant empty plot
+      updateMetrics(false);                              // cheap tiles now, focus deferred
+      setPnComputing(true);
+      if (pnPropRaf) cancelAnimationFrame(pnPropRaf);
+      pnPropRaf = requestAnimationFrame(() => requestAnimationFrame(() => {
+        pnPropRaf = 0;
+        drawPropagation(true);
+        updateMetrics(true);
+        setPnComputing(false);
+      }));
+      pnChart = 'prop';
+    }
+  }
+
+  function drawProbability() {
+    const c = ctx2dP($p('pn-chart') as HTMLCanvasElement); if (!c) return; const { ctx, w, h } = c;
+    const { N, P } = sidebandProbabilities(pn.absg, pn.nmax);
+    const ns = pn.nshow; let pmax = 0; for (let i = 0; i < N.length; i++) if (Math.abs(N[i]) <= ns) pmax = Math.max(pmax, P[i]);
+    pmax = Math.max(pmax, 1e-6);
+    const fr = frameP(ctx, w, h, -ns - 0.6, ns + 0.6, 0, pmax * 1.08, 'photon order N', 'Pₙ', ticksNice(-ns, ns).filter(v => Number.isInteger(v)), ticksNice(0, pmax * 1.08), v => String(Math.round(v)), v => v.toFixed(2));
+    const bw = Math.max(2, (fr.px(1) - fr.px(0)) * 0.7);
+    for (let i = 0; i < N.length; i++) { if (Math.abs(N[i]) > ns) continue; const X = fr.px(N[i]), y0 = fr.py(0), y1 = fr.py(P[i]); ctx.fillStyle = N[i] === 0 ? cvarp('--primary') : 'rgba(99,102,241,0.6)'; ctx.fillRect(X - bw / 2, y1, bw, y0 - y1); }
+    let psum = 0; for (const p of P) psum += p;
+    $p('pn-readout').innerHTML = `<span>2|g| (Rabi phase) = <b>${(2 * pn.absg).toFixed(2)}</b></span><span>Σ Pₙ = <b>${psum.toFixed(4)}</b> (nₘₐₓ = ${pn.nmax})</span>`;
+  }
+
+  function drawEELS() {
+    const c = ctx2dP($p('pn-chart') as HTMLCanvasElement); if (!c) return; const { ctx, w, h } = c;
+    const b = pnBeam(), NE = 800, e0 = Math.min(pn.eMinEV, pn.eMaxEV), e1 = Math.max(pn.eMinEV, pn.eMaxEV);
+    const E = new Float64Array(NE); for (let i = 0; i < NE; i++) E[i] = e0 + (e1 - e0) * i / (NE - 1);
+    const S = pinemSpectrum(pn.absg, E, pn.fwhmEV, beamPhotonEV(b), pn.nmax, true);
+    const fr = frameP(ctx, w, h, e0, e1, 0, 1.08, 'electron energy loss / gain (eV)', 'norm. probability', ticksNice(e0, e1), ticksNice(0, 1), v => v.toFixed(0), v => v.toFixed(1));
+    const { N, P } = sidebandProbabilities(pn.absg, pn.nmax); let pmax = 0; for (const p of P) pmax = Math.max(pmax, p);
+    ctx.strokeStyle = 'rgba(140,140,150,0.5)'; ctx.lineWidth = 1;
+    for (let i = 0; i < N.length; i++) { if (P[i] < 1e-4) continue; const Ei = N[i] * beamPhotonEV(b); if (Ei < e0 || Ei > e1) continue; const X = fr.px(Ei); ctx.beginPath(); ctx.moveTo(X, fr.py(0)); ctx.lineTo(X, fr.py(P[i] / pmax)); ctx.stroke(); }
+    ctx.save(); ctx.beginPath(); ctx.rect(fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b); ctx.clip();
+    ctx.strokeStyle = cvarp('--primary'); ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < NE; i++) { const X = fr.px(E[i]), Y = fr.py(S[i]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); } ctx.stroke(); ctx.restore();
+    $p('pn-readout').innerHTML = `<span>sideband spacing &#8463;&omega; = <b>${beamPhotonEV(b).toFixed(3)} eV</b></span><span>Lorentzian FWHM Γ = <b>${pn.fwhmEV} eV</b> · grey stems = bare Pₙ</span>`;
+  }
+
+  function drawPropagation(withData = true) {
+    const c = ctx2dP($p('pn-chart') as HTMLCanvasElement); if (!c) return; const { ctx, w, h } = c;
+    const b = pnBeam(), T = beamPeriodS(b);
+    const zMaxM = pn.fullTalbot ? talbotDistanceM(b) : pn.zMaxMm * 1e-3;
+    const tauHi = pn.tauRange * T, zMm = zMaxM * 1e3, tauFs = tauHi * 1e15;
+    const fr = frameP(ctx, w, h, 0, zMm, -tauFs, tauFs, 'propagation distance z (mm)', 'retarded time τ (fs)', ticksNice(0, zMm), ticksNice(-tauFs, tauFs), v => v.toFixed(zMm > 20 ? 0 : 1), v => v.toFixed(0));
+    if (!withData) {
+      ctx.fillStyle = cvarp('--text-muted'); ctx.font = '12px ' + (cvarp('--font') || 'sans-serif'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('computing density…', (fr.m.l + w - fr.m.r) / 2, (fr.m.t + h - fr.m.b) / 2);
+      $p('pn-readout').innerHTML = `<span>computing charge density…</span><span>τ: ±${pn.tauRange} T · dispersion: ${pn.method}</span>`;
+      return;
+    }
+    const NZ = 300, NT = 180;
+    const zArr = new Float64Array(NZ); for (let i = 0; i < NZ; i++) zArr[i] = zMaxM * i / (NZ - 1);
+    const tauArr = new Float64Array(NT); for (let i = 0; i < NT; i++) tauArr[i] = -tauHi + 2 * tauHi * i / (NT - 1);
+    const coh = pn.cohNm > 0 ? pn.cohNm * 1e-9 : null;
+    const fld = chargeDensity(pn.absg, pn.phaseDeg * PIp / 180, zArr, tauArr, b, pn.nmax, pn.method, coh, true);
+    const data = new Float64Array(NZ * NT);
+    for (let it = 0; it < NT; it++) for (let iz = 0; iz < NZ; iz++) data[it * NZ + iz] = fld.rho[iz * NT + it];
+    heatmap(ctx, fr, NZ, NT, data, HOT);
+    colorbar(ctx, fr, HOT, '0', '1');
+    $p('pn-readout').innerHTML = `<span>z: 0 → <b>${zMm.toFixed(zMm > 20 ? 0 : 2)} mm</b>${pn.fullTalbot ? ' (Talbot z_T)' : ''} · τ: ±${pn.tauRange} T</span><span>dispersion: <b>${pn.method}</b>${pn.cohNm > 0 ? ` · coherence ${pn.cohNm} nm` : ''}</span>`;
+  }
+
+  function drawBilliard() {
+    const c = ctx2dP($p('pn-chart') as HTMLCanvasElement); if (!c) return; const { ctx, w, h } = c;
+    const b = pnBeam(), ns = pn.nshow, NX = 240, NY = 2 * ns + 1;
+    const data = new Float64Array(NX * NY);
+    for (let ix = 0; ix < NX; ix++) {
+      const g = pn.gMax * ix / (NX - 1);
+      const { N, P } = sidebandProbabilities(g, pn.nmax);
+      let cmax = 1e-9; for (let i = 0; i < N.length; i++) if (Math.abs(N[i]) <= ns) cmax = Math.max(cmax, P[i]);
+      for (let i = 0; i < N.length; i++) { const n = N[i]; if (Math.abs(n) > ns) continue; const iy = n + ns; data[iy * NX + ix] = P[i] / cmax; }
+    }
+    const fr = frameP(ctx, w, h, 0, pn.gMax, -ns - 0.5, ns + 0.5, 'coupling |g|', 'photon order N', ticksNice(0, pn.gMax), ticksNice(-ns, ns).filter(Number.isInteger), v => v.toFixed(1), v => String(Math.round(v)));
+    heatmap(ctx, fr, NX, NY, data, MAGMA, false);   // discrete photon orders N — no vertical interpolation
+    colorbar(ctx, fr, MAGMA, '0', '1');
+    $p('pn-readout').innerHTML = `<span>per-column normalized Pₙ · N = ±${ns}</span><span>energy = N·&#8463;&omega; = N·<b>${beamPhotonEV(b).toFixed(2)} eV</b></span>`;
+  }
+
+  // attosecond-pulse metrics
+  function metric(label: string, val: string): string { return `<div class="pn-metric"><span class="pn-metric__label">${label}</span><span class="pn-metric__val">${val}</span></div>`; }
+  function updateMetrics(withFocus = true) {
+    const b = pnBeam(), zT = talbotDistanceM(b) * 1e3;
+    let html = metric('Talbot distance z_T', `${zT.toFixed(1)} <em>mm</em>`)
+      + metric('Photon energy &#8463;&omega;', `${beamPhotonEV(b).toFixed(3)} <em>eV</em>`)
+      + metric('Optical period T', `${(beamPeriodS(b) * 1e15).toFixed(3)} <em>fs</em>`)
+      + metric('Electron v/c', `${pn.beta.toFixed(4)}`);
+    if (pn.view === 'spectrum' && pn.sub === 'propagation' && pn.absg > 0.2) {
+      if (!withFocus) {   // focus is computed on the deferred frame — show placeholders meanwhile
+        html += metric('Attosecond FWHM', `<em>…</em>`) + metric('Temporal focus z', `<em>…</em>`) + metric('Spike position τ', `<em>…</em>`);
+      } else {
+        const zScanM = pn.fullTalbot ? talbotDistanceM(b) : pn.zMaxMm * 1e-3;
+        const f = analyzeFocus(pn.absg, pn.phaseDeg * PIp / 180, b, zScanM, pn.nmax, pn.method);
+        html += metric('Attosecond FWHM', `${(f.fwhmS * 1e18).toFixed(0)} <em>as</em>`)
+          + metric('Temporal focus z', `${(f.zFocusM * 1e3).toFixed(2)} <em>mm</em>`)
+          + metric('Spike position τ', `${(f.spikeTauS * 1e15).toFixed(2)} <em>fs</em>`);
+      }
+    }
+    $p('pn-metrics-grid').innerHTML = html;
+  }
+
+  // controls wiring
+  const betaToKeV = (be: number) => betaToEnergyEV(be) / 1000;
+  const keVToBeta = (K: number) => energyEVToBeta(K * 1000);
+  function pnSyncBeta(beta: number, src?: string) {
+    pn.beta = Math.max(0.001, Math.min(0.999, beta));
+    if (src !== 'vc') ($p('pn-vc') as HTMLInputElement).value = String(+pn.beta.toFixed(4));
+    if (src !== 'kev') ($p('pn-kev') as HTMLInputElement).value = String(+betaToKeV(pn.beta).toPrecision(5));
+  }
+  ($p('pn-vc') as HTMLInputElement).addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0 && v < 1) { pnSyncBeta(v, 'vc'); renderPn(); } });
+  ($p('pn-kev') as HTMLInputElement).addEventListener('input', e => { const K = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(K) && K > 0) { pnSyncBeta(keVToBeta(K), 'kev'); renderPn(); } });
+
+  function pnBindNum(id: string, key: keyof typeof pn, isInt = false) {
+    const num = $p(id) as HTMLInputElement, slider = document.getElementById(id + '-slider') as HTMLInputElement | null;
+    const apply = (raw: string, from: HTMLInputElement) => { let v = parseFloat(raw); if (!Number.isFinite(v)) return; if (isInt) v = Math.round(v); (pn as any)[key] = v; const other = from === num ? slider : num; if (other) other.value = String(v); renderPn(); };
+    num.addEventListener('input', () => apply(num.value, num));
+    if (slider) slider.addEventListener('input', () => apply(slider.value, slider));
+  }
+  pnBindNum('pn-g', 'absg');
+
+  function pnSetWavelength(nm: number, src: 'nm' | 'ev' | 'slider') {
+    pn.wavelengthNm = Math.max(50, nm);
+    if (src !== 'nm') ($p('pn-wl-nm') as HTMLInputElement).value = String(Math.round(pn.wavelengthNm));
+    if (src !== 'ev') ($p('pn-wl-ev') as HTMLInputElement).value = eVFromWavelengthNm(pn.wavelengthNm).toFixed(3);
+    if (src !== 'slider') ($p('pn-wl-slider') as HTMLInputElement).value = pn.wlUnit === 'nm' ? String(Math.round(pn.wavelengthNm)) : eVFromWavelengthNm(pn.wavelengthNm).toFixed(3);
+    renderPn();
+  }
+  ($p('pn-wl-nm') as HTMLInputElement).addEventListener('input', e => { const nm = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(nm) && nm > 0) pnSetWavelength(nm, 'nm'); });
+  ($p('pn-wl-ev') as HTMLInputElement).addEventListener('input', e => { const ev = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(ev) && ev > 0) pnSetWavelength(wavelengthNmFromEV(ev), 'ev'); });
+  ($p('pn-wl-slider') as HTMLInputElement).addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) pnSetWavelength(pn.wlUnit === 'nm' ? v : wavelengthNmFromEV(v), 'slider'); });
+  $p('pn-wl-unit').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-wu]') as HTMLButtonElement | null; if (!btn) return;
+    const unit = btn.dataset.wu as 'nm' | 'eV'; if (unit === pn.wlUnit) return; pn.wlUnit = unit;
+    const sl = $p('pn-wl-slider') as HTMLInputElement;
+    if (unit === 'nm') { sl.min = '200'; sl.max = '2000'; sl.step = '5'; sl.value = String(Math.round(pn.wavelengthNm)); }
+    else { sl.min = '0.4'; sl.max = '6'; sl.step = '0.01'; sl.value = eVFromWavelengthNm(pn.wavelengthNm).toFixed(3); }
+    $p('pn-wl-unit').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.wu === unit; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+  });
+
+  const pnBindRange = (id: string, key: keyof typeof pn, isInt = false) => ($p(id) as HTMLInputElement).addEventListener('input', e => { let v = parseFloat((e.target as HTMLInputElement).value); if (!Number.isFinite(v)) return; if (isInt) v = Math.round(v); (pn as any)[key] = v; renderPn(); });
+  pnBindNum('pn-fwhm', 'fwhmEV');   // number + slider, like Coupling |g|
+  pnBindRange('pn-nshow', 'nshow', true); pnBindRange('pn-emin', 'eMinEV'); pnBindRange('pn-emax', 'eMaxEV');
+  pnBindRange('pn-taurange', 'tauRange'); pnBindRange('pn-zmax', 'zMaxMm'); pnBindRange('pn-coh', 'cohNm'); pnBindRange('pn-gmax', 'gMax'); pnBindRange('pn-nmax', 'nmax', true);
+
+  $p('pn-zt-btn').addEventListener('click', () => {
+    pn.fullTalbot = !pn.fullTalbot;
+    $p('pn-zt-btn').setAttribute('aria-pressed', pn.fullTalbot ? 'true' : 'false');
+    ($p('pn-zmax') as HTMLInputElement).disabled = pn.fullTalbot;
+    ($p('pn-zrange-label') as HTMLElement).textContent = pn.fullTalbot ? 'Distance z — full Talbot carpet' : 'Distance z (mm)';
+    renderPn();
+  });
+
+  $p('pn-method').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-dm]') as HTMLButtonElement | null; if (!btn) return;
+    pn.method = btn.dataset.dm as DispMethod;
+    $p('pn-method').querySelectorAll('button').forEach(b => { const a = (b as HTMLElement).dataset.dm === pn.method; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a ? 'true' : 'false'); });
+    renderPn();
+  });
+
+  $p('pn-view-tabs').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('.sp-view-tab') as HTMLButtonElement | null; if (!btn) return;
+    pn.view = btn.dataset.view as any;
+    $p('pn-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === pn.view; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
+    renderPnSubTabs(); renderPn();
+  });
+
+  $p('pn-ex-1').addEventListener('click', () => {
+    pnSyncBeta(0.5867); pn.absg = 5.7; pn.phaseDeg = 0; pn.zMaxMm = 5; pn.fullTalbot = false; pn.method = 'exact';
+    ($p('pn-g') as HTMLInputElement).value = '5.7'; ($p('pn-g-slider') as HTMLInputElement).value = '5.7';
+    ($p('pn-zmax') as HTMLInputElement).value = '5'; ($p('pn-zmax') as HTMLInputElement).disabled = false;
+    $p('pn-zt-btn').setAttribute('aria-pressed', 'false');
+    pnSetWavelength(800, 'slider');
+    pn.view = 'spectrum'; pn.sub = 'propagation';
+    $p('pn-view-tabs').querySelectorAll('.sp-view-tab').forEach(b => { const a = (b as HTMLElement).dataset.view === 'spectrum'; b.classList.toggle('active', a); b.setAttribute('aria-selected', a ? 'true' : 'false'); });
+    renderPnSubTabs(); renderPn();
+  });
+
+  function pnChartName(): string { return pn.view === 'billiard' ? 'pinem_billiard' : `pinem_${pn.sub}`; }
+  $p('pn-export-png').addEventListener('click', () => { const cv = $p('pn-chart') as HTMLCanvasElement; cv.toBlob(bl => { if (bl) pnDownload(bl, pnChartName() + '.png'); }); });
+  $p('pn-export-csv').addEventListener('click', () => {
+    const b = pnBeam(); const name = pnChartName() + '.csv'; let csv = '';
+    if (pn.view === 'billiard') { const rows = ['g,N,P_N']; for (let ix = 0; ix <= 120; ix++) { const g = pn.gMax * ix / 120; const { N, P } = sidebandProbabilities(g, pn.nmax); for (let i = 0; i < N.length; i++) if (Math.abs(N[i]) <= pn.nshow) rows.push(`${g.toFixed(4)},${N[i]},${P[i].toPrecision(6)}`); } csv = rows.join('\n'); }
+    else if (pn.sub === 'probability') { const { N, P } = sidebandProbabilities(pn.absg, pn.nmax); const rows = ['N,P_N']; for (let i = 0; i < N.length; i++) if (Math.abs(N[i]) <= pn.nshow) rows.push(`${N[i]},${P[i].toPrecision(6)}`); csv = rows.join('\n'); }
+    else if (pn.sub === 'eels') { const NE = 1000, e0 = Math.min(pn.eMinEV, pn.eMaxEV), e1 = Math.max(pn.eMinEV, pn.eMaxEV); const E = new Float64Array(NE); for (let i = 0; i < NE; i++) E[i] = e0 + (e1 - e0) * i / (NE - 1); const S = pinemSpectrum(pn.absg, E, pn.fwhmEV, beamPhotonEV(b), pn.nmax, true); const rows = ['E_eV,S']; for (let i = 0; i < NE; i++) rows.push(`${E[i].toPrecision(6)},${S[i].toPrecision(6)}`); csv = rows.join('\n'); }
+    else { const T = beamPeriodS(b), zMaxM = pn.fullTalbot ? talbotDistanceM(b) : pn.zMaxMm * 1e-3, tauHi = pn.tauRange * T; const NZ = 120, NT = 120; const zArr = new Float64Array(NZ); for (let i = 0; i < NZ; i++) zArr[i] = zMaxM * i / (NZ - 1); const tauArr = new Float64Array(NT); for (let i = 0; i < NT; i++) tauArr[i] = -tauHi + 2 * tauHi * i / (NT - 1); const coh = pn.cohNm > 0 ? pn.cohNm * 1e-9 : null; const fld = chargeDensity(pn.absg, pn.phaseDeg * PIp / 180, zArr, tauArr, b, pn.nmax, pn.method, coh, true); const rows = ['z_mm,tau_fs,rho']; for (let iz = 0; iz < NZ; iz++) for (let it = 0; it < NT; it++) rows.push(`${(zArr[iz] * 1e3).toPrecision(6)},${(tauArr[it] * 1e15).toPrecision(6)},${fld.rho[iz * NT + it].toPrecision(5)}`); csv = rows.join('\n'); }
+    pnDownload(new Blob([csv], { type: 'text/csv' }), name);
+  });
+
+  let pnRT: number; window.addEventListener('resize', () => { clearTimeout(pnRT); pnRT = window.setTimeout(() => { if (!($p('panel-pinem') as HTMLElement).hidden) renderPn(); }, 120); });
+
+  let pnReady = false;
+  (window as any).__pinemActivate = (beta: number) => {
+    if (beta > 0 && beta < 1) pnSyncBeta(beta); else pnSyncBeta(pn.beta);
+    if (!pnReady) { pnReady = true; renderPnSubTabs(); }
+    renderPn();
+  };
+  pnSyncBeta(pn.beta);
 </script>
