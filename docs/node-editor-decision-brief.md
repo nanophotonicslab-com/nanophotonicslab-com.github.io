@@ -51,3 +51,23 @@ If go, two sub-decisions:
 Build the 3-node slice behind a hidden route as a proof (small, the hard part
 is already tested), re-evaluate before investing in the full canvas. The
 library question can be deferred until the slice needs real interaction.
+
+---
+
+## Resolution (2026-07-18, decision interview with José Ramón)
+
+**GO**, with the v0 reframed by the actual first-week use case:
+
+- **v0 is a "material workbench", not the linear color slice.** The personal
+  value is the shared material node: define a dispersion once (database /
+  Drude / file) and fan it out to **Mie + plasmonic + electron-sphere
+  side by side**. All three solvers already accept the material callback and
+  all three have `Spectrum` adapters — the fan-out is the same proven sockets,
+  wired 1→3 instead of 1→1. Color swatch comes along nearly for free.
+- **No canvas, no library in v0.** Fixed topology behind a hidden route:
+  parameter panels + live recompute. The canvas-library decision is deferred
+  until the graph actually needs re-wiring by hand.
+- **Starts now** — it takes the weekly project day. Mobile touch-chart work
+  (issue #22) only pre-empts it if real-device testing surfaces breakage.
+- **Álvaro's role: consultative.** The internal v0 proceeds without waiting;
+  his input is sought on the public-facing scope and timing.
