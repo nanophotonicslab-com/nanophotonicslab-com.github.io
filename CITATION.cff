@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use these tools or the optics library, please cite this repository."
+title: "NanophotonicsLab — browser-based nanophotonics tools and optics library"
+type: software
+authors:
+  - family-names: "Martinez Saavedra"
+    given-names: "Jose Ramon"
+    email: joseramasa@gmail.com
+repository-code: "https://github.com/nanophotonicslab-com/nanophotonicslab-com.github.io"
+url: "https://nanophotonicslab.com"
+license: MIT
+keywords:
+  - nanophotonics
+  - mie-scattering
+  - plasmonics
+  - electron-energy-loss-spectroscopy
+  - purcell-factor
+  - optical-tweezers
+  - ultrafast-optics

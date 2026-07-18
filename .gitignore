@@ -34,3 +34,4 @@ paper/
 scripts/.venv/
 scripts/out/
 **/__pycache__/
+packages/optics/dist/

@@ -1,0 +1,47 @@
+{
+  "name": "@nanophotonicslab/optics",
+  "version": "0.1.0",
+  "description": "Nanophotonics compute engines from nanophotonicslab.com: Mie scattering (multilayer, near/far field), plasmonic nanoparticles, EELS/CL electron-beam spectra, dipole decay rates and Purcell factors, optical tweezers forces, photothermal heating, ultrafast pulse dispersion, spectrum fitting \u2014 typed, tested, zero dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/types/packages/optics/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/packages/optics/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "esbuild index.ts --bundle --format=esm --platform=neutral --outfile=dist/index.js && tsc -p tsconfig.json --emitDeclarationOnly --outDir dist/types",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "nanophotonics",
+    "mie-scattering",
+    "plasmonics",
+    "optical-tweezers",
+    "purcell-factor",
+    "eels",
+    "photothermal",
+    "ultrafast",
+    "dispersion",
+    "sellmeier",
+    "optics",
+    "physics"
+  ],
+  "author": "Jose Ramon Martinez Saavedra <joseramasa@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nanophotonicslab-com/nanophotonicslab-com.github.io.git",
+    "directory": "packages/optics"
+  },
+  "homepage": "https://nanophotonicslab.com/lab/",
+  "publishConfig": {
+    "access": "public"
+  }
+}

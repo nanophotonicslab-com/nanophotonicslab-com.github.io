@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2020"],
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "../..",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": false,
+    "noEmitOnError": true
+  },
+  "include": ["index.ts"]
+}
