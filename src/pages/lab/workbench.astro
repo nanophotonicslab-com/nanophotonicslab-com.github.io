@@ -107,6 +107,77 @@ import 'litegraph.js/css/litegraph.css';
   }
 </style>
 
+<style is:global>
+  /* Restyle litegraph's HTML chrome (context menu, search box, prompts)
+     with the site tokens — its stock CSS is dark with !important. */
+  .litegraph.litecontextmenu {
+    background-color: var(--bg) !important;
+    border: 1px solid var(--bg-muted) !important;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+    font-family: var(--font) !important;
+    padding: 4px;
+  }
+  .litegraph.litecontextmenu .litemenu-title {
+    background-color: var(--bg-soft) !important;
+    color: var(--text) !important;
+    border-radius: var(--radius-sm);
+  }
+  .litegraph.litecontextmenu .litemenu-entry {
+    background-color: transparent !important;
+    color: var(--text-soft) !important;
+    border-radius: var(--radius-sm);
+    margin: 1px 0;
+  }
+  .litegraph.litecontextmenu .litemenu-entry:hover:not(.disabled):not(.separator) {
+    background-color: var(--bg-soft) !important;
+    color: var(--primary) !important;
+  }
+  .litegraph.litecontextmenu .litemenu-entry.separator {
+    border-top: 1px solid var(--bg-muted) !important;
+    background: transparent !important;
+  }
+  .litegraph.litesearchbox {
+    background-color: var(--bg-glass) !important;
+    border: 1px solid var(--bg-muted) !important;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+    font-family: var(--font) !important;
+  }
+  .litegraph.litesearchbox input,
+  .litegraph.litesearchbox select {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--bg-muted) !important;
+    border-radius: var(--radius-sm);
+    font-family: var(--font) !important;
+  }
+  .litegraph.litesearchbox .helper { background: transparent !important; }
+  .litegraph .lite-search-item {
+    background-color: transparent !important;
+    color: var(--text-soft) !important;
+    border-radius: var(--radius-sm);
+    font-family: var(--font) !important;
+  }
+  .litegraph .lite-search-item:hover,
+  .litegraph .lite-search-item.selected {
+    background-color: var(--bg-soft) !important;
+    color: var(--primary) !important;
+  }
+  .graph-wrap .lgraphdialog {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--bg-muted) !important;
+    border-radius: var(--radius-md);
+    font-family: var(--font) !important;
+  }
+  .graph-wrap .lgraphdialog input {
+    background-color: var(--bg-soft) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--bg-muted) !important;
+  }
+</style>
+
 <script>
   import { LiteGraph, LGraph, LGraphCanvas } from 'litegraph.js';
   import { MATERIALS, interpolateNK, nkToEpsilon, drudeEpsilon } from '../../lib/materials';
@@ -169,21 +240,93 @@ import 'litegraph.js/css/litegraph.css';
   const MAT_IDS = [...Object.keys(MATERIALS), 'drude'];
   const POINTS = 240;
 
+  // ── Editor theme: restyle litegraph to the site's design system ──
+  type Family = 'source' | 'solver' | 'derived';
+  const FAMILY_ACCENT: Record<Family, string> = { source: '#5B5EE0', solver: '#0891B2', derived: '#D97706' };
+  const EDITOR_THEME = {
+    light: {
+      canvasBg: '#F4F2FD',
+      nodeBg: '#FFFFFF', nodeTitle: '#FFFFFF',
+      titleText: '#1E1B4B', text: '#64648B', ink: '#64648B', inkSoft: '#9CA3AF',
+      widgetBg: '#F8F7FF', widgetOutline: '#E4E2F5', widgetText: '#5B5EE0', widgetText2: '#64648B',
+      shadow: 'rgba(30, 27, 75, 0.10)',
+      link: '#C7C5E8', linkTypes: { material: '#A5B4FC', env: '#93C5FD', sphere: '#67E8F9', particle: '#67E8F9', spectrum: '#FCD34D' },
+      portOff: '#C7C5E8', portOn: '#5B5EE0',
+      outline: '#5B5EE0',
+      miniBorder: 'rgba(100, 100, 139, 0.25)',
+    },
+    dark: {
+      canvasBg: '#0F0E1A',
+      nodeBg: '#1A1930', nodeTitle: '#1A1930',
+      titleText: '#E8E6F0', text: '#9896B0', ink: '#9896B0', inkSoft: '#6B7280',
+      widgetBg: '#0F0E1A', widgetOutline: '#2A2945', widgetText: '#A5B4FC', widgetText2: '#9896B0',
+      shadow: 'rgba(0, 0, 0, 0.35)',
+      link: '#3D3B66', linkTypes: { material: '#6366F1', env: '#3B82F6', sphere: '#0891B2', particle: '#0891B2', spectrum: '#D97706' },
+      portOff: '#3D3B66', portOn: '#A5B4FC',
+      outline: '#A5B4FC',
+      miniBorder: 'rgba(152, 150, 176, 0.3)',
+    },
+  };
+  const theme = () => (isDark() ? EDITOR_THEME.dark : EDITOR_THEME.light);
+
+  function applyEditorTheme() {
+    const t = theme();
+    Object.assign(LiteGraph, {
+      NODE_TITLE_COLOR: t.titleText,
+      NODE_SELECTED_TITLE_COLOR: t.titleText,
+      NODE_TEXT_COLOR: t.text,
+      NODE_DEFAULT_COLOR: t.nodeTitle,
+      NODE_DEFAULT_BGCOLOR: t.nodeBg,
+      NODE_DEFAULT_BOXCOLOR: t.portOff,
+      NODE_BOX_OUTLINE_COLOR: t.outline,
+      WIDGET_BGCOLOR: t.widgetBg,
+      WIDGET_OUTLINE_COLOR: t.widgetOutline,
+      WIDGET_TEXT_COLOR: t.widgetText,
+      WIDGET_SECONDARY_TEXT_COLOR: t.widgetText2,
+      DEFAULT_SHADOW_COLOR: t.shadow,
+      LINK_COLOR: t.link,
+      CONNECTING_LINK_COLOR: t.outline,
+    });
+    Object.assign(lcanvas, {
+      clear_background_color: t.canvasBg,
+      background_image: null,
+      render_shadows: true,
+      render_canvas_border: false,
+      render_connection_arrows: false,
+      connections_width: 2,
+      round_radius: 10,
+      default_link_color: t.link,
+      link_type_colors: t.linkTypes,
+      default_connection_color: { input_off: t.portOff, input_on: t.portOn, output_off: t.portOff, output_on: t.portOn },
+      title_text_font: `600 13px ${getComputedStyle(document.body).fontFamily}`,
+      inner_text_font: `normal 12px ${getComputedStyle(document.body).fontFamily}`,
+    });
+    for (const node of (graph as any)._nodes || []) applyNodeTheme(node);
+    lcanvas.setDirty(true, true);
+  }
+  function applyNodeTheme(node: any) {
+    const t = theme();
+    node.color = t.nodeTitle;
+    node.bgcolor = t.nodeBg;
+    node.boxcolor = FAMILY_ACCENT[(node.constructor as any).family as Family] || t.portOff;
+  }
+
   // ── Node definitions (replace the stock litegraph node library) ──
   LiteGraph.clearRegisteredTypes();
 
   function defineNode(
-    type: string, title: string, color: string,
+    type: string, title: string, family: Family,
     setup: (node: any) => void, onExecute: (node: any) => void,
     extras: Record<string, any> = {},
   ) {
     function NodeClass(this: any) {
-      this.color = color;
       this.serialize_widgets = true;
       this.onConnectionsChange = () => scheduleRun();
       setup(this);
+      applyNodeTheme(this);
     }
     (NodeClass as any).title = title;
+    (NodeClass as any).family = family;
     NodeClass.prototype.onExecute = function () { try { onExecute(this); } catch (err) { console.error(title, err); } };
     NodeClass.prototype.onPropertyChanged = function () { scheduleRun(); };
     Object.assign(NodeClass.prototype, extras);
@@ -195,7 +338,7 @@ import 'litegraph.js/css/litegraph.css';
   };
 
   // Sources -------------------------------------------------------------
-  defineNode('workbench/material', 'Material', '#4338CA', (n) => {
+  defineNode('workbench/material', 'Material', 'source', (n) => {
     n.addOutput('material', 'material');
     n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05 };
     widget(n, 'combo', 'source', 'source', { values: MAT_IDS });
@@ -214,12 +357,12 @@ import 'litegraph.js/css/litegraph.css';
   }, {
     onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
       if (this.flags.collapsed || !this._readout) return;
-      ctx.fillStyle = '#999'; ctx.font = '10px monospace';
+      ctx.fillStyle = theme().ink; ctx.font = '10px monospace';
       ctx.fillText(this._readout, 10, this.size[1] - 8);
     },
   });
 
-  defineNode('workbench/environment', 'Environment', '#4338CA', (n) => {
+  defineNode('workbench/environment', 'Environment', 'source', (n) => {
     n.addOutput('env', 'env');
     n.properties = { nHost: 1.33, lambdaMin: 300, lambdaMax: 900 };
     widget(n, 'number', 'n host', 'nHost', { min: 1, max: 2.5, step: 0.1 });
@@ -232,7 +375,7 @@ import 'litegraph.js/css/litegraph.css';
     n.setOutputData(0, { nHost: Math.min(2.5, Math.max(1, p.nHost)), lmin, lmax: Math.max(lmin + 50, p.lambdaMax) });
   });
 
-  defineNode('workbench/sphere', 'Sphere geometry', '#4338CA', (n) => {
+  defineNode('workbench/sphere', 'Sphere geometry', 'source', (n) => {
     n.addOutput('sphere', 'sphere');
     n.properties = { radiusNm: 50 };
     widget(n, 'number', 'radius (nm)', 'radiusNm', { min: 1, max: 500, step: 10 });
@@ -241,7 +384,7 @@ import 'litegraph.js/css/litegraph.css';
     n.setOutputData(0, { radiusNm: Math.max(1, n.properties.radiusNm) });
   });
 
-  defineNode('workbench/particle', 'Particle geometry', '#4338CA', (n) => {
+  defineNode('workbench/particle', 'Particle geometry', 'source', (n) => {
     n.addOutput('particle', 'particle');
     n.properties = { shape: 'rod', lengthNm: 50, aspectRatio: 4 };
     widget(n, 'combo', 'shape', 'shape', { values: SHAPE_OPTIONS.map((s) => s.id) });
@@ -258,7 +401,7 @@ import 'litegraph.js/css/litegraph.css';
     const w = node.size[0] - 20, h = node.size[1] - top - 10;
     if (!cd || w < 40 || h < 24) return;
     ctx.save();
-    ctx.strokeStyle = 'rgba(128,128,140,0.35)';
+    ctx.strokeStyle = theme().miniBorder;
     ctx.strokeRect(10, top, w, h);
     let ymax = 0;
     for (const s of cd.series) for (const v of cd.spectrum.series[s.key]) if (v > ymax) ymax = v;
@@ -279,7 +422,7 @@ import 'litegraph.js/css/litegraph.css';
   }
 
   // Solvers -------------------------------------------------------------
-  defineNode('workbench/mie', 'Mie sphere', '#0E7490', (n) => {
+  defineNode('workbench/mie', 'Mie sphere', 'solver', (n) => {
     n.addInput('material', 'material');
     n.addInput('env', 'env');
     n.addInput('sphere', 'sphere');
@@ -311,7 +454,7 @@ import 'litegraph.js/css/litegraph.css';
     },
   });
 
-  defineNode('workbench/plasmon', 'Plasmonic particle', '#0E7490', (n) => {
+  defineNode('workbench/plasmon', 'Plasmonic particle', 'solver', (n) => {
     n.addInput('material', 'material');
     n.addInput('env', 'env');
     n.addInput('particle', 'particle');
@@ -352,7 +495,7 @@ import 'litegraph.js/css/litegraph.css';
     },
   });
 
-  defineNode('workbench/electron', 'Electron beam', '#0E7490', (n) => {
+  defineNode('workbench/electron', 'Electron beam', 'solver', (n) => {
     n.addInput('material', 'material');
     n.addInput('env', 'env');
     n.addInput('sphere', 'sphere');
@@ -396,7 +539,7 @@ import 'litegraph.js/css/litegraph.css';
   const absKey = (spec: Spectrum) =>
     Object.keys(spec.series).find((k) => k.toLowerCase().includes('abs')) || Object.keys(spec.series)[0];
 
-  defineNode('workbench/photothermal', 'Photothermal ΔT', '#B45309', (n) => {
+  defineNode('workbench/photothermal', 'Photothermal ΔT', 'derived', (n) => {
     n.addInput('spectrum', 'spectrum');
     n.addOutput('spectrum', 'spectrum');
     n.properties = { powerMw: 1, waistUm: 1, kappa: 0.606 };
@@ -422,11 +565,11 @@ import 'litegraph.js/css/litegraph.css';
     onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
       if (this.flags.collapsed) return;
       drawMiniPlot(this, ctx, 80);
-      if (this._headline) { ctx.fillStyle = '#bbb'; ctx.font = '10px monospace'; ctx.fillText(this._headline, 10, 76); }
+      if (this._headline) { ctx.fillStyle = theme().ink; ctx.font = '10px monospace'; ctx.fillText(this._headline, 10, 76); }
     },
   });
 
-  defineNode('workbench/color', 'Color', '#B45309', (n) => {
+  defineNode('workbench/color', 'Color', 'derived', (n) => {
     n.addInput('spectrum', 'spectrum');
     n.properties = { channel: 'auto' };
     n._channelWidget = n.addWidget('combo', 'channel', 'auto', () => scheduleRun(), { values: ['auto'], property: 'channel' });
@@ -451,15 +594,15 @@ import 'litegraph.js/css/litegraph.css';
       if (this._hex) {
         ctx.fillStyle = this._hex;
         ctx.fillRect(10, y0, this.size[0] - 20, h);
-        ctx.strokeStyle = 'rgba(128,128,140,0.4)';
+        ctx.strokeStyle = theme().miniBorder;
         ctx.strokeRect(10, y0, this.size[0] - 20, h);
-        ctx.fillStyle = '#bbb'; ctx.font = '10px monospace';
+        ctx.fillStyle = theme().ink; ctx.font = '10px monospace';
         ctx.fillText(`${this._hex}  (${this._key})`, 10, this.size[1] - 2);
       }
     },
   });
 
-  defineNode('workbench/peak', 'Peak analysis', '#B45309', (n) => {
+  defineNode('workbench/peak', 'Peak analysis', 'derived', (n) => {
     n.addInput('spectrum', 'spectrum');
     n.properties = { channel: 'auto' };
     n._channelWidget = n.addWidget('combo', 'channel', 'auto', () => scheduleRun(), { values: ['auto'], property: 'channel' });
@@ -482,7 +625,7 @@ import 'litegraph.js/css/litegraph.css';
   }, {
     onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
       if (this.flags.collapsed || !this._lines) return;
-      ctx.fillStyle = '#bbb'; ctx.font = '11px monospace';
+      ctx.fillStyle = theme().ink; ctx.font = '11px monospace';
       this._lines.forEach((l: string, i: number) => ctx.fillText(l, 10, 52 + i * 15));
     },
   });
@@ -492,10 +635,6 @@ import 'litegraph.js/css/litegraph.css';
   const canvasEl = $('graph-canvas') as unknown as HTMLCanvasElement;
   const lcanvas = new LGraphCanvas(canvasEl, graph);
   lcanvas.allow_searchbox = true;
-  function themeCanvas() {
-    lcanvas.clear_background_color = isDark() ? '#0F0E1A' : '#EDEBFA';
-    lcanvas.setDirty(true, true);
-  }
   function resizeCanvas() {
     const wrap = $('graph-wrap');
     lcanvas.resize(wrap.clientWidth, wrap.clientHeight);
@@ -672,9 +811,9 @@ import 'litegraph.js/css/litegraph.css';
 
   // ── Boot ──
   if (!restoreFromHash()) buildDefaultGraph();
-  themeCanvas();
+  applyEditorTheme();
   resizeCanvas();
   scheduleRun();
   window.addEventListener('resize', () => { resizeCanvas(); scheduleRun(); });
-  onThemeChange(() => { themeCanvas(); scheduleRun(); });
+  onThemeChange(() => { applyEditorTheme(); scheduleRun(); });
 </script>
