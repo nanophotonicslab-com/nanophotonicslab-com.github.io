@@ -53,24 +53,40 @@ export function fitMieRadius(
   const sseAt = (r: number) => scaleAndSse(modelAt(r), yData).sse;
 
   // Coarse grid
-  let bestR = rMinNm, bestSse = Infinity;
+  const cells: { r: number; sse: number }[] = [];
   for (let s = 0; s < coarseSteps; s++) {
     const r = rMinNm + ((rMaxNm - rMinNm) * s) / (coarseSteps - 1);
-    const sse = sseAt(r);
-    if (sse < bestSse) { bestSse = sse; bestR = r; }
+    cells.push({ r, sse: sseAt(r) });
   }
-
-  // Golden-section refinement around the best coarse cell
+  cells.sort((p, q) => p.sse - q.sse);
   const step = (rMaxNm - rMinNm) / (coarseSteps - 1);
-  let lo = Math.max(rMinNm, bestR - step), hi = Math.min(rMaxNm, bestR + step);
-  const phi = (Math.sqrt(5) - 1) / 2;
-  let c = hi - phi * (hi - lo), d = lo + phi * (hi - lo);
-  let fc = sseAt(c), fd = sseAt(d);
-  for (let it = 0; it < 40 && hi - lo > 1e-3; it++) {
-    if (fc < fd) { hi = d; d = c; fd = fc; c = hi - phi * (hi - lo); fc = sseAt(c); }
-    else { lo = c; c = d; fc = fd; d = lo + phi * (hi - lo); fd = sseAt(d); }
+
+  // Refine from up to 3 well-separated coarse minima: sharp-resonance
+  // (high-index) particles can put a spurious local minimum inside a single
+  // golden window (physics audit 2026-07-18).
+  const seeds: number[] = [];
+  for (const cell of cells) {
+    if (seeds.every((r) => Math.abs(r - cell.r) > 1.5 * step)) seeds.push(cell.r);
+    if (seeds.length === 3) break;
   }
-  const rFit = (lo + hi) / 2;
+  const golden = (seed: number): { r: number; sse: number } => {
+    let lo = Math.max(rMinNm, seed - step), hi = Math.min(rMaxNm, seed + step);
+    const phi = (Math.sqrt(5) - 1) / 2;
+    let c = hi - phi * (hi - lo), d = lo + phi * (hi - lo);
+    let fc = sseAt(c), fd = sseAt(d);
+    for (let it = 0; it < 40 && hi - lo > 1e-3; it++) {
+      if (fc < fd) { hi = d; d = c; fd = fc; c = hi - phi * (hi - lo); fc = sseAt(c); }
+      else { lo = c; c = d; fc = fd; d = lo + phi * (hi - lo); fd = sseAt(d); }
+    }
+    const r = (lo + hi) / 2;
+    return { r, sse: sseAt(r) };
+  };
+  let best = golden(seeds[0]);
+  for (let i = 1; i < seeds.length; i++) {
+    const cand = golden(seeds[i]);
+    if (cand.sse < best.sse) best = cand;
+  }
+  const rFit = best.r;
 
   const model = modelAt(rFit);
   const { A, sse } = scaleAndSse(model, yData);

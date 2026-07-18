@@ -177,25 +177,34 @@ export function decayRatesAt(
     // --- radiative rates (moduli squared) ---
     // γ_∥^rad (2.71): (3/2) Σ ℓ(ℓ+1)(2ℓ+1) |[ j_ℓ − a_ℓ h_ℓ ]/u|²
     const parNum = csub(cx(j[l], 0), cmul(al, h(l)));      // j_ℓ − a_ℓ h_ℓ
-    gParRad += wPar * cabs2(parNum) / (u * u);
+    const dParRad = wPar * cabs2(parNum) / (u * u);
 
     // γ_⊥^rad (2.72): (3/4) Σ (2ℓ+1) { |j_ℓ − b_ℓ h_ℓ|² + |[ψ'_ℓ − a_ℓ ξ'_ℓ]/u|² }
     const perpB = csub(cx(j[l], 0), cmul(bl, h(l)));       // j_ℓ − b_ℓ h_ℓ
     const perpA = csub(cx(psiP(l), 0), cmul(al, xiP(l)));  // ψ'_ℓ − a_ℓ ξ'_ℓ
-    gPerpRad += wPerp * (cabs2(perpB) + cabs2(perpA) / (u * u));
+    const dPerpRad = wPerp * (cabs2(perpB) + cabs2(perpA) / (u * u));
 
     // --- total rates (complex squares inside Re{…}) ---
     const hOverU = cscale(h(l), 1 / u);                    // h_ℓ/u
     const hSq = cmul(hOverU, hOverU);                      // (h_ℓ/u)²
     // γ_∥ (2.75)
-    gParTotSum += wPar * cmul(al, hSq).re;
+    const dParTot = wPar * cmul(al, hSq).re;
     // γ_⊥ (2.76): a_ℓ (ξ'_ℓ/u)² + b_ℓ h_ℓ²   (magnetic term has NO 1/u — matches
     // MNPBEM/Kim et al. 1988; the printed thesis Eq. 2.76 carries a stray 1/k₂r'
     // on the magnetic term.)
     const xiPU = cscale(xiP(l), 1 / u);
     const xiPSq = cmul(xiPU, xiPU);
     const hSqNoU = cmul(h(l), h(l));                       // h_ℓ²  (no /u)
-    gPerpTotSum += wPerp * (cmul(al, xiPSq).re + cmul(bl, hSqNoU).re);
+    const dPerpTot = wPerp * (cmul(al, xiPSq).re + cmul(bl, hSqNoU).re);
+
+    // Past ℓ ≈ 60–130 (x-dependent) h_ℓ overflows while a_ℓ underflows and
+    // 0·Inf = NaN would poison the sums — by then the series has long
+    // converged, so stop instead (physics audit 2026-07-18).
+    if (!Number.isFinite(dParRad + dPerpRad + dParTot + dPerpTot)) break;
+    gParRad += dParRad;
+    gPerpRad += dPerpRad;
+    gParTotSum += dParTot;
+    gPerpTotSum += dPerpTot;
   }
 
   const gammaParRad = 1.5 * gParRad;

@@ -211,15 +211,41 @@ function sphJ(ell: number, z: C): C {
   if (ell === 0) return cdiv(csin(z), z);
   const sinz = csin(z);
   const cosz = ccos(z);
-  let jm1 = cdiv(sinz, z);
-  let j = csub(cdiv(sinz, cmul(z, z)), cdiv(cosz, z));
-  if (ell === 1) return j;
-  for (let n = 1; n < ell; n++) {
-    const jp1 = csub(cscale(cdiv(j, z), 2 * n + 1), jm1);
-    jm1 = j;
-    j = jp1;
+  const j0 = cdiv(sinz, z);
+  const j1 = csub(cdiv(sinz, cmul(z, z)), cdiv(cosz, z));
+  if (ell === 1) return j1;
+  const zAbs = Math.hypot(z[0], z[1]);
+  if (ell <= zAbs) {
+    // upward recurrence is stable while ℓ ≲ |z|
+    let jm1 = j0;
+    let j = j1;
+    for (let n = 1; n < ell; n++) {
+      const jp1 = csub(cscale(cdiv(j, z), 2 * n + 1), jm1);
+      jm1 = j;
+      j = jp1;
+    }
+    return j;
   }
-  return j;
+  // ℓ > |z|: upward recurrence amplifies rounding as ~(2ℓ−1)!!/|z|ℓ and blew
+  // up to ±1e24 at low energies (physics audit 2026-07-18). Downward Miller
+  // recurrence, normalized to j₀ = sin z / z.
+  const start = ell + 16 + Math.ceil(zAbs);
+  let jp: C = [0, 0];
+  let jc: C = [1e-30, 0];
+  let out: C | null = null;
+  for (let n = start; n >= 1; n--) {
+    const jm = csub(cscale(cdiv(jc, z), 2 * n + 1), jp);
+    jp = jc;
+    jc = jm;
+    if (n - 1 === ell) out = jm;
+    const mag = Math.abs(jc[0]) + Math.abs(jc[1]);
+    if (mag > 1e120) {
+      jp = cscale(jp, 1e-120);
+      jc = cscale(jc, 1e-120);
+      if (out) out = cscale(out, 1e-120);
+    }
+  }
+  return cmul(out!, cdiv(j0, jc));
 }
 
 function sphY(ell: number, z: C): C {
@@ -398,7 +424,11 @@ function pathIntegrals(
 }
 
 function gammaMedium(eps: C, beta: number): C {
-  return cInv(csqrt(csub([1, 0], cscale(eps, beta * beta))));
+  const arg = csub([1, 0], cscale(eps, beta * beta));
+  // Exactly at the Cherenkov threshold (εβ² = 1) 1/√0 turned the whole
+  // spectrum NaN — regularize the branch point (physics audit 2026-07-18).
+  if (Math.hypot(arg[0], arg[1]) < 1e-12) return cInv(csqrt([1e-12, 1e-12]));
+  return cInv(csqrt(arg));
 }
 
 function point(

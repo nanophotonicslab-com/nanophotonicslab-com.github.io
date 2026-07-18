@@ -737,6 +737,10 @@ export interface EELSParOpts {
  * reference. Multiply by an appropriate scale factor for comparison with
  * measured spectra; for visualization the raw values are fine.
  */
+// NOTE (physics audit 2026-07-18): for trajectories INSIDE the material this
+// returns only the boundary-induced correction — the bulk/Cherenkov term is
+// NOT included, so the value can legitimately go negative for lossy media or
+// above the Cherenkov threshold. Do not sum it as a total EELS probability.
 export function eelsParallel(opts: EELSParOpts): number[] {
   const { a_nm, b_nm, eps_h, eps1_of_w, w_eV, vFrac, maxOrder } = opts;
 
@@ -957,6 +961,10 @@ export function eelsPerpendicularQResolved(opts: EELSPerpOpts): EELSPerpQResolve
   return { w_eV, qz_nm, values_nm_per_eV, integrated_1_per_eV };
 }
 
+// NOTE (physics audit 2026-07-18): for trajectories INSIDE the material this
+// returns only the boundary-induced correction — the bulk/Cherenkov term is
+// NOT included, so the value can legitimately go negative for lossy media or
+// above the Cherenkov threshold. Do not sum it as a total EELS probability.
 export function eelsPerpendicular(opts: EELSPerpOpts): number[] {
   return eelsPerpendicularQResolved(opts).integrated_1_per_eV;
 }

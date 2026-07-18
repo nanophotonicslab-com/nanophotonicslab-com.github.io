@@ -284,6 +284,13 @@ export function computeMie(
     const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
     const mAbs = Math.sqrt(mRe * mRe + mIm * mIm);
     const nmx = Math.max(nmax, Math.ceil(mAbs * x)) + 16;
+    // Shared scratch is sized MAX_N; beyond x ≈ 91 nmax exceeds it and typed-
+    // array OOB silently produced NaN — fall back to local buffers there.
+    const sDRe = nmax <= MAX_N ? _DRe : new Float64Array(nmax + 2);
+    const sDIm = nmax <= MAX_N ? _DIm : new Float64Array(nmax + 2);
+    const sPsiX = nmax <= MAX_N ? _psiX : new Float64Array(nmax + 2);
+    const sXiRe = nmax <= MAX_N ? _xiRe : new Float64Array(nmax + 2);
+    const sXiIm = nmax <= MAX_N ? _xiIm : new Float64Array(nmax + 2);
 
     // Complex mx = m * x
     const mxRe = mRe * x, mxIm = mIm * x;
@@ -298,30 +305,30 @@ export function computeMie(
       const tM2 = tRe * tRe + tIm * tIm;
       dRe = novRe - tRe / tM2;
       dIm = novIm + tIm / tM2;
-      if (n - 1 <= nmax) { _DRe[n - 1] = dRe; _DIm[n - 1] = dIm; }
+      if (n - 1 <= nmax) { sDRe[n - 1] = dRe; sDIm[n - 1] = dIm; }
     }
 
     // Upward recurrence for psi_n(x) and xi_n(x) at real x
     const sinX = Math.sin(x), cosX = Math.cos(x);
-    _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
-    for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
-    _xiRe[0] = sinX; _xiIm[0] = -cosX;
-    _xiRe[1] = sinX / x - cosX; _xiIm[1] = -cosX / x - sinX;
+    sPsiX[0] = sinX; sPsiX[1] = sinX / x - cosX;
+    for (let n = 1; n < nmax; n++) sPsiX[n + 1] = ((2 * n + 1) / x) * sPsiX[n] - sPsiX[n - 1];
+    sXiRe[0] = sinX; sXiIm[0] = -cosX;
+    sXiRe[1] = sinX / x - cosX; sXiIm[1] = -cosX / x - sinX;
     for (let n = 1; n < nmax; n++) {
       const f = (2 * n + 1) / x;
-      _xiRe[n + 1] = f * _xiRe[n] - _xiRe[n - 1];
-      _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1];
+      sXiRe[n + 1] = f * sXiRe[n] - sXiRe[n - 1];
+      sXiIm[n + 1] = f * sXiIm[n] - sXiIm[n - 1];
     }
 
     let sumSca = 0, sumExt = 0, sSE = 0, sSM = 0, sEE = 0, sEM = 0;
     const sSMP = [0, 0, 0, 0], sEMP = [0, 0, 0, 0];
     for (let n = 1; n <= nmax; n++) {
       // D_n(mx)/m  (complex / complex)
-      const DomRe = (_DRe[n] * mRe + _DIm[n] * mIm) / mMag2;
-      const DomIm = (_DIm[n] * mRe - _DRe[n] * mIm) / mMag2;
+      const DomRe = (sDRe[n] * mRe + sDIm[n] * mIm) / mMag2;
+      const DomIm = (sDIm[n] * mRe - sDRe[n] * mIm) / mMag2;
       // m * D_n(mx)
-      const mDRe = mRe * _DRe[n] - mIm * _DIm[n];
-      const mDIm = mRe * _DIm[n] + mIm * _DRe[n];
+      const mDRe = mRe * sDRe[n] - mIm * sDIm[n];
+      const mDIm = mRe * sDIm[n] + mIm * sDRe[n];
 
       const nx = n / x;
 
@@ -330,16 +337,16 @@ export function computeMie(
       const BRe = mDRe + nx, BIm = mDIm;
 
       // a_n = (A * psi_n - psi_{n-1}) / (A * xi_n - xi_{n-1})
-      const anNRe = ARe * _psiX[n] - _psiX[n - 1];
-      const anNIm = AIm * _psiX[n];
-      const anDRe = (ARe * _xiRe[n] - AIm * _xiIm[n]) - _xiRe[n - 1];
-      const anDIm = (ARe * _xiIm[n] + AIm * _xiRe[n]) - _xiIm[n - 1];
+      const anNRe = ARe * sPsiX[n] - sPsiX[n - 1];
+      const anNIm = AIm * sPsiX[n];
+      const anDRe = (ARe * sXiRe[n] - AIm * sXiIm[n]) - sXiRe[n - 1];
+      const anDIm = (ARe * sXiIm[n] + AIm * sXiRe[n]) - sXiIm[n - 1];
 
       // b_n = (B * psi_n - psi_{n-1}) / (B * xi_n - xi_{n-1})
-      const bnNRe = BRe * _psiX[n] - _psiX[n - 1];
-      const bnNIm = BIm * _psiX[n];
-      const bnDRe = (BRe * _xiRe[n] - BIm * _xiIm[n]) - _xiRe[n - 1];
-      const bnDIm = (BRe * _xiIm[n] + BIm * _xiRe[n]) - _xiIm[n - 1];
+      const bnNRe = BRe * sPsiX[n] - sPsiX[n - 1];
+      const bnNIm = BIm * sPsiX[n];
+      const bnDRe = (BRe * sXiRe[n] - BIm * sXiIm[n]) - sXiRe[n - 1];
+      const bnDIm = (BRe * sXiIm[n] + BIm * sXiRe[n]) - sXiIm[n - 1];
 
       // Complex division a = N/D
       const adM2 = anDRe * anDRe + anDIm * anDIm;
@@ -854,19 +861,26 @@ export function computeSphereCoeffs(
   const nmax = Math.max(Math.ceil(x + 4 * Math.cbrt(x) + 2), 3);
   const mAbs = Math.sqrt(mRe * mRe + mIm * mIm);
   const nmx = Math.max(nmax, Math.ceil(mAbs * x)) + 16;
+    // Shared scratch is sized MAX_N; beyond x ≈ 91 nmax exceeds it and typed-
+    // array OOB silently produced NaN — fall back to local buffers there.
+    const sDRe = nmax <= MAX_N ? _DRe : new Float64Array(nmax + 2);
+    const sDIm = nmax <= MAX_N ? _DIm : new Float64Array(nmax + 2);
+    const sPsiX = nmax <= MAX_N ? _psiX : new Float64Array(nmax + 2);
+    const sXiRe = nmax <= MAX_N ? _xiRe : new Float64Array(nmax + 2);
+    const sXiIm = nmax <= MAX_N ? _xiIm : new Float64Array(nmax + 2);
   const mxRe = mRe * x, mxIm = mIm * x, mxMag2 = mxRe * mxRe + mxIm * mxIm, mMag2 = mRe * mRe + mIm * mIm;
   let dRe = 0, dIm = 0;
   for (let n = nmx; n >= 1; n--) {
     const novRe = n * mxRe / mxMag2, novIm = -n * mxIm / mxMag2;
     const tRe = dRe + novRe, tIm = dIm + novIm, tM2 = tRe * tRe + tIm * tIm;
     dRe = novRe - tRe / tM2; dIm = novIm + tIm / tM2;
-    if (n - 1 <= nmax) { _DRe[n - 1] = dRe; _DIm[n - 1] = dIm; }
+    if (n - 1 <= nmax) { sDRe[n - 1] = dRe; sDIm[n - 1] = dIm; }
   }
   const sinX = Math.sin(x), cosX = Math.cos(x);
-  _psiX[0] = sinX; _psiX[1] = sinX / x - cosX;
-  for (let n = 1; n < nmax; n++) _psiX[n + 1] = ((2 * n + 1) / x) * _psiX[n] - _psiX[n - 1];
-  _xiRe[0] = sinX; _xiIm[0] = -cosX; _xiRe[1] = sinX / x - cosX; _xiIm[1] = -cosX / x - sinX;
-  for (let n = 1; n < nmax; n++) { const f = (2 * n + 1) / x; _xiRe[n + 1] = f * _xiRe[n] - _xiRe[n - 1]; _xiIm[n + 1] = f * _xiIm[n] - _xiIm[n - 1]; }
+  sPsiX[0] = sinX; sPsiX[1] = sinX / x - cosX;
+  for (let n = 1; n < nmax; n++) sPsiX[n + 1] = ((2 * n + 1) / x) * sPsiX[n] - sPsiX[n - 1];
+  sXiRe[0] = sinX; sXiIm[0] = -cosX; sXiRe[1] = sinX / x - cosX; sXiIm[1] = -cosX / x - sinX;
+  for (let n = 1; n < nmax; n++) { const f = (2 * n + 1) / x; sXiRe[n + 1] = f * sXiRe[n] - sXiRe[n - 1]; sXiIm[n + 1] = f * sXiIm[n] - sXiIm[n - 1]; }
   // ψ_n(mx) for complex mx — needed for internal field coefficients
   const [mxSinRe, mxSinIm] = csin(mxRe, mxIm);
   const [mxCosRe, mxCosIm] = ccos(mxRe, mxIm);
@@ -882,25 +896,27 @@ export function computeSphereCoeffs(
   const aR = new Float64Array(nmax), aI = new Float64Array(nmax), bR = new Float64Array(nmax), bI = new Float64Array(nmax);
   const cR = new Float64Array(nmax), cI = new Float64Array(nmax), dR2 = new Float64Array(nmax), dI2 = new Float64Array(nmax);
   for (let n = 1; n <= nmax; n++) {
-    const DomRe = (_DRe[n]*mRe+_DIm[n]*mIm)/mMag2, DomIm = (_DIm[n]*mRe-_DRe[n]*mIm)/mMag2;
-    const mDRe = mRe*_DRe[n]-mIm*_DIm[n], mDIm = mRe*_DIm[n]+mIm*_DRe[n];
+    const DomRe = (sDRe[n]*mRe+sDIm[n]*mIm)/mMag2, DomIm = (sDIm[n]*mRe-sDRe[n]*mIm)/mMag2;
+    const mDRe = mRe*sDRe[n]-mIm*sDIm[n], mDIm = mRe*sDIm[n]+mIm*sDRe[n];
     const nx = n/x, ARe = DomRe+nx, AIm = DomIm, BRe = mDRe+nx, BIm = mDIm;
-    const anNRe = ARe*_psiX[n]-_psiX[n-1], anNIm = AIm*_psiX[n];
-    const anDRe = (ARe*_xiRe[n]-AIm*_xiIm[n])-_xiRe[n-1], anDIm = (ARe*_xiIm[n]+AIm*_xiRe[n])-_xiIm[n-1];
-    const bnNRe = BRe*_psiX[n]-_psiX[n-1], bnNIm = BIm*_psiX[n];
-    const bnDRe = (BRe*_xiRe[n]-BIm*_xiIm[n])-_xiRe[n-1], bnDIm = (BRe*_xiIm[n]+BIm*_xiRe[n])-_xiIm[n-1];
+    const anNRe = ARe*sPsiX[n]-sPsiX[n-1], anNIm = AIm*sPsiX[n];
+    const anDRe = (ARe*sXiRe[n]-AIm*sXiIm[n])-sXiRe[n-1], anDIm = (ARe*sXiIm[n]+AIm*sXiRe[n])-sXiIm[n-1];
+    const bnNRe = BRe*sPsiX[n]-sPsiX[n-1], bnNIm = BIm*sPsiX[n];
+    const bnDRe = (BRe*sXiRe[n]-BIm*sXiIm[n])-sXiRe[n-1], bnDIm = (BRe*sXiIm[n]+BIm*sXiRe[n])-sXiIm[n-1];
     const adM2 = anDRe*anDRe+anDIm*anDIm; aR[n-1] = (anNRe*anDRe+anNIm*anDIm)/adM2; aI[n-1] = (anNIm*anDRe-anNRe*anDIm)/adM2;
     const bdM2 = bnDRe*bnDRe+bnDIm*bnDIm; bR[n-1] = (bnNRe*bnDRe+bnNIm*bnDIm)/bdM2; bI[n-1] = (bnNIm*bnDRe-bnNRe*bnDIm)/bdM2;
-    // Internal field coefficients (B&H 4.53):
-    // c_n = -i / (m * ψ_n(mx) * anD), d_n = -m*i / (ψ_n(mx) * bnD)
-    const [mpRe, mpIm] = cmul(mRe, mIm, _psiMxRe[n], _psiMxIm[n]);
-    const [dcRe, dcIm] = cmul(mpRe, mpIm, anDRe, anDIm);
+    // Internal field coefficients (B&H 4.53, log-derivative denominators):
+    //   d_n = -i / (ψ_n(mx)·anD)    (pairs with the a_n denominator)
+    //   c_n = -i·m / (ψ_n(mx)·bnD)  (pairs with the b_n denominator)
+    // FIXED 2026-07-18 (physics audit): c/d were swapped with a misplaced m,
+    // breaking tangential-E continuity at the surface by up to ~3× for metals.
+    const [dcRe, dcIm] = cmul(_psiMxRe[n], _psiMxIm[n], anDRe, anDIm);
     const dcM2 = dcRe * dcRe + dcIm * dcIm;
-    cR[n - 1] = -dcIm / dcM2; cI[n - 1] = -dcRe / dcM2;
+    dR2[n - 1] = -dcIm / dcM2; dI2[n - 1] = -dcRe / dcM2;
     const [ddRe, ddIm] = cmul(_psiMxRe[n], _psiMxIm[n], bnDRe, bnDIm);
     const ddM2 = ddRe * ddRe + ddIm * ddIm;
-    dR2[n - 1] = (mIm * ddRe - mRe * ddIm) / ddM2;
-    dI2[n - 1] = (-mRe * ddRe - mIm * ddIm) / ddM2;
+    cR[n - 1] = (mIm * ddRe - mRe * ddIm) / ddM2;
+    cI[n - 1] = (-mRe * ddRe - mIm * ddIm) / ddM2;
   }
   return { aRe: aR, aIm: aI, bRe: bR, bIm: bI, cRe: cR, cIm: cI, dRe: dR2, dIm: dI2, mRe, mIm, nmax, x };
 }
@@ -1041,19 +1057,42 @@ export function computeNearField(coeffs: SphereCoeffs, k: number, radiusNm: numb
         const chI = Math.cosh(r1Im), shI = Math.sinh(r1Im);
         const sinRRe = Math.sin(r1Re) * chI, sinRIm = Math.cos(r1Re) * shI;
         const cosRRe = Math.cos(r1Re) * chI, cosRIm = -Math.sin(r1Re) * shI;
-        // ψ₀ = sin(ρ₁), ψ₁ = sin(ρ₁)/ρ₁ - cos(ρ₁)
-        let ppRe = sinRRe, ppIm = sinRIm;
-        const sovRe = (sinRRe * r1Re + sinRIm * r1Im) / r1M2;
-        const sovIm = (sinRIm * r1Re - sinRRe * r1Im) / r1M2;
-        let pcRe = sovRe - cosRRe, pcIm = sovIm - cosRIm;
+        // ψ_n(ρ₁), n = 0..nmax, by DOWNWARD (Miller) recurrence normalized to
+        // ψ₀ = sin ρ₁. The upward recurrence amplifies rounding as
+        // ~(2n−1)!!/|ρ₁|ⁿ near the centre and produced spurious hotspots up
+        // to 1e17 that poisoned the heatmap scale (physics audit 2026-07-18).
+        const NN = coeffs.nmax;
+        const psiAR = new Float64Array(NN + 1), psiAI = new Float64Array(NN + 1);
+        {
+          let p1R = 0, p1I = 0, c0R = 1e-30, c0I = 0;
+          for (let nn = NN + 16; nn >= 1; nn--) {
+            const fR = (2 * nn + 1) * r1Re / r1M2, fI = -(2 * nn + 1) * r1Im / r1M2;
+            const pmR = fR * c0R - fI * c0I - p1R;
+            const pmI = fR * c0I + fI * c0R - p1I;
+            p1R = c0R; p1I = c0I; c0R = pmR; c0I = pmI;
+            if (nn - 1 <= NN) { psiAR[nn - 1] = pmR; psiAI[nn - 1] = pmI; }
+            if (Math.abs(c0R) + Math.abs(c0I) > 1e120) {
+              p1R *= 1e-120; p1I *= 1e-120; c0R *= 1e-120; c0I *= 1e-120;
+              for (let q = Math.max(0, nn - 1); q <= NN; q++) { psiAR[q] *= 1e-120; psiAI[q] *= 1e-120; }
+            }
+          }
+          const den = psiAR[0] * psiAR[0] + psiAI[0] * psiAI[0];
+          const nsR = (sinRRe * psiAR[0] + sinRIm * psiAI[0]) / den;
+          const nsI = (sinRIm * psiAR[0] - sinRRe * psiAI[0]) / den;
+          for (let q = 0; q <= NN; q++) {
+            const aR = psiAR[q], aI = psiAI[q];
+            psiAR[q] = aR * nsR - aI * nsI;
+            psiAI[q] = aR * nsI + aI * nsR;
+          }
+        }
         let piPr = 0, piCu = 1;
         let ErRe = 0, ErIm = 0, EtRe = 0, EtIm = 0;
         for (let n = 1; n <= coeffs.nmax; n++) {
-          const psiRe = pcRe, psiIm = pcIm;
+          const psiRe = psiAR[n], psiIm = psiAI[n];
           // ψ'_n = ψ_{n-1} - n/ρ₁ · ψ_n
           const novRe = n * r1Re / r1M2, novIm = -n * r1Im / r1M2;
-          const psiDRe = ppRe - (novRe * psiRe - novIm * psiIm);
-          const psiDIm = ppIm - (novRe * psiIm + novIm * psiRe);
+          const psiDRe = psiAR[n - 1] - (novRe * psiRe - novIm * psiIm);
+          const psiDIm = psiAI[n - 1] - (novRe * psiIm + novIm * psiRe);
           const tau = n * costh * piCu - (n + 1) * piPr;
           const Pn1 = sinth * piCu;
           const ww = (2 * n + 1) / (n * (n + 1));
@@ -1087,11 +1126,6 @@ export function computeNearField(coeffs: SphereCoeffs, k: number, radiusNm: numb
           const t2Re = (edpRe * invR1Re - edpIm * invR1Im) * tau;
           const t2Im = (edpRe * invR1Im + edpIm * invR1Re) * tau;
           EtRe += t2Re; EtIm += t2Im;
-          // Recurrences: ψ_{n+1} = (2n+1)/ρ₁ · ψ_n - ψ_{n-1}
-          const bfRe = (2 * n + 1) * r1Re / r1M2, bfIm = -(2 * n + 1) * r1Im / r1M2;
-          const pNRe = bfRe * pcRe - bfIm * pcIm - ppRe;
-          const pNIm = bfRe * pcIm + bfIm * pcRe - ppIm;
-          ppRe = pcRe; ppIm = pcIm; pcRe = pNRe; pcIm = pNIm;
           const piN = ((2 * n + 1) / n) * costh * piCu - ((n + 1) / n) * piPr;
           piPr = piCu; piCu = piN;
         }

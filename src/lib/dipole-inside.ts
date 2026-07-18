@@ -178,6 +178,12 @@ export function insideDecay(
   // (the two cases normalise by different γ₀). Both reduce to the same real,
   // positive prefactor here (|·| of a complex power).
   const abs = Math.hypot(eps2.re, eps2.im);
+  // KNOWN LIMITATION (physics audit 2026-07-18): this radiative prefactor
+  // implements Kim Eqs. 26–27, derived for VACUUM outside the sphere. For the
+  // cavity geometry with a dielectric outer medium (ε₁ ≠ 1) the rad/nr split
+  // is invalid (can go negative even for lossless media); the TOTAL rates
+  // (Eqs. 21–22) remain correct. A general-outer-medium radiative formula
+  // needs re-derivation before trusting the split in that regime.
   const e32 = fOmega === undefined ? abs ** 1.5 : abs ** 2;
   void eps2_32;
   let perpRad = 1.5 * e32 * perpR;
