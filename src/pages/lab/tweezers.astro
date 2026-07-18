@@ -1,0 +1,507 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import { MATERIALS } from '../../data/optical-constants';
+
+const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label: m.label }));
+---
+
+<Layout title="Optical Tweezers" description="Optical trapping of a sphere: exact Mie radiation pressure, asymmetry parameter, and Rayleigh-regime trap stiffness and depth for a focused Gaussian beam.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Optical <span class="gradient-text">Tweezers</span></h1>
+      <p class="widget-hero__subtitle">
+        Radiation pressure on a sphere from exact Mie theory — asymmetry
+        parameter, pressure cross-section, scattering force — plus trap
+        stiffness and depth for a focused Gaussian beam in the Rayleigh regime.
+      </p>
+      <ToolMeta slug="tweezers" name="Optical Tweezers" />
+    </div>
+  </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>
+        Exact Mie: &sigma;<sub>pr</sub>&nbsp;=&nbsp;&sigma;<sub>ext</sub>&nbsp;&minus;&nbsp;g&sigma;<sub>sca</sub>
+        with g&nbsp;=&nbsp;&lang;cos&theta;&rang; from the Mie coefficients (Bohren&nbsp;&amp;&nbsp;Huffman &sect;4.5);
+        F&nbsp;=&nbsp;n<sub>host</sub>&sigma;<sub>pr</sub>I/c. Trap: Rayleigh (dipole) gradient force in a
+        TEM&#8320;&#8320; Gaussian focus — U&nbsp;=&nbsp;&minus;&beta;I with
+        &beta;&nbsp;=&nbsp;(2&pi;n<sub>host</sub>a&sup3;/c)&middot;Re[(m&sup2;&minus;1)/(m&sup2;+2)];
+        &kappa;<sub>r</sub>&nbsp;=&nbsp;4&beta;I&#8320;/w&#8320;&sup2;, &kappa;<sub>z</sub>&nbsp;=&nbsp;2&beta;I&#8320;/z<sub>R</sub>&sup2;.
+      </dt>
+      <dt>Assumptions</dt>
+      <dd>
+        Homogeneous sphere; paraxial Gaussian beam (peak irradiance 2P/&pi;w&#8320;&sup2;);
+        Minkowski photon momentum in the host medium. Trap numbers use the dipole
+        approximation — trusted for 2a&nbsp;&#8818;&nbsp;&lambda;/(5n<sub>host</sub>), flagged otherwise.
+      </dd>
+      <dt>Limitations</dt>
+      <dd>
+        No generalized Lorenz&ndash;Mie (beam-shape) coefficients: outside the dipole regime,
+        stiffness and depth are indicative only. Gradient force uses Re(n) of absorbing
+        particles; heating of absorbing particles is the Photothermal tool's job.
+      </dd>
+    </dl>
+  </ModelInfo>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <div class="widget-column widget-column--controls">
+          <ParamsDrawer>
+          <div class="controls card">
+            <div class="param">
+              <div class="param-header"><label for="material-select">Particle</label></div>
+              <select id="material-select" class="param-select">
+                <option value="custom" selected>Custom dielectric</option>
+                {materialOptions.map((m) => <option value={m.id}>{m.label}</option>)}
+              </select>
+            </div>
+            <div class="param" id="n-group">
+              <div class="param-header">
+                <label>n (real)</label>
+                <input type="number" class="param-number" id="n-num" value="1.57" step="0.01" min="0.1">
+              </div>
+              <input type="range" class="param-slider" id="n-slider" aria-label="Particle refractive index" min="1" max="3" step="0.01" value="1.57">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Radius (nm)</label>
+                <input type="number" class="param-number" id="r-num" value="60" step="5" min="5">
+              </div>
+              <input type="range" class="param-slider" id="r-slider" aria-label="Particle radius (nm)" min="5" max="300" step="1" value="60">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>n<sub>host</sub></label>
+                <input type="number" class="param-number" id="nh-num" value="1.33" step="0.01" min="1">
+              </div>
+              <input type="range" class="param-slider" id="nh-slider" aria-label="Host refractive index" min="1" max="2" step="0.01" value="1.33">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Trap &lambda; (nm)</label>
+                <input type="number" class="param-number" id="lam-num" value="1064" step="1" min="300">
+              </div>
+              <input type="range" class="param-slider" id="lam-slider" aria-label="Trapping wavelength (nm)" min="400" max="1600" step="1" value="1064">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Power (mW)</label>
+                <input type="number" class="param-number" id="pow-num" value="50" step="5" min="0">
+              </div>
+              <input type="range" class="param-slider" id="pow-slider" aria-label="Laser power (mW)" min="1" max="500" step="1" value="50">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>1/e&sup2; waist w&#8320; (&mu;m)</label>
+                <input type="number" class="param-number" id="w0-num" value="0.6" step="0.05" min="0.2">
+              </div>
+              <input type="range" class="param-slider" id="w0-slider" aria-label="Beam waist (µm)" min="0.3" max="3" step="0.05" value="0.6">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>T (K)</label>
+                <input type="number" class="param-number" id="temp-num" value="293" step="1" min="1">
+              </div>
+            </div>
+            <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
+            <p class="theory-note">
+              <strong>Trapping criterion.</strong> A trap is usually considered
+              stable when the depth exceeds ~10&nbsp;k<sub>B</sub>T, so Brownian
+              kicks rarely eject the particle. The radius chart marks that line.
+            </p>
+          </div>
+          </ParamsDrawer>
+        </div>
+
+        <div class="widget-column widget-column--results">
+          <div class="chart-panel card">
+            <div class="stats">
+              <div class="stat">
+                <span class="stat-label">&kappa;<sub>r</sub></span>
+                <span class="stat-value" id="out-kr">&mdash;</span>
+                <span class="stat-unit">pN/&mu;m</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">&kappa;<sub>z</sub></span>
+                <span class="stat-value" id="out-kz">&mdash;</span>
+                <span class="stat-unit">pN/&mu;m</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Depth</span>
+                <span class="stat-value" id="out-depth">&mdash;</span>
+                <span class="stat-unit">k<sub>B</sub>T</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">F<sub>scat</sub></span>
+                <span class="stat-value" id="out-fscat">&mdash;</span>
+                <span class="stat-unit">fN</span>
+              </div>
+            </div>
+            <p class="validity-note" id="validity-note" hidden>
+              &#9888; 2a &gt; &lambda;/(5n<sub>host</sub>) — the dipole approximation is
+              stretched; trap numbers are indicative only.
+            </p>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Radiation pressure spectrum &mdash; Q<sub>pr</sub> and g</span></div>
+              <div class="chart-wrap"><canvas id="spec-chart"></canvas><div class="chart-tip" id="spec-tip"></div></div>
+              <div class="chart-legend" id="spec-legend"></div>
+            </div>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Trap depth vs radius at &lambda;<sub>trap</sub></span></div>
+              <div class="chart-wrap"><canvas id="radius-chart"></canvas><div class="chart-tip" id="radius-tip"></div></div>
+              <div class="chart-legend" id="radius-legend"></div>
+            </div>
+
+            <div class="export-bar">
+              <span class="export-label">Export</span>
+              <button id="dl-png" class="export-btn" type="button" title="Download the spectrum chart as PNG">PNG</button>
+              <button id="dl-csv" class="export-btn" type="button" title="Download both curves as CSV">CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+import { initPermalinks } from '../../lib/permalink';
+initPermalinks({
+  material: 'material-select',
+  n: 'n-num',
+  r: 'r-num',
+  nh: 'nh-num',
+  lam: 'lam-num',
+  pow: 'pow-num',
+  w0: 'w0-num',
+  t: 'temp-num',
+});
+</script>
+</Layout>
+
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 660px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
+  .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
+  .param-select, .param-number {
+    padding: 0.25rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; color: var(--primary);
+    background: var(--bg); outline: none; text-align: right;
+  }
+  .param-select { width: 100%; text-align: left; }
+  .param-number { width: 5.2rem; }
+  .param-slider { width: 100%; accent-color: var(--primary); }
+  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
+  .chart-tool-btn:focus-visible, .export-btn:focus-visible {
+    outline: 2px solid var(--primary); outline-offset: 2px;
+  }
+  .chart-tool-btn {
+    padding: 0.4rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+  }
+  .chart-tool-btn:hover { border-color: var(--primary-light); }
+  .theory-note { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+
+  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
+  .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat-unit { font-size: 0.7rem; color: var(--text-muted); }
+  .validity-note { font-size: 0.78rem; color: var(--amber); margin: 0; font-weight: 600; }
+
+  .chart-header { margin-bottom: 0.3rem; }
+  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-soft); }
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
+  .chart-tip {
+    position: absolute; display: none; pointer-events: none; z-index: 3;
+    background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    padding: 0.3rem 0.5rem; font-size: 0.72rem; font-variant-numeric: tabular-nums;
+    color: var(--text); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
+  .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+  .export-bar { display: flex; align-items: center; gap: 0.5rem; }
+  .export-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  }
+  .export-btn:hover { border-color: var(--primary-light); }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+
+<script>
+  import { MATERIALS, interpolateNK } from '../../lib/materials';
+  import { mieAt, computeSphereCoeffs } from '../../lib/mie';
+  import { asymmetryParameter, pressureCrossSection, radiationForceN, rayleighTrap } from '../../lib/optical-forces';
+  import { peakIrradianceWm2 } from '../../lib/photothermal';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { downloadBlob } from '../../lib/download';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const val = (id: string, fb: number) => {
+    const v = parseFloat(($(id) as unknown as HTMLInputElement).value);
+    return Number.isFinite(v) ? v : fb;
+  };
+
+  // Validated categorical pair (subset of the site's six-checks palette)
+  const COLORS = {
+    light: { qpr: '#6366F1', g: '#F43F5E', depth: '#6366F1' },
+    dark:  { qpr: '#6366F1', g: '#F43F5E', depth: '#6366F1' },
+  };
+  const isDark = () => document.documentElement.dataset.theme === 'dark'
+    || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const colors = () => (isDark() ? COLORS.dark : COLORS.light);
+
+  const DEFAULTS: Record<string, number> = {
+    'n-num': 1.57, 'r-num': 60, 'nh-num': 1.33, 'lam-num': 1064,
+    'pow-num': 50, 'w0-num': 0.6, 'temp-num': 293,
+  };
+
+  const matSelect = $('material-select') as unknown as HTMLSelectElement;
+  function nkAt(lambdaNm: number): [number, number] {
+    if (matSelect.value === 'custom') return [val('n-num', 1.57), 0];
+    return interpolateNK(MATERIALS[matSelect.value].data, lambdaNm);
+  }
+
+  // ── Compact chart renderer (line series + hover) ──
+  interface Series { y: Float64Array; label: string; color: string; dash?: number[]; }
+  interface Chart { x: Float64Array; series: Series[]; xLabel: string; xUnit: string; hoverI: number; }
+  const charts = new Map<string, Chart>();
+
+  function niceTicks(min: number, max: number, n = 5): number[] {
+    const span = max - min || 1;
+    const mag = 10 ** Math.floor(Math.log10(span / n));
+    const step = [1, 2, 5, 10].map((m) => m * mag).find((s) => span / s <= n + 1) || mag * 10;
+    const out: number[] = [];
+    for (let t = Math.ceil(min / step) * step; t <= max + 1e-9; t += step) out.push(t);
+    return out;
+  }
+  const fmt = (v: number) => {
+    const a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 1e4 || a < 1e-2) return v.toExponential(1).replace('e+', 'e');
+    return a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(1) : v.toFixed(2);
+  };
+
+  function draw(canvasId: string) {
+    const st = charts.get(canvasId);
+    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
+    if (!st) return;
+    const t = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (W === 0) return;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    const PAD = { l: 46, r: 10, t: 8, b: 30 };
+    const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
+    const xmin = st.x[0], xmax = st.x[st.x.length - 1];
+    let ymin = 0, ymax = 0;
+    for (const s of st.series) for (const v of s.y) { if (v > ymax) ymax = v; if (v < ymin) ymin = v; }
+    if (ymax <= ymin) ymax = ymin + 1;
+    const tx = (v: number) => PAD.l + ((v - xmin) / (xmax - xmin)) * pw;
+    const ty = (v: number) => PAD.t + ph - ((v - ymin) / (ymax - ymin)) * ph;
+    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.strokeStyle = t.grid; ctx.fillStyle = t.textMuted; ctx.lineWidth = 1;
+    for (const yt of niceTicks(ymin, ymax, 4)) {
+      ctx.beginPath(); ctx.moveTo(PAD.l, ty(yt)); ctx.lineTo(W - PAD.r, ty(yt)); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmt(yt), PAD.l - 5, ty(yt));
+    }
+    for (const xt of niceTicks(xmin, xmax, 6)) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(fmt(xt), tx(xt), PAD.t + ph + 6);
+    }
+    ctx.fillStyle = t.textSoft; ctx.textAlign = 'center';
+    ctx.fillText(st.xLabel, PAD.l + pw / 2, H - 12);
+    for (const s of st.series) {
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.setLineDash(s.dash || []);
+      ctx.beginPath();
+      for (let i = 0; i < st.x.length; i++) {
+        i === 0 ? ctx.moveTo(tx(st.x[i]), ty(s.y[i])) : ctx.lineTo(tx(st.x[i]), ty(s.y[i]));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (st.hoverI >= 0) {
+      const hx = tx(st.x[st.hoverI]);
+      ctx.strokeStyle = t.textMuted; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, PAD.t + ph); ctx.stroke();
+      ctx.setLineDash([]);
+      for (const s of st.series) {
+        ctx.fillStyle = s.color;
+        ctx.beginPath(); ctx.arc(hx, ty(s.y[st.hoverI]), 3, 0, 2 * Math.PI); ctx.fill();
+      }
+    }
+  }
+
+  function legend(id: string, series: Series[]) {
+    $(id).innerHTML = series.map((s) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`).join('');
+  }
+
+  function hover(canvasId: string, tipId: string) {
+    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
+    const tip = $(tipId);
+    canvas.addEventListener('pointermove', (ev) => {
+      const st = charts.get(canvasId);
+      if (!st) return;
+      const rect = canvas.getBoundingClientRect();
+      const rel = (ev.clientX - rect.left - 46) / (rect.width - 56);
+      st.hoverI = Math.max(0, Math.min(st.x.length - 1, Math.round(rel * (st.x.length - 1))));
+      draw(canvasId);
+      tip.style.display = 'block';
+      tip.style.left = Math.min(ev.clientX - rect.left + 10, rect.width - 150) + 'px';
+      tip.style.top = '6px';
+      tip.innerHTML = `${fmt(st.x[st.hoverI])} ${st.xUnit}<br>`
+        + st.series.map((s) => `${s.label}: ${fmt(s.y[st.hoverI])}`).join('<br>');
+    });
+    canvas.addEventListener('pointerleave', () => {
+      const st = charts.get(canvasId);
+      if (!st) return;
+      st.hoverI = -1; tip.style.display = 'none';
+      draw(canvasId);
+    });
+  }
+
+  // ── Physics ──
+  const SPEC_POINTS = 140, RAD_POINTS = 120;
+
+  function update() {
+    const r = val('r-num', 60), nh = val('nh-num', 1.33), lam0 = val('lam-num', 1064);
+    const P = val('pow-num', 50), w0 = val('w0-num', 0.6), T = val('temp-num', 293);
+    const c = colors();
+
+    // Headline tiles at the trapping wavelength
+    const [nP0] = nkAt(lam0);
+    const trap = rayleighTrap({ nParticle: nP0, radiusNm: r, nHost: nh, lambdaNm: lam0, powerMw: P, waistUm: w0, temperatureK: T });
+    const [n0, k0] = nkAt(lam0);
+    const m0 = mieAt(n0, k0, nh, r, lam0);
+    const g0 = asymmetryParameter(computeSphereCoeffs(() => [n0, k0], r, nh, lam0));
+    const fScat = radiationForceN(pressureCrossSection(m0.cext, m0.csca, g0), peakIrradianceWm2(P, w0), nh);
+    $('out-kr').textContent = fmt(trap.kappaRPnPerUm);
+    $('out-kz').textContent = fmt(trap.kappaZPnPerUm);
+    $('out-depth').textContent = fmt(trap.trapDepthKbT);
+    $('out-fscat').textContent = fmt(fScat * 1e15);
+    ($('validity-note') as HTMLElement).hidden = trap.dipoleValid;
+
+    // Spectrum: Q_pr(λ) and g(λ)
+    const lams = new Float64Array(SPEC_POINTS), qpr = new Float64Array(SPEC_POINTS), gArr = new Float64Array(SPEC_POINTS);
+    const geo = Math.PI * r * r;
+    for (let i = 0; i < SPEC_POINTS; i++) {
+      const lam = 400 + (1300 - 400) * i / (SPEC_POINTS - 1);
+      lams[i] = lam;
+      const [n, k] = nkAt(lam);
+      const mm = mieAt(n, k, nh, r, lam);
+      const g = asymmetryParameter(computeSphereCoeffs(() => [n, k], r, nh, lam));
+      qpr[i] = pressureCrossSection(mm.cext, mm.csca, g) / geo;
+      gArr[i] = g;
+    }
+    const specSeries: Series[] = [
+      { y: qpr, label: 'Q_pr', color: c.qpr },
+      { y: gArr, label: 'g = ⟨cosθ⟩', color: c.g },
+    ];
+    charts.set('spec-chart', { x: lams, series: specSeries, xLabel: 'λ (nm) · dimensionless', xUnit: 'nm', hoverI: -1 });
+    legend('spec-legend', specSeries);
+    draw('spec-chart');
+
+    // Trap depth vs radius at λ0, with the ~10 kBT stability guide
+    const radii = new Float64Array(RAD_POINTS), depth = new Float64Array(RAD_POINTS), guide = new Float64Array(RAD_POINTS);
+    for (let i = 0; i < RAD_POINTS; i++) {
+      const rr = 5 + (300 - 5) * i / (RAD_POINTS - 1);
+      radii[i] = rr;
+      depth[i] = rayleighTrap({ nParticle: nP0, radiusNm: rr, nHost: nh, lambdaNm: lam0, powerMw: P, waistUm: w0, temperatureK: T }).trapDepthKbT;
+      guide[i] = 10;
+    }
+    const radSeries: Series[] = [
+      { y: depth, label: 'U / k_BT', color: c.depth },
+      { y: guide, label: '10 k_BT guide', color: chartTheme().textMuted, dash: [5, 4] },
+    ];
+    charts.set('radius-chart', { x: radii, series: radSeries, xLabel: 'radius (nm) · U/k_BT', xUnit: 'nm', hoverI: -1 });
+    legend('radius-legend', radSeries);
+    draw('radius-chart');
+  }
+
+  let raf = 0;
+  function schedule() {
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); });
+  }
+
+  // ── Wiring ──
+  function pair(numId: string, sliderId: string) {
+    const num = $(numId) as unknown as HTMLInputElement;
+    const slider = $(sliderId) as unknown as HTMLInputElement;
+    num.addEventListener('input', () => { slider.value = num.value; schedule(); });
+    slider.addEventListener('input', () => { num.value = slider.value; schedule(); });
+  }
+  pair('n-num', 'n-slider');
+  pair('r-num', 'r-slider');
+  pair('nh-num', 'nh-slider');
+  pair('lam-num', 'lam-slider');
+  pair('pow-num', 'pow-slider');
+  pair('w0-num', 'w0-slider');
+  $('temp-num').addEventListener('input', schedule);
+  matSelect.addEventListener('change', () => {
+    ($('n-group') as HTMLElement).style.display = matSelect.value === 'custom' ? '' : 'none';
+    schedule();
+  });
+  $('reset-btn').addEventListener('click', () => {
+    matSelect.value = 'custom';
+    ($('n-group') as HTMLElement).style.display = '';
+    for (const [id, v] of Object.entries(DEFAULTS)) {
+      ($(id) as unknown as HTMLInputElement).value = String(v);
+      const slider = $(id.replace('-num', '-slider')) as unknown as HTMLInputElement | null;
+      if (slider) slider.value = String(v);
+    }
+    schedule();
+  });
+
+  hover('spec-chart', 'spec-tip');
+  hover('radius-chart', 'radius-tip');
+
+  $('dl-png').addEventListener('click', () => {
+    ($('spec-chart') as unknown as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, 'tweezers_qpr_spectrum.png'); }, 'image/png');
+  });
+  $('dl-csv').addEventListener('click', () => {
+    const spec = charts.get('spec-chart'), rad = charts.get('radius-chart');
+    if (!spec || !rad) return;
+    const lines = ['lambda_nm,Q_pr,g'];
+    for (let i = 0; i < spec.x.length; i++) lines.push(`${spec.x[i]},${spec.series[0].y[i]},${spec.series[1].y[i]}`);
+    lines.push('', 'radius_nm,trap_depth_kBT');
+    for (let i = 0; i < rad.x.length; i++) lines.push(`${rad.x[i]},${rad.series[0].y[i]}`);
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), 'tweezers_curves.csv');
+  });
+
+  window.addEventListener('resize', schedule);
+  onThemeChange(schedule);
+  update();
+</script>
