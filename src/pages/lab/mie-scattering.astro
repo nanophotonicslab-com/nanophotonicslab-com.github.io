@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 
 const miePresets = [
   { label: 'Au in water', values: { 'material-select': 'au', 'r-num': 50, 'r-slider': 50, 'nh-num': 1.33, 'nh-slider': 1.33, 'lam-min': 300, 'lam-max': 900 } },
@@ -59,6 +60,7 @@ const miePresets = [
       </div>
       <div class="widget-layout">
         <div class="widget-column widget-column--controls">
+          <ParamsDrawer>
           <div class="controls card">
           <div class="params-head">
             <h3>Parameters</h3>
@@ -454,6 +456,7 @@ const miePresets = [
             Metals have complex&nbsp;&epsilon;, giving C<sub>abs</sub>&nbsp;&gt;&nbsp;0.
           </p>
           </div>
+          </ParamsDrawer>
 
         </div>
 

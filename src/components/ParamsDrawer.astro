@@ -1,0 +1,50 @@
+---
+// Phone-only collapsible wrapper for a tool's controls panel.
+// Desktop: transparent pass-through (display: contents, summary hidden) — the
+// wrapped panel participates in the widget-layout grid as if unwrapped.
+// Phone (≤640px): renders a tap-to-open header below the chart so the result
+// gets the first screen; ships open and is collapsed by the script before
+// first interaction, so no-JS visitors still see the controls.
+interface Props { label?: string }
+const { label = 'Parameters' } = Astro.props;
+---
+<details class="params-drawer" open>
+  <summary class="params-drawer__summary">
+    <span>{label}</span>
+    <svg class="params-drawer__chevron" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </summary>
+  <slot />
+</details>
+
+<script>
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    document.querySelectorAll('details.params-drawer[open]').forEach((d) => d.removeAttribute('open'));
+  }
+</script>
+
+<style>
+  .params-drawer { display: contents; }
+  .params-drawer__summary { display: none; }
+
+  @media (max-width: 640px) {
+    .params-drawer { display: block; }
+    .params-drawer__summary {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 44px; padding: 0 var(--space-md);
+      background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md);
+      font-weight: 600; color: var(--text);
+      cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+      list-style: none;
+    }
+    .params-drawer__summary::-webkit-details-marker { display: none; }
+    .params-drawer__summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .params-drawer__chevron { color: var(--text-soft); transition: transform 0.18s ease; }
+    .params-drawer[open] .params-drawer__chevron { transform: rotate(180deg); }
+    .params-drawer[open] > .params-drawer__summary { margin-bottom: var(--space-sm); }
+    @media (prefers-reduced-motion: reduce) {
+      .params-drawer__chevron { transition: none; }
+    }
+  }
+</style>

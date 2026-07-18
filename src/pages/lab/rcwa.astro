@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 ---
 
 <Layout title="RCWA — 1D Grating" description="Rigorous Coupled Wave Analysis for 1D periodic gratings. Compute reflection and transmission spectra via Fourier modal method.">
@@ -52,6 +53,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
 
       <div class="widget-layout" id="module-panel-rcwa-1d">
         <!-- ===== Controls ===== -->
+        <ParamsDrawer>
         <div class="controls card">
           <h3 class="controls-title">Parameters</h3>
           <h3>Grating</h3>
@@ -158,6 +160,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
             couple through the Fourier decomposition of &epsilon;(x).
           </p>
         </div>
+        </ParamsDrawer>
 
         <!-- ===== Chart ===== -->
         <div class="chart-panel card">
@@ -275,6 +278,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       <div id="module-panel-blazed" hidden>
         <div class="widget-layout">
           <!-- Controls -->
+          <ParamsDrawer>
           <div class="controls card">
             <h3 class="controls-title">Parameters</h3>
             <h3>Grating</h3>
@@ -410,6 +414,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
               </div>
             </section>
           </div>
+          </ParamsDrawer>
         </div>
 
         <div class="references card">

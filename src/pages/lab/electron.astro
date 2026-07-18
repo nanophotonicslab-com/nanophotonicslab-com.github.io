@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 ---
 
 <Layout title="Relativistic Electron Calculator" description="Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons — with live chart and microscope references.">
@@ -53,6 +54,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       <div id="panel-fields">
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
+        <ParamsDrawer>
         <div class="controls card">
           <h3>Parameters</h3>
 
@@ -142,6 +144,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
             Constants: CODATA 2018.
           </p>
         </div>
+        </ParamsDrawer>
 
         <!-- ===== Results ===== -->
         <div class="results-grid">
@@ -200,6 +203,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       <div id="panel-sp" hidden>
         <div class="widget-layout">
           <!-- ===== Controls ===== -->
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Parameters</h3>
 
@@ -450,6 +454,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
               </div>
             </div>
           </div>
+          </ParamsDrawer>
         </div>
 
         <div class="references card">
@@ -531,6 +536,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
       <div id="panel-pinem" hidden>
         <div class="widget-layout">
           <!-- ===== Controls ===== -->
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Parameters</h3>
 
@@ -672,6 +678,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
               </div>
             </div>
           </div>
+          </ParamsDrawer>
         </div>
 
         <div class="references card">

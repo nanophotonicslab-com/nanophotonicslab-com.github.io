@@ -2,6 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 import ModelInfo from '../../../components/ModelInfo.astro';
 import ToolMeta from '../../../components/ToolMeta.astro';
+import ParamsDrawer from '../../../components/ParamsDrawer.astro';
 ---
 
 <Layout title="Heterostructures | Lab" description="Interactive stacking solver for the electromagnetic modes of layered heterostructures: surface plasmons at planar Drude interfaces, with normalized Economou axes and physical unit controls.">
@@ -54,6 +55,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
       </div>
 
       <div class="widget-layout" id="module-panel-surface-plasmons">
+        <ParamsDrawer>
         <aside class="controls card">
           <div class="panel-title-row">
             <h3>Parameters</h3>
@@ -145,6 +147,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
 
           <button type="button" class="reset-btn" id="reset-parameters">Reset</button>
         </aside>
+        </ParamsDrawer>
 
         <main class="lab-main">
           <section class="chart-panel card">
@@ -228,6 +231,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
 
       <!-- ===== Layered structure (Transfer Matrix Method) module ===== -->
       <div class="widget-layout" id="module-panel-layered-structure" hidden>
+        <ParamsDrawer>
         <aside class="controls card">
           <div class="panel-title-row">
             <h3>Stack</h3>
@@ -316,6 +320,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
 
           <button type="button" class="reset-btn" id="tmm-reset">Reset</button>
         </aside>
+        </ParamsDrawer>
 
         <main class="lab-main">
           <section class="chart-panel card">
