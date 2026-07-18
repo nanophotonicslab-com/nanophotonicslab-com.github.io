@@ -171,7 +171,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
             <label class="slope-control">
               <input type="checkbox" id="show-tailored" checked>
               <span>Slope / c</span>
-              <input type="range" class="slope-slider" id="tailored-slope-slider" value="0.35" step="0.01" min="0" max="2">
+              <input type="range" class="slope-slider" id="tailored-slope-slider" aria-label="Line slope (fraction of c)" value="0.35" step="0.01" min="0" max="2">
               <input type="number" class="param-number param-number--sm" id="tailored-slope" value="0.35" step="0.01" min="0">
             </label>
             </div>
@@ -279,7 +279,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
             <div class="param" id="tmm-angle-control">
               <span class="axis-section-label" id="tmm-angle-label">Angle of incidence (&deg;)</span>
               <div class="tmm-slider-row">
-                <input type="range" class="slope-slider" id="tmm-angle-slider" min="0" max="90" step="0.5" value="0">
+                <input type="range" class="slope-slider" id="tmm-angle-slider" aria-labelledby="tmm-angle-label" min="0" max="90" step="0.5" value="0">
                 <input type="number" class="param-number param-number--sm" id="tmm-angle" step="1" min="0" max="90" value="0">
               </div>
             </div>
@@ -301,7 +301,7 @@ import ToolMeta from '../../../components/ToolMeta.astro';
           <div class="param" id="tmm-wavelength-control" hidden>
             <span class="axis-section-label">Wavelength (nm)</span>
             <div class="tmm-slider-row">
-              <input type="range" class="slope-slider" id="tmm-lam-slider" min="200" max="1200" step="1" value="600">
+              <input type="range" class="slope-slider" id="tmm-lam-slider" aria-label="Wavelength (nm)" min="200" max="1200" step="1" value="600">
               <input type="number" class="param-number param-number--sm" id="tmm-field-lam" step="5" min="10" value="600">
             </div>
           </div>

@@ -62,7 +62,7 @@ const cylPresets = [
               <input type="number" class="param-number" id="r-num" value="15" step="1" min="1" max="200">
             </div>
             <div class="slider-marker-wrap">
-              <input type="range" class="param-slider" id="r-slider" min="2" max="100" step="1" value="15">
+              <input type="range" class="param-slider" id="r-slider" aria-label="Radius a (nm)" min="2" max="100" step="1" value="15">
               <span class="threshold-marker" id="radius-impact-marker" title="Impact parameter b"></span>
             </div>
           </div>
@@ -72,7 +72,7 @@ const cylPresets = [
               <label>&epsilon;<sub>h</sub> (host)</label>
               <input type="number" class="param-number" id="eh-num" value="1.00" step="0.01" min="1">
             </div>
-            <input type="range" class="param-slider" id="eh-slider" min="1" max="4" step="0.01" value="1">
+            <input type="range" class="param-slider" id="eh-slider" aria-label="Host permittivity εh" min="1" max="4" step="0.01" value="1">
             <div class="param-presets" id="eh-presets">
               <button class="preset-btn active" data-val="1.00">Air</button>
               <button class="preset-btn" data-val="1.77">Water</button>
@@ -117,12 +117,12 @@ const cylPresets = [
               <label>Re(&epsilon;<sub>1</sub>)</label>
               <input type="number" class="param-number" id="e1r-num" value="10.0" step="0.1" min="1">
             </div>
-            <input type="range" class="param-slider" id="e1r-slider" min="1" max="30" step="0.1" value="10">
+            <input type="range" class="param-slider" id="e1r-slider" aria-label="Real part of permittivity Re(ε₁)" min="1" max="30" step="0.1" value="10">
             <div class="param-header">
               <label>Im(&epsilon;<sub>1</sub>)</label>
               <input type="number" class="param-number" id="e1i-num" value="0.10" step="0.01" min="0">
             </div>
-            <input type="range" class="param-slider" id="e1i-slider" min="0" max="2" step="0.01" value="0.1">
+            <input type="range" class="param-slider" id="e1i-slider" aria-label="Imaginary part of permittivity Im(ε₁)" min="0" max="2" step="0.01" value="0.1">
           </div>
 
           <div class="param">
@@ -142,7 +142,7 @@ const cylPresets = [
                 <input type="number" class="param-number" id="b-num" value="25" step="1" min="0">
               </div>
               <div class="slider-marker-wrap">
-                <input type="range" class="param-slider" id="b-slider" min="0" max="100" step="0.5" value="25">
+                <input type="range" class="param-slider" id="b-slider" aria-label="Impact parameter b (nm)" min="0" max="100" step="0.5" value="25">
                 <span class="threshold-marker" id="impact-radius-marker" title="Cylinder radius a"></span>
               </div>
               <span class="param-note" id="b-note">outside the cylinder</span>
@@ -166,7 +166,7 @@ const cylPresets = [
                   <input type="number" class="param-number" id="kev-num" value="24.7" step="0.1" min="0.001">
                 </label>
               </div>
-              <input type="range" class="param-slider" id="v-slider" min="0.05" max="0.99" step="0.01" value="0.3">
+              <input type="range" class="param-slider" id="v-slider" aria-label="Electron speed v/c" min="0.05" max="0.99" step="0.01" value="0.3">
               <div class="param-presets" id="v-presets">
                 <button class="preset-btn" data-val="0.328">30&thinsp;keV</button>
                 <button class="preset-btn" data-val="0.55">100&thinsp;keV</button>
@@ -290,7 +290,7 @@ const cylPresets = [
               <div class="chart-tooltip" id="phase-tooltip"></div>
             </div>
           </div>
-          <input type="range" class="param-slider angular-slider" id="angle-energy-slider" min="0.5" max="6" step="0.05" value="2.4" style="display:none">
+          <input type="range" class="param-slider angular-slider" id="angle-energy-slider" aria-label="Photon energy ℏω (eV)" min="0.5" max="6" step="0.05" value="2.4" style="display:none">
           <div class="chart-legend" id="chart-legend" style="display:none"></div>
           <div class="download-bar">
             <span class="download-label">Export</span>

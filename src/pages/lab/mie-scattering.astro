@@ -127,7 +127,7 @@ const miePresets = [
               <label>&epsilon;<sub>r</sub></label>
               <input type="number" class="param-number" id="eps-num" value="10" step="0.5" min="1">
             </div>
-            <input type="range" class="param-slider" id="eps-slider" min="1" max="50" step="0.5" value="10">
+            <input type="range" class="param-slider" id="eps-slider" aria-label="Relative permittivity" min="1" max="50" step="0.5" value="10">
             <div class="param-limits">
               <input type="number" class="param-limit" id="eps-min" value="1" step="0.5" min="0.1">
               <span class="param-limit-dash">&mdash;</span>
@@ -185,7 +185,7 @@ const miePresets = [
                   <label>&epsilon;<sub>r</sub></label>
                   <input type="number" class="param-number" id="core-eps-num" value="10" step="0.5" min="1">
                 </div>
-                <input type="range" class="param-slider" id="core-eps-slider" min="1" max="50" step="0.5" value="10">
+                <input type="range" class="param-slider" id="core-eps-slider" aria-label="Core relative permittivity" min="1" max="50" step="0.5" value="10">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="core-eps-min" value="1" step="0.5" min="0.1">
                   <span class="param-limit-dash">&mdash;</span>
@@ -197,7 +197,7 @@ const miePresets = [
                   <label>Radius (nm)</label>
                   <input type="number" class="param-number" id="core-r-num" value="60" step="1" min="1">
                 </div>
-                <input type="range" class="param-slider" id="core-r-slider" min="5" max="400" step="1" value="60">
+                <input type="range" class="param-slider" id="core-r-slider" aria-label="Core radius (nm)" min="5" max="400" step="1" value="60">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="core-r-min" value="5" step="5" min="1">
                   <span class="param-limit-dash">&mdash;</span>
@@ -212,7 +212,7 @@ const miePresets = [
               <label id="radius-label">Radius (nm)</label>
               <input type="number" class="param-number" id="r-num" value="50" step="1" min="1">
             </div>
-            <input type="range" class="param-slider" id="r-slider" min="10" max="500" step="1" value="50">
+            <input type="range" class="param-slider" id="r-slider" aria-labelledby="radius-label" min="10" max="500" step="1" value="50">
             <div class="param-limits">
               <input type="number" class="param-limit" id="r-min" value="10" step="5" min="1">
               <span class="param-limit-dash">&mdash;</span>
@@ -234,7 +234,7 @@ const miePresets = [
               <label>n<sub>host</sub></label>
               <input type="number" class="param-number" id="nh-num" value="1.33" step="0.01" min="1">
             </div>
-            <input type="range" class="param-slider" id="nh-slider" min="1.0" max="2.5" step="0.01" value="1.33">
+            <input type="range" class="param-slider" id="nh-slider" aria-label="Host refractive index" min="1.0" max="2.5" step="0.01" value="1.33">
             <div class="param-limits">
               <input type="number" class="param-limit" id="nh-min" value="1.0" step="0.01" min="1">
               <span class="param-limit-dash">&mdash;</span>
@@ -278,7 +278,7 @@ const miePresets = [
               <input type="number" class="param-number" id="electron-b-num" value="60" step="5" min="0.1">
             </div>
             <div class="slider-marker-wrap">
-              <input type="range" class="param-slider" id="electron-b-slider" min="1" max="250" step="1" value="60">
+              <input type="range" class="param-slider" id="electron-b-slider" aria-label="Impact parameter b (nm)" min="1" max="250" step="1" value="60">
               <span class="radius-threshold-marker" id="electron-radius-marker" title="Particle radius threshold"></span>
             </div>
             <div class="param-limits">
@@ -302,7 +302,7 @@ const miePresets = [
                 <input type="number" class="param-number" id="electron-kev-num" value="30.00" step="0.1" min="0.001">
               </label>
             </div>
-            <input type="range" class="param-slider" id="electron-beta-slider" min="0.02" max="0.95" step="0.01" value="0.33">
+            <input type="range" class="param-slider" id="electron-beta-slider" aria-label="Electron speed β = v/c" min="0.02" max="0.95" step="0.01" value="0.33">
             <div class="param-limits">
               <input type="number" class="param-limit" id="electron-beta-min" value="0.02" step="0.01" min="0.01">
               <span class="param-limit-dash">&mdash;</span>
@@ -327,7 +327,7 @@ const miePresets = [
                   <label>l<sub>max</sub></label>
                   <input type="number" class="param-number" id="electron-lmax-num" value="6" step="1" min="1" max="14">
                 </div>
-                <input type="range" class="param-slider" id="electron-lmax-slider" min="1" max="14" step="1" value="6">
+                <input type="range" class="param-slider" id="electron-lmax-slider" aria-label="Multipole cutoff lmax" min="1" max="14" step="1" value="6">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="electron-lmax-min" value="1" step="1" min="1">
                   <span class="param-limit-dash">&mdash;</span>
@@ -339,7 +339,7 @@ const miePresets = [
                   <label>q<sub>c</sub> (nm<sup>-1</sup>)</label>
                   <input type="number" class="param-number" id="electron-qc-num" value="0.71" step="0.01" min="0.01">
                 </div>
-                <input type="range" class="param-slider" id="electron-qc-slider" min="0.05" max="20" step="0.01" value="0.71">
+                <input type="range" class="param-slider" id="electron-qc-slider" aria-label="Momentum cutoff qc (nm⁻¹)" min="0.05" max="20" step="0.01" value="0.71">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="electron-qc-min" value="0.05" step="0.01" min="0.001">
                   <span class="param-limit-dash">&mdash;</span>
@@ -351,7 +351,7 @@ const miePresets = [
                   <label>z quadrature</label>
                   <input type="number" class="param-number" id="electron-nz-num" value="64" step="8" min="8" max="160">
                 </div>
-                <input type="range" class="param-slider" id="electron-nz-slider" min="8" max="160" step="8" value="64">
+                <input type="range" class="param-slider" id="electron-nz-slider" aria-label="z quadrature points" min="8" max="160" step="8" value="64">
                 <div class="param-limits">
                   <input type="number" class="param-limit" id="electron-nz-min" value="8" step="8" min="8">
                   <span class="param-limit-dash">&mdash;</span>
@@ -367,7 +367,7 @@ const miePresets = [
               <label>Emission wavelength (nm)</label>
               <input type="number" class="param-number" id="dipole-lambda-num" value="413.3" step="1" min="100">
             </div>
-            <input type="range" class="param-slider" id="dipole-lambda-slider" min="300" max="900" step="0.1" value="413.3">
+            <input type="range" class="param-slider" id="dipole-lambda-slider" aria-label="Emission wavelength (nm)" min="300" max="900" step="0.1" value="413.3">
             <div class="param-limits">
               <input type="number" class="param-limit" id="dipole-lambda-min" value="300" step="10" min="100">
               <span class="param-limit-dash">&mdash;</span>
@@ -429,7 +429,7 @@ const miePresets = [
                 <label>Multipole cutoff &ell;<sub>max</sub></label>
                 <input type="number" class="param-number" id="dipole-lmax-num" value="20" step="1" min="1" max="60">
               </div>
-              <input type="range" class="param-slider" id="dipole-lmax-slider" min="1" max="60" step="1" value="20">
+              <input type="range" class="param-slider" id="dipole-lmax-slider" aria-label="Multipole cutoff ℓmax" min="1" max="60" step="1" value="20">
               <div class="param-limits">
                 <input type="number" class="param-limit" id="dipole-lmax-min" value="1" step="1" min="1">
                 <span class="param-limit-dash">&mdash;</span>
@@ -3963,6 +3963,8 @@ initPermalinks({
     for (let i = 0; i < extraShells.length; i++) {
       const lbl = extraShells[i].el.querySelector('.shell-label')!;
       lbl.textContent = `Shell ${i + 2}`;
+      extraShells[i].el.querySelector('.sh-eps-slider')?.setAttribute('aria-label', `Shell ${i + 2} relative permittivity`);
+      extraShells[i].el.querySelector('.sh-r-slider')?.setAttribute('aria-label', `Shell ${i + 2} outer radius (nm)`);
     }
   }
 
@@ -4033,7 +4035,7 @@ initPermalinks({
             <label>&epsilon;<sub>r</sub></label>
             <input type="number" class="param-number sh-eps-num" value="10" step="0.5" min="1">
           </div>
-          <input type="range" class="param-slider sh-eps-slider" min="1" max="50" step="0.5" value="10">
+          <input type="range" class="param-slider sh-eps-slider" aria-label="Shell ${idx + 2} relative permittivity" min="1" max="50" step="0.5" value="10">
           <div class="param-limits">
             <input type="number" class="param-limit sh-eps-min" value="1" step="0.5" min="0.1">
             <span class="param-limit-dash">&mdash;</span>
@@ -4045,7 +4047,7 @@ initPermalinks({
             <label>Outer radius (nm)</label>
             <input type="number" class="param-number sh-r-num" value="${outerR}" step="1" min="1">
           </div>
-          <input type="range" class="param-slider sh-r-slider" min="10" max="${maxOuterR}" step="1" value="${outerR}">
+          <input type="range" class="param-slider sh-r-slider" aria-label="Shell ${idx + 2} outer radius (nm)" min="10" max="${maxOuterR}" step="1" value="${outerR}">
           <div class="param-limits">
             <input type="number" class="param-limit sh-r-min" value="10" step="5" min="1">
             <span class="param-limit-dash">&mdash;</span>
