@@ -72,8 +72,9 @@ import 'litegraph.js/css/litegraph.css';
 
   .graph-wrap {
     width: 100%; height: 62vh; min-height: 420px;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-lg); overflow: hidden;
-    background: var(--bg-soft);
+    border: 1px solid #2A2945; border-radius: var(--radius-lg); overflow: hidden;
+    background: #12102B;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.25);
   }
   .graph-wrap canvas { display: block; width: 100%; height: 100%; outline: none; }
 
@@ -242,32 +243,42 @@ import 'litegraph.js/css/litegraph.css';
 
   // ── Editor theme: restyle litegraph to the site's design system ──
   type Family = 'source' | 'solver' | 'derived';
-  const FAMILY_ACCENT: Record<Family, string> = { source: '#5B5EE0', solver: '#0891B2', derived: '#D97706' };
+  // Header colors: dark enough for white 13px-bold titles.
+  const FAMILY_ACCENT: Record<Family, string> = { source: '#4F46E5', solver: '#0E7490', derived: '#B45309' };
+  // The canvas is a deliberately dark "instrument" surface in BOTH site themes
+  // (like a code block in light docs) — saturated wires and colored headers pop.
+  const INSTRUMENT = {
+    canvasBg: '#12102B',
+    titleText: '#FFFFFF',
+    link: '#6D6A9E',
+    linkTypes: { material: '#818CF8', env: '#60A5FA', sphere: '#22D3EE', particle: '#22D3EE', spectrum: '#FBBF24' },
+    portOff: '#6D6A9E', portOn: '#A5B4FC',
+    outline: '#A5B4FC',
+    shadow: 'rgba(0, 0, 0, 0.45)',
+    gridDot: 'rgba(165, 180, 252, 0.12)',
+  };
   const EDITOR_THEME = {
     light: {
-      canvasBg: '#F4F2FD',
-      nodeBg: '#FFFFFF', nodeTitle: '#FFFFFF',
-      titleText: '#1E1B4B', text: '#64648B', ink: '#64648B', inkSoft: '#9CA3AF',
+      ...INSTRUMENT,
+      nodeBg: '#FFFFFF',
+      text: '#64648B', ink: '#64648B',
       widgetBg: '#F8F7FF', widgetOutline: '#E4E2F5', widgetText: '#5B5EE0', widgetText2: '#64648B',
-      shadow: 'rgba(30, 27, 75, 0.10)',
-      link: '#C7C5E8', linkTypes: { material: '#A5B4FC', env: '#93C5FD', sphere: '#67E8F9', particle: '#67E8F9', spectrum: '#FCD34D' },
-      portOff: '#C7C5E8', portOn: '#5B5EE0',
-      outline: '#5B5EE0',
       miniBorder: 'rgba(100, 100, 139, 0.25)',
     },
     dark: {
-      canvasBg: '#0F0E1A',
-      nodeBg: '#1A1930', nodeTitle: '#1A1930',
-      titleText: '#E8E6F0', text: '#9896B0', ink: '#9896B0', inkSoft: '#6B7280',
+      ...INSTRUMENT,
+      canvasBg: '#0B0A16',
+      nodeBg: '#1A1930',
+      text: '#9896B0', ink: '#9896B0',
       widgetBg: '#0F0E1A', widgetOutline: '#2A2945', widgetText: '#A5B4FC', widgetText2: '#9896B0',
-      shadow: 'rgba(0, 0, 0, 0.35)',
-      link: '#3D3B66', linkTypes: { material: '#6366F1', env: '#3B82F6', sphere: '#0891B2', particle: '#0891B2', spectrum: '#D97706' },
-      portOff: '#3D3B66', portOn: '#A5B4FC',
-      outline: '#A5B4FC',
       miniBorder: 'rgba(152, 150, 176, 0.3)',
     },
   };
   const theme = () => (isDark() ? EDITOR_THEME.dark : EDITOR_THEME.light);
+  const GRID_SVG = (dot: string) =>
+    'data:image/svg+xml;utf8,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="1.2" fill="${dot}"/></svg>`,
+    );
 
   function applyEditorTheme() {
     const t = theme();
@@ -275,9 +286,9 @@ import 'litegraph.js/css/litegraph.css';
       NODE_TITLE_COLOR: t.titleText,
       NODE_SELECTED_TITLE_COLOR: t.titleText,
       NODE_TEXT_COLOR: t.text,
-      NODE_DEFAULT_COLOR: t.nodeTitle,
+      NODE_DEFAULT_COLOR: FAMILY_ACCENT.source,
       NODE_DEFAULT_BGCOLOR: t.nodeBg,
-      NODE_DEFAULT_BOXCOLOR: t.portOff,
+      NODE_DEFAULT_BOXCOLOR: 'rgba(255,255,255,0.85)',
       NODE_BOX_OUTLINE_COLOR: t.outline,
       WIDGET_BGCOLOR: t.widgetBg,
       WIDGET_OUTLINE_COLOR: t.widgetOutline,
@@ -289,11 +300,11 @@ import 'litegraph.js/css/litegraph.css';
     });
     Object.assign(lcanvas, {
       clear_background_color: t.canvasBg,
-      background_image: null,
+      background_image: GRID_SVG(t.gridDot),
       render_shadows: true,
       render_canvas_border: false,
       render_connection_arrows: false,
-      connections_width: 2,
+      connections_width: 3,
       round_radius: 10,
       default_link_color: t.link,
       link_type_colors: t.linkTypes,
@@ -306,9 +317,9 @@ import 'litegraph.js/css/litegraph.css';
   }
   function applyNodeTheme(node: any) {
     const t = theme();
-    node.color = t.nodeTitle;
+    node.color = FAMILY_ACCENT[(node.constructor as any).family as Family] || FAMILY_ACCENT.source;
     node.bgcolor = t.nodeBg;
-    node.boxcolor = FAMILY_ACCENT[(node.constructor as any).family as Family] || t.portOff;
+    node.boxcolor = 'rgba(255,255,255,0.85)';
   }
 
   // ── Node definitions (replace the stock litegraph node library) ──
