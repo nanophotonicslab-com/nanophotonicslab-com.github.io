@@ -100,11 +100,23 @@ BEM/RCWA (async Python).
 2. **Canvas library** vs hand-rolled: `svelte-flow`/`@xyflow`, `rete.js`,
    `litegraph.js`. Trade-off = bundle weight + a framework dependency in an
    otherwise vanilla-Astro app vs build/maintain our own pan/zoom/wire.
-3. **Prerequisite refactors as their own PRs** before any canvas work:
-   - unify complex types → one `Complex`
-   - define shared `Spectrum` / `Grid` / `Geometry` types in `src/lib/`
-   - extract Mie compute out of `mie-scattering.astro` into `src/lib/mie.ts`
-     usage (the page currently bypasses the lib)
+3. **Prerequisite refactors as their own PRs** before any canvas work —
+   **ALL DONE (2026-07-18):**
+   - ~~unify complex types → one `Complex`~~ — `c49eef1`: canonical type + ops
+     in `src/lib/complex.ts`; six struct-style modules rewired (found 6
+     duplicate definitions, not the 3 the audit estimated). The tuple style
+     (cylinder/electron-sphere) and scalar-pair style (mie) stay as documented
+     hot-loop conventions — sockets unify at the boundary, not in inner loops.
+   - ~~define shared `Spectrum` types in `src/lib/`~~ — `76ef248`:
+     `src/lib/spectrum.ts` + zero-copy adapters for mie/plasmon/electron-sphere;
+     the 3-node slice below already runs end-to-end as a test
+     (`spectrum.test.ts`). `Geometry` deliberately deferred — with no graph
+     producing or consuming it, the type would be dead speculation; define it
+     with the first canvas PR if approved.
+   - ~~extract Mie compute out of `mie-scattering.astro`~~ — `2e311ac`: full
+     spectrum engine (computeMie, BHCOAT, N-layer, coefficients, angular,
+     near-field) now in `src/lib/mie.ts` with equivalence tests; the page
+     imports it.
 4. **Scope of v1 nodes:** start with the 3-node slice; add Mie + electron-sphere
    once types are unified; leave BEM/RCWA/BPM out until there's a reason.
 
