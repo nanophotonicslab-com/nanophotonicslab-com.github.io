@@ -1,0 +1,524 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import { MATERIALS } from '../../data/optical-constants';
+
+const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label: m.label }));
+---
+
+<Layout title="Purcell Factor" description="Purcell factor, quantum yield and lifetime of a quantum emitter near a nanosphere — exact multipole decay rates with emitter bookkeeping for NV centers, quantum dots, and dyes.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Purcell <span class="gradient-text">Factor</span></h1>
+      <p class="widget-hero__subtitle">
+        A quantum emitter near a nanosphere: total and radiative decay
+        enhancement, modified quantum yield, and lifetime — exact multipole
+        theory with the emitter's intrinsic quantum yield folded in.
+      </p>
+      <ToolMeta slug="purcell" name="Purcell Factor" />
+    </div>
+  </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>
+        Exact multipole decay rates of a point dipole at distance d from a sphere
+        (Kim, Leung &amp; George, Surf. Sci. 195, 1 (1988)), &ell;<sub>max</sub>&nbsp;=&nbsp;20.
+        Emitter bookkeeping: &tau;&prime;&nbsp;=&nbsp;&tau;&#8320;/(q&#8320;F<sub>tot</sub>&nbsp;+&nbsp;1&nbsp;&minus;&nbsp;q&#8320;),
+        q&prime;&nbsp;=&nbsp;q&#8320;F<sub>rad</sub>/(q&#8320;F<sub>tot</sub>&nbsp;+&nbsp;1&nbsp;&minus;&nbsp;q&#8320;).
+      </dd>
+      <dt>Assumptions</dt>
+      <dd>
+        Point dipole; homogeneous lossless host; local response of the sphere
+        material (tabulated n,k). Isotropic orientation = (radial&nbsp;+&nbsp;2&middot;tangential)/3.
+      </dd>
+      <dt>Limitations</dt>
+      <dd>
+        No nonlocal/quantum corrections at sub-nm gaps — below ~1&nbsp;nm the local
+        model overestimates quenching. Single sphere only (no substrate, no dimer gaps).
+      </dd>
+    </dl>
+  </ModelInfo>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <div class="widget-column widget-column--controls">
+          <ParamsDrawer>
+          <div class="controls card">
+            <div class="param">
+              <div class="param-header"><label for="material-select">Sphere material</label></div>
+              <select id="material-select" class="param-select">
+                {materialOptions.map((m) => <option value={m.id} selected={m.id === 'au'}>{m.label}</option>)}
+              </select>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Radius (nm)</label>
+                <input type="number" class="param-number" id="r-num" value="50" step="5" min="5">
+              </div>
+              <input type="range" class="param-slider" id="r-slider" aria-label="Sphere radius (nm)" min="5" max="200" step="1" value="50">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>n<sub>host</sub></label>
+                <input type="number" class="param-number" id="nh-num" value="1.33" step="0.01" min="1">
+              </div>
+              <input type="range" class="param-slider" id="nh-slider" aria-label="Host refractive index" min="1" max="2" step="0.01" value="1.33">
+            </div>
+            <div class="param">
+              <div class="param-header"><label for="emitter-select">Emitter</label></div>
+              <select id="emitter-select" class="param-select">
+                <option value="custom">Custom</option>
+                <option value="637" selected>NV center (637 nm)</option>
+                <option value="738">SiV center (738 nm)</option>
+                <option value="620">CdSe/ZnS QD (620 nm)</option>
+                <option value="670">Cy5 dye (670 nm)</option>
+                <option value="570">Rhodamine 6G (570 nm)</option>
+              </select>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Emission &lambda; (nm)</label>
+                <input type="number" class="param-number" id="lam-num" value="637" step="1" min="300">
+              </div>
+              <input type="range" class="param-slider" id="lam-slider" aria-label="Emission wavelength (nm)" min="400" max="900" step="1" value="637">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Gap d (nm)</label>
+                <input type="number" class="param-number" id="d-num" value="10" step="1" min="1">
+              </div>
+              <input type="range" class="param-slider" id="d-slider" aria-label="Emitter-surface gap (nm)" min="1" max="200" step="1" value="10">
+            </div>
+            <div class="param">
+              <div class="param-header"><label>Dipole orientation</label></div>
+              <div class="seg-row" role="radiogroup" aria-label="Dipole orientation">
+                <button class="seg-btn" data-orient="radial" role="radio" aria-checked="false">&perp; radial</button>
+                <button class="seg-btn" data-orient="tangential" role="radio" aria-checked="false">&#8741; tangential</button>
+                <button class="seg-btn active" data-orient="isotropic" role="radio" aria-checked="true">isotropic</button>
+              </div>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Intrinsic QY q&#8320;</label>
+                <input type="number" class="param-number" id="qy-num" value="0.7" step="0.05" min="0.01" max="1">
+              </div>
+              <input type="range" class="param-slider" id="qy-slider" aria-label="Intrinsic quantum yield" min="0.01" max="1" step="0.01" value="0.7">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Intrinsic &tau;&#8320; (ns)</label>
+                <input type="number" class="param-number" id="tau-num" value="12" step="0.5" min="0.01">
+              </div>
+            </div>
+            <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
+            <p class="theory-note">
+              <strong>Reading the numbers.</strong> F<sub>tot</sub> is the Purcell
+              factor; the gap between F<sub>tot</sub> and F<sub>rad</sub> is light
+              absorbed in the particle (quenching). A good antenna raises
+              q&prime; of a poor emitter; quenching kills it at small gaps.
+            </p>
+          </div>
+          </ParamsDrawer>
+        </div>
+
+        <div class="widget-column widget-column--results">
+          <div class="chart-panel card">
+            <div class="stats">
+              <div class="stat">
+                <span class="stat-label">F<sub>tot</sub> (Purcell)</span>
+                <span class="stat-value" id="out-ftot">&mdash;</span>
+                <span class="stat-unit">&Gamma;/&Gamma;&#8320;</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">F<sub>rad</sub></span>
+                <span class="stat-value" id="out-frad">&mdash;</span>
+                <span class="stat-unit">&Gamma;<sub>rad</sub>/&Gamma;&#8320;</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">q&prime;</span>
+                <span class="stat-value" id="out-qy">&mdash;</span>
+                <span class="stat-unit">quantum yield</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">&tau;&prime;</span>
+                <span class="stat-value" id="out-tau">&mdash;</span>
+                <span class="stat-unit">ns</span>
+              </div>
+            </div>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Decay enhancement vs gap at &lambda;<sub>em</sub> (log scale)</span></div>
+              <div class="chart-wrap"><canvas id="gap-chart"></canvas><div class="chart-tip" id="gap-tip"></div></div>
+              <div class="chart-legend" id="gap-legend"></div>
+            </div>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Decay enhancement vs wavelength at gap d (log scale)</span></div>
+              <div class="chart-wrap"><canvas id="lam-chart"></canvas><div class="chart-tip" id="lam-tip"></div></div>
+              <div class="chart-legend" id="lam-legend"></div>
+            </div>
+
+            <div class="export-bar">
+              <span class="export-label">Export</span>
+              <button id="dl-png" class="export-btn" type="button" title="Download the gap chart as PNG">PNG</button>
+              <button id="dl-csv" class="export-btn" type="button" title="Download both curves as CSV">CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+import { initPermalinks } from '../../lib/permalink';
+initPermalinks({
+  material: 'material-select',
+  r: 'r-num',
+  nh: 'nh-num',
+  lam: 'lam-num',
+  d: 'd-num',
+  qy: 'qy-num',
+  tau: 'tau-num',
+});
+</script>
+</Layout>
+
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 660px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
+  .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
+  .param-select, .param-number {
+    padding: 0.25rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; color: var(--primary);
+    background: var(--bg); outline: none; text-align: right;
+  }
+  .param-select { width: 100%; text-align: left; }
+  .param-number { width: 5.2rem; }
+  .param-slider { width: 100%; accent-color: var(--primary); }
+  .seg-row { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .seg-btn {
+    flex: 1 1 auto; padding: 0.3rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font);
+    font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  }
+  .seg-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
+  .seg-btn:focus-visible, .chart-tool-btn:focus-visible, .export-btn:focus-visible {
+    outline: 2px solid var(--primary); outline-offset: 2px;
+  }
+  .chart-tool-btn {
+    padding: 0.4rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+  }
+  .chart-tool-btn:hover { border-color: var(--primary-light); }
+  .theory-note { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+
+  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
+  .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat-unit { font-size: 0.7rem; color: var(--text-muted); }
+
+  .chart-header { margin-bottom: 0.3rem; }
+  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-soft); }
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
+  .chart-tip {
+    position: absolute; display: none; pointer-events: none; z-index: 3;
+    background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    padding: 0.3rem 0.5rem; font-size: 0.72rem; font-variant-numeric: tabular-nums;
+    color: var(--text); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
+  .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+  .export-bar { display: flex; align-items: center; gap: 0.5rem; }
+  .export-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  }
+  .export-btn:hover { border-color: var(--primary-light); }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+
+<script>
+  import { MATERIALS, interpolateNK, nkToEpsilon } from '../../lib/materials';
+  import { purcellAt, modifiedQuantumYield, modifiedLifetime, type DipoleOrientation } from '../../lib/purcell';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { downloadBlob } from '../../lib/download';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const val = (id: string, fb: number) => {
+    const v = parseFloat(($(id) as unknown as HTMLInputElement).value);
+    return Number.isFinite(v) ? v : fb;
+  };
+
+  // Validated categorical trio (site six-checks palette), per theme
+  const COLORS = {
+    light: { tot: '#6366F1', rad: '#06B6D4', nr: '#F43F5E' },
+    dark:  { tot: '#6366F1', rad: '#0891B2', nr: '#F43F5E' },
+  };
+  const isDark = () => document.documentElement.dataset.theme === 'dark'
+    || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const colors = () => (isDark() ? COLORS.dark : COLORS.light);
+
+  const DEFAULTS: Record<string, number> = {
+    'r-num': 50, 'nh-num': 1.33, 'lam-num': 637, 'd-num': 10, 'qy-num': 0.7, 'tau-num': 12,
+  };
+  const LMAX = 20;
+
+  const matSelect = $('material-select') as unknown as HTMLSelectElement;
+  let orientation: DipoleOrientation = 'isotropic';
+
+  function epsAt(lambdaNm: number) {
+    const [n, k] = interpolateNK(MATERIALS[matSelect.value].data, lambdaNm);
+    return nkToEpsilon(n, k);
+  }
+
+  // ── Compact chart renderer with log-y ──
+  interface Series { y: Float64Array; label: string; color: string; }
+  interface Chart { x: Float64Array; series: Series[]; xLabel: string; xUnit: string; hoverI: number; }
+  const charts = new Map<string, Chart>();
+
+  const fmt = (v: number) => {
+    const a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 1e4 || a < 1e-2) return v.toExponential(1).replace('e+', 'e');
+    return a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(1) : v.toFixed(2);
+  };
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const pow10Label = (e: number) => '10' + String(e).split('').map((c) => (c === '-' ? '⁻' : SUP[+c])).join('');
+
+  function draw(canvasId: string) {
+    const st = charts.get(canvasId);
+    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
+    if (!st) return;
+    const t = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (W === 0) return;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    const PAD = { l: 46, r: 10, t: 8, b: 30 };
+    const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
+    const xmin = st.x[0], xmax = st.x[st.x.length - 1];
+    let vmax = 0;
+    for (const s of st.series) for (const v of s.y) if (v > vmax) vmax = v;
+    if (vmax <= 0) vmax = 1;
+    const lmax = Math.ceil(Math.log10(vmax));
+    const lmin = Math.max(lmax - 5, Math.floor(Math.log10(vmax)) - 4) - 0.2;
+    const ly = (v: number) => Math.max(lmin, Math.log10(Math.max(v, 1e-300)));
+    const tx = (v: number) => PAD.l + ((v - xmin) / (xmax - xmin)) * pw;
+    const ty = (v: number) => PAD.t + ph - ((ly(v) - lmin) / (lmax - lmin)) * ph;
+    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.strokeStyle = t.grid; ctx.fillStyle = t.textMuted; ctx.lineWidth = 1;
+    for (let e = Math.ceil(lmin); e <= lmax; e++) {
+      const y = PAD.t + ph - ((e - lmin) / (lmax - lmin)) * ph;
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(pow10Label(e), PAD.l - 5, y);
+    }
+    const xspan = xmax - xmin;
+    const xstep = [1, 2, 5, 10, 20, 50, 100, 200].find((s) => xspan / s <= 8) || 200;
+    for (let xv = Math.ceil(xmin / xstep) * xstep; xv <= xmax; xv += xstep) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(String(xv), tx(xv), PAD.t + ph + 6);
+    }
+    ctx.fillStyle = t.textSoft; ctx.textAlign = 'center';
+    ctx.fillText(st.xLabel, PAD.l + pw / 2, H - 12);
+    for (const s of st.series) {
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < st.x.length; i++) {
+        i === 0 ? ctx.moveTo(tx(st.x[i]), ty(s.y[i])) : ctx.lineTo(tx(st.x[i]), ty(s.y[i]));
+      }
+      ctx.stroke();
+    }
+    if (st.hoverI >= 0) {
+      const hx = tx(st.x[st.hoverI]);
+      ctx.strokeStyle = t.textMuted; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, PAD.t + ph); ctx.stroke();
+      ctx.setLineDash([]);
+      for (const s of st.series) {
+        ctx.fillStyle = s.color;
+        ctx.beginPath(); ctx.arc(hx, ty(s.y[st.hoverI]), 3, 0, 2 * Math.PI); ctx.fill();
+      }
+    }
+  }
+
+  function legend(id: string, series: Series[]) {
+    $(id).innerHTML = series.map((s) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`).join('');
+  }
+
+  function hover(canvasId: string, tipId: string) {
+    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
+    const tip = $(tipId);
+    canvas.addEventListener('pointermove', (ev) => {
+      const st = charts.get(canvasId);
+      if (!st) return;
+      const rect = canvas.getBoundingClientRect();
+      const rel = (ev.clientX - rect.left - 46) / (rect.width - 56);
+      st.hoverI = Math.max(0, Math.min(st.x.length - 1, Math.round(rel * (st.x.length - 1))));
+      draw(canvasId);
+      tip.style.display = 'block';
+      tip.style.left = Math.min(ev.clientX - rect.left + 10, rect.width - 150) + 'px';
+      tip.style.top = '6px';
+      tip.innerHTML = `${fmt(st.x[st.hoverI])} ${st.xUnit}<br>`
+        + st.series.map((s) => `${s.label}: ${fmt(s.y[st.hoverI])}`).join('<br>');
+    });
+    canvas.addEventListener('pointerleave', () => {
+      const st = charts.get(canvasId);
+      if (!st) return;
+      st.hoverI = -1; tip.style.display = 'none';
+      draw(canvasId);
+    });
+  }
+
+  // ── Physics ──
+  const GAP_POINTS = 120, LAM_POINTS = 120;
+
+  function update() {
+    const r = val('r-num', 50), nh = val('nh-num', 1.33), lam = val('lam-num', 637);
+    const d = Math.max(1, val('d-num', 10)), q0 = Math.min(1, Math.max(0.01, val('qy-num', 0.7)));
+    const tau0 = val('tau-num', 12);
+    const c = colors();
+
+    const f0 = purcellAt(lam, epsAt(lam), nh, r, d, orientation, LMAX);
+    $('out-ftot').textContent = fmt(f0.fTot);
+    $('out-frad').textContent = fmt(f0.fRad);
+    $('out-qy').textContent = fmt(modifiedQuantumYield(f0, q0));
+    $('out-tau').textContent = fmt(modifiedLifetime(f0, q0, tau0));
+
+    // vs gap at fixed λ
+    const gaps = new Float64Array(GAP_POINTS), tot = new Float64Array(GAP_POINTS),
+      rad = new Float64Array(GAP_POINTS), nr = new Float64Array(GAP_POINTS);
+    const eps = epsAt(lam);
+    for (let i = 0; i < GAP_POINTS; i++) {
+      const g = 1 + (200 - 1) * i / (GAP_POINTS - 1);
+      gaps[i] = g;
+      const f = purcellAt(lam, eps, nh, r, g, orientation, LMAX);
+      tot[i] = f.fTot; rad[i] = f.fRad; nr[i] = Math.max(f.fNr, 0);
+    }
+    const gapSeries: Series[] = [
+      { y: tot, label: 'F_tot', color: c.tot },
+      { y: rad, label: 'F_rad', color: c.rad },
+      { y: nr, label: 'F_nr', color: c.nr },
+    ];
+    charts.set('gap-chart', { x: gaps, series: gapSeries, xLabel: 'gap d (nm) · Γ/Γ₀', xUnit: 'nm', hoverI: -1 });
+    legend('gap-legend', gapSeries);
+    draw('gap-chart');
+
+    // vs λ at fixed gap
+    const lams = new Float64Array(LAM_POINTS), tot2 = new Float64Array(LAM_POINTS), rad2 = new Float64Array(LAM_POINTS);
+    for (let i = 0; i < LAM_POINTS; i++) {
+      const l = 400 + (900 - 400) * i / (LAM_POINTS - 1);
+      lams[i] = l;
+      const f = purcellAt(l, epsAt(l), nh, r, d, orientation, LMAX);
+      tot2[i] = f.fTot; rad2[i] = f.fRad;
+    }
+    const lamSeries: Series[] = [
+      { y: tot2, label: 'F_tot', color: c.tot },
+      { y: rad2, label: 'F_rad', color: c.rad },
+    ];
+    charts.set('lam-chart', { x: lams, series: lamSeries, xLabel: 'λ (nm) · Γ/Γ₀', xUnit: 'nm', hoverI: -1 });
+    legend('lam-legend', lamSeries);
+    draw('lam-chart');
+  }
+
+  let raf = 0;
+  function schedule() {
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); });
+  }
+
+  // ── Wiring ──
+  function pair(numId: string, sliderId: string) {
+    const num = $(numId) as unknown as HTMLInputElement;
+    const slider = $(sliderId) as unknown as HTMLInputElement;
+    num.addEventListener('input', () => { slider.value = num.value; schedule(); });
+    slider.addEventListener('input', () => { num.value = slider.value; schedule(); });
+  }
+  pair('r-num', 'r-slider');
+  pair('nh-num', 'nh-slider');
+  pair('lam-num', 'lam-slider');
+  pair('d-num', 'd-slider');
+  pair('qy-num', 'qy-slider');
+  $('tau-num').addEventListener('input', schedule);
+  matSelect.addEventListener('change', schedule);
+
+  const emitterSel = $('emitter-select') as unknown as HTMLSelectElement;
+  emitterSel.addEventListener('change', () => {
+    if (emitterSel.value !== 'custom') {
+      ($('lam-num') as unknown as HTMLInputElement).value = emitterSel.value;
+      ($('lam-slider') as unknown as HTMLInputElement).value = emitterSel.value;
+    }
+    schedule();
+  });
+  ($('lam-num') as unknown as HTMLInputElement).addEventListener('input', () => { emitterSel.value = 'custom'; });
+
+  document.querySelectorAll('.seg-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.seg-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
+      orientation = (btn as HTMLElement).dataset.orient as DipoleOrientation;
+      schedule();
+    });
+  });
+
+  $('reset-btn').addEventListener('click', () => {
+    matSelect.value = 'au';
+    emitterSel.value = '637';
+    for (const [id, v] of Object.entries(DEFAULTS)) {
+      ($(id) as unknown as HTMLInputElement).value = String(v);
+      const slider = document.getElementById(id.replace('-num', '-slider')) as HTMLInputElement | null;
+      if (slider) slider.value = String(v);
+    }
+    schedule();
+  });
+
+  hover('gap-chart', 'gap-tip');
+  hover('lam-chart', 'lam-tip');
+
+  $('dl-png').addEventListener('click', () => {
+    ($('gap-chart') as unknown as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, 'purcell_vs_gap.png'); }, 'image/png');
+  });
+  $('dl-csv').addEventListener('click', () => {
+    const gap = charts.get('gap-chart'), lamc = charts.get('lam-chart');
+    if (!gap || !lamc) return;
+    const lines = ['gap_nm,F_tot,F_rad,F_nr'];
+    for (let i = 0; i < gap.x.length; i++) lines.push(`${gap.x[i]},${gap.series[0].y[i]},${gap.series[1].y[i]},${gap.series[2].y[i]}`);
+    lines.push('', 'lambda_nm,F_tot,F_rad');
+    for (let i = 0; i < lamc.x.length; i++) lines.push(`${lamc.x[i]},${lamc.series[0].y[i]},${lamc.series[1].y[i]}`);
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), 'purcell_curves.csv');
+  });
+
+  window.addEventListener('resize', schedule);
+  onThemeChange(schedule);
+  update();
+</script>
