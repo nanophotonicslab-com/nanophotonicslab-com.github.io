@@ -1,0 +1,375 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import { SELLMEIER } from '../../lib/pulse';
+
+const materials = Object.entries(SELLMEIER).map(([id, m]) => ({ id, label: m.label }));
+---
+
+<Layout title="Ultrafast Pulse Toolbox" description="Femtosecond pulse dispersion: GVD/GDD and TOD of common optical materials from Sellmeier equations, pulse broadening, transform-limited bandwidth and autocorrelation widths.">
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Ultrafast <span class="gradient-text">Pulse Toolbox</span></h1>
+      <p class="widget-hero__subtitle">
+        The numbers an ultrafast lab needs daily: material GVD and TOD from
+        Sellmeier equations, pulse broadening through glass, transform-limited
+        bandwidth, and autocorrelation deconvolution.
+      </p>
+      <ToolMeta slug="pulse" name="Ultrafast Pulse Toolbox" />
+    </div>
+  </section>
+
+  <ModelInfo status="Beta">
+    <dl>
+      <dt>Model</dt>
+      <dd>
+        Sellmeier dispersion with published coefficients (Malitson, SCHOTT, Zelmon —
+        cited per material). &beta;&#8322;&nbsp;=&nbsp;(&lambda;&sup3;/2&pi;c&sup2;)&middot;d&sup2;n/d&lambda;&sup2;;
+        &beta;&#8323; from the third derivative. Gaussian broadening
+        &tau;&nbsp;=&nbsp;&tau;&#8320;&radic;(1+(4ln2&middot;GDD/&tau;&#8320;&sup2;)&sup2;).
+      </dd>
+      <dt>Assumptions</dt>
+      <dd>
+        Transform-limited input pulse; linear propagation (no self-phase modulation);
+        broadening from GDD only — TOD is reported but not folded into the width.
+        Time&ndash;bandwidth products: 0.441 (Gaussian), 0.315 (sech&sup2;).
+      </dd>
+      <dt>Limitations</dt>
+      <dd>
+        Sellmeier fits are valid inside each material's quoted range; no nonlinear
+        effects, no chirped inputs, no absorption.
+      </dd>
+    </dl>
+  </ModelInfo>
+
+  <section class="section">
+    <div class="container">
+      <div class="widget-layout">
+        <div class="widget-column widget-column--controls">
+          <ParamsDrawer>
+          <div class="controls card">
+            <div class="param">
+              <div class="param-header"><label for="material-select">Material</label></div>
+              <select id="material-select" class="param-select">
+                {materials.map((m) => <option value={m.id}>{m.label}</option>)}
+              </select>
+              <span class="material-ref" id="material-ref"></span>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Thickness L (mm)</label>
+                <input type="number" class="param-number" id="len-num" value="5" step="0.5" min="0">
+              </div>
+              <input type="range" class="param-slider" id="len-slider" aria-label="Material thickness (mm)" min="0" max="50" step="0.5" value="5">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Center &lambda; (nm)</label>
+                <input type="number" class="param-number" id="lam-num" value="800" step="5" min="300">
+              </div>
+              <input type="range" class="param-slider" id="lam-slider" aria-label="Center wavelength (nm)" min="400" max="1600" step="5" value="800">
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label>Input FWHM &tau;&#8320; (fs)</label>
+                <input type="number" class="param-number" id="tau-num" value="30" step="1" min="1">
+              </div>
+              <input type="range" class="param-slider" id="tau-slider" aria-label="Input pulse FWHM (fs)" min="5" max="200" step="1" value="30">
+            </div>
+            <div class="param">
+              <div class="param-header"><label>Pulse shape</label></div>
+              <div class="seg-row" role="radiogroup" aria-label="Pulse shape">
+                <button class="seg-btn active" data-shape="gaussian" role="radio" aria-checked="true">Gaussian</button>
+                <button class="seg-btn" data-shape="sech2" role="radio" aria-checked="false">sech&sup2;</button>
+              </div>
+            </div>
+            <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
+            <p class="theory-note">
+              <strong>Rule of thumb.</strong> A pulse survives GDD while
+              &tau;&#8320;&sup2;&nbsp;&#8811;&nbsp;4ln2&middot;GDD. Short pulses are
+              fragile: 10&nbsp;fs doubles in ~1&nbsp;mm of glass at 800&nbsp;nm;
+              100&nbsp;fs barely notices 10&nbsp;mm.
+            </p>
+          </div>
+          </ParamsDrawer>
+        </div>
+
+        <div class="widget-column widget-column--results">
+          <div class="chart-panel card">
+            <div class="stats">
+              <div class="stat">
+                <span class="stat-label">GDD</span>
+                <span class="stat-value" id="out-gdd">&mdash;</span>
+                <span class="stat-unit">fs&sup2;</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">&tau;<sub>out</sub></span>
+                <span class="stat-value" id="out-tau">&mdash;</span>
+                <span class="stat-unit">fs (&times;<span id="out-factor">&mdash;</span>)</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">TL bandwidth</span>
+                <span class="stat-value" id="out-bw">&mdash;</span>
+                <span class="stat-unit">nm FWHM</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Autocorr.</span>
+                <span class="stat-value" id="out-ac">&mdash;</span>
+                <span class="stat-unit">fs FWHM</span>
+              </div>
+            </div>
+            <p class="sub-readout" id="sub-readout"></p>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Material GVD vs wavelength</span></div>
+              <div class="chart-wrap"><canvas id="gvd-chart"></canvas><div class="chart-tip" id="gvd-tip"></div></div>
+              <div class="chart-legend" id="gvd-legend"></div>
+            </div>
+
+            <div class="chart-block">
+              <div class="chart-header"><span class="chart-title">Output vs input FWHM through L at &lambda;&#8320;</span></div>
+              <div class="chart-wrap"><canvas id="tau-chart"></canvas><div class="chart-tip" id="tau-tip"></div></div>
+              <div class="chart-legend" id="tau-legend"></div>
+            </div>
+
+            <div class="export-bar">
+              <span class="export-label">Export</span>
+              <button id="dl-png" class="export-btn" type="button" title="Download the GVD chart as PNG">PNG</button>
+              <button id="dl-csv" class="export-btn" type="button" title="Download both curves as CSV">CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+import { initPermalinks } from '../../lib/permalink';
+initPermalinks({
+  material: 'material-select',
+  l: 'len-num',
+  lam: 'lam-num',
+  tau: 'tau-num',
+});
+</script>
+</Layout>
+
+<style>
+  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
+  .widget-hero h1 { margin-bottom: var(--space-sm); }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 660px; }
+  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
+  .back-link:hover { color: var(--primary); }
+
+  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
+  .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
+  .param-select, .param-number {
+    padding: 0.25rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.875rem; font-weight: 600; color: var(--primary);
+    background: var(--bg); outline: none; text-align: right;
+  }
+  .param-select { width: 100%; text-align: left; }
+  .param-number { width: 5.2rem; }
+  .param-slider { width: 100%; accent-color: var(--primary); }
+  .material-ref { display: block; margin-top: 0.25rem; font-size: 0.7rem; color: var(--text-muted); }
+  .seg-row { display: flex; gap: 0.3rem; }
+  .seg-btn {
+    flex: 1 1 auto; padding: 0.3rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text-soft); font-family: var(--font);
+    font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  }
+  .seg-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
+  .seg-btn:focus-visible, .chart-tool-btn:focus-visible, .export-btn:focus-visible {
+    outline: 2px solid var(--primary); outline-offset: 2px;
+  }
+  .chart-tool-btn {
+    padding: 0.4rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+  }
+  .chart-tool-btn:hover { border-color: var(--primary-light); }
+  .theory-note { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+
+  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
+  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
+  .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat-unit { font-size: 0.7rem; color: var(--text-muted); }
+  .sub-readout { font-size: 0.78rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }
+
+  .chart-header { margin-bottom: 0.3rem; }
+  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-soft); }
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
+  .chart-tip {
+    position: absolute; display: none; pointer-events: none; z-index: 3;
+    background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    padding: 0.3rem 0.5rem; font-size: 0.72rem; font-variant-numeric: tabular-nums;
+    color: var(--text); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
+  .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
+  .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+  .export-bar { display: flex; align-items: center; gap: 0.5rem; }
+  .export-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  }
+  .export-btn:hover { border-color: var(--primary-light); }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+
+<script>
+  import {
+    SELLMEIER, sellmeierN, groupIndex, gvdFs2PerMm, todFs3PerMm,
+    broadenedFwhmFs, transformLimitedBandwidthNm, AC_FACTOR, type PulseShape,
+  } from '../../lib/pulse';
+  import { drawLite, attachLiteHover, legendHtml, fmtLite, type LiteChart, type LiteSeries } from '../../lib/chart-lite';
+  import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { downloadBlob } from '../../lib/download';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const val = (id: string, fb: number) => {
+    const v = parseFloat(($(id) as unknown as HTMLInputElement).value);
+    return Number.isFinite(v) ? v : fb;
+  };
+
+  const COLORS = {
+    light: { gvd: '#6366F1', tau: '#6366F1', ref: '#F43F5E' },
+    dark:  { gvd: '#6366F1', tau: '#6366F1', ref: '#F43F5E' },
+  };
+  const isDark = () => document.documentElement.dataset.theme === 'dark'
+    || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const colors = () => (isDark() ? COLORS.dark : COLORS.light);
+
+  const DEFAULTS: Record<string, number> = { 'len-num': 5, 'lam-num': 800, 'tau-num': 30 };
+  const matSelect = $('material-select') as unknown as HTMLSelectElement;
+  let shape: PulseShape = 'gaussian';
+
+  const charts = new Map<string, LiteChart>();
+
+  function update() {
+    const mat = SELLMEIER[matSelect.value];
+    const L = val('len-num', 5), lam = val('lam-num', 800), tau0 = val('tau-num', 30);
+    const c = colors();
+    $('material-ref').textContent = mat.ref;
+
+    const gvd = gvdFs2PerMm(mat, lam);
+    const gdd = gvd * L;
+    const tod = todFs3PerMm(mat, lam) * L;
+    const tauOut = broadenedFwhmFs(tau0, gdd);
+    $('out-gdd').textContent = fmtLite(gdd);
+    $('out-tau').textContent = fmtLite(tauOut);
+    $('out-factor').textContent = (tauOut / tau0).toFixed(2);
+    $('out-bw').textContent = fmtLite(transformLimitedBandwidthNm(tau0, lam, shape));
+    $('out-ac').textContent = fmtLite(tau0 * AC_FACTOR[shape]);
+    $('sub-readout').textContent =
+      `n = ${sellmeierN(mat, lam / 1000).toFixed(4)} · n_g = ${groupIndex(mat, lam).toFixed(4)} · `
+      + `β₂ = ${fmtLite(gvd)} fs²/mm · TOD = ${fmtLite(tod)} fs³ · `
+      + `valid ${mat.rangeUm[0]}–${mat.rangeUm[1]} µm`;
+
+    // GVD vs λ inside the material's validity range (clipped to 300–1700 nm)
+    const N1 = 160;
+    const lmin = Math.max(300, mat.rangeUm[0] * 1000), lmax = Math.min(1700, mat.rangeUm[1] * 1000);
+    const xs = new Float64Array(N1), ys = new Float64Array(N1), zero = new Float64Array(N1);
+    for (let i = 0; i < N1; i++) {
+      xs[i] = lmin + (lmax - lmin) * i / (N1 - 1);
+      ys[i] = gvdFs2PerMm(mat, xs[i]);
+    }
+    const gvdSeries: LiteSeries[] = [
+      { y: ys, label: 'β₂ (fs²/mm)', color: c.gvd },
+      { y: zero, label: 'zero dispersion', color: chartTheme().textMuted, dash: [5, 4] },
+    ];
+    charts.set('gvd-chart', { x: xs, series: gvdSeries, xLabel: 'λ (nm) · β₂ (fs²/mm)', xUnit: 'nm', hoverI: -1 });
+    $('gvd-legend').innerHTML = legendHtml(gvdSeries);
+    drawLite($('gvd-chart') as unknown as HTMLCanvasElement, charts.get('gvd-chart')!);
+
+    // Output vs input FWHM at this GDD
+    const N2 = 160;
+    const ti = new Float64Array(N2), to = new Float64Array(N2), id = new Float64Array(N2);
+    for (let i = 0; i < N2; i++) {
+      ti[i] = 3 + (120 - 3) * i / (N2 - 1);
+      to[i] = broadenedFwhmFs(ti[i], gdd);
+      id[i] = ti[i];
+    }
+    const tauSeries: LiteSeries[] = [
+      { y: to, label: 'τ_out (fs)', color: c.tau },
+      { y: id, label: 'no dispersion', color: chartTheme().textMuted, dash: [5, 4] },
+    ];
+    charts.set('tau-chart', { x: ti, series: tauSeries, xLabel: 'τ_in (fs) · τ_out (fs)', xUnit: 'fs', hoverI: -1 });
+    $('tau-legend').innerHTML = legendHtml(tauSeries);
+    drawLite($('tau-chart') as unknown as HTMLCanvasElement, charts.get('tau-chart')!);
+  }
+
+  let raf = 0;
+  function schedule() {
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); });
+  }
+
+  function pair(numId: string, sliderId: string) {
+    const num = $(numId) as unknown as HTMLInputElement;
+    const slider = $(sliderId) as unknown as HTMLInputElement;
+    num.addEventListener('input', () => { slider.value = num.value; schedule(); });
+    slider.addEventListener('input', () => { num.value = slider.value; schedule(); });
+  }
+  pair('len-num', 'len-slider');
+  pair('lam-num', 'lam-slider');
+  pair('tau-num', 'tau-slider');
+  matSelect.addEventListener('change', schedule);
+
+  document.querySelectorAll('.seg-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.seg-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
+      shape = (btn as HTMLElement).dataset.shape as PulseShape;
+      schedule();
+    });
+  });
+
+  $('reset-btn').addEventListener('click', () => {
+    matSelect.value = 'fused-silica';
+    for (const [id, v] of Object.entries(DEFAULTS)) {
+      ($(id) as unknown as HTMLInputElement).value = String(v);
+      const slider = document.getElementById(id.replace('-num', '-slider')) as HTMLInputElement | null;
+      if (slider) slider.value = String(v);
+    }
+    schedule();
+  });
+
+  attachLiteHover($('gvd-chart') as unknown as HTMLCanvasElement, $('gvd-tip'), () => charts.get('gvd-chart'));
+  attachLiteHover($('tau-chart') as unknown as HTMLCanvasElement, $('tau-tip'), () => charts.get('tau-chart'));
+
+  $('dl-png').addEventListener('click', () => {
+    ($('gvd-chart') as unknown as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, 'pulse_gvd.png'); }, 'image/png');
+  });
+  $('dl-csv').addEventListener('click', () => {
+    const g = charts.get('gvd-chart'), t = charts.get('tau-chart');
+    if (!g || !t) return;
+    const lines = ['lambda_nm,beta2_fs2_per_mm'];
+    for (let i = 0; i < g.x.length; i++) lines.push(`${g.x[i]},${g.series[0].y[i]}`);
+    lines.push('', 'tau_in_fs,tau_out_fs');
+    for (let i = 0; i < t.x.length; i++) lines.push(`${t.x[i]},${t.series[0].y[i]}`);
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), 'pulse_curves.csv');
+  });
+
+  window.addEventListener('resize', schedule);
+  onThemeChange(schedule);
+  update();
+</script>
