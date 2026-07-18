@@ -239,6 +239,7 @@ initPermalinks({ lam: 'lam' });
 <!-- ===== Script ===== -->
 <script>
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { downloadBlob } from '../../lib/download';
 
   // ===== Physical constants (CODATA 2018) =====
   const C  = 299792458.0;            // m/s
@@ -703,10 +704,7 @@ initPermalinks({ lam: 'lam' });
 
   // ===== Export =====
   document.getElementById('dl-png')?.addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.download = 'photon_spectrum.png';
-    a.href = chartCanvas.toDataURL('image/png');
-    a.click();
+    chartCanvas.toBlob(b => { if (b) downloadBlob(b, 'photon_spectrum.png'); }, 'image/png');
   });
   document.getElementById('dl-csv')?.addEventListener('click', () => {
     const q = isFinite(currentLambda) && currentLambda > 0 ? fromLam(currentLambda) : null;
@@ -721,11 +719,7 @@ initPermalinks({ lam: 'lam' });
       ['Period', 'T', q ? v(q.T_fs) : '', 'fs'],
     ];
     const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'photon_parameters.csv'; a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'photon_parameters.csv');
   });
 
   // Initial draw
