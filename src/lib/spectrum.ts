@@ -12,7 +12,7 @@ import type { MieSpectrum } from './mie';
 import type { PlasmonSpectrum } from './plasmonic-nanoparticles';
 import type { ElectronSpectrum } from './electron-sphere';
 
-export type SpectrumAxis = 'lambdaNm' | 'energyEv';
+export type SpectrumAxis = 'lambdaNm' | 'energyEv' | 'radiusNm';
 
 export interface Spectrum {
   x: Float64Array;

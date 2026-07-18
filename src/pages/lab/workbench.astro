@@ -29,6 +29,7 @@ import 'litegraph.js/css/litegraph.css';
         <button id="ex-default" class="tool-btn" type="button" title="One material fanned out to all three solvers">Fan-out</button>
         <button id="ex-compare" class="tool-btn" type="button" title="Two materials, two Mie solvers, two peak readouts">Au vs Ag</button>
         <button id="ex-thermal" class="tool-btn" type="button" title="Chained derivation: σ_abs → ΔT(λ) → peak analysis">Thermal chain</button>
+        <button id="ex-sweep" class="tool-btn" type="button" title="Radius sweep: 2D map + resonance trace into peak analysis">Radius sweep</button>
         <span class="bench-toolbar__sep"></span>
         <button id="btn-share" class="tool-btn" type="button" title="Copy a link to this exact graph">Share graph</button>
         <span class="bench-hint" id="share-hint"></span>
@@ -352,7 +353,7 @@ import 'litegraph.js/css/litegraph.css';
     canvasBg: '#12102B',
     titleText: '#FFFFFF',
     link: '#6D6A9E',
-    linkTypes: { material: '#818CF8', env: '#60A5FA', sphere: '#22D3EE', particle: '#22D3EE', spectrum: '#FBBF24' },
+    linkTypes: { material: '#818CF8', env: '#60A5FA', sphere: '#22D3EE', particle: '#22D3EE', spectrum: '#FBBF24', map: '#F472B6' },
     portOff: '#6D6A9E', portOn: '#A5B4FC',
     outline: '#A5B4FC',
     shadow: 'rgba(0, 0, 0, 0.45)',
@@ -664,6 +665,94 @@ import 'litegraph.js/css/litegraph.css';
     },
   });
 
+  // Sweep ---------------------------------------------------------------
+  interface SweepMap { radii: Float64Array; lambda: Float64Array; values: Float64Array; channel: string; vmax: number; }
+
+  defineNode('workbench/sweep', 'Radius sweep (Mie)', 'solver', (n) => {
+    n.addInput('material', 'material');
+    n.addInput('env', 'env');
+    n.addOutput('map', 'map');
+    n.addOutput('resonance trace', 'spectrum');
+    n.properties = { fromNm: 20, toNm: 150, steps: 36, channel: 'cext' };
+    widget(n, 'number', 'from (nm)', 'fromNm', { min: 5, max: 400, step: 10 });
+    widget(n, 'number', 'to (nm)', 'toNm', { min: 10, max: 500, step: 10 });
+    widget(n, 'number', 'steps', 'steps', { min: 8, max: 80, step: 10 });
+    widget(n, 'combo', 'channel', 'channel', { values: ['cext', 'csca', 'cabs'] });
+    n.size = [230, 210];
+  }, (n) => {
+    const mat = n.getInputData(0), e = n.getInputData(1);
+    if (!mat || !e) { n._map = null; n._chart = null; n.setOutputData(0, null); n.setOutputData(1, null); return; }
+    const p = n.properties;
+    const steps = Math.max(8, Math.min(80, Math.round(p.steps)));
+    const from = Math.max(1, Math.min(p.fromNm, p.toNm - 1));
+    const to = Math.max(from + 1, p.toNm);
+    const L = 160;
+    const sig = JSON.stringify([mat, e, from, to, steps, p.channel]);
+    if (sig !== n._sig) {
+      n._sig = sig;
+      const radii = new Float64Array(steps), lambda = new Float64Array(L);
+      const values = new Float64Array(steps * L);
+      const peakLam = new Float64Array(steps), peakVal = new Float64Array(steps);
+      let vmax = 0;
+      for (let ri = 0; ri < steps; ri++) {
+        const r = from + ((to - from) * ri) / (steps - 1);
+        radii[ri] = r;
+        const spec = computeMie((l: number) => nkOf(mat, l), r, e.nHost, e.lmin, e.lmax, L);
+        const ch = (spec as any)[p.channel] as Float64Array;
+        let best = 0;
+        for (let li = 0; li < L; li++) {
+          const v = ch[li];
+          values[ri * L + li] = v;
+          if (v > vmax) vmax = v;
+          if (v > ch[best]) best = li;
+          if (ri === 0) lambda[li] = spec.lambda[li];
+        }
+        peakLam[ri] = spec.lambda[best];
+        peakVal[ri] = ch[best];
+      }
+      n._sweep = { radii, lambda, values, channel: p.channel, vmax } as SweepMap;
+      n._trace = {
+        spectrum: { x: radii, axis: 'radiusNm', series: { lambdaPeakNm: peakLam, peakValue: peakVal } } as Spectrum,
+        radiusNm: (from + to) / 2,
+      } as ProducerOutput;
+    }
+    n._map = n._sweep;
+    n._chart = null;
+    n.setOutputData(0, n._sweep);
+    n.setOutputData(1, n._trace);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed || !this._map) return;
+      drawHeatmapInto(ctx, this._map, 10, 104, this.size[0] - 20, this.size[1] - 114);
+    },
+  });
+
+  // Sequential single-hue ramp (dataviz: monotonic lightness), per theme.
+  function rampColor(t: number): [number, number, number] {
+    const stops: [number, number, number][] = isDark()
+      ? [[15, 14, 26], [79, 70, 229], [199, 210, 254]]
+      : [[238, 242, 255], [99, 102, 241], [30, 27, 75]];
+    const s = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(s)), f = s - i;
+    const a = stops[i], b = stops[i + 1];
+    return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])];
+  }
+
+  function drawHeatmapInto(ctx: CanvasRenderingContext2D, m: SweepMap, x0: number, y0: number, w: number, h: number) {
+    if (w < 20 || h < 20 || !(m.vmax > 0)) return;
+    const R = m.radii.length, L = m.lambda.length;
+    for (let ri = 0; ri < R; ri++) {
+      const py = y0 + h - ((ri + 1) * h) / R;
+      for (let li = 0; li < L; li += 2) {
+        const [cr, cg, cb] = rampColor(m.values[ri * L + li] / m.vmax);
+        ctx.fillStyle = `rgb(${cr | 0},${cg | 0},${cb | 0})`;
+        ctx.fillRect(x0 + (li * w) / L, py, (2 * w) / L + 1, h / R + 1);
+      }
+    }
+    ctx.strokeStyle = theme().miniBorder;
+    ctx.strokeRect(x0, y0, w, h);
+  }
+
   // Derived -------------------------------------------------------------
   const absKey = (spec: Spectrum) =>
     Object.keys(spec.series).find((k) => k.toLowerCase().includes('abs')) || Object.keys(spec.series)[0];
@@ -743,11 +832,13 @@ import 'litegraph.js/css/litegraph.css';
     const keys = Object.keys(src.spectrum.series);
     n._channelWidget.options.values = ['auto', ...keys];
     const key = keys.includes(n.properties.channel) ? n.properties.channel : keys[0];
-    const isEv = src.spectrum.axis === 'energyEv';
+    const axis = src.spectrum.axis;
+    const isEv = axis === 'energyEv';
+    const sym = isEv ? 'E₀' : axis === 'radiusNm' ? 'r₀' : 'λ₀';
     const p = peakAnalysis(src.spectrum.x, src.spectrum.series[key]);
     const u = isEv ? 'eV' : 'nm';
     n._lines = p
-      ? [`${key}`, `${isEv ? 'E₀' : 'λ₀'} = ${p.x0.toFixed(isEv ? 3 : 1)} ${u}`,
+      ? [`${key}`, `${sym} = ${p.x0.toFixed(isEv ? 3 : 1)} ${u}`,
          `FWHM = ${Number.isNaN(p.fwhm) ? 'out of window' : p.fwhm.toFixed(isEv ? 3 : 1) + ' ' + u}`,
          `Q = ${Number.isNaN(p.q) ? '—' : p.q.toFixed(1)}`]
       : ['no peak in window'];
@@ -870,9 +961,20 @@ import 'litegraph.js/css/litegraph.css';
     pt.connect(0, pk, 0); // chained derivation: σ_abs → ΔT(λ) → peak width
   }
 
+  function buildSweepGraph() {
+    const mat = mkNode('workbench/material', 40, 100);
+    const env = mkNode('workbench/environment', 40, 300);
+    const sw = mkNode('workbench/sweep', 320, 120);
+    const pk = mkNode('workbench/peak', 620, 150);
+    setProp(pk, 'channel', 'lambdaPeakNm');
+    mat.connect(0, sw, 0); env.connect(0, sw, 1);
+    sw.connect(1, pk, 0); // resonance trace λ_res(r) → peak readout
+  }
+
   $('ex-default').addEventListener('click', () => loadExample(buildDefaultGraph));
   $('ex-compare').addEventListener('click', () => loadExample(buildCompareGraph));
   $('ex-thermal').addEventListener('click', () => loadExample(buildThermalGraph));
+  $('ex-sweep').addEventListener('click', () => loadExample(buildSweepGraph));
 
   // ── Inspector (big chart for the selected node) ──
   let selectedNode: any = null;
@@ -905,6 +1007,7 @@ import 'litegraph.js/css/litegraph.css';
     canvas.width = W * dpr; canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
+    if (!cd && selectedNode?._map) { drawInspectorMap(ctx, selectedNode._map as SweepMap, W, H); return; }
     if (!cd) return;
     const t = chartTheme();
     const PAD = { l: 48, r: 10, t: 8, b: 28 };
@@ -950,6 +1053,44 @@ import 'litegraph.js/css/litegraph.css';
     }
   }
 
+  function drawInspectorMap(ctx: CanvasRenderingContext2D, m: SweepMap, W: number, H: number) {
+    const t = chartTheme();
+    const PAD = { l: 52, r: 64, t: 10, b: 34 };
+    const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
+    drawHeatmapInto(ctx, m, PAD.l, PAD.t, pw, ph);
+    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = t.textMuted;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const L = m.lambda.length, R = m.radii.length;
+    for (let f = 0; f <= 4; f++) {
+      const li = Math.round((f * (L - 1)) / 4);
+      ctx.fillText(m.lambda[li].toFixed(0), PAD.l + (pw * li) / (L - 1), PAD.t + ph + 6);
+    }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let f = 0; f <= 4; f++) {
+      const ri = Math.round((f * (R - 1)) / 4);
+      ctx.fillText(m.radii[ri].toFixed(0), PAD.l - 6, PAD.t + ph - (ph * ri) / (R - 1));
+    }
+    ctx.fillStyle = t.textSoft;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(`λ (nm) — radius (nm) vertical · ${m.channel} (nm²)`, PAD.l + pw / 2, H - 15);
+    // Colorbar
+    const cbX = W - PAD.r + 16, cbW = 14;
+    for (let i = 0; i < ph; i++) {
+      const [cr, cg, cb] = rampColor(1 - i / ph);
+      ctx.fillStyle = `rgb(${cr | 0},${cg | 0},${cb | 0})`;
+      ctx.fillRect(cbX, PAD.t + i, cbW, 2);
+    }
+    ctx.strokeStyle = t.grid;
+    ctx.strokeRect(cbX, PAD.t, cbW, ph);
+    ctx.fillStyle = t.textMuted;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(fmt(m.vmax), cbX + cbW + 4, PAD.t);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('0', cbX + cbW + 4, PAD.t + ph);
+  }
+
   function renderInspector() {
     const title = $('inspector-title'), tag = $('inspector-tag'), head = $('inspector-headline'), leg = $('inspector-legend');
     if (!selectedNode) {
@@ -963,15 +1104,15 @@ import 'litegraph.js/css/litegraph.css';
       return;
     }
     title.textContent = selectedNode.title;
-    tag.textContent = selectedNode._chart ? 'output' : 'no spectrum output';
+    tag.textContent = selectedNode._chart ? 'output' : selectedNode._map ? 'sweep map' : 'no spectrum output';
     head.textContent = selectedNode._headline || selectedNode._readout || (selectedNode._hex ? `${selectedNode._hex} (${selectedNode._key})` : '') || (selectedNode._lines || []).join('  ·  ');
     leg.innerHTML = (selectedNode._chart?.series || [])
       .map((s: SeriesSpec) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`)
       .join('');
     drawInspectorChart();
-    const hasChart = !!selectedNode?._chart;
-    ($('btn-png') as unknown as HTMLButtonElement).disabled = !hasChart;
-    ($('btn-csv') as unknown as HTMLButtonElement).disabled = !hasChart;
+    const exportable = !!selectedNode?._chart || !!selectedNode?._map;
+    ($('btn-png') as unknown as HTMLButtonElement).disabled = !exportable;
+    ($('btn-csv') as unknown as HTMLButtonElement).disabled = !exportable;
   }
 
   const inspCanvas = $('inspector-chart') as unknown as HTMLCanvasElement;
@@ -1059,10 +1200,21 @@ import 'litegraph.js/css/litegraph.css';
   const exportName = (ext: string) =>
     `workbench_${(selectedNode?.title || 'node').toLowerCase().replace(/[^a-z0-9]+/g, '_')}.${ext}`;
   $('btn-png').addEventListener('click', () => {
-    if (!selectedNode?._chart) return;
+    if (!selectedNode?._chart && !selectedNode?._map) return;
     (inspCanvas as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, exportName('png')); }, 'image/png');
   });
   $('btn-csv').addEventListener('click', () => {
+    const m: SweepMap | undefined = selectedNode?._map;
+    if (m && !selectedNode?._chart) {
+      const lines = ['radius_nm\\lambda_nm,' + Array.from(m.lambda, (l) => l.toFixed(1)).join(',')];
+      for (let ri = 0; ri < m.radii.length; ri++) {
+        const row = [m.radii[ri].toFixed(1)];
+        for (let li = 0; li < m.lambda.length; li++) row.push(String(m.values[ri * m.lambda.length + li]));
+        lines.push(row.join(','));
+      }
+      downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
+      return;
+    }
     const cd: ChartData | undefined = selectedNode?._chart;
     if (!cd) return;
     const keys = cd.series.map((s) => s.key);
