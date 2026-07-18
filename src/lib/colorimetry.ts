@@ -10,6 +10,9 @@ function _gauss(lam: number, mu: number, s1: number, s2: number): number {
     : Math.exp(-0.5 * (t / s2) * (t / s2));
 }
 
+// KNOWN LIMITATION (verified 2026-07-18): the analytic Wyman fit underestimates
+// x̄ beyond ~680 nm (x̄(700) ≈ 0.0057 vs CIE 0.0114), so deep-red spectra render
+// orange-shifted. Accurate through ~650 nm; a table-based x̄ tail would fix it.
 export function xBar(l: number): number {
   return 0.362 * _gauss(l, 442.0, 16.0, 26.7)
        + 1.056 * _gauss(l, 599.8, 37.9, 31.0)

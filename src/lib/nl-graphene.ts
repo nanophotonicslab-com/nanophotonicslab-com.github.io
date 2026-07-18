@@ -92,8 +92,12 @@ export function grapheneSigma2dRPA(E: number, EF: number, gamma: number, T = 0):
   if (T < 1) return cAdd(grapheneSigma2d(E, EF, gamma), grapheneInterband(E, EF, gamma));
   const KT = KB_EV * T, mu = grapheneMuT(EF, T), x = E - 2 * mu;
   const intra = cDiv(cScale(Ic, E2 * mu / (PI * HBAR)), c(E, gamma));                                  // iE²μ(T)/[πħ(E+iγ)]
-  const inter = cScale(c(0.5 + Math.atan(x / (2 * KT)) / PI,
-    Math.log((x * x + 4 * KT * KT) / ((E + 2 * mu) * (E + 2 * mu))) / (2 * PI)), SIGMA0_NMFS);
+  // Interband step smeared by thermal AND collisional broadening in quadrature:
+  // W → γ as T→0 recovers the zero-T (γ-broadened) branch continuously; the pure
+  // 2kT form is discontinuous across the T switch whenever γ ≫ kT.
+  const W = Math.hypot(2 * KT, gamma);
+  const inter = cScale(c(0.5 + Math.atan(x / W) / PI,
+    Math.log((x * x + W * W) / ((E + 2 * mu) * (E + 2 * mu))) / (2 * PI)), SIGMA0_NMFS);
   return cAdd(intra, inter);
 }
 export function metalSigma2d(E: number, epsRe: number, epsIm: number, tNm: number): Cpx {

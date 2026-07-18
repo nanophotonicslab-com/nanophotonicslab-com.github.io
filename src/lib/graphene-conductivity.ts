@@ -30,7 +30,12 @@ const eqC = (a: Cx, b: Cx) => a.re === b.re && a.im === b.im;
 
 export const KB_EV = 8.617333262e-5;   // Boltzmann constant [eV/K]
 
-// Thermal chemical potential μ(T) of doped graphene (Fermi energy E_F, T in K) [eV].
+// Thermal Drude-weight energy of doped graphene: 2kT·ln(2cosh(E_F/2kT))
+// = E_F + 2kT·ln(1+e^(−E_F/kT)). NOTE this is NOT the chemical potential μ(T)
+// (which *decreases* with T at fixed density); it is the effective energy in
+// the intraband weight with μ approximated by E_F. Using it as the interband
+// Pauli threshold overestimates the onset at low doping (E_F ≲ 2k_BT) — fine
+// for the E_F ≥ 0.2 eV regimes the tools expose (error < 3% at 300 K).
 export const grapheneMuT = (EF_ev: number, T_K: number): number => {
   const KT = KB_EV * Math.max(T_K, 1e-9);
   return Math.abs(EF_ev) + 2 * KT * Math.log(1 + Math.exp(-Math.abs(EF_ev) / KT));

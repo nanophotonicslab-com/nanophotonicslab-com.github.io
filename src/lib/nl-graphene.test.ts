@@ -209,3 +209,22 @@ describe('Nonlinear peaks track the fundamental plasmon (test_nonlinear_peaks_tr
     }
   });
 });
+
+describe('grapheneSigma2dRPA finite-T continuity (regression, found by physics audit)', () => {
+  it('is continuous across the T≈1 K branch switch when γ ≫ kT', () => {
+    // Before the γ⊕kT quadrature broadening, Im σ jumped ~7× across T = 1 K
+    // at the interband onset (E = 2E_F) for γ = 0.05 eV.
+    const E = 0.4, EF = 0.2, gamma = 0.05;
+    const cold = grapheneSigma2dRPA(E, EF, gamma, 0);
+    const warm = grapheneSigma2dRPA(E, EF, gamma, 2);
+    expect(Math.abs(warm.im - cold.im) / Math.abs(cold.im)).toBeLessThan(0.5);
+    expect(Math.abs(warm.re - cold.re) / Math.abs(cold.re)).toBeLessThan(0.5);
+  });
+
+  it('recovers the thermal limit when kT ≫ γ', () => {
+    // At high T and tiny γ the quadrature width is dominated by 2kT — the
+    // onset must smear far beyond the collisional width.
+    const s = grapheneSigma2dRPA(0.35, 0.2, 1e-4, 600); // 2kT ≈ 0.10 eV
+    expect(s.re).toBeGreaterThan(0.05); // appreciable absorption below 2E_F
+  });
+});
