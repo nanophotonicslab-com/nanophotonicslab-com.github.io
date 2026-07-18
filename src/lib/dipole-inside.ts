@@ -18,36 +18,19 @@
  */
 
 // ---------------------------------------------------------------------------
-// complex arithmetic
+// complex arithmetic — canonical implementations in complex.ts
+// (div = Smith's algorithm, robust to the tiny high-order Bessel values
+//  in Miller's recurrence; csqrt = upper-half-plane branch)
 // ---------------------------------------------------------------------------
-export interface Cx { re: number; im: number; }
-const C = (re: number, im = 0): Cx => ({ re, im });
-const add = (a: Cx, b: Cx): Cx => ({ re: a.re + b.re, im: a.im + b.im });
-const sub = (a: Cx, b: Cx): Cx => ({ re: a.re - b.re, im: a.im - b.im });
-const mul = (a: Cx, b: Cx): Cx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
-// Smith's algorithm — robust to over/underflow (avoids squaring |b|, which
-// underflows to 0 for the tiny high-order Bessel values in Miller's recurrence)
-const div = (a: Cx, b: Cx): Cx => {
-  if (Math.abs(b.re) >= Math.abs(b.im)) {
-    const r = b.im / b.re, d = b.re + b.im * r;
-    return { re: (a.re + a.im * r) / d, im: (a.im - a.re * r) / d };
-  }
-  const r = b.re / b.im, d = b.re * r + b.im;
-  return { re: (a.re * r + a.im) / d, im: (a.im * r - a.re) / d };
-};
-const scale = (a: Cx, s: number): Cx => ({ re: a.re * s, im: a.im * s });
-const neg = (a: Cx): Cx => ({ re: -a.re, im: -a.im });
-const abs2 = (a: Cx): number => a.re * a.re + a.im * a.im;
-const csin = (z: Cx): Cx => ({ re: Math.sin(z.re) * Math.cosh(z.im), im: Math.cos(z.re) * Math.sinh(z.im) });
-const ccos = (z: Cx): Cx => ({ re: Math.cos(z.re) * Math.cosh(z.im), im: -Math.sin(z.re) * Math.sinh(z.im) });
-export function csqrt(z: Cx): Cx {
-  const r = Math.hypot(z.re, z.im);
-  let re = Math.sqrt(Math.max(0, (r + z.re) / 2));
-  let im = Math.sqrt(Math.max(0, (r - z.re) / 2));
-  if (z.im < 0) im = -im;
-  if (im < 0) { re = -re; im = -im; }
-  return { re, im };
-}
+import {
+  type Complex, complex as C, cadd as add, csub as sub, cmul as mul,
+  cdivRobust as div, cscale as scale, cneg as neg, cabs2 as abs2,
+  csin, ccos, csqrtUpper,
+} from './complex';
+
+/** Aliases kept for existing imports — the canonical type lives in complex.ts. */
+export type Cx = Complex;
+export const csqrt = csqrtUpper;
 
 // ---------------------------------------------------------------------------
 // complex spherical Bessel jₙ(z), yₙ(z) for n = 0..nmax

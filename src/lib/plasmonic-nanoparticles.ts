@@ -1,4 +1,8 @@
 import { MATERIALS, interpolateNK } from './materials';
+import {
+  type Complex, complex, cadd as cAdd, csub as cSub, cmul as cMul,
+  cscale as cScale, cdiv as cDiv, cinv as cInv, cabs2 as cAbs2,
+} from './complex';
 
 export type PlasmonShapeId =
   | 'rod'
@@ -38,10 +42,7 @@ export interface ShapeMode {
   modeIndex: number;
 }
 
-export interface Complex {
-  re: number;
-  im: number;
-}
+export type { Complex } from './complex';
 
 export interface PlasmonSpectrumOptions {
   shape: PlasmonShapeId;
@@ -110,40 +111,6 @@ export const SHAPE_OPTIONS: ShapeOption[] = [
 ];
 
 const PI = Math.PI;
-
-function complex(re: number, im = 0): Complex {
-  return { re, im };
-}
-
-function cAdd(a: Complex, b: Complex): Complex {
-  return complex(a.re + b.re, a.im + b.im);
-}
-
-function cSub(a: Complex, b: Complex): Complex {
-  return complex(a.re - b.re, a.im - b.im);
-}
-
-function cMul(a: Complex, b: Complex): Complex {
-  return complex(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
-}
-
-function cScale(a: Complex, s: number): Complex {
-  return complex(a.re * s, a.im * s);
-}
-
-function cDiv(a: Complex, b: Complex): Complex {
-  const d = b.re * b.re + b.im * b.im;
-  return complex((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
-}
-
-function cInv(a: Complex): Complex {
-  const d = a.re * a.re + a.im * a.im;
-  return complex(a.re / d, -a.im / d);
-}
-
-function cAbs2(a: Complex): number {
-  return a.re * a.re + a.im * a.im;
-}
 
 export function nkFromMaterial(materialId: string, lambdaNm: number): [number, number] {
   const material = MATERIALS[materialId];

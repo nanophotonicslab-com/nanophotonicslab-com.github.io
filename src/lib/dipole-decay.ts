@@ -28,29 +28,13 @@
 import { epsilonToNK, drudeEpsilon, type DrudeParams } from './materials';
 
 // ---------------------------------------------------------------------------
-// Minimal complex helpers
+// Complex helpers — canonical implementations in complex.ts
 // ---------------------------------------------------------------------------
-export interface Cx { re: number; im: number; }
-const cx = (re: number, im = 0): Cx => ({ re, im });
-const cadd = (a: Cx, b: Cx): Cx => ({ re: a.re + b.re, im: a.im + b.im });
-const csub = (a: Cx, b: Cx): Cx => ({ re: a.re - b.re, im: a.im - b.im });
-const cmul = (a: Cx, b: Cx): Cx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
-const cdiv = (a: Cx, b: Cx): Cx => {
-  const d = b.re * b.re + b.im * b.im;
-  return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
-};
-const cscale = (a: Cx, s: number): Cx => ({ re: a.re * s, im: a.im * s });
-const cabs2 = (a: Cx): number => a.re * a.re + a.im * a.im;
-/** principal complex square root with Im(√) ≥ 0 (physical refractive index). */
-export function csqrt(z: Cx): Cx {
-  const r = Math.hypot(z.re, z.im);
-  let re = Math.sqrt(Math.max(0, (r + z.re) / 2));
-  let im = Math.sqrt(Math.max(0, (r - z.re) / 2));
-  if (z.im < 0) im = -im;
-  // enforce Im ≥ 0 (choose the root in the upper half plane)
-  if (im < 0) { re = -re; im = -im; }
-  return { re, im };
-}
+import { type Complex, complex as cx, cadd, csub, cmul, cdiv, cscale, cabs2, csqrtUpper } from './complex';
+
+/** Aliases kept for existing imports — the canonical type lives in complex.ts. */
+export type Cx = Complex;
+export const csqrt = csqrtUpper;
 
 // ---------------------------------------------------------------------------
 // Real spherical Bessel functions j_ℓ(x), y_ℓ(x) for ℓ = 0..lmax, real x > 0.

@@ -5,18 +5,15 @@
 // engineered dipole distributions (Eqs. 7–8), the vector far field (Eq. 2) with full
 // polarization analysis (Stokes), and the swift-electron elliptical dipole (Eq. 9).
 
-export interface Cpx { re: number; im: number; }
+import { type Complex, complex, cadd, csub, cmul, cscale, cconj, cabs2, cabs } from './complex';
+
+/** Aliases kept for existing imports — the canonical type lives in complex.ts. */
+export type Cpx = Complex;
 export type Vec3c = [Cpx, Cpx, Cpx];
 
 const PI = Math.PI;
-export const c = (re: number, im = 0): Cpx => ({ re, im });
-const cadd = (a: Cpx, b: Cpx): Cpx => ({ re: a.re + b.re, im: a.im + b.im });
-const csub = (a: Cpx, b: Cpx): Cpx => ({ re: a.re - b.re, im: a.im - b.im });
-const cmul = (a: Cpx, b: Cpx): Cpx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
-const cscale = (a: Cpx, s: number): Cpx => ({ re: a.re * s, im: a.im * s });
-const cconj = (a: Cpx): Cpx => ({ re: a.re, im: -a.im });
-const cabs2 = (a: Cpx): number => a.re * a.re + a.im * a.im;
-export const cabs = (a: Cpx): number => Math.hypot(a.re, a.im);
+export const c = complex;
+export { cabs };
 
 // ── constants / unit helpers (gsp_lib.constants) ──
 export const HBAR_EVS = 6.582119569e-16;          // ħ [eV·s]

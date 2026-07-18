@@ -7,7 +7,10 @@
 // (Phys. Rev. 172, 788, 1968) constants (not distributed with the paper), so VO₂ results are
 // faithful in structure/trend but not last-digit values. Energies are in eV.
 
-export interface Cpx { re: number; im: number; }
+import { type Complex, cadd, csub, cmul, cscale, csqrt } from './complex';
+
+/** Alias kept for existing imports — the canonical type lives in complex.ts. */
+export type Cpx = Complex;
 
 // ── pure-phase oscillator tables: (E0 [eV], strength S, γ [eV]) ──
 const EPS_INF_INS = 4.0;
@@ -47,17 +50,7 @@ export const epsInsulating = (E: number): Cpx => lorentzSum(E, EPS_INF_INS, OSC_
 /** Metallic (rutile) VO₂ permittivity at energy E [eV]: Drude + interband Lorentz. */
 export const epsMetallic = (E: number): Cpx => lorentzSum(E, EPS_INF_MET, OSC_MET, DRUDE_MET);
 
-// ── complex helpers ──
-const cmul = (a: Cpx, b: Cpx): Cpx => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
-const cadd = (a: Cpx, b: Cpx): Cpx => ({ re: a.re + b.re, im: a.im + b.im });
-const csub = (a: Cpx, b: Cpx): Cpx => ({ re: a.re - b.re, im: a.im - b.im });
-const cscale = (a: Cpx, s: number): Cpx => ({ re: a.re * s, im: a.im * s });
-function csqrt(z: Cpx): Cpx {
-  const r = Math.hypot(z.re, z.im), re = Math.sqrt(Math.max(0, (r + z.re) / 2));
-  let im = Math.sqrt(Math.max(0, (r - z.re) / 2));
-  if (z.im < 0) im = -im;
-  return { re, im };
-}
+// ── complex helpers: canonical implementations in complex.ts (csqrt = principal branch) ──
 
 /**
  * Bruggeman effective-medium permittivity of a mix of insulating (B) and metallic (A) VO₂

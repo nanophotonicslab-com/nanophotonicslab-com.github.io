@@ -2,10 +2,10 @@ import { MATERIALS } from '../data/optical-constants';
 
 export { MATERIALS };
 
-export interface ComplexDielectric {
-  re: number;
-  im: number;
-}
+import type { Complex } from './complex';
+
+/** Alias kept for existing imports — the canonical type lives in complex.ts. */
+export type ComplexDielectric = Complex;
 
 export interface DrudeParams {
   epsB: number;
