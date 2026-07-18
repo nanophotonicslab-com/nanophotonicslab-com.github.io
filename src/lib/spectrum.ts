@@ -44,6 +44,37 @@ export function spectrumFromPlasmon(r: PlasmonSpectrum): Spectrum {
   };
 }
 
+/** Peak metrics of one spectrum channel: position, height, FWHM, quality factor. */
+export interface PeakAnalysis {
+  x0: number; y0: number;
+  /** Full width at half maximum; NaN when a half-max crossing falls outside the grid. */
+  fwhm: number;
+  /** x0 / fwhm — dimensionless Q for either λ or energy axes. */
+  q: number;
+}
+
+export function peakAnalysis(x: Float64Array, y: Float64Array): PeakAnalysis | null {
+  if (x.length < 3) return null;
+  let iMax = 0;
+  for (let i = 1; i < y.length; i++) if (y[i] > y[iMax]) iMax = i;
+  const y0 = y[iMax];
+  if (!(y0 > 0)) return null;
+  const half = y0 / 2;
+  const crossing = (from: number, step: -1 | 1): number => {
+    for (let i = from; i + step >= 0 && i + step < y.length; i += step) {
+      const a = y[i], b = y[i + step];
+      if ((a - half) * (b - half) <= 0 && a !== b) {
+        const t = (half - a) / (b - a);
+        return x[i] + t * (x[i + step] - x[i]);
+      }
+    }
+    return NaN;
+  };
+  const xl = crossing(iMax, -1), xr = crossing(iMax, 1);
+  const fwhm = Math.abs(xr - xl);
+  return { x0: x[iMax], y0, fwhm, q: fwhm > 0 ? x[iMax] / fwhm : NaN };
+}
+
 /** EELS/CL spectra of a swift electron near a sphere (computeElectronSphereSpectrum). */
 export function spectrumFromElectron(r: ElectronSpectrum): Spectrum {
   return {

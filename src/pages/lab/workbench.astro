@@ -2,9 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import { MATERIALS } from '../../data/optical-constants';
 
-// v0 of the node-editor "material workbench" (docs/node-editor-decision-brief.md):
-// one shared Material + Environment definition fanned out to three solvers,
-// fixed topology, hidden route (excluded from sitemap, not linked from /lab/).
+// v0.5 of the node-editor "material workbench" (docs/node-editor-decision-brief.md):
+// shared Material/Environment/Geometry nodes fan out to three solvers, and a
+// consumer row re-uses solver outputs (σ_abs → ΔT, any channel → color/peaks).
+// Edges into consumers are editable via input selectors — re-wiring without a
+// canvas. Evaluation runs on src/lib/graph.ts. Hidden route (no sitemap, noindex).
 const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label: m.label }));
 ---
 
@@ -14,10 +16,11 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
       <a href="/lab/" class="back-link">&larr; Back to Lab</a>
       <h1>Material <span class="gradient-text">Workbench</span></h1>
       <p class="widget-hero__subtitle">
-        Define a material once — feed it to three solvers at the same time.
-        Plane-wave Mie, plasmonic nanoparticle and electron-beam spectra share
-        the same dispersion and the same spectral window.
-        <span class="bench-badge">v0 &middot; hidden preview</span>
+        Define a material, an environment and a geometry once — feed them to
+        three solvers at the same time, then pipe the solver outputs into
+        derived calculations. The input selector on each derived node is a
+        re-wirable edge.
+        <span class="bench-badge">v0.5 &middot; hidden preview</span>
       </p>
     </div>
   </section>
@@ -28,7 +31,7 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
         <svg class="bench-wires" id="bench-wires" aria-hidden="true"></svg>
 
         <div class="bench-left">
-          <div class="node card" id="node-material">
+          <div class="node card">
             <div class="node-head">
               <h3>Material</h3>
               <span class="port port--out" id="port-material"></span>
@@ -48,7 +51,7 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
             <p class="node-readout" id="mat-readout"></p>
           </div>
 
-          <div class="node card" id="node-env">
+          <div class="node card">
             <div class="node-head">
               <h3>Environment</h3>
               <span class="port port--out" id="port-env"></span>
@@ -67,29 +70,25 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
               <p class="node-readout" id="env-readout"></p>
             </div>
           </div>
-        </div>
 
-        <div class="bench-right">
-          <div class="node card node--solver" id="node-mie">
+          <div class="node card">
             <div class="node-head">
-              <span class="port port--in"></span>
-              <h3>Mie sphere</h3>
-              <span class="swatch" id="mie-swatch" title="Scattered color (σ_sca over the visible)"></span>
+              <h3>Sphere</h3>
+              <span class="node-tag">geometry</span>
+              <span class="port port--out" id="port-sphere"></span>
             </div>
-            <div class="solver-params">
-              <label>Radius (nm)
-                <input type="number" id="mie-radius" class="param-number" value="50" step="5" min="1" max="500" aria-label="Sphere radius (nm)">
-              </label>
+            <div class="param">
+              <div class="param-header"><label for="geo-radius">Radius (nm)</label></div>
+              <input type="number" id="geo-radius" class="param-number" value="50" step="5" min="1" max="500" aria-label="Sphere radius (nm)">
             </div>
-            <div class="chart-wrap"><canvas id="mie-chart"></canvas><div class="chart-tip" id="mie-tip"></div></div>
-            <div class="chart-legend" id="mie-legend"></div>
+            <p class="node-readout">&rarr; Mie &middot; Electron beam</p>
           </div>
 
-          <div class="node card node--solver" id="node-plasmon">
+          <div class="node card">
             <div class="node-head">
-              <span class="port port--in"></span>
-              <h3>Plasmonic particle</h3>
-              <span class="swatch" id="plasmon-swatch" title="Scattered color (σ_sca over the visible)"></span>
+              <h3>Particle</h3>
+              <span class="node-tag">geometry</span>
+              <span class="port port--out" id="port-particle"></span>
             </div>
             <div class="solver-params">
               <label>Shape
@@ -102,28 +101,122 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
                 <input type="number" id="plasmon-aspect" class="param-number" value="4" step="0.5" min="1" max="10" aria-label="Aspect ratio">
               </label>
             </div>
-            <div class="chart-wrap"><canvas id="plasmon-chart"></canvas><div class="chart-tip" id="plasmon-tip"></div></div>
-            <div class="chart-legend" id="plasmon-legend"></div>
+            <p class="node-readout">&rarr; Plasmonic particle</p>
+          </div>
+        </div>
+
+        <div class="bench-main">
+          <div class="bench-solvers">
+            <div class="node card node--solver" id="node-mie">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Mie sphere</h3>
+                <span class="port port--out" id="port-out-mie"></span>
+              </div>
+              <div class="chart-wrap"><canvas id="mie-chart"></canvas><div class="chart-tip" id="mie-tip"></div></div>
+              <div class="chart-legend" id="mie-legend"></div>
+            </div>
+
+            <div class="node card node--solver" id="node-plasmon">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Plasmonic particle</h3>
+                <span class="port port--out" id="port-out-plasmon"></span>
+              </div>
+              <div class="chart-wrap"><canvas id="plasmon-chart"></canvas><div class="chart-tip" id="plasmon-tip"></div></div>
+              <div class="chart-legend" id="plasmon-legend"></div>
+            </div>
+
+            <div class="node card node--solver" id="node-electron">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Electron beam</h3>
+                <span class="port port--out" id="port-out-electron"></span>
+              </div>
+              <div class="solver-params">
+                <label>K (keV)
+                  <input type="number" id="el-kev" class="param-number" value="100" step="10" min="1" max="300" aria-label="Electron kinetic energy (keV)">
+                </label>
+                <label>b (nm)
+                  <input type="number" id="el-impact" class="param-number" value="60" step="5" min="1" max="400" aria-label="Impact parameter (nm)">
+                </label>
+              </div>
+              <div class="chart-wrap"><canvas id="electron-chart"></canvas><div class="chart-tip" id="electron-tip"></div></div>
+              <div class="chart-legend" id="electron-legend"></div>
+            </div>
           </div>
 
-          <div class="node card node--solver" id="node-electron">
-            <div class="node-head">
-              <span class="port port--in"></span>
-              <h3>Electron beam</h3>
+          <div class="bench-derived">
+            <div class="node card node--derived" id="node-photothermal">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Photothermal</h3>
+                <span class="node-tag">derived</span>
+              </div>
+              <div class="solver-params">
+                <label>&sigma;<sub>abs</sub> from
+                  <select id="pt-input" class="param-select" aria-label="Absorption input for photothermal">
+                    <option value="mie" selected>Mie sphere</option>
+                    <option value="plasmon">Plasmonic particle</option>
+                  </select>
+                </label>
+                <label>P (mW)
+                  <input type="number" id="pt-power" class="param-number" value="1" step="0.5" min="0" max="500" aria-label="Laser power (mW)">
+                </label>
+                <label>w&#8320; (&mu;m)
+                  <input type="number" id="pt-waist" class="param-number" value="1" step="0.1" min="0.2" max="50" aria-label="Beam waist (µm)">
+                </label>
+                <label>&kappa; (W/mK)
+                  <input type="number" id="pt-kappa" class="param-number" value="0.606" step="0.05" min="0.05" max="5" aria-label="Host thermal conductivity (W/mK)">
+                </label>
+              </div>
+              <div class="chart-wrap"><canvas id="pt-chart"></canvas><div class="chart-tip" id="pt-tip"></div></div>
+              <p class="node-headline" id="pt-headline"></p>
             </div>
-            <div class="solver-params">
-              <label>Radius (nm)
-                <input type="number" id="el-radius" class="param-number" value="50" step="5" min="5" max="300" aria-label="Sphere radius (nm)">
-              </label>
-              <label>K (keV)
-                <input type="number" id="el-kev" class="param-number" value="100" step="10" min="1" max="300" aria-label="Electron kinetic energy (keV)">
-              </label>
-              <label>b (nm)
-                <input type="number" id="el-impact" class="param-number" value="60" step="5" min="1" max="400" aria-label="Impact parameter (nm)">
-              </label>
+
+            <div class="node card node--derived" id="node-color">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Color</h3>
+                <span class="node-tag">derived</span>
+              </div>
+              <div class="solver-params">
+                <label>Channel
+                  <select id="color-input" class="param-select" aria-label="Spectrum channel for color">
+                    <option value="mie:csca" selected>Mie &sigma;_sca</option>
+                    <option value="mie:cabs">Mie &sigma;_abs</option>
+                    <option value="plasmon:sigmaScaNm2">Plasmon &sigma;_sca</option>
+                    <option value="plasmon:sigmaAbsNm2">Plasmon &sigma;_abs</option>
+                  </select>
+                </label>
+              </div>
+              <div class="color-swatch" id="color-swatch"></div>
+              <p class="node-headline" id="color-headline"></p>
+              <p class="node-readout">Channel normalized to its peak over 380&ndash;780&nbsp;nm.</p>
             </div>
-            <div class="chart-wrap"><canvas id="electron-chart"></canvas><div class="chart-tip" id="electron-tip"></div></div>
-            <div class="chart-legend" id="electron-legend"></div>
+
+            <div class="node card node--derived" id="node-peak">
+              <div class="node-head">
+                <span class="port port--in"></span>
+                <h3>Peak analysis</h3>
+                <span class="node-tag">derived</span>
+              </div>
+              <div class="solver-params">
+                <label>Channel
+                  <select id="peak-input" class="param-select" aria-label="Spectrum channel for peak analysis">
+                    <option value="mie:cext">Mie &sigma;_ext</option>
+                    <option value="mie:csca" selected>Mie &sigma;_sca</option>
+                    <option value="mie:cabs">Mie &sigma;_abs</option>
+                    <option value="plasmon:sigmaExtNm2">Plasmon &sigma;_ext</option>
+                    <option value="plasmon:sigmaScaNm2">Plasmon &sigma;_sca</option>
+                    <option value="plasmon:sigmaAbsNm2">Plasmon &sigma;_abs</option>
+                    <option value="electron:eelsTotal">EELS</option>
+                    <option value="electron:clTotal">CL</option>
+                  </select>
+                </label>
+              </div>
+              <dl class="peak-readout" id="peak-readout"></dl>
+            </div>
           </div>
         </div>
       </div>
@@ -134,7 +227,7 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
 <style>
   .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
   .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 640px; }
+  .widget-hero__subtitle { font-size: 1.125rem; max-width: 680px; }
   .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
   .back-link:hover { color: var(--primary); }
@@ -145,13 +238,18 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   }
 
   .bench { position: relative; display: grid; grid-template-columns: 240px 1fr; gap: var(--space-lg); align-items: start; }
-  .bench-left { display: flex; flex-direction: column; gap: var(--space-lg); }
-  .bench-right { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg); min-width: 0; }
+  .bench-left { display: flex; flex-direction: column; gap: var(--space-md); }
+  .bench-main { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
+  .bench-solvers, .bench-derived { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg); }
 
   .bench-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   .node { position: relative; z-index: 2; padding: var(--space-md); }
   .node-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--space-md); }
-  .node-head h3 { font-size: 0.95rem; flex: 1 1 auto; }
+  .node-head h3 { font-size: 0.95rem; flex: 0 1 auto; }
+  .node-tag {
+    padding: 0.05rem 0.45rem; background: var(--bg-muted); border-radius: var(--radius-full);
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.03em; color: var(--text-muted); text-transform: uppercase;
+  }
   .port {
     width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
     background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
@@ -173,14 +271,11 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   .env-range { display: flex; align-items: center; gap: 0.35rem; }
   .env-dash { color: var(--text-muted); }
   .node-readout { font-size: 0.75rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }
+  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0.4rem 0 0; font-variant-numeric: tabular-nums; }
 
-  .node--solver { display: flex; flex-direction: column; min-width: 0; }
+  .node--solver, .node--derived { display: flex; flex-direction: column; min-width: 0; }
   .solver-params { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: var(--space-sm); }
   .solver-params label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.75rem; font-weight: 600; color: var(--text-soft); flex: 1 1 4.5rem; min-width: 0; }
-  .swatch {
-    width: 22px; height: 22px; border-radius: var(--radius-sm); flex: 0 0 auto;
-    border: 1px solid var(--bg-muted); background: transparent;
-  }
 
   .chart-wrap { position: relative; width: 100%; }
   .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 4 / 3; }
@@ -194,15 +289,22 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
 
+  .color-swatch {
+    width: 100%; height: 64px; border-radius: var(--radius-md);
+    border: 1px solid var(--bg-muted); background: transparent;
+  }
+  .peak-readout { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.8rem; margin: 0.3rem 0 0; font-size: 0.85rem; }
+  .peak-readout :global(dt) { color: var(--text-soft); font-weight: 500; }
+  .peak-readout :global(dd) { margin: 0; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+
   @media (max-width: 1100px) {
     .bench { grid-template-columns: 1fr; }
-    .bench-left { flex-direction: row; }
-    .bench-left .node { flex: 1 1 0; }
+    .bench-left { display: grid; grid-template-columns: 1fr 1fr; }
     .bench-wires { display: none; }
   }
   @media (max-width: 640px) {
-    .bench-left { flex-direction: column; }
-    .bench-right { grid-template-columns: 1fr; }
+    .bench-left { grid-template-columns: 1fr; }
+    .bench-solvers, .bench-derived { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -212,13 +314,15 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   import { computeMie } from '../../lib/mie';
   import { computePlasmonSpectrum, SHAPE_OPTIONS, type PlasmonShapeId } from '../../lib/plasmonic-nanoparticles';
   import { computeElectronSphereSpectrum } from '../../lib/electron-sphere';
-  import { spectrumFromMie, spectrumFromPlasmon, spectrumFromElectron, type Spectrum } from '../../lib/spectrum';
+  import { spectrumFromMie, spectrumFromPlasmon, spectrumFromElectron, peakAnalysis, type Spectrum } from '../../lib/spectrum';
   import { spectrumToHex } from '../../lib/colorimetry';
+  import { peakIrradianceWm2, deltaTSpectrum } from '../../lib/photothermal';
+  import { Graph } from '../../lib/graph';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const num = (id: string, fallback: number) => {
-    const v = parseFloat(($ (id) as HTMLInputElement).value);
+    const v = parseFloat(($(id) as unknown as HTMLInputElement).value);
     return Number.isFinite(v) ? v : fallback;
   };
 
@@ -234,7 +338,7 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   const isDark = () => document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  // ── Material node ──
+  // ── Source nodes: material / environment / geometries ──
   const matSelect = $('mat-select') as unknown as HTMLSelectElement;
   const drudeBox = $('drude-params');
   function drudeParams() {
@@ -253,7 +357,6 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     return nkToEpsilon(n, k);
   }
 
-  // ── Environment node ──
   const HC = 1239.841984;
   function env() {
     const lmin = Math.max(200, num('env-lmin', 300));
@@ -262,7 +365,6 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     return { lmin, lmax, nHost };
   }
 
-  // ── Shapes ──
   const shapeSel = $('plasmon-shape') as unknown as HTMLSelectElement;
   for (const s of SHAPE_OPTIONS) {
     const o = document.createElement('option');
@@ -271,7 +373,11 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   }
   shapeSel.value = 'rod';
 
-  // ── Compact line-chart renderer (thin marks, recessive grid, one axis) ──
+  // ── Producer registry: solver outputs the derived row can consume ──
+  interface ProducerOutput { spectrum: Spectrum; radiusNm: number; }
+  const outputs = new Map<string, ProducerOutput>();
+
+  // ── Compact line-chart renderer ──
   interface SeriesSpec { key: string; label: string; color: string; }
   interface ChartState { spectrum: Spectrum | null; series: SeriesSpec[]; xLabel: string; hoverI: number; }
   const charts = new Map<string, ChartState>();
@@ -387,20 +493,33 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     });
   }
 
-  // ── Swatches ──
-  function updateSwatch(id: string, s: Spectrum, key: string) {
-    const el = $(id);
-    const peak = Math.max(...s.series[key]);
-    if (!(peak > 0)) { el.style.background = 'transparent'; return; }
-    const R = Float64Array.from(s.series[key], (v) => v / peak);
-    el.style.background = spectrumToHex(s.x, R);
-  }
+  // ── Consumer input selectors (each one is a re-wirable edge) ──
+  const ptInput = $('pt-input') as unknown as HTMLSelectElement;
+  const colorInput = $('color-input') as unknown as HTMLSelectElement;
+  const peakInput = $('peak-input') as unknown as HTMLSelectElement;
+  const producerOf = (sel: HTMLSelectElement) => sel.value.split(':')[0];
+  const channelOf = (sel: HTMLSelectElement) => sel.value.split(':')[1];
 
-  // ── Solver runs ──
+  // ── Graph nodes ──
+  const graph = new Graph();
   const POINTS = 240;
-  function runMie() {
+
+  graph.add({ id: 'material', deps: () => [], run: () => {
+    const [n, k] = getNK(550);
+    $('mat-readout').textContent = `n + ik @ 550 nm: ${n.toFixed(3)} + ${k.toFixed(3)}i`;
+  }});
+  graph.add({ id: 'env', deps: () => [], run: () => {
     const e = env();
-    const spec = spectrumFromMie(computeMie(getNK, num('mie-radius', 50), e.nHost, e.lmin, e.lmax, POINTS));
+    $('env-readout').textContent = `= ${(HC / e.lmax).toFixed(2)} – ${(HC / e.lmin).toFixed(2)} eV`;
+  }});
+  graph.add({ id: 'sphereGeo', deps: () => [], run: () => {} });
+  graph.add({ id: 'particleGeo', deps: () => [], run: () => {} });
+
+  graph.add({ id: 'mie', deps: () => ['material', 'env', 'sphereGeo'], run: () => {
+    const e = env();
+    const radiusNm = num('geo-radius', 50);
+    const spec = spectrumFromMie(computeMie(getNK, radiusNm, e.nHost, e.lmin, e.lmax, POINTS));
+    outputs.set('mie', { spectrum: spec, radiusNm });
     const c = isDark() ? SIGMA_COLORS.dark : SIGMA_COLORS.light;
     const series = [
       { key: 'cext', label: 'σ_ext', color: c.ext },
@@ -410,12 +529,11 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     charts.set('mie-chart', { spectrum: spec, series, xLabel: 'λ (nm) · σ (nm²)', hoverI: -1 });
     renderLegend('mie-legend', series);
     drawChart('mie-chart');
-    updateSwatch('mie-swatch', spec, 'csca');
-  }
+  }});
 
-  function runPlasmon() {
+  graph.add({ id: 'plasmon', deps: () => ['material', 'env', 'particleGeo'], run: () => {
     const e = env();
-    const spec = spectrumFromPlasmon(computePlasmonSpectrum({
+    const raw = computePlasmonSpectrum({
       shape: shapeSel.value as PlasmonShapeId,
       materialId: matSelect.value === 'drude' ? 'au' : matSelect.value,
       epsilonAt,
@@ -425,7 +543,11 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
       lambdaMinNm: e.lmin,
       lambdaMaxNm: e.lmax,
       points: POINTS,
-    }));
+    });
+    const spec = spectrumFromPlasmon(raw);
+    // volume-equivalent radius for downstream photothermal use
+    const radiusNm = Math.cbrt((3 * raw.volumeNm3) / (4 * Math.PI));
+    outputs.set('plasmon', { spectrum: spec, radiusNm });
     const c = isDark() ? SIGMA_COLORS.dark : SIGMA_COLORS.light;
     const series = [
       { key: 'sigmaExtNm2', label: 'σ_ext', color: c.ext },
@@ -435,19 +557,20 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     charts.set('plasmon-chart', { spectrum: spec, series, xLabel: 'λ (nm) · σ (nm²)', hoverI: -1 });
     renderLegend('plasmon-legend', series);
     drawChart('plasmon-chart');
-    updateSwatch('plasmon-swatch', spec, 'sigmaScaNm2');
-  }
+  }});
 
-  function runElectron() {
+  graph.add({ id: 'electron', deps: () => ['material', 'env', 'sphereGeo'], run: () => {
     const e = env();
     const kev = num('el-kev', 100);
     const gamma = 1 + kev / 510.99895;
     const beta = Math.sqrt(Math.max(1e-6, 1 - 1 / (gamma * gamma)));
+    const radiusNm = num('geo-radius', 50);
     const spec = spectrumFromElectron(computeElectronSphereSpectrum(
       getNK,
-      { radiusNm: num('el-radius', 50), beta, impactNm: num('el-impact', 60), lmax: 6, qCutNm: 0.71, nz: 32 },
+      { radiusNm, beta, impactNm: num('el-impact', 60), lmax: 6, qCutNm: 0.71, nz: 32 },
       HC / e.lmax, HC / e.lmin, 120,
     ));
+    outputs.set('electron', { spectrum: spec, radiusNm });
     const c = isDark() ? ELECTRON_COLORS.dark : ELECTRON_COLORS.light;
     const series = [
       { key: 'eelsTotal', label: 'EELS', color: c.eels },
@@ -456,42 +579,82 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     charts.set('electron-chart', { spectrum: spec, series, xLabel: 'ħω (eV) · Γ (eV⁻¹)', hoverI: -1 });
     renderLegend('electron-legend', series);
     drawChart('electron-chart');
-  }
+  }});
 
-  function updateReadouts() {
-    const e = env();
-    const [n, k] = getNK(550);
-    $('mat-readout').textContent = `n + ik @ 550 nm: ${n.toFixed(3)} + ${k.toFixed(3)}i`;
-    $('env-readout').textContent = `= ${(HC / e.lmax).toFixed(2)} – ${(HC / e.lmin).toFixed(2)} eV`;
-  }
+  graph.add({ id: 'photothermal', deps: () => [producerOf(ptInput)], run: () => {
+    const src = outputs.get(producerOf(ptInput));
+    if (!src) return;
+    const key = producerOf(ptInput) === 'mie' ? 'cabs' : 'sigmaAbsNm2';
+    const I = peakIrradianceWm2(num('pt-power', 1), num('pt-waist', 1));
+    const kappa = num('pt-kappa', 0.606);
+    const dT = deltaTSpectrum(src.spectrum.series[key], I, kappa, src.radiusNm);
+    const spec: Spectrum = { x: src.spectrum.x, axis: 'lambdaNm', series: { dT } };
+    const series = [{ key: 'dT', label: 'ΔT', color: chartTheme().primary }];
+    charts.set('pt-chart', { spectrum: spec, series, xLabel: 'λ (nm) · ΔT (K)', hoverI: -1 });
+    drawChart('pt-chart');
+    const p = peakAnalysis(spec.x, dT);
+    $('pt-headline').textContent = p
+      ? `ΔT(peak) = ${p.y0.toFixed(2)} K @ ${p.x0.toFixed(0)} nm — R = ${src.radiusNm.toFixed(1)} nm`
+      : 'No absorption in this window.';
+  }});
 
-  // ── Scheduling: material/env changes rerun everything; solver params rerun one ──
-  let pending = new Set<() => void>();
+  graph.add({ id: 'color', deps: () => [producerOf(colorInput)], run: () => {
+    const src = outputs.get(producerOf(colorInput));
+    if (!src) return;
+    const y = src.spectrum.series[channelOf(colorInput)];
+    const peak = Math.max(...y);
+    const sw = $('color-swatch');
+    if (!(peak > 0)) { sw.style.background = 'transparent'; $('color-headline').textContent = '—'; return; }
+    const R = Float64Array.from(y, (v) => v / peak);
+    const hex = spectrumToHex(src.spectrum.x, R);
+    sw.style.background = hex;
+    $('color-headline').textContent = hex;
+  }});
+
+  graph.add({ id: 'peak', deps: () => [producerOf(peakInput)], run: () => {
+    const src = outputs.get(producerOf(peakInput));
+    if (!src) return;
+    const isEv = src.spectrum.axis === 'energyEv';
+    const p = peakAnalysis(src.spectrum.x, src.spectrum.series[channelOf(peakInput)]);
+    $('peak-readout').innerHTML = p
+      ? `<dt>${isEv ? 'E₀' : 'λ₀'}</dt><dd>${p.x0.toFixed(isEv ? 3 : 1)} ${isEv ? 'eV' : 'nm'}</dd>
+         <dt>Peak</dt><dd>${fmt(p.y0)}</dd>
+         <dt>FWHM</dt><dd>${Number.isNaN(p.fwhm) ? 'outside window' : fmt(p.fwhm) + (isEv ? ' eV' : ' nm')}</dd>
+         <dt>Q</dt><dd>${Number.isNaN(p.q) ? '—' : p.q.toFixed(1)}</dd>`
+      : '<dt>Peak</dt><dd>none in window</dd>';
+  }});
+
+  // ── Event wiring: each control invalidates its own node ──
+  const invalidateQueue = new Set<string>();
   let rafId = 0;
-  function schedule(...runs: Array<() => void>) {
-    runs.forEach((r) => pending.add(r));
+  function invalidateSoon(id: string) {
+    invalidateQueue.add(id);
     if (!rafId) rafId = requestAnimationFrame(() => {
       rafId = 0;
-      const batch = [...pending]; pending.clear();
-      updateReadouts();
-      batch.forEach((r) => { try { r(); } catch (err) { console.error(err); } });
+      const batch = [...invalidateQueue]; invalidateQueue.clear();
+      for (const nodeId of batch) {
+        try { graph.invalidate(nodeId); } catch (err) { console.error(err); }
+      }
       layoutWires();
     });
   }
-  const ALL = [runMie, runPlasmon, runElectron];
 
   matSelect.addEventListener('change', () => {
     drudeBox.style.display = matSelect.value === 'drude' ? '' : 'none';
-    schedule(...ALL);
+    invalidateSoon('material');
   });
-  for (const id of ['drude-epsb', 'drude-wp', 'drude-gamma', 'env-nhost', 'env-lmin', 'env-lmax'])
-    $(id).addEventListener('input', () => schedule(...ALL));
-  $('mie-radius').addEventListener('input', () => schedule(runMie));
-  for (const id of ['plasmon-length', 'plasmon-aspect']) $(id).addEventListener('input', () => schedule(runPlasmon));
-  shapeSel.addEventListener('change', () => schedule(runPlasmon));
-  for (const id of ['el-radius', 'el-kev', 'el-impact']) $(id).addEventListener('input', () => schedule(runElectron));
+  for (const id of ['drude-epsb', 'drude-wp', 'drude-gamma']) $(id).addEventListener('input', () => invalidateSoon('material'));
+  for (const id of ['env-nhost', 'env-lmin', 'env-lmax']) $(id).addEventListener('input', () => invalidateSoon('env'));
+  $('geo-radius').addEventListener('input', () => invalidateSoon('sphereGeo'));
+  for (const id of ['plasmon-length', 'plasmon-aspect']) $(id).addEventListener('input', () => invalidateSoon('particleGeo'));
+  shapeSel.addEventListener('change', () => invalidateSoon('particleGeo'));
+  for (const id of ['el-kev', 'el-impact']) $(id).addEventListener('input', () => invalidateSoon('electron'));
+  for (const id of ['pt-power', 'pt-waist', 'pt-kappa']) $(id).addEventListener('input', () => invalidateSoon('photothermal'));
+  ptInput.addEventListener('change', () => invalidateSoon('photothermal'));
+  colorInput.addEventListener('change', () => invalidateSoon('color'));
+  peakInput.addEventListener('change', () => invalidateSoon('peak'));
 
-  // ── Wires: material/env ports → solver in-ports ──
+  // ── Wires: sources → solvers → selected consumers ──
   function layoutWires() {
     const svg = $('bench-wires') as unknown as SVGSVGElement & HTMLElement;
     const bench = $('bench');
@@ -501,16 +664,31 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
       const r = el.getBoundingClientRect();
       return { x: (side === 'right' ? r.right : r.left) - br.left, y: r.top + r.height / 2 - br.top };
     };
+    const curve = (o: { x: number; y: number }, p: { x: number; y: number }) => {
+      const midX = (o.x + p.x) / 2;
+      return `<path d="M ${o.x} ${o.y} C ${midX} ${o.y}, ${midX} ${p.y}, ${p.x} ${p.y}"/>`;
+    };
+    const inPort = (nodeId: string) => document.querySelector(`#${nodeId} .port--in`)!;
+    const paths: string[] = [];
     const outM = anchor($('port-material'), 'right');
     const outE = anchor($('port-env'), 'right');
-    const paths: string[] = [];
-    for (const id of ['node-mie', 'node-plasmon', 'node-electron']) {
-      const port = document.querySelector(`#${id} .port--in`)!;
-      const p = anchor(port, 'left');
-      for (const o of [outM, outE]) {
-        const midX = (o.x + p.x) / 2;
-        paths.push(`<path d="M ${o.x} ${o.y} C ${midX} ${o.y}, ${midX} ${p.y}, ${p.x} ${p.y}"/>`);
-      }
+    const outS = anchor($('port-sphere'), 'right');
+    const outP = anchor($('port-particle'), 'right');
+    for (const [nodeId, sources] of [
+      ['node-mie', [outM, outE, outS]],
+      ['node-plasmon', [outM, outE, outP]],
+      ['node-electron', [outM, outE, outS]],
+    ] as const) {
+      const p = anchor(inPort(nodeId), 'left');
+      for (const o of sources) paths.push(curve(o, p));
+    }
+    for (const [sel, nodeId] of [
+      [ptInput, 'node-photothermal'],
+      [colorInput, 'node-color'],
+      [peakInput, 'node-peak'],
+    ] as const) {
+      const o = anchor($(`port-out-${producerOf(sel)}`), 'right');
+      paths.push(curve(o, anchor(inPort(nodeId), 'left')));
     }
     const stroke = chartTheme().primary;
     svg.innerHTML = `<g fill="none" stroke="${stroke}" stroke-opacity="0.28" stroke-width="1.5">${paths.join('')}</g>`;
@@ -519,8 +697,13 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   attachHover('mie-chart', 'mie-tip', 'nm');
   attachHover('plasmon-chart', 'plasmon-tip', 'nm');
   attachHover('electron-chart', 'electron-tip', 'eV');
+  attachHover('pt-chart', 'pt-tip', 'nm');
 
-  window.addEventListener('resize', () => schedule(...ALL));
-  onThemeChange(() => schedule(...ALL));
-  schedule(...ALL);
+  function runAll() {
+    try { graph.runAll(); } catch (err) { console.error(err); }
+    layoutWires();
+  }
+  window.addEventListener('resize', runAll);
+  onThemeChange(runAll);
+  runAll();
 </script>
