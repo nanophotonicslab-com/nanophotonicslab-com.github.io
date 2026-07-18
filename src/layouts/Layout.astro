@@ -8,9 +8,10 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  noindex?: boolean;
 }
 
-const { title, description = 'Interactive browser-based tools for nanophotonics, optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.' } = Astro.props;
+const { title, description = 'Interactive browser-based tools for nanophotonics, optical scattering, plasmonics, electron microscopy, wave optics and ultrafast laser calculations.', noindex = false } = Astro.props;
 const siteTitle = title === 'Home'
   ? 'NanophotonicsLab \u2014 Browser-Based Nanophotonics Tools'
   : `${title} \u2014 NanophotonicsLab`;
@@ -65,6 +66,7 @@ const jsonLd = isHome
     <meta name="theme-color" content="#6366F1" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
     <meta name="generator" content={Astro.generator} />
     <meta property="og:title" content={siteTitle} />
     <meta property="og:description" content={description} />

@@ -13,5 +13,5 @@ export default defineConfig({
     '/team/': '/about/',
   },
 
-  integrations: [sitemap()],
+  integrations: [sitemap({ filter: (page) => !page.includes('/lab/workbench') })],
 });
