@@ -45,8 +45,10 @@ import 'litegraph.js/css/litegraph.css';
           <li><strong>Remove:</strong> select a node and press <kbd>Delete</kbd>. Drag the title bar to move it.</li>
           <li><strong>Save:</strong> <em>Share graph</em> copies a URL that restores nodes, wires and values exactly.</li>
           <li><strong>Try this:</strong> the ΔT output of Photothermal is a spectrum too — wire it into Peak analysis to measure the width of the thermal resonance (that is what the <em>Thermal chain</em> example does).</li>
+          <li><strong>Fit an experiment:</strong> add a <em>Fit to data (Mie)</em> node, wire material + environment, load your measured (λ, extinction) CSV — it fits radius and amplitude and shows data, fit and residuals in the Inspector.</li>
         </ul>
       </details>
+      <input type="file" id="fit-file" accept=".csv,.tsv,.txt,.dat" hidden aria-label="Load experimental spectrum CSV">
       <div class="graph-wrap" id="graph-wrap">
         <canvas id="graph-canvas"></canvas>
         <div class="rii-modal" id="rii-modal" hidden>
@@ -275,6 +277,7 @@ import 'litegraph.js/css/litegraph.css';
   import { spectrumFromMie, spectrumFromPlasmon, spectrumFromElectron, peakAnalysis, type Spectrum } from '../../lib/spectrum';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { peakIrradianceWm2, deltaTSpectrum } from '../../lib/photothermal';
+  import { fitMieRadius, parseSpectrumCsv, type MieChannel } from '../../lib/fit';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
   import { downloadBlob } from '../../lib/download';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
@@ -752,6 +755,90 @@ import 'litegraph.js/css/litegraph.css';
     ctx.strokeStyle = theme().miniBorder;
     ctx.strokeRect(x0, y0, w, h);
   }
+
+  // Fit-to-data ---------------------------------------------------------
+  const fitFileInput = $('fit-file') as unknown as HTMLInputElement;
+  let fitTarget: any = null;
+  fitFileInput.addEventListener('change', () => {
+    const file = fitFileInput.files?.[0];
+    const node = fitTarget;
+    fitFileInput.value = '';
+    if (!file || !node) return;
+    file.text().then((text) => {
+      const parsed = parseSpectrumCsv(text);
+      if ('error' in parsed) { node._dataError = parsed.error; node._data = null; }
+      else {
+        // decimate to ≤300 points to bound the fit cost
+        const N = parsed.x.length, stride = Math.max(1, Math.ceil(N / 300));
+        const M = Math.ceil(N / stride);
+        const x = new Float64Array(M), y = new Float64Array(M);
+        for (let i = 0; i < M; i++) { x[i] = parsed.x[i * stride]; y[i] = parsed.y[i * stride]; }
+        node._data = { x, y, name: file.name };
+        node._dataError = null;
+        node._dataRev = (node._dataRev || 0) + 1;
+      }
+      scheduleRun();
+    });
+  });
+
+  defineNode('workbench/fit', 'Fit to data (Mie)', 'derived', (n) => {
+    n.addInput('material', 'material');
+    n.addInput('env', 'env');
+    n.addOutput('spectrum', 'spectrum');
+    n.properties = { channel: 'cext', rMinNm: 10, rMaxNm: 200 };
+    n.addWidget('button', 'load CSV…', null, () => { fitTarget = n; fitFileInput.click(); });
+    widget(n, 'combo', 'channel', 'channel', { values: ['cext', 'csca', 'cabs'] });
+    widget(n, 'number', 'r min (nm)', 'rMinNm', { min: 1, max: 400, step: 10 });
+    widget(n, 'number', 'r max (nm)', 'rMaxNm', { min: 5, max: 500, step: 10 });
+    n.size = [230, 220];
+  }, (n) => {
+    const mat = n.getInputData(0), e = n.getInputData(1);
+    n._lines = [];
+    if (n._dataError) { n._lines = [`file: ${n._dataError}`]; n._chart = null; n.setOutputData(0, null); return; }
+    if (!n._data) { n._lines = ['load a (λ, value) CSV…']; n._chart = null; n.setOutputData(0, null); return; }
+    if (!mat || !e) { n._lines = ['wire material + environment']; n._chart = null; n.setOutputData(0, null); return; }
+    const p = n.properties;
+    const rMin = Math.max(1, Math.min(p.rMinNm, p.rMaxNm - 1));
+    const rMax = Math.max(rMin + 1, p.rMaxNm);
+    const sig = JSON.stringify([mat, e.nHost, p.channel, rMin, rMax, n._dataRev]);
+    if (sig !== n._sig) {
+      n._sig = sig;
+      n._fit = fitMieRadius((l: number) => nkOf(mat, l), e.nHost, n._data.x, n._data.y, p.channel as MieChannel, rMin, rMax);
+    }
+    const fit = n._fit;
+    const residual = Float64Array.from(n._data.y, (v: number, i: number) => v - fit.model[i]);
+    const spec: Spectrum = {
+      x: n._data.x, axis: 'lambdaNm',
+      series: { data: n._data.y, fit: fit.model, residual },
+    };
+    const c = sigmaColors();
+    n._chart = {
+      spectrum: spec,
+      series: [
+        { key: 'data', label: `data (${n._data.name})`, color: c.ext },
+        { key: 'fit', label: 'fit', color: c.abs },
+        { key: 'residual', label: 'residual', color: c.sca },
+      ],
+      xLabel: 'λ (nm) · signal', xUnit: 'nm',
+    } as ChartData;
+    const atEdge = fit.radiusNm - rMin < 0.5 || rMax - fit.radiusNm < 0.5;
+    n._lines = [
+      `r = ${fit.radiusNm.toFixed(1)} nm${atEdge ? ' (at bound!)' : ''}`,
+      `scale = ${fit.scale.toExponential(2)}`,
+      `R² = ${fit.r2.toFixed(4)} · rms = ${fit.rms.toExponential(1)}`,
+    ];
+    n._headline = n._lines[0];
+    n.setOutputData(0, { spectrum: spec, radiusNm: fit.radiusNm } as ProducerOutput);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed) return;
+      if (this._lines) {
+        ctx.fillStyle = theme().ink; ctx.font = '10px monospace';
+        this._lines.forEach((l: string, i: number) => ctx.fillText(l, 10, 118 + i * 13));
+      }
+      if (this._chart) drawMiniPlot(this, ctx, 158);
+    },
+  });
 
   // Derived -------------------------------------------------------------
   const absKey = (spec: Spectrum) =>
