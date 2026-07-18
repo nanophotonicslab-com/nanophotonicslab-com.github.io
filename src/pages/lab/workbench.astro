@@ -25,10 +25,27 @@ import 'litegraph.js/css/litegraph.css';
   <section class="section">
     <div class="container">
       <div class="bench-toolbar">
+        <span class="bench-toolbar__label">Examples</span>
+        <button id="ex-default" class="tool-btn" type="button" title="One material fanned out to all three solvers">Fan-out</button>
+        <button id="ex-compare" class="tool-btn" type="button" title="Two materials, two Mie solvers, two peak readouts">Au vs Ag</button>
+        <button id="ex-thermal" class="tool-btn" type="button" title="Chained derivation: σ_abs → ΔT(λ) → peak analysis">Thermal chain</button>
+        <span class="bench-toolbar__sep"></span>
         <button id="btn-share" class="tool-btn" type="button" title="Copy a link to this exact graph">Share graph</button>
-        <button id="btn-reset" class="tool-btn" type="button" title="Restore the default material→solvers→derived graph">Reset graph</button>
-        <span class="bench-hint" id="share-hint">Double-click: add node &middot; drag port&rarr;port: wire &middot; right-click: menu</span>
+        <span class="bench-hint" id="share-hint"></span>
       </div>
+
+      <details class="guide">
+        <summary>Quick guide — how to drive the graph</summary>
+        <ul>
+          <li><strong>Add a node:</strong> double-click empty canvas and pick a type (or right-click &rarr; Add Node).</li>
+          <li><strong>Wire:</strong> drag from an output port to an input port. Sockets are typed — a material wire only fits a material input.</li>
+          <li><strong>Inspect:</strong> click any node; the full-size chart appears in the Inspector below the canvas.</li>
+          <li><strong>Edit values:</strong> drag horizontally on a number widget; click a combo to choose.</li>
+          <li><strong>Remove:</strong> select a node and press <kbd>Delete</kbd>. Drag the title bar to move it.</li>
+          <li><strong>Save:</strong> <em>Share graph</em> copies a URL that restores nodes, wires and values exactly.</li>
+          <li><strong>Try this:</strong> the ΔT output of Photothermal is a spectrum too — wire it into Peak analysis to measure the width of the thermal resonance (that is what the <em>Thermal chain</em> example does).</li>
+        </ul>
+      </details>
       <div class="graph-wrap" id="graph-wrap">
         <canvas id="graph-canvas"></canvas>
       </div>
@@ -61,6 +78,22 @@ import 'litegraph.js/css/litegraph.css';
   }
 
   .bench-toolbar { display: flex; align-items: center; gap: 0.6rem; margin-bottom: var(--space-sm); flex-wrap: wrap; }
+  .bench-toolbar__label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+  .bench-toolbar__sep { flex: 0 0 1px; height: 1.4rem; background: var(--bg-muted); }
+  .guide { margin-bottom: var(--space-sm); border: 1px solid var(--bg-muted); border-radius: var(--radius-md); background: var(--bg); }
+  .guide summary {
+    padding: 0.5rem 0.9rem; cursor: pointer; user-select: none;
+    font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); list-style: none;
+  }
+  .guide summary::-webkit-details-marker { display: none; }
+  .guide summary::before { content: '▸ '; color: var(--primary); }
+  .guide[open] summary::before { content: '▾ '; }
+  .guide ul { margin: 0; padding: 0 1.2rem 0.8rem 2rem; }
+  .guide li { font-size: 0.8125rem; color: var(--text-soft); margin-bottom: 0.3rem; }
+  .guide kbd {
+    padding: 0.05rem 0.35rem; border: 1px solid var(--bg-muted); border-bottom-width: 2px;
+    border-radius: 4px; font-size: 0.72rem; background: var(--bg-soft);
+  }
   .tool-btn {
     padding: 0.35rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     background: var(--bg); color: var(--primary); font-family: var(--font);
@@ -268,10 +301,10 @@ import 'litegraph.js/css/litegraph.css';
     dark: {
       ...INSTRUMENT,
       canvasBg: '#0B0A16',
-      nodeBg: '#1A1930',
-      text: '#9896B0', ink: '#9896B0',
-      widgetBg: '#0F0E1A', widgetOutline: '#2A2945', widgetText: '#A5B4FC', widgetText2: '#9896B0',
-      miniBorder: 'rgba(152, 150, 176, 0.3)',
+      nodeBg: '#232145',
+      text: '#B4B2CC', ink: '#B4B2CC',
+      widgetBg: '#1A1930', widgetOutline: '#3D3B66', widgetText: '#A5B4FC', widgetText2: '#9896B0',
+      miniBorder: 'rgba(165, 180, 252, 0.3)',
     },
   };
   const theme = () => (isDark() ? EDITOR_THEME.dark : EDITOR_THEME.light);
@@ -696,13 +729,65 @@ import 'litegraph.js/css/litegraph.css';
     history.replaceState(null, '', url);
     try { await navigator.clipboard.writeText(url); $('share-hint').textContent = 'Link copied to clipboard.'; }
     catch { $('share-hint').textContent = 'Link is in the address bar.'; }
-    setTimeout(() => { $('share-hint').textContent = 'Double-click: add node · drag port→port: wire · right-click: menu'; }, 3000);
+    setTimeout(() => { $('share-hint').textContent = ''; }, 3000);
   });
-  $('btn-reset').addEventListener('click', () => {
+
+  // ── Example graphs (the tutorial that teaches by doing) ──
+  const mkNode = (type: string, x: number, y: number) => {
+    const node = LiteGraph.createNode(type);
+    node.pos = [x, y];
+    graph.add(node);
+    return node;
+  };
+  // Set a property AND sync its widget display (widgets cache their value).
+  function setProp(node: any, key: string, value: unknown) {
+    node.properties[key] = value;
+    const w = (node.widgets || []).find((w: any) => w.options?.property === key);
+    if (w) w.value = value;
+  }
+  function loadExample(build: () => void) {
     history.replaceState(null, '', location.pathname);
-    buildDefaultGraph();
+    graph.clear();
+    build();
     scheduleRun();
-  });
+  }
+
+  function buildCompareGraph() {
+    const matA = mkNode('workbench/material', 40, 60);
+    const matB = mkNode('workbench/material', 40, 240);
+    setProp(matB, 'source', 'ag');
+    const env = mkNode('workbench/environment', 40, 420);
+    const sph = mkNode('workbench/sphere', 40, 590);
+    setProp(sph, 'radiusNm', 60);
+    const mieA = mkNode('workbench/mie', 340, 80);
+    const mieB = mkNode('workbench/mie', 340, 320);
+    const pkA = mkNode('workbench/peak', 650, 90);
+    const pkB = mkNode('workbench/peak', 650, 330);
+    setProp(pkA, 'channel', 'csca');
+    setProp(pkB, 'channel', 'csca');
+    for (const [mat, mie, pk] of [[matA, mieA, pkA], [matB, mieB, pkB]] as const) {
+      mat.connect(0, mie, 0); env.connect(0, mie, 1); sph.connect(0, mie, 2);
+      mie.connect(0, pk, 0);
+    }
+  }
+
+  function buildThermalGraph() {
+    const mat = mkNode('workbench/material', 40, 80);
+    const env = mkNode('workbench/environment', 40, 280);
+    const sph = mkNode('workbench/sphere', 40, 460);
+    setProp(sph, 'radiusNm', 60);
+    const mie = mkNode('workbench/mie', 320, 120);
+    const pt = mkNode('workbench/photothermal', 600, 100);
+    const pk = mkNode('workbench/peak', 880, 130);
+    setProp(pk, 'channel', 'dT');
+    mat.connect(0, mie, 0); env.connect(0, mie, 1); sph.connect(0, mie, 2);
+    mie.connect(0, pt, 0);
+    pt.connect(0, pk, 0); // chained derivation: σ_abs → ΔT(λ) → peak width
+  }
+
+  $('ex-default').addEventListener('click', () => loadExample(buildDefaultGraph));
+  $('ex-compare').addEventListener('click', () => loadExample(buildCompareGraph));
+  $('ex-thermal').addEventListener('click', () => loadExample(buildThermalGraph));
 
   // ── Inspector (big chart for the selected node) ──
   let selectedNode: any = null;

@@ -71,3 +71,40 @@ library question can be deferred until the slice needs real interaction.
   (issue #22) only pre-empts it if real-device testing surfaces breakage.
 - **Álvaro's role: consultative.** The internal v0 proceeds without waiting;
   his input is sought on the public-facing scope and timing.
+
+---
+
+## v1 critique (2026-07-18, after the canvas shipped)
+
+Shipped in one day: v0 fan-out → v0.5 graph engine + derived row → v1
+litegraph canvas (typed sockets, mini-plots, inspector, URL serialization,
+example graphs). Honest assessment of whether it is worth anything:
+
+**Where the real value is**
+- *Shared dispersion across physics contexts* — one material feeding
+  Mie + plasmonic + EELS with zero re-entry is something none of the 12
+  tools can do, and it is the workflow the owner actually asked for.
+- *Chained derivation* (σ_abs → ΔT(λ) → peak width) answers a
+  research-shaped question end-to-end; each new derived node is ~40 lines
+  around an existing lib function, so marginal cost is low.
+- *Serializable graphs* are reproducible mini-protocols — teaching and
+  collaboration material the single-purpose tools can't express.
+
+**Honest doubts**
+- For any *single* question, the dedicated tool is still better (presets,
+  exports, citations, RII database). v1 composes answers; it does not yet
+  beat the tools at anything they already do.
+- The material node only knows 6 tabulated materials + Drude — far weaker
+  than the Mie page's RII search. For real personal use this is the #1 gap.
+- No CSV/PNG export from nodes; graph permalinks don't interoperate with
+  the tool pages.
+- litegraph.js is minimally maintained upstream; treat it as replaceable
+  (the model/engine is ours, the canvas is a view).
+- Touch/mobile is poor; fine for a hidden preview, blocking for public.
+
+**The test that decides**: per the promotion criterion (survives the
+owner's own use), give it 4–6 weeks of real use. If the workbench is not
+reached for by then, that is the no-go for public promotion. Next
+iterations should target the personal-use gaps in order: (1) RII material
+search in the material node, (2) CSV/PNG export from any node, (3) more
+derived nodes only when a real question demands one.
