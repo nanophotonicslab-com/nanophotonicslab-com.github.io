@@ -1,224 +1,47 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { MATERIALS } from '../../data/optical-constants';
+import 'litegraph.js/css/litegraph.css';
 
-// v0.5 of the node-editor "material workbench" (docs/node-editor-decision-brief.md):
-// shared Material/Environment/Geometry nodes fan out to three solvers, and a
-// consumer row re-uses solver outputs (σ_abs → ΔT, any channel → color/peaks).
-// Edges into consumers are editable via input selectors — re-wiring without a
-// canvas. Evaluation runs on src/lib/graph.ts. Hidden route (no sitemap, noindex).
-const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label: m.label }));
+// v1 of the node-editor workbench: the real editable graph on litegraph.js
+// (decision 2026-07-18: canvas now, all four edit operations). Our node types
+// replace the stock library; solver physics stays in src/lib. The graph
+// serializes to the URL hash for save/share. Hidden route (no sitemap, noindex).
 ---
 
-<Layout title="Material Workbench" description="Define a material once and run Mie, plasmonic and electron-beam solvers side by side." noindex>
+<Layout title="Material Workbench" description="Wire nanophotonics simulations as a node graph: materials, geometries, solvers and derived quantities." noindex>
   <section class="widget-hero">
     <div class="container">
       <a href="/lab/" class="back-link">&larr; Back to Lab</a>
       <h1>Material <span class="gradient-text">Workbench</span></h1>
       <p class="widget-hero__subtitle">
-        Define a material, an environment and a geometry once — feed them to
-        three solvers at the same time, then pipe the solver outputs into
-        derived calculations. The input selector on each derived node is a
-        re-wirable edge.
-        <span class="bench-badge">v0.5 &middot; hidden preview</span>
+        Wire simulations as a graph: materials, environments and geometries feed
+        solvers; solver spectra feed derived quantities. Double-click the canvas
+        to add nodes, drag between ports to wire, select a node to inspect it.
+        <span class="bench-badge">v1 &middot; node editor &middot; hidden preview</span>
       </p>
     </div>
   </section>
 
   <section class="section">
     <div class="container">
-      <div class="widget-layout bench" id="bench">
-        <svg class="bench-wires" id="bench-wires" aria-hidden="true"></svg>
+      <div class="bench-toolbar">
+        <button id="btn-share" class="tool-btn" type="button" title="Copy a link to this exact graph">Share graph</button>
+        <button id="btn-reset" class="tool-btn" type="button" title="Restore the default material→solvers→derived graph">Reset graph</button>
+        <span class="bench-hint" id="share-hint">Double-click: add node &middot; drag port&rarr;port: wire &middot; right-click: menu</span>
+      </div>
+      <div class="graph-wrap" id="graph-wrap">
+        <canvas id="graph-canvas"></canvas>
+      </div>
 
-        <div class="bench-left">
-          <div class="node card">
-            <div class="node-head">
-              <h3>Material</h3>
-              <span class="port port--out" id="port-material"></span>
-            </div>
-            <div class="param">
-              <div class="param-header"><label for="mat-select">Source</label></div>
-              <select id="mat-select" class="param-select">
-                {materialOptions.map((m) => <option value={m.id}>{m.label}</option>)}
-                <option value="drude">Drude model</option>
-              </select>
-            </div>
-            <div class="drude-grid" id="drude-params" style="display:none">
-              <label><span>&epsilon;<sub>b</sub></span><input type="number" id="drude-epsb" value="1" step="0.1" aria-label="Drude background permittivity"></label>
-              <label><span>&omega;<sub>p</sub> (eV)</span><input type="number" id="drude-wp" value="9" step="0.1" min="0.1" aria-label="Drude plasma frequency (eV)"></label>
-              <label><span>&gamma; (eV)</span><input type="number" id="drude-gamma" value="0.05" step="0.01" min="0" aria-label="Drude damping (eV)"></label>
-            </div>
-            <p class="node-readout" id="mat-readout"></p>
-          </div>
-
-          <div class="node card">
-            <div class="node-head">
-              <h3>Environment</h3>
-              <span class="port port--out" id="port-env"></span>
-            </div>
-            <div class="param">
-              <div class="param-header"><label for="env-nhost">n<sub>host</sub></label></div>
-              <input type="number" id="env-nhost" class="param-number" value="1.33" step="0.01" min="1" max="2.5" aria-label="Host refractive index">
-            </div>
-            <div class="param">
-              <div class="param-header"><label>&lambda; window (nm)</label></div>
-              <div class="env-range">
-                <input type="number" id="env-lmin" class="param-number" value="300" step="10" min="200" aria-label="Minimum wavelength (nm)">
-                <span class="env-dash">&mdash;</span>
-                <input type="number" id="env-lmax" class="param-number" value="900" step="10" min="300" aria-label="Maximum wavelength (nm)">
-              </div>
-              <p class="node-readout" id="env-readout"></p>
-            </div>
-          </div>
-
-          <div class="node card">
-            <div class="node-head">
-              <h3>Sphere</h3>
-              <span class="node-tag">geometry</span>
-              <span class="port port--out" id="port-sphere"></span>
-            </div>
-            <div class="param">
-              <div class="param-header"><label for="geo-radius">Radius (nm)</label></div>
-              <input type="number" id="geo-radius" class="param-number" value="50" step="5" min="1" max="500" aria-label="Sphere radius (nm)">
-            </div>
-            <p class="node-readout">&rarr; Mie &middot; Electron beam</p>
-          </div>
-
-          <div class="node card">
-            <div class="node-head">
-              <h3>Particle</h3>
-              <span class="node-tag">geometry</span>
-              <span class="port port--out" id="port-particle"></span>
-            </div>
-            <div class="solver-params">
-              <label>Shape
-                <select id="plasmon-shape" class="param-select" aria-label="Particle shape"></select>
-              </label>
-              <label>L (nm)
-                <input type="number" id="plasmon-length" class="param-number" value="50" step="5" min="5" max="300" aria-label="Particle length (nm)">
-              </label>
-              <label>Aspect R
-                <input type="number" id="plasmon-aspect" class="param-number" value="4" step="0.5" min="1" max="10" aria-label="Aspect ratio">
-              </label>
-            </div>
-            <p class="node-readout">&rarr; Plasmonic particle</p>
-          </div>
+      <div class="inspector card" id="inspector">
+        <div class="node-head">
+          <span class="port port--in"></span>
+          <h3 id="inspector-title">Inspector</h3>
+          <span class="node-tag" id="inspector-tag">select a node</span>
         </div>
-
-        <div class="bench-main">
-          <div class="bench-solvers">
-            <div class="node card node--solver" id="node-mie">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Mie sphere</h3>
-                <span class="port port--out" id="port-out-mie"></span>
-              </div>
-              <div class="chart-wrap"><canvas id="mie-chart"></canvas><div class="chart-tip" id="mie-tip"></div></div>
-              <div class="chart-legend" id="mie-legend"></div>
-            </div>
-
-            <div class="node card node--solver" id="node-plasmon">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Plasmonic particle</h3>
-                <span class="port port--out" id="port-out-plasmon"></span>
-              </div>
-              <div class="chart-wrap"><canvas id="plasmon-chart"></canvas><div class="chart-tip" id="plasmon-tip"></div></div>
-              <div class="chart-legend" id="plasmon-legend"></div>
-            </div>
-
-            <div class="node card node--solver" id="node-electron">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Electron beam</h3>
-                <span class="port port--out" id="port-out-electron"></span>
-              </div>
-              <div class="solver-params">
-                <label>K (keV)
-                  <input type="number" id="el-kev" class="param-number" value="100" step="10" min="1" max="300" aria-label="Electron kinetic energy (keV)">
-                </label>
-                <label>b (nm)
-                  <input type="number" id="el-impact" class="param-number" value="60" step="5" min="1" max="400" aria-label="Impact parameter (nm)">
-                </label>
-              </div>
-              <div class="chart-wrap"><canvas id="electron-chart"></canvas><div class="chart-tip" id="electron-tip"></div></div>
-              <div class="chart-legend" id="electron-legend"></div>
-            </div>
-          </div>
-
-          <div class="bench-derived">
-            <div class="node card node--derived" id="node-photothermal">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Photothermal</h3>
-                <span class="node-tag">derived</span>
-              </div>
-              <div class="solver-params">
-                <label>&sigma;<sub>abs</sub> from
-                  <select id="pt-input" class="param-select" aria-label="Absorption input for photothermal">
-                    <option value="mie" selected>Mie sphere</option>
-                    <option value="plasmon">Plasmonic particle</option>
-                  </select>
-                </label>
-                <label>P (mW)
-                  <input type="number" id="pt-power" class="param-number" value="1" step="0.5" min="0" max="500" aria-label="Laser power (mW)">
-                </label>
-                <label>w&#8320; (&mu;m)
-                  <input type="number" id="pt-waist" class="param-number" value="1" step="0.1" min="0.2" max="50" aria-label="Beam waist (µm)">
-                </label>
-                <label>&kappa; (W/mK)
-                  <input type="number" id="pt-kappa" class="param-number" value="0.606" step="0.05" min="0.05" max="5" aria-label="Host thermal conductivity (W/mK)">
-                </label>
-              </div>
-              <div class="chart-wrap"><canvas id="pt-chart"></canvas><div class="chart-tip" id="pt-tip"></div></div>
-              <p class="node-headline" id="pt-headline"></p>
-            </div>
-
-            <div class="node card node--derived" id="node-color">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Color</h3>
-                <span class="node-tag">derived</span>
-              </div>
-              <div class="solver-params">
-                <label>Channel
-                  <select id="color-input" class="param-select" aria-label="Spectrum channel for color">
-                    <option value="mie:csca" selected>Mie &sigma;_sca</option>
-                    <option value="mie:cabs">Mie &sigma;_abs</option>
-                    <option value="plasmon:sigmaScaNm2">Plasmon &sigma;_sca</option>
-                    <option value="plasmon:sigmaAbsNm2">Plasmon &sigma;_abs</option>
-                  </select>
-                </label>
-              </div>
-              <div class="color-swatch" id="color-swatch"></div>
-              <p class="node-headline" id="color-headline"></p>
-              <p class="node-readout">Channel normalized to its peak over 380&ndash;780&nbsp;nm.</p>
-            </div>
-
-            <div class="node card node--derived" id="node-peak">
-              <div class="node-head">
-                <span class="port port--in"></span>
-                <h3>Peak analysis</h3>
-                <span class="node-tag">derived</span>
-              </div>
-              <div class="solver-params">
-                <label>Channel
-                  <select id="peak-input" class="param-select" aria-label="Spectrum channel for peak analysis">
-                    <option value="mie:cext">Mie &sigma;_ext</option>
-                    <option value="mie:csca" selected>Mie &sigma;_sca</option>
-                    <option value="mie:cabs">Mie &sigma;_abs</option>
-                    <option value="plasmon:sigmaExtNm2">Plasmon &sigma;_ext</option>
-                    <option value="plasmon:sigmaScaNm2">Plasmon &sigma;_sca</option>
-                    <option value="plasmon:sigmaAbsNm2">Plasmon &sigma;_abs</option>
-                    <option value="electron:eelsTotal">EELS</option>
-                    <option value="electron:clTotal">CL</option>
-                  </select>
-                </label>
-              </div>
-              <dl class="peak-readout" id="peak-readout"></dl>
-            </div>
-          </div>
-        </div>
+        <p class="node-headline" id="inspector-headline"></p>
+        <div class="chart-wrap"><canvas id="inspector-chart"></canvas><div class="chart-tip" id="inspector-tip"></div></div>
+        <div class="chart-legend" id="inspector-legend"></div>
       </div>
     </div>
   </section>
@@ -237,14 +60,25 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     font-size: 0.75rem; font-weight: 600; color: var(--text-soft); white-space: nowrap;
   }
 
-  .bench { position: relative; display: grid; grid-template-columns: 240px 1fr; gap: var(--space-lg); align-items: start; }
-  .bench-left { display: flex; flex-direction: column; gap: var(--space-md); }
-  .bench-main { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
-  .bench-solvers, .bench-derived { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg); }
+  .bench-toolbar { display: flex; align-items: center; gap: 0.6rem; margin-bottom: var(--space-sm); flex-wrap: wrap; }
+  .tool-btn {
+    padding: 0.35rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--primary); font-family: var(--font);
+    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+  }
+  .tool-btn:hover { border-color: var(--primary-light); }
+  .tool-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .bench-hint { font-size: 0.75rem; color: var(--text-muted); }
 
-  .bench-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-  .node { position: relative; z-index: 2; padding: var(--space-md); }
-  .node-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--space-md); }
+  .graph-wrap {
+    width: 100%; height: 62vh; min-height: 420px;
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--bg-soft);
+  }
+  .graph-wrap canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+  .inspector { margin-top: var(--space-lg); padding: var(--space-md); }
+  .node-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--space-sm); }
   .node-head h3 { font-size: 0.95rem; flex: 0 1 auto; }
   .node-tag {
     padding: 0.05rem 0.45rem; background: var(--bg-muted); border-radius: var(--radius-full);
@@ -254,31 +88,10 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
     background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   }
-  .port--out { margin-left: auto; }
+  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }
 
-  .param { margin-bottom: var(--space-md); }
-  .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
-  .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
-  .param-select, .param-number {
-    width: 100%; padding: 0.3rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    font-family: var(--font); font-size: 0.875rem; font-weight: 600; color: var(--primary);
-    background: var(--bg); outline: none;
-  }
-  .param-select:focus-visible, .param-number:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-  .drude-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; margin-bottom: var(--space-md); }
-  .drude-grid label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.75rem; font-weight: 600; color: var(--text-soft); }
-  .drude-grid input { width: 100%; padding: 0.25rem 0.35rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.8125rem; font-weight: 600; color: var(--primary); background: var(--bg); }
-  .env-range { display: flex; align-items: center; gap: 0.35rem; }
-  .env-dash { color: var(--text-muted); }
-  .node-readout { font-size: 0.75rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }
-  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0.4rem 0 0; font-variant-numeric: tabular-nums; }
-
-  .node--solver, .node--derived { display: flex; flex-direction: column; min-width: 0; }
-  .solver-params { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: var(--space-sm); }
-  .solver-params label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.75rem; font-weight: 600; color: var(--text-soft); flex: 1 1 4.5rem; min-width: 0; }
-
-  .chart-wrap { position: relative; width: 100%; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 4 / 3; }
+  .chart-wrap { position: relative; width: 100%; max-width: 720px; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
   .chart-tip {
     position: absolute; display: none; pointer-events: none; z-index: 3;
     background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
@@ -289,26 +102,13 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
 
-  .color-swatch {
-    width: 100%; height: 64px; border-radius: var(--radius-md);
-    border: 1px solid var(--bg-muted); background: transparent;
-  }
-  .peak-readout { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.8rem; margin: 0.3rem 0 0; font-size: 0.85rem; }
-  .peak-readout :global(dt) { color: var(--text-soft); font-weight: 500; }
-  .peak-readout :global(dd) { margin: 0; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
-
-  @media (max-width: 1100px) {
-    .bench { grid-template-columns: 1fr; }
-    .bench-left { display: grid; grid-template-columns: 1fr 1fr; }
-    .bench-wires { display: none; }
-  }
   @media (max-width: 640px) {
-    .bench-left { grid-template-columns: 1fr; }
-    .bench-solvers, .bench-derived { grid-template-columns: 1fr; }
+    .graph-wrap { height: 55vh; min-height: 360px; }
   }
 </style>
 
 <script>
+  import { LiteGraph, LGraph, LGraphCanvas } from 'litegraph.js';
   import { MATERIALS, interpolateNK, nkToEpsilon, drudeEpsilon } from '../../lib/materials';
   import { csqrtUpper } from '../../lib/complex';
   import { computeMie } from '../../lib/mie';
@@ -317,16 +117,12 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   import { spectrumFromMie, spectrumFromPlasmon, spectrumFromElectron, peakAnalysis, type Spectrum } from '../../lib/spectrum';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { peakIrradianceWm2, deltaTSpectrum } from '../../lib/photothermal';
-  import { Graph } from '../../lib/graph';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const num = (id: string, fallback: number) => {
-    const v = parseFloat(($(id) as unknown as HTMLInputElement).value);
-    return Number.isFinite(v) ? v : fallback;
-  };
+  const HC = 1239.841984;
 
-  // ── Series colors: validated categorical sets (dataviz six-checks), per theme ──
+  // ── Validated series palettes (dataviz six-checks), per theme ──
   const SIGMA_COLORS = {
     light: { ext: '#6366F1', sca: '#06B6D4', abs: '#F43F5E' },
     dark:  { ext: '#6366F1', sca: '#0891B2', abs: '#F43F5E' },
@@ -337,50 +133,431 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
   };
   const isDark = () => document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const sigmaColors = () => (isDark() ? SIGMA_COLORS.dark : SIGMA_COLORS.light);
+  const electronColors = () => (isDark() ? ELECTRON_COLORS.dark : ELECTRON_COLORS.light);
 
-  // ── Source nodes: material / environment / geometries ──
-  const matSelect = $('mat-select') as unknown as HTMLSelectElement;
-  const drudeBox = $('drude-params');
-  function drudeParams() {
-    return { epsB: num('drude-epsb', 1), wpEv: num('drude-wp', 9), gammaEv: num('drude-gamma', 0.05) };
-  }
-  function getNK(lambdaNm: number): [number, number] {
-    if (matSelect.value === 'drude') {
-      const nk = csqrtUpper(drudeEpsilon(lambdaNm, drudeParams()));
+  // ── Material descriptor (plain data on the wire; callbacks built at use) ──
+  interface MaterialDesc { kind: 'db' | 'drude'; id?: string; epsB?: number; wpEv?: number; gammaEv?: number; }
+  function nkOf(mat: MaterialDesc, lambdaNm: number): [number, number] {
+    if (mat.kind === 'drude') {
+      const nk = csqrtUpper(drudeEpsilon(lambdaNm, { epsB: mat.epsB!, wpEv: mat.wpEv!, gammaEv: mat.gammaEv! }));
       return [nk.re, nk.im];
     }
-    return interpolateNK(MATERIALS[matSelect.value].data, lambdaNm);
+    return interpolateNK(MATERIALS[mat.id!].data, lambdaNm);
   }
-  function epsilonAt(lambdaNm: number) {
-    if (matSelect.value === 'drude') return drudeEpsilon(lambdaNm, drudeParams());
-    const [n, k] = getNK(lambdaNm);
+  function epsOf(mat: MaterialDesc, lambdaNm: number) {
+    if (mat.kind === 'drude') return drudeEpsilon(lambdaNm, { epsB: mat.epsB!, wpEv: mat.wpEv!, gammaEv: mat.gammaEv! });
+    const [n, k] = nkOf(mat, lambdaNm);
     return nkToEpsilon(n, k);
   }
 
-  const HC = 1239.841984;
-  function env() {
-    const lmin = Math.max(200, num('env-lmin', 300));
-    const lmax = Math.max(lmin + 50, num('env-lmax', 900));
-    const nHost = Math.min(2.5, Math.max(1, num('env-nhost', 1.33)));
-    return { lmin, lmax, nHost };
-  }
-
-  const shapeSel = $('plasmon-shape') as unknown as HTMLSelectElement;
-  for (const s of SHAPE_OPTIONS) {
-    const o = document.createElement('option');
-    o.value = s.id; o.textContent = s.label;
-    shapeSel.appendChild(o);
-  }
-  shapeSel.value = 'rod';
-
-  // ── Producer registry: solver outputs the derived row can consume ──
-  interface ProducerOutput { spectrum: Spectrum; radiusNm: number; }
-  const outputs = new Map<string, ProducerOutput>();
-
-  // ── Compact line-chart renderer ──
   interface SeriesSpec { key: string; label: string; color: string; }
-  interface ChartState { spectrum: Spectrum | null; series: SeriesSpec[]; xLabel: string; hoverI: number; }
-  const charts = new Map<string, ChartState>();
+  interface ChartData { spectrum: Spectrum; series: SeriesSpec[]; xLabel: string; xUnit: string; }
+  interface ProducerOutput { spectrum: Spectrum; radiusNm: number; }
+
+  // ── Scheduling ──
+  let rafId = 0;
+  function scheduleRun() {
+    if (!rafId) rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      try { graph.runStep(1); } catch (err) { console.error(err); }
+      lcanvas.setDirty(true, true);
+      renderInspector();
+    });
+  }
+
+  const MAT_IDS = [...Object.keys(MATERIALS), 'drude'];
+  const POINTS = 240;
+
+  // ── Node definitions (replace the stock litegraph node library) ──
+  LiteGraph.clearRegisteredTypes();
+
+  function defineNode(
+    type: string, title: string, color: string,
+    setup: (node: any) => void, onExecute: (node: any) => void,
+    extras: Record<string, any> = {},
+  ) {
+    function NodeClass(this: any) {
+      this.color = color;
+      this.serialize_widgets = true;
+      this.onConnectionsChange = () => scheduleRun();
+      setup(this);
+    }
+    (NodeClass as any).title = title;
+    NodeClass.prototype.onExecute = function () { try { onExecute(this); } catch (err) { console.error(title, err); } };
+    NodeClass.prototype.onPropertyChanged = function () { scheduleRun(); };
+    Object.assign(NodeClass.prototype, extras);
+    LiteGraph.registerNodeType(type, NodeClass as any);
+  }
+
+  const widget = (node: any, kind: string, name: string, prop: string, options: any = {}) => {
+    node.addWidget(kind, name, node.properties[prop], () => scheduleRun(), { ...options, property: prop });
+  };
+
+  // Sources -------------------------------------------------------------
+  defineNode('workbench/material', 'Material', '#4338CA', (n) => {
+    n.addOutput('material', 'material');
+    n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05 };
+    widget(n, 'combo', 'source', 'source', { values: MAT_IDS });
+    widget(n, 'number', 'εb (Drude)', 'epsB', { min: -10, max: 20, step: 1 });
+    widget(n, 'number', 'ωp eV (Drude)', 'wpEv', { min: 0.1, max: 20, step: 1 });
+    widget(n, 'number', 'γ eV (Drude)', 'gammaEv', { min: 0, max: 3, step: 0.1 });
+    n.size = [210, 130];
+  }, (n) => {
+    const p = n.properties;
+    const mat: MaterialDesc = p.source === 'drude'
+      ? { kind: 'drude', epsB: p.epsB, wpEv: p.wpEv, gammaEv: p.gammaEv }
+      : { kind: 'db', id: p.source };
+    n.setOutputData(0, mat);
+    const [nn, kk] = nkOf(mat, 550);
+    n._readout = `n+ik@550: ${nn.toFixed(2)}+${kk.toFixed(2)}i`;
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed || !this._readout) return;
+      ctx.fillStyle = '#999'; ctx.font = '10px monospace';
+      ctx.fillText(this._readout, 10, this.size[1] - 8);
+    },
+  });
+
+  defineNode('workbench/environment', 'Environment', '#4338CA', (n) => {
+    n.addOutput('env', 'env');
+    n.properties = { nHost: 1.33, lambdaMin: 300, lambdaMax: 900 };
+    widget(n, 'number', 'n host', 'nHost', { min: 1, max: 2.5, step: 0.1 });
+    widget(n, 'number', 'λ min (nm)', 'lambdaMin', { min: 200, max: 2000, step: 10 });
+    widget(n, 'number', 'λ max (nm)', 'lambdaMax', { min: 250, max: 3000, step: 10 });
+    n.size = [210, 110];
+  }, (n) => {
+    const p = n.properties;
+    const lmin = Math.max(200, Math.min(p.lambdaMin, p.lambdaMax - 50));
+    n.setOutputData(0, { nHost: Math.min(2.5, Math.max(1, p.nHost)), lmin, lmax: Math.max(lmin + 50, p.lambdaMax) });
+  });
+
+  defineNode('workbench/sphere', 'Sphere geometry', '#4338CA', (n) => {
+    n.addOutput('sphere', 'sphere');
+    n.properties = { radiusNm: 50 };
+    widget(n, 'number', 'radius (nm)', 'radiusNm', { min: 1, max: 500, step: 10 });
+    n.size = [200, 60];
+  }, (n) => {
+    n.setOutputData(0, { radiusNm: Math.max(1, n.properties.radiusNm) });
+  });
+
+  defineNode('workbench/particle', 'Particle geometry', '#4338CA', (n) => {
+    n.addOutput('particle', 'particle');
+    n.properties = { shape: 'rod', lengthNm: 50, aspectRatio: 4 };
+    widget(n, 'combo', 'shape', 'shape', { values: SHAPE_OPTIONS.map((s) => s.id) });
+    widget(n, 'number', 'L (nm)', 'lengthNm', { min: 5, max: 300, step: 10 });
+    widget(n, 'number', 'aspect R', 'aspectRatio', { min: 1, max: 10, step: 0.5 });
+    n.size = [210, 110];
+  }, (n) => {
+    n.setOutputData(0, { ...n.properties });
+  });
+
+  // Shared mini-plot for solver/derived nodes --------------------------
+  function drawMiniPlot(node: any, ctx: CanvasRenderingContext2D, top: number) {
+    const cd: ChartData | undefined = node._chart;
+    const w = node.size[0] - 20, h = node.size[1] - top - 10;
+    if (!cd || w < 40 || h < 24) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(128,128,140,0.35)';
+    ctx.strokeRect(10, top, w, h);
+    let ymax = 0;
+    for (const s of cd.series) for (const v of cd.spectrum.series[s.key]) if (v > ymax) ymax = v;
+    if (ymax <= 0) { ctx.restore(); return; }
+    const { x } = cd.spectrum;
+    for (const s of cd.series) {
+      const ys = cd.spectrum.series[s.key];
+      ctx.strokeStyle = s.color; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i = 0; i < x.length; i++) {
+        const px = 10 + (w * i) / (x.length - 1);
+        const py = top + h - (h * ys[i]) / ymax;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Solvers -------------------------------------------------------------
+  defineNode('workbench/mie', 'Mie sphere', '#0E7490', (n) => {
+    n.addInput('material', 'material');
+    n.addInput('env', 'env');
+    n.addInput('sphere', 'sphere');
+    n.addOutput('spectrum', 'spectrum');
+    n.size = [220, 150];
+  }, (n) => {
+    const mat = n.getInputData(0), e = n.getInputData(1), geo = n.getInputData(2);
+    if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
+    const sig = JSON.stringify([mat, e, geo]);
+    if (sig !== n._sig) {
+      n._sig = sig;
+      const spec = spectrumFromMie(computeMie((l) => nkOf(mat, l), geo.radiusNm, e.nHost, e.lmin, e.lmax, POINTS));
+      n._out = { spectrum: spec, radiusNm: geo.radiusNm } as ProducerOutput;
+    }
+    const c = sigmaColors();
+    n._chart = {
+      spectrum: n._out.spectrum,
+      series: [
+        { key: 'cext', label: 'σ_ext', color: c.ext },
+        { key: 'csca', label: 'σ_sca', color: c.sca },
+        { key: 'cabs', label: 'σ_abs', color: c.abs },
+      ],
+      xLabel: 'λ (nm) · σ (nm²)', xUnit: 'nm',
+    } as ChartData;
+    n.setOutputData(0, n._out);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (!this.flags.collapsed) drawMiniPlot(this, ctx, 8);
+    },
+  });
+
+  defineNode('workbench/plasmon', 'Plasmonic particle', '#0E7490', (n) => {
+    n.addInput('material', 'material');
+    n.addInput('env', 'env');
+    n.addInput('particle', 'particle');
+    n.addOutput('spectrum', 'spectrum');
+    n.size = [220, 150];
+  }, (n) => {
+    const mat = n.getInputData(0), e = n.getInputData(1), geo = n.getInputData(2);
+    if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
+    const sig = JSON.stringify([mat, e, geo]);
+    if (sig !== n._sig) {
+      n._sig = sig;
+      const raw = computePlasmonSpectrum({
+        shape: geo.shape as PlasmonShapeId,
+        materialId: mat.kind === 'db' ? mat.id! : 'au',
+        epsilonAt: (l: number) => epsOf(mat, l),
+        lengthNm: geo.lengthNm, aspectRatio: geo.aspectRatio,
+        hostIndex: e.nHost, lambdaMinNm: e.lmin, lambdaMaxNm: e.lmax, points: POINTS,
+      });
+      n._out = {
+        spectrum: spectrumFromPlasmon(raw),
+        radiusNm: Math.cbrt((3 * raw.volumeNm3) / (4 * Math.PI)),
+      } as ProducerOutput;
+    }
+    const c = sigmaColors();
+    n._chart = {
+      spectrum: n._out.spectrum,
+      series: [
+        { key: 'sigmaExtNm2', label: 'σ_ext', color: c.ext },
+        { key: 'sigmaScaNm2', label: 'σ_sca', color: c.sca },
+        { key: 'sigmaAbsNm2', label: 'σ_abs', color: c.abs },
+      ],
+      xLabel: 'λ (nm) · σ (nm²)', xUnit: 'nm',
+    } as ChartData;
+    n.setOutputData(0, n._out);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (!this.flags.collapsed) drawMiniPlot(this, ctx, 8);
+    },
+  });
+
+  defineNode('workbench/electron', 'Electron beam', '#0E7490', (n) => {
+    n.addInput('material', 'material');
+    n.addInput('env', 'env');
+    n.addInput('sphere', 'sphere');
+    n.addOutput('spectrum', 'spectrum');
+    n.properties = { kev: 100, impactNm: 60 };
+    widget(n, 'number', 'K (keV)', 'kev', { min: 1, max: 300, step: 10 });
+    widget(n, 'number', 'b (nm)', 'impactNm', { min: 1, max: 400, step: 10 });
+    n.size = [220, 190];
+  }, (n) => {
+    const mat = n.getInputData(0), e = n.getInputData(1), geo = n.getInputData(2);
+    if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
+    const sig = JSON.stringify([mat, e, geo, n.properties]);
+    if (sig !== n._sig) {
+      n._sig = sig;
+      const gamma = 1 + n.properties.kev / 510.99895;
+      const beta = Math.sqrt(Math.max(1e-6, 1 - 1 / (gamma * gamma)));
+      const spec = spectrumFromElectron(computeElectronSphereSpectrum(
+        (l) => nkOf(mat, l),
+        { radiusNm: geo.radiusNm, beta, impactNm: n.properties.impactNm, lmax: 6, qCutNm: 0.71, nz: 32 },
+        HC / e.lmax, HC / e.lmin, 120,
+      ));
+      n._out = { spectrum: spec, radiusNm: geo.radiusNm } as ProducerOutput;
+    }
+    const c = electronColors();
+    n._chart = {
+      spectrum: n._out.spectrum,
+      series: [
+        { key: 'eelsTotal', label: 'EELS', color: c.eels },
+        { key: 'clTotal', label: 'CL', color: c.cl },
+      ],
+      xLabel: 'ħω (eV) · Γ (eV⁻¹)', xUnit: 'eV',
+    } as ChartData;
+    n.setOutputData(0, n._out);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (!this.flags.collapsed) drawMiniPlot(this, ctx, 56);
+    },
+  });
+
+  // Derived -------------------------------------------------------------
+  const absKey = (spec: Spectrum) =>
+    Object.keys(spec.series).find((k) => k.toLowerCase().includes('abs')) || Object.keys(spec.series)[0];
+
+  defineNode('workbench/photothermal', 'Photothermal ΔT', '#B45309', (n) => {
+    n.addInput('spectrum', 'spectrum');
+    n.addOutput('spectrum', 'spectrum');
+    n.properties = { powerMw: 1, waistUm: 1, kappa: 0.606 };
+    widget(n, 'number', 'P (mW)', 'powerMw', { min: 0, max: 500, step: 1 });
+    widget(n, 'number', 'w₀ (µm)', 'waistUm', { min: 0.2, max: 50, step: 0.5 });
+    widget(n, 'number', 'κ (W/mK)', 'kappa', { min: 0.05, max: 5, step: 0.1 });
+    n.size = [220, 190];
+  }, (n) => {
+    const src = n.getInputData(0) as ProducerOutput | null;
+    if (!src || src.spectrum.axis !== 'lambdaNm') { n._chart = null; n._headline = src ? 'needs a λ spectrum' : ''; n.setOutputData(0, null); return; }
+    const I = peakIrradianceWm2(n.properties.powerMw, n.properties.waistUm);
+    const dT = deltaTSpectrum(src.spectrum.series[absKey(src.spectrum)], I, n.properties.kappa, src.radiusNm);
+    const spec: Spectrum = { x: src.spectrum.x, axis: 'lambdaNm', series: { dT } };
+    n._chart = {
+      spectrum: spec,
+      series: [{ key: 'dT', label: 'ΔT (K)', color: chartTheme().primary }],
+      xLabel: 'λ (nm) · ΔT (K)', xUnit: 'nm',
+    } as ChartData;
+    const p = peakAnalysis(spec.x, dT);
+    n._headline = p ? `ΔT ${p.y0.toFixed(2)} K @ ${p.x0.toFixed(0)} nm` : 'no absorption';
+    n.setOutputData(0, { spectrum: spec, radiusNm: src.radiusNm } as ProducerOutput);
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed) return;
+      drawMiniPlot(this, ctx, 80);
+      if (this._headline) { ctx.fillStyle = '#bbb'; ctx.font = '10px monospace'; ctx.fillText(this._headline, 10, 76); }
+    },
+  });
+
+  defineNode('workbench/color', 'Color', '#B45309', (n) => {
+    n.addInput('spectrum', 'spectrum');
+    n.properties = { channel: 'auto' };
+    n._channelWidget = n.addWidget('combo', 'channel', 'auto', () => scheduleRun(), { values: ['auto'], property: 'channel' });
+    n.size = [190, 110];
+  }, (n) => {
+    const src = n.getInputData(0) as ProducerOutput | null;
+    n._hex = null;
+    if (!src || src.spectrum.axis !== 'lambdaNm') return;
+    const keys = Object.keys(src.spectrum.series);
+    n._channelWidget.options.values = ['auto', ...keys];
+    const key = keys.includes(n.properties.channel) ? n.properties.channel
+      : keys.find((k) => k.toLowerCase().includes('sca')) || keys[0];
+    const y = src.spectrum.series[key];
+    const peak = Math.max(...y);
+    if (!(peak > 0)) return;
+    n._hex = spectrumToHex(src.spectrum.x, Float64Array.from(y, (v) => v / peak));
+    n._key = key;
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed) return;
+      const y0 = 36, h = this.size[1] - y0 - 10;
+      if (this._hex) {
+        ctx.fillStyle = this._hex;
+        ctx.fillRect(10, y0, this.size[0] - 20, h);
+        ctx.strokeStyle = 'rgba(128,128,140,0.4)';
+        ctx.strokeRect(10, y0, this.size[0] - 20, h);
+        ctx.fillStyle = '#bbb'; ctx.font = '10px monospace';
+        ctx.fillText(`${this._hex}  (${this._key})`, 10, this.size[1] - 2);
+      }
+    },
+  });
+
+  defineNode('workbench/peak', 'Peak analysis', '#B45309', (n) => {
+    n.addInput('spectrum', 'spectrum');
+    n.properties = { channel: 'auto' };
+    n._channelWidget = n.addWidget('combo', 'channel', 'auto', () => scheduleRun(), { values: ['auto'], property: 'channel' });
+    n.size = [200, 120];
+  }, (n) => {
+    const src = n.getInputData(0) as ProducerOutput | null;
+    n._lines = [];
+    if (!src) return;
+    const keys = Object.keys(src.spectrum.series);
+    n._channelWidget.options.values = ['auto', ...keys];
+    const key = keys.includes(n.properties.channel) ? n.properties.channel : keys[0];
+    const isEv = src.spectrum.axis === 'energyEv';
+    const p = peakAnalysis(src.spectrum.x, src.spectrum.series[key]);
+    const u = isEv ? 'eV' : 'nm';
+    n._lines = p
+      ? [`${key}`, `${isEv ? 'E₀' : 'λ₀'} = ${p.x0.toFixed(isEv ? 3 : 1)} ${u}`,
+         `FWHM = ${Number.isNaN(p.fwhm) ? 'out of window' : p.fwhm.toFixed(isEv ? 3 : 1) + ' ' + u}`,
+         `Q = ${Number.isNaN(p.q) ? '—' : p.q.toFixed(1)}`]
+      : ['no peak in window'];
+  }, {
+    onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
+      if (this.flags.collapsed || !this._lines) return;
+      ctx.fillStyle = '#bbb'; ctx.font = '11px monospace';
+      this._lines.forEach((l: string, i: number) => ctx.fillText(l, 10, 52 + i * 15));
+    },
+  });
+
+  // ── Graph + canvas ──
+  const graph = new LGraph();
+  const canvasEl = $('graph-canvas') as unknown as HTMLCanvasElement;
+  const lcanvas = new LGraphCanvas(canvasEl, graph);
+  lcanvas.allow_searchbox = true;
+  function themeCanvas() {
+    lcanvas.clear_background_color = isDark() ? '#0F0E1A' : '#EDEBFA';
+    lcanvas.setDirty(true, true);
+  }
+  function resizeCanvas() {
+    const wrap = $('graph-wrap');
+    lcanvas.resize(wrap.clientWidth, wrap.clientHeight);
+  }
+
+  function buildDefaultGraph() {
+    graph.clear();
+    const mk = (type: string, x: number, y: number) => {
+      const node = LiteGraph.createNode(type);
+      node.pos = [x, y];
+      graph.add(node);
+      return node;
+    };
+    const mat = mk('workbench/material', 40, 80);
+    const env = mk('workbench/environment', 40, 280);
+    const sph = mk('workbench/sphere', 40, 450);
+    const par = mk('workbench/particle', 40, 560);
+    const mie = mk('workbench/mie', 340, 80);
+    const pla = mk('workbench/plasmon', 340, 280);
+    const ele = mk('workbench/electron', 340, 480);
+    const pt = mk('workbench/photothermal', 650, 80);
+    const col = mk('workbench/color', 650, 320);
+    const pk = mk('workbench/peak', 650, 480);
+    for (const s of [mie, pla, ele]) { mat.connect(0, s, 0); env.connect(0, s, 1); }
+    sph.connect(0, mie, 2); sph.connect(0, ele, 2);
+    par.connect(0, pla, 2);
+    mie.connect(0, pt, 0);
+    pla.connect(0, col, 0);
+    mie.connect(0, pk, 0);
+  }
+
+  // ── Save / share via URL hash ──
+  function serializeToHash(): string {
+    const json = JSON.stringify(graph.serialize());
+    return btoa(String.fromCharCode(...new TextEncoder().encode(json)));
+  }
+  function restoreFromHash(): boolean {
+    const m = location.hash.match(/^#g=(.+)$/);
+    if (!m) return false;
+    try {
+      const bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+      graph.configure(JSON.parse(new TextDecoder().decode(bytes)));
+      return true;
+    } catch (err) { console.error('bad graph permalink', err); return false; }
+  }
+  $('btn-share').addEventListener('click', async () => {
+    const url = `${location.origin}${location.pathname}#g=${serializeToHash()}`;
+    history.replaceState(null, '', url);
+    try { await navigator.clipboard.writeText(url); $('share-hint').textContent = 'Link copied to clipboard.'; }
+    catch { $('share-hint').textContent = 'Link is in the address bar.'; }
+    setTimeout(() => { $('share-hint').textContent = 'Double-click: add node · drag port→port: wire · right-click: menu'; }, 3000);
+  });
+  $('btn-reset').addEventListener('click', () => {
+    history.replaceState(null, '', location.pathname);
+    buildDefaultGraph();
+    scheduleRun();
+  });
+
+  // ── Inspector (big chart for the selected node) ──
+  let selectedNode: any = null;
+  lcanvas.onNodeSelected = (node: any) => { selectedNode = node; renderInspector(); };
+  lcanvas.onNodeDeselected = () => { selectedNode = null; renderInspector(); };
 
   function niceTicks(min: number, max: number, n = 5): number[] {
     const span = max - min || 1;
@@ -398,312 +575,106 @@ const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label:
     return a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(1) : v.toFixed(2);
   };
 
-  function drawChart(canvasId: string) {
-    const st = charts.get(canvasId);
-    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
-    if (!st || !st.spectrum) return;
-    const t = chartTheme();
+  let inspectorHover = -1;
+  function drawInspectorChart() {
+    const cd: ChartData | undefined = selectedNode?._chart;
+    const canvas = $('inspector-chart') as unknown as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.clientWidth, H = canvas.clientHeight;
-    if (W === 0) return;
     canvas.width = W * dpr; canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
-
-    const PAD = { l: 44, r: 8, t: 8, b: 26 };
+    if (!cd) return;
+    const t = chartTheme();
+    const PAD = { l: 48, r: 10, t: 8, b: 28 };
     const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
-    const { x } = st.spectrum;
+    const { x } = cd.spectrum;
     const xmin = x[0], xmax = x[x.length - 1];
     let ymax = 0;
-    for (const s of st.series) for (const v of st.spectrum.series[s.key]) if (v > ymax) ymax = v;
+    for (const s of cd.series) for (const v of cd.spectrum.series[s.key]) if (v > ymax) ymax = v;
     if (ymax <= 0) ymax = 1;
     const tx = (v: number) => PAD.l + ((v - xmin) / (xmax - xmin)) * pw;
     const ty = (v: number) => PAD.t + ph - (v / ymax) * ph;
-
-    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
-    ctx.strokeStyle = t.grid; ctx.lineWidth = 1;
-    ctx.fillStyle = t.textMuted;
+    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.strokeStyle = t.grid; ctx.fillStyle = t.textMuted; ctx.lineWidth = 1;
     for (const yt of niceTicks(0, ymax, 4)) {
       ctx.beginPath(); ctx.moveTo(PAD.l, ty(yt)); ctx.lineTo(W - PAD.r, ty(yt)); ctx.stroke();
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      ctx.fillText(fmt(yt), PAD.l - 5, ty(yt));
+      ctx.fillText(fmt(yt), PAD.l - 6, ty(yt));
     }
-    for (const xt of niceTicks(xmin, xmax, 5)) {
+    for (const xt of niceTicks(xmin, xmax, 6)) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(fmt(xt), tx(xt), PAD.t + ph + 6);
+      ctx.fillText(fmt(xt), tx(xt), PAD.t + ph + 7);
     }
-    ctx.textAlign = 'center';
     ctx.fillStyle = t.textSoft;
-    ctx.fillText(st.xLabel, PAD.l + pw / 2, H - 11);
-
-    for (const s of st.series) {
-      const ys = st.spectrum.series[s.key];
+    ctx.fillText(cd.xLabel, PAD.l + pw / 2, H - 13);
+    for (const s of cd.series) {
+      const ys = cd.spectrum.series[s.key];
       ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let i = 0; i < x.length; i++) {
-        const px = tx(x[i]), py = ty(ys[i]);
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        i === 0 ? ctx.moveTo(tx(x[i]), ty(ys[i])) : ctx.lineTo(tx(x[i]), ty(ys[i]));
       }
       ctx.stroke();
     }
-
-    if (st.hoverI >= 0) {
-      const hx = tx(x[st.hoverI]);
-      ctx.strokeStyle = t.textMuted; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    if (inspectorHover >= 0 && inspectorHover < x.length) {
+      const hx = tx(x[inspectorHover]);
+      ctx.strokeStyle = t.textMuted; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, PAD.t + ph); ctx.stroke();
       ctx.setLineDash([]);
-      for (const s of st.series) {
+      for (const s of cd.series) {
         ctx.fillStyle = s.color;
-        ctx.beginPath(); ctx.arc(hx, ty(st.spectrum.series[s.key][st.hoverI]), 3, 0, 2 * Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.arc(hx, ty(cd.spectrum.series[s.key][inspectorHover]), 3.2, 0, 2 * Math.PI); ctx.fill();
       }
     }
   }
 
-  function renderLegend(legendId: string, series: SeriesSpec[]) {
-    $(legendId).innerHTML = series
-      .map((s) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`)
+  function renderInspector() {
+    const title = $('inspector-title'), tag = $('inspector-tag'), head = $('inspector-headline'), leg = $('inspector-legend');
+    if (!selectedNode) {
+      title.textContent = 'Inspector';
+      tag.textContent = 'select a node';
+      head.textContent = '';
+      leg.innerHTML = '';
+      drawInspectorChart();
+      return;
+    }
+    title.textContent = selectedNode.title;
+    tag.textContent = selectedNode._chart ? 'output' : 'no spectrum output';
+    head.textContent = selectedNode._headline || selectedNode._readout || (selectedNode._hex ? `${selectedNode._hex} (${selectedNode._key})` : '') || (selectedNode._lines || []).join('  ·  ');
+    leg.innerHTML = (selectedNode._chart?.series || [])
+      .map((s: SeriesSpec) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`)
       .join('');
+    drawInspectorChart();
   }
 
-  function attachHover(canvasId: string, tipId: string, xUnit: string) {
-    const canvas = $(canvasId) as unknown as HTMLCanvasElement;
-    const tip = $(tipId);
-    canvas.addEventListener('pointermove', (ev) => {
-      const st = charts.get(canvasId);
-      if (!st?.spectrum) return;
-      const rect = canvas.getBoundingClientRect();
-      const relX = (ev.clientX - rect.left - 44) / (rect.width - 52);
-      const { x } = st.spectrum;
-      const i = Math.round(relX * (x.length - 1));
-      st.hoverI = Math.max(0, Math.min(x.length - 1, i));
-      drawChart(canvasId);
-      tip.style.display = 'block';
-      tip.style.left = Math.min(ev.clientX - rect.left + 10, rect.width - 130) + 'px';
-      tip.style.top = '6px';
-      tip.innerHTML = `${fmt(x[st.hoverI])} ${xUnit}<br>` + st.series
-        .map((s) => `${s.label}: ${fmt(st.spectrum!.series[s.key][st.hoverI])}`)
-        .join('<br>');
-    });
-    canvas.addEventListener('pointerleave', () => {
-      const st = charts.get(canvasId);
-      if (!st) return;
-      st.hoverI = -1; tip.style.display = 'none';
-      drawChart(canvasId);
-    });
-  }
-
-  // ── Consumer input selectors (each one is a re-wirable edge) ──
-  const ptInput = $('pt-input') as unknown as HTMLSelectElement;
-  const colorInput = $('color-input') as unknown as HTMLSelectElement;
-  const peakInput = $('peak-input') as unknown as HTMLSelectElement;
-  const producerOf = (sel: HTMLSelectElement) => sel.value.split(':')[0];
-  const channelOf = (sel: HTMLSelectElement) => sel.value.split(':')[1];
-
-  // ── Graph nodes ──
-  const graph = new Graph();
-  const POINTS = 240;
-
-  graph.add({ id: 'material', deps: () => [], run: () => {
-    const [n, k] = getNK(550);
-    $('mat-readout').textContent = `n + ik @ 550 nm: ${n.toFixed(3)} + ${k.toFixed(3)}i`;
-  }});
-  graph.add({ id: 'env', deps: () => [], run: () => {
-    const e = env();
-    $('env-readout').textContent = `= ${(HC / e.lmax).toFixed(2)} – ${(HC / e.lmin).toFixed(2)} eV`;
-  }});
-  graph.add({ id: 'sphereGeo', deps: () => [], run: () => {} });
-  graph.add({ id: 'particleGeo', deps: () => [], run: () => {} });
-
-  graph.add({ id: 'mie', deps: () => ['material', 'env', 'sphereGeo'], run: () => {
-    const e = env();
-    const radiusNm = num('geo-radius', 50);
-    const spec = spectrumFromMie(computeMie(getNK, radiusNm, e.nHost, e.lmin, e.lmax, POINTS));
-    outputs.set('mie', { spectrum: spec, radiusNm });
-    const c = isDark() ? SIGMA_COLORS.dark : SIGMA_COLORS.light;
-    const series = [
-      { key: 'cext', label: 'σ_ext', color: c.ext },
-      { key: 'csca', label: 'σ_sca', color: c.sca },
-      { key: 'cabs', label: 'σ_abs', color: c.abs },
-    ];
-    charts.set('mie-chart', { spectrum: spec, series, xLabel: 'λ (nm) · σ (nm²)', hoverI: -1 });
-    renderLegend('mie-legend', series);
-    drawChart('mie-chart');
-  }});
-
-  graph.add({ id: 'plasmon', deps: () => ['material', 'env', 'particleGeo'], run: () => {
-    const e = env();
-    const raw = computePlasmonSpectrum({
-      shape: shapeSel.value as PlasmonShapeId,
-      materialId: matSelect.value === 'drude' ? 'au' : matSelect.value,
-      epsilonAt,
-      lengthNm: num('plasmon-length', 50),
-      aspectRatio: num('plasmon-aspect', 4),
-      hostIndex: e.nHost,
-      lambdaMinNm: e.lmin,
-      lambdaMaxNm: e.lmax,
-      points: POINTS,
-    });
-    const spec = spectrumFromPlasmon(raw);
-    // volume-equivalent radius for downstream photothermal use
-    const radiusNm = Math.cbrt((3 * raw.volumeNm3) / (4 * Math.PI));
-    outputs.set('plasmon', { spectrum: spec, radiusNm });
-    const c = isDark() ? SIGMA_COLORS.dark : SIGMA_COLORS.light;
-    const series = [
-      { key: 'sigmaExtNm2', label: 'σ_ext', color: c.ext },
-      { key: 'sigmaScaNm2', label: 'σ_sca', color: c.sca },
-      { key: 'sigmaAbsNm2', label: 'σ_abs', color: c.abs },
-    ];
-    charts.set('plasmon-chart', { spectrum: spec, series, xLabel: 'λ (nm) · σ (nm²)', hoverI: -1 });
-    renderLegend('plasmon-legend', series);
-    drawChart('plasmon-chart');
-  }});
-
-  graph.add({ id: 'electron', deps: () => ['material', 'env', 'sphereGeo'], run: () => {
-    const e = env();
-    const kev = num('el-kev', 100);
-    const gamma = 1 + kev / 510.99895;
-    const beta = Math.sqrt(Math.max(1e-6, 1 - 1 / (gamma * gamma)));
-    const radiusNm = num('geo-radius', 50);
-    const spec = spectrumFromElectron(computeElectronSphereSpectrum(
-      getNK,
-      { radiusNm, beta, impactNm: num('el-impact', 60), lmax: 6, qCutNm: 0.71, nz: 32 },
-      HC / e.lmax, HC / e.lmin, 120,
-    ));
-    outputs.set('electron', { spectrum: spec, radiusNm });
-    const c = isDark() ? ELECTRON_COLORS.dark : ELECTRON_COLORS.light;
-    const series = [
-      { key: 'eelsTotal', label: 'EELS', color: c.eels },
-      { key: 'clTotal', label: 'CL', color: c.cl },
-    ];
-    charts.set('electron-chart', { spectrum: spec, series, xLabel: 'ħω (eV) · Γ (eV⁻¹)', hoverI: -1 });
-    renderLegend('electron-legend', series);
-    drawChart('electron-chart');
-  }});
-
-  graph.add({ id: 'photothermal', deps: () => [producerOf(ptInput)], run: () => {
-    const src = outputs.get(producerOf(ptInput));
-    if (!src) return;
-    const key = producerOf(ptInput) === 'mie' ? 'cabs' : 'sigmaAbsNm2';
-    const I = peakIrradianceWm2(num('pt-power', 1), num('pt-waist', 1));
-    const kappa = num('pt-kappa', 0.606);
-    const dT = deltaTSpectrum(src.spectrum.series[key], I, kappa, src.radiusNm);
-    const spec: Spectrum = { x: src.spectrum.x, axis: 'lambdaNm', series: { dT } };
-    const series = [{ key: 'dT', label: 'ΔT', color: chartTheme().primary }];
-    charts.set('pt-chart', { spectrum: spec, series, xLabel: 'λ (nm) · ΔT (K)', hoverI: -1 });
-    drawChart('pt-chart');
-    const p = peakAnalysis(spec.x, dT);
-    $('pt-headline').textContent = p
-      ? `ΔT(peak) = ${p.y0.toFixed(2)} K @ ${p.x0.toFixed(0)} nm — R = ${src.radiusNm.toFixed(1)} nm`
-      : 'No absorption in this window.';
-  }});
-
-  graph.add({ id: 'color', deps: () => [producerOf(colorInput)], run: () => {
-    const src = outputs.get(producerOf(colorInput));
-    if (!src) return;
-    const y = src.spectrum.series[channelOf(colorInput)];
-    const peak = Math.max(...y);
-    const sw = $('color-swatch');
-    if (!(peak > 0)) { sw.style.background = 'transparent'; $('color-headline').textContent = '—'; return; }
-    const R = Float64Array.from(y, (v) => v / peak);
-    const hex = spectrumToHex(src.spectrum.x, R);
-    sw.style.background = hex;
-    $('color-headline').textContent = hex;
-  }});
-
-  graph.add({ id: 'peak', deps: () => [producerOf(peakInput)], run: () => {
-    const src = outputs.get(producerOf(peakInput));
-    if (!src) return;
-    const isEv = src.spectrum.axis === 'energyEv';
-    const p = peakAnalysis(src.spectrum.x, src.spectrum.series[channelOf(peakInput)]);
-    $('peak-readout').innerHTML = p
-      ? `<dt>${isEv ? 'E₀' : 'λ₀'}</dt><dd>${p.x0.toFixed(isEv ? 3 : 1)} ${isEv ? 'eV' : 'nm'}</dd>
-         <dt>Peak</dt><dd>${fmt(p.y0)}</dd>
-         <dt>FWHM</dt><dd>${Number.isNaN(p.fwhm) ? 'outside window' : fmt(p.fwhm) + (isEv ? ' eV' : ' nm')}</dd>
-         <dt>Q</dt><dd>${Number.isNaN(p.q) ? '—' : p.q.toFixed(1)}</dd>`
-      : '<dt>Peak</dt><dd>none in window</dd>';
-  }});
-
-  // ── Event wiring: each control invalidates its own node ──
-  const invalidateQueue = new Set<string>();
-  let rafId = 0;
-  function invalidateSoon(id: string) {
-    invalidateQueue.add(id);
-    if (!rafId) rafId = requestAnimationFrame(() => {
-      rafId = 0;
-      const batch = [...invalidateQueue]; invalidateQueue.clear();
-      for (const nodeId of batch) {
-        try { graph.invalidate(nodeId); } catch (err) { console.error(err); }
-      }
-      layoutWires();
-    });
-  }
-
-  matSelect.addEventListener('change', () => {
-    drudeBox.style.display = matSelect.value === 'drude' ? '' : 'none';
-    invalidateSoon('material');
+  const inspCanvas = $('inspector-chart') as unknown as HTMLCanvasElement;
+  inspCanvas.addEventListener('pointermove', (ev) => {
+    const cd: ChartData | undefined = selectedNode?._chart;
+    if (!cd) return;
+    const rect = inspCanvas.getBoundingClientRect();
+    const relX = (ev.clientX - rect.left - 48) / (rect.width - 58);
+    inspectorHover = Math.max(0, Math.min(cd.spectrum.x.length - 1, Math.round(relX * (cd.spectrum.x.length - 1))));
+    drawInspectorChart();
+    const tip = $('inspector-tip');
+    tip.style.display = 'block';
+    tip.style.left = Math.min(ev.clientX - rect.left + 12, rect.width - 140) + 'px';
+    tip.style.top = '8px';
+    tip.innerHTML = `${fmt(cd.spectrum.x[inspectorHover])} ${cd.xUnit}<br>` + cd.series
+      .map((s) => `${s.label}: ${fmt(cd.spectrum.series[s.key][inspectorHover])}`)
+      .join('<br>');
   });
-  for (const id of ['drude-epsb', 'drude-wp', 'drude-gamma']) $(id).addEventListener('input', () => invalidateSoon('material'));
-  for (const id of ['env-nhost', 'env-lmin', 'env-lmax']) $(id).addEventListener('input', () => invalidateSoon('env'));
-  $('geo-radius').addEventListener('input', () => invalidateSoon('sphereGeo'));
-  for (const id of ['plasmon-length', 'plasmon-aspect']) $(id).addEventListener('input', () => invalidateSoon('particleGeo'));
-  shapeSel.addEventListener('change', () => invalidateSoon('particleGeo'));
-  for (const id of ['el-kev', 'el-impact']) $(id).addEventListener('input', () => invalidateSoon('electron'));
-  for (const id of ['pt-power', 'pt-waist', 'pt-kappa']) $(id).addEventListener('input', () => invalidateSoon('photothermal'));
-  ptInput.addEventListener('change', () => invalidateSoon('photothermal'));
-  colorInput.addEventListener('change', () => invalidateSoon('color'));
-  peakInput.addEventListener('change', () => invalidateSoon('peak'));
+  inspCanvas.addEventListener('pointerleave', () => {
+    inspectorHover = -1; $('inspector-tip').style.display = 'none';
+    drawInspectorChart();
+  });
 
-  // ── Wires: sources → solvers → selected consumers ──
-  function layoutWires() {
-    const svg = $('bench-wires') as unknown as SVGSVGElement & HTMLElement;
-    const bench = $('bench');
-    if (getComputedStyle(svg).display === 'none') { svg.innerHTML = ''; return; }
-    const br = bench.getBoundingClientRect();
-    const anchor = (el: Element, side: 'right' | 'left') => {
-      const r = el.getBoundingClientRect();
-      return { x: (side === 'right' ? r.right : r.left) - br.left, y: r.top + r.height / 2 - br.top };
-    };
-    const curve = (o: { x: number; y: number }, p: { x: number; y: number }) => {
-      const midX = (o.x + p.x) / 2;
-      return `<path d="M ${o.x} ${o.y} C ${midX} ${o.y}, ${midX} ${p.y}, ${p.x} ${p.y}"/>`;
-    };
-    const inPort = (nodeId: string) => document.querySelector(`#${nodeId} .port--in`)!;
-    const paths: string[] = [];
-    const outM = anchor($('port-material'), 'right');
-    const outE = anchor($('port-env'), 'right');
-    const outS = anchor($('port-sphere'), 'right');
-    const outP = anchor($('port-particle'), 'right');
-    for (const [nodeId, sources] of [
-      ['node-mie', [outM, outE, outS]],
-      ['node-plasmon', [outM, outE, outP]],
-      ['node-electron', [outM, outE, outS]],
-    ] as const) {
-      const p = anchor(inPort(nodeId), 'left');
-      for (const o of sources) paths.push(curve(o, p));
-    }
-    for (const [sel, nodeId] of [
-      [ptInput, 'node-photothermal'],
-      [colorInput, 'node-color'],
-      [peakInput, 'node-peak'],
-    ] as const) {
-      const o = anchor($(`port-out-${producerOf(sel)}`), 'right');
-      paths.push(curve(o, anchor(inPort(nodeId), 'left')));
-    }
-    const stroke = chartTheme().primary;
-    svg.innerHTML = `<g fill="none" stroke="${stroke}" stroke-opacity="0.28" stroke-width="1.5">${paths.join('')}</g>`;
-  }
-
-  attachHover('mie-chart', 'mie-tip', 'nm');
-  attachHover('plasmon-chart', 'plasmon-tip', 'nm');
-  attachHover('electron-chart', 'electron-tip', 'eV');
-  attachHover('pt-chart', 'pt-tip', 'nm');
-
-  function runAll() {
-    try { graph.runAll(); } catch (err) { console.error(err); }
-    layoutWires();
-  }
-  window.addEventListener('resize', runAll);
-  onThemeChange(runAll);
-  runAll();
+  // ── Boot ──
+  if (!restoreFromHash()) buildDefaultGraph();
+  themeCanvas();
+  resizeCanvas();
+  scheduleRun();
+  window.addEventListener('resize', () => { resizeCanvas(); scheduleRun(); });
+  onThemeChange(() => { themeCanvas(); scheduleRun(); });
 </script>
