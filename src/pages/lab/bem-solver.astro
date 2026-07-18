@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 
 const bemPresets = [
   { label: 'Au sphere in water', values: { 'shape-select': 'sphere', 'material-select': 'au', 'radius-input': 25, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 800, 'wl-npoints-input': 20 } },
@@ -45,6 +46,7 @@ const bemPresets = [
       <div class="bem-layout">
 
         <!-- Left: Controls -->
+        <ParamsDrawer>
         <div class="controls card">
           <PresetStrip presets={bemPresets} canvasId="spectrum-canvas" />
           <h3>Geometry</h3>
@@ -126,6 +128,7 @@ const bemPresets = [
           </div>
           <p class="progress-text" id="progress-text">Loading solver...</p>
         </div>
+        </ParamsDrawer>
 
         <!-- Center: 3D Viewport -->
         <div class="viewport-panel card">

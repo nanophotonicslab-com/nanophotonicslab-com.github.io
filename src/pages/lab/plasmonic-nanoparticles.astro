@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import { MATERIALS } from '../../lib/materials';
 import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 
 const materialOptions = PLASMONIC_MATERIAL_IDS
   .filter(id => MATERIALS[id])
@@ -63,6 +64,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       </div>
 
       <div class="widget-layout">
+        <ParamsDrawer>
         <aside class="controls card">
           <div class="controls-head">
             <h3>Parameters</h3>
@@ -312,6 +314,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
             </div>
           </div>
         </aside>
+        </ParamsDrawer>
 
         <main class="lab-main">
           <div class="tabs" id="lin-tabs" role="tablist" aria-label="Plot views">

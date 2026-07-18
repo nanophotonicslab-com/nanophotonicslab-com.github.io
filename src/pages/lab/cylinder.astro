@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 
 const cylPresets = [
   { label: 'Ag in air', values: { 'material-select': 'ag', 'r-num': 15, 'r-slider': 15, 'eh-num': 1.00, 'eh-slider': 1.00, 'w-min': 0.2, 'w-max': 4 } },
@@ -53,6 +54,7 @@ const cylPresets = [
       </div>
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
+        <ParamsDrawer>
         <div class="controls card">
           <h3>Parameters</h3>
 
@@ -185,6 +187,7 @@ const cylPresets = [
 
           <button type="button" class="config-check" id="config-check" aria-haspopup="dialog" aria-controls="structure-dialog" title="Open structure drawing"></button>
         </div>
+        </ParamsDrawer>
 
         <!-- ===== Results ===== -->
         <div class="results-col">

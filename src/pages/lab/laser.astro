@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 
 const laserPresets = [
   { label: 'Ti:sapphire (100 fs)', values: { 'tbp-lam': 800, 'tbp-dt': 100, 'peak-pavg': 1, 'peak-frep': 80, 'peak-dt': 100, 'gdd-wl': 800, 'gdd-dt': 100 } },
@@ -57,6 +58,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel active" id="panel-tbp">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Time-Bandwidth Product</h3>
 
@@ -94,6 +96,7 @@ const laserPresets = [
               &Delta;&nu;&nbsp;=&nbsp;c&thinsp;&Delta;&lambda;/&lambda;&sup2;.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -143,6 +146,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-peak">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Peak Power</h3>
 
@@ -202,6 +206,7 @@ const laserPresets = [
               k: Gaussian&nbsp;0.94, sech&sup2;&nbsp;0.88, rect&nbsp;1.0.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -235,6 +240,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-gdd">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>GDD Pulse Broadening</h3>
 
@@ -287,6 +293,7 @@ const laserPresets = [
               GDD&nbsp;=&nbsp;GVD&thinsp;&times;&thinsp;L&thinsp;&times;&thinsp;passes.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>

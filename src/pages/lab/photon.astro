@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
 ---
 
 <Layout title="Photon Calculator" description="Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons — with live spectral chart and common laser references.">
@@ -33,6 +34,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
     <div class="container">
       <div class="widget-layout">
         <!-- ===== Controls ===== -->
+        <ParamsDrawer>
         <div class="controls card">
           <h3>Parameters</h3>
 
@@ -98,6 +100,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
             Constants: CODATA 2018.
           </p>
         </div>
+        </ParamsDrawer>
 
         <!-- ===== Chart ===== -->
         <div class="chart-panel card">

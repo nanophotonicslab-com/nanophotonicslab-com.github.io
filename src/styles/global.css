@@ -319,11 +319,14 @@ p {
 @media (max-width: 640px) {
   /* Chart first: the controls panel (bare, drawer-wrapped, or column-wrapped)
      drops below the results column. */
-  .widget-layout.widget-layout { display: flex; flex-direction: column; }
+  .widget-layout.widget-layout,
+  .bem-layout.bem-layout { display: flex; flex-direction: column; }
   .widget-layout.widget-layout[hidden] { display: none; }
   .widget-layout.widget-layout > .controls,
   .widget-layout.widget-layout > .params-drawer,
-  .widget-layout.widget-layout > .widget-column--controls { order: 2; }
+  .widget-layout.widget-layout > .widget-column--controls,
+  .bem-layout.bem-layout > .controls,
+  .bem-layout.bem-layout > .params-drawer { order: 2; }
 
   /* The drawer header replaces the panel's own title on phones. */
   .params-drawer .controls-title,
@@ -332,17 +335,25 @@ p {
   /* 16px form controls stop iOS Safari's focus auto-zoom. */
   .widget-layout input[type="number"],
   .widget-layout input[type="text"],
-  .widget-layout select { font-size: 1rem; }
+  .widget-layout select,
+  .bem-layout input[type="number"],
+  .bem-layout input[type="text"],
+  .bem-layout select { font-size: 1rem; }
 
   /* Touch targets */
-  .widget-layout input[type="range"] { min-height: 36px; }
-  .widget-layout input[type="range"]::-webkit-slider-thumb { width: 22px; height: 22px; }
-  .widget-layout input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; }
+  .widget-layout input[type="range"],
+  .bem-layout input[type="range"] { min-height: 36px; }
+  .widget-layout input[type="range"]::-webkit-slider-thumb,
+  .bem-layout input[type="range"]::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .widget-layout input[type="range"]::-moz-range-thumb,
+  .bem-layout input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; }
   .widget-layout .chart-tool-btn,
   .widget-layout .preset-btn,
   .widget-layout .tool-btn,
   .widget-layout .share-btn,
   .widget-layout .icon-btn,
   .widget-layout .seg-btn,
-  .widget-layout .plot-tab { min-height: 42px; }
+  .widget-layout .plot-tab,
+  .bem-layout .chart-tool-btn,
+  .bem-layout .preset-btn { min-height: 42px; }
 }
