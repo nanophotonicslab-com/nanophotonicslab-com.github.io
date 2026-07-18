@@ -48,6 +48,17 @@ import 'litegraph.js/css/litegraph.css';
       </details>
       <div class="graph-wrap" id="graph-wrap">
         <canvas id="graph-canvas"></canvas>
+        <div class="rii-modal" id="rii-modal" hidden>
+          <div class="rii-panel">
+            <div class="rii-head">
+              <h3>Search refractiveindex.info</h3>
+              <button id="rii-close" class="rii-close" type="button" aria-label="Close search">&times;</button>
+            </div>
+            <input id="rii-query" class="rii-query" type="text" placeholder="e.g. gold Johnson, TiO2, GaAs&hellip;" aria-label="Search materials">
+            <div class="rii-results" id="rii-results" role="listbox"></div>
+            <p class="rii-status" id="rii-status"></p>
+          </div>
+        </div>
       </div>
 
       <div class="inspector card" id="inspector">
@@ -55,6 +66,10 @@ import 'litegraph.js/css/litegraph.css';
           <span class="port port--in"></span>
           <h3 id="inspector-title">Inspector</h3>
           <span class="node-tag" id="inspector-tag">select a node</span>
+          <span class="inspector-actions">
+            <button id="btn-png" class="tool-btn" type="button" disabled title="Download the inspected chart as PNG">PNG</button>
+            <button id="btn-csv" class="tool-btn" type="button" disabled title="Download the inspected spectrum as CSV">CSV</button>
+          </span>
         </div>
         <p class="node-headline" id="inspector-headline"></p>
         <div class="chart-wrap"><canvas id="inspector-chart"></canvas><div class="chart-tip" id="inspector-tip"></div></div>
@@ -104,11 +119,48 @@ import 'litegraph.js/css/litegraph.css';
   .bench-hint { font-size: 0.75rem; color: var(--text-muted); }
 
   .graph-wrap {
+    position: relative;
     width: 100%; height: 62vh; min-height: 420px;
     border: 1px solid #2A2945; border-radius: var(--radius-lg); overflow: hidden;
     background: #12102B;
     box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.25);
   }
+  .rii-modal {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 6vh; background: rgba(15, 14, 26, 0.55); backdrop-filter: blur(2px);
+  }
+  .rii-modal[hidden] { display: none; }
+  .rii-panel {
+    width: min(440px, 92%); max-height: 80%; display: flex; flex-direction: column;
+    background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35); padding: var(--space-md);
+  }
+  .rii-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm); }
+  .rii-head h3 { font-size: 0.95rem; }
+  .rii-close {
+    border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer;
+    color: var(--text-muted); padding: 0.1rem 0.4rem; border-radius: var(--radius-sm);
+  }
+  .rii-close:hover { color: var(--text); background: var(--bg-soft); }
+  .rii-query {
+    width: 100%; padding: 0.45rem 0.6rem; margin-bottom: var(--space-sm);
+    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.9rem; color: var(--text); background: var(--bg-soft); outline: none;
+  }
+  .rii-query:focus-visible { border-color: var(--primary-light); }
+  .rii-results { overflow-y: auto; min-height: 0; }
+  .rii-results :global(button) {
+    display: block; width: 100%; text-align: left; padding: 0.4rem 0.55rem;
+    border: none; background: none; cursor: pointer; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.8125rem; color: var(--text-soft);
+  }
+  .rii-results :global(button:hover) { background: var(--bg-soft); color: var(--primary); }
+  .rii-results :global(b) { color: var(--text); font-weight: 600; }
+  .rii-status { font-size: 0.75rem; color: var(--text-muted); margin: 0.4rem 0 0; min-height: 1em; }
+
+  .inspector-actions { margin-left: auto; display: flex; gap: 0.4rem; }
+  .inspector-actions .tool-btn[disabled] { opacity: 0.45; cursor: default; }
   .graph-wrap canvas { display: block; width: 100%; height: 100%; outline: none; }
 
   .inspector { margin-top: var(--space-lg); padding: var(--space-md); }
@@ -223,6 +275,8 @@ import 'litegraph.js/css/litegraph.css';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { peakIrradianceWm2, deltaTSpectrum } from '../../lib/photothermal';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
+  import { downloadBlob } from '../../lib/download';
+  import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const HC = 1239.841984;
@@ -242,13 +296,27 @@ import 'litegraph.js/css/litegraph.css';
   const electronColors = () => (isDark() ? ELECTRON_COLORS.dark : ELECTRON_COLORS.light);
 
   // ── Material descriptor (plain data on the wire; callbacks built at use) ──
-  interface MaterialDesc { kind: 'db' | 'drude'; id?: string; epsB?: number; wpEv?: number; gammaEv?: number; }
+  interface MaterialDesc { kind: 'db' | 'drude' | 'rii'; id?: string; dataPath?: string; epsB?: number; wpEv?: number; gammaEv?: number; }
+  const riiNK = new Map<string, number[][]>();      // dataPath → tabulated [[µm, n, k]]
+  const riiPending = new Set<string>();
+  const riiErrors = new Map<string, string>();
   function nkOf(mat: MaterialDesc, lambdaNm: number): [number, number] {
     if (mat.kind === 'drude') {
       const nk = csqrtUpper(drudeEpsilon(lambdaNm, { epsB: mat.epsB!, wpEv: mat.wpEv!, gammaEv: mat.gammaEv! }));
       return [nk.re, nk.im];
     }
+    if (mat.kind === 'rii') return interpolateNK(riiNK.get(mat.dataPath!)!, lambdaNm);
     return interpolateNK(MATERIALS[mat.id!].data, lambdaNm);
+  }
+  // Fetch tabulated data for a graph that references an RII material (e.g. a
+  // restored permalink); re-runs the graph when the data lands.
+  function ensureRiiData(dataPath: string) {
+    if (riiNK.has(dataPath) || riiPending.has(dataPath)) return;
+    riiPending.add(dataPath);
+    fetchMaterialNK(dataPath)
+      .then((data) => { riiNK.set(dataPath, data); riiErrors.delete(dataPath); })
+      .catch((err) => { riiErrors.set(dataPath, String(err?.message || err)); })
+      .finally(() => { riiPending.delete(dataPath); scheduleRun(); });
   }
   function epsOf(mat: MaterialDesc, lambdaNm: number) {
     if (mat.kind === 'drude') return drudeEpsilon(lambdaNm, { epsB: mat.epsB!, wpEv: mat.wpEv!, gammaEv: mat.gammaEv! });
@@ -382,22 +450,39 @@ import 'litegraph.js/css/litegraph.css';
   };
 
   // Sources -------------------------------------------------------------
+  const RII_OPTION = 'database…';
   defineNode('workbench/material', 'Material', 'source', (n) => {
     n.addOutput('material', 'material');
-    n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05 };
-    widget(n, 'combo', 'source', 'source', { values: MAT_IDS });
+    n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05, riiDataPath: '', riiLabel: '' };
+    n.addWidget('combo', 'source', n.properties.source, (v: string) => {
+      if (v === RII_OPTION) openRiiDialog(n);
+      scheduleRun();
+    }, { values: [...MAT_IDS, RII_OPTION], property: 'source' });
     widget(n, 'number', 'εb (Drude)', 'epsB', { min: -10, max: 20, step: 1 });
     widget(n, 'number', 'ωp eV (Drude)', 'wpEv', { min: 0.1, max: 20, step: 1 });
     widget(n, 'number', 'γ eV (Drude)', 'gammaEv', { min: 0, max: 3, step: 0.1 });
     n.size = [210, 130];
   }, (n) => {
     const p = n.properties;
-    const mat: MaterialDesc = p.source === 'drude'
-      ? { kind: 'drude', epsB: p.epsB, wpEv: p.wpEv, gammaEv: p.gammaEv }
-      : { kind: 'db', id: p.source };
+    let mat: MaterialDesc | null = null;
+    if (p.source === RII_OPTION) {
+      n.title = p.riiLabel ? (p.riiLabel.length > 22 ? p.riiLabel.slice(0, 21) + '…' : p.riiLabel) : 'Material';
+      if (!p.riiDataPath) { n._readout = 'pick a material…'; }
+      else if (riiErrors.has(p.riiDataPath)) { n._readout = 'fetch failed — retry via source'; }
+      else if (!riiNK.has(p.riiDataPath)) { n._readout = 'fetching nk data…'; ensureRiiData(p.riiDataPath); }
+      else mat = { kind: 'rii', dataPath: p.riiDataPath };
+    } else {
+      n.title = 'Material';
+      n._lastConcrete = p.source;
+      mat = p.source === 'drude'
+        ? { kind: 'drude', epsB: p.epsB, wpEv: p.wpEv, gammaEv: p.gammaEv }
+        : { kind: 'db', id: p.source };
+    }
     n.setOutputData(0, mat);
-    const [nn, kk] = nkOf(mat, 550);
-    n._readout = `n+ik@550: ${nn.toFixed(2)}+${kk.toFixed(2)}i`;
+    if (mat) {
+      const [nn, kk] = nkOf(mat, 550);
+      n._readout = `n+ik@550: ${nn.toFixed(2)}+${kk.toFixed(2)}i`;
+    }
   }, {
     onDrawForeground(this: any, ctx: CanvasRenderingContext2D) {
       if (this.flags.collapsed || !this._readout) return;
@@ -872,6 +957,8 @@ import 'litegraph.js/css/litegraph.css';
       tag.textContent = 'select a node';
       head.textContent = '';
       leg.innerHTML = '';
+      ($('btn-png') as unknown as HTMLButtonElement).disabled = true;
+      ($('btn-csv') as unknown as HTMLButtonElement).disabled = true;
       drawInspectorChart();
       return;
     }
@@ -882,6 +969,9 @@ import 'litegraph.js/css/litegraph.css';
       .map((s: SeriesSpec) => `<span><i style="--c:${s.color}"></i>${s.label}</span>`)
       .join('');
     drawInspectorChart();
+    const hasChart = !!selectedNode?._chart;
+    ($('btn-png') as unknown as HTMLButtonElement).disabled = !hasChart;
+    ($('btn-csv') as unknown as HTMLButtonElement).disabled = !hasChart;
   }
 
   const inspCanvas = $('inspector-chart') as unknown as HTMLCanvasElement;
@@ -903,6 +993,85 @@ import 'litegraph.js/css/litegraph.css';
   inspCanvas.addEventListener('pointerleave', () => {
     inspectorHover = -1; $('inspector-tip').style.display = 'none';
     drawInspectorChart();
+  });
+
+  // ── RII search dialog (fills a Material node from refractiveindex.info) ──
+  let riiCatalog: RIIMaterial[] | null = null;
+  let riiTarget: any = null;
+  const riiModal = $('rii-modal'), riiQuery = $('rii-query') as unknown as HTMLInputElement;
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+  function openRiiDialog(node: any) {
+    riiTarget = node;
+    riiModal.hidden = false;
+    riiQuery.value = '';
+    $('rii-status').textContent = '';
+    if (!riiCatalog) {
+      $('rii-status').textContent = 'Loading catalog…';
+      loadCatalog()
+        .then((c) => { riiCatalog = c; $('rii-status').textContent = `${c.length} materials.`; renderRiiResults(''); })
+        .catch((err) => { $('rii-status').textContent = `Catalog failed: ${err?.message || err}`; });
+    } else renderRiiResults('');
+    riiQuery.focus();
+  }
+  function closeRiiDialog() {
+    riiModal.hidden = true;
+    // Cancelled with nothing ever picked → fall back to the last concrete source.
+    if (riiTarget && riiTarget.properties.source === RII_OPTION && !riiTarget.properties.riiDataPath) {
+      setProp(riiTarget, 'source', riiTarget._lastConcrete || 'au');
+      scheduleRun();
+    }
+    riiTarget = null;
+  }
+  function renderRiiResults(q: string) {
+    if (!riiCatalog) return;
+    const hits = searchCatalog(riiCatalog, q, 40);
+    $('rii-results').innerHTML = hits
+      .map((m, i) => `<button type="button" data-i="${i}"><b>${esc(m.bookName)}</b> — ${esc(m.pageName)}</button>`)
+      .join('');
+    ($('rii-results') as HTMLElement).querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', () => pickRiiMaterial(hits[parseInt(btn.dataset.i!, 10)]));
+    });
+  }
+  function pickRiiMaterial(m: RIIMaterial) {
+    const node = riiTarget;
+    if (!node) return;
+    $('rii-status').textContent = `Fetching ${m.bookName} (${m.pageName})…`;
+    fetchMaterialNK(m.dataPath)
+      .then((data) => {
+        riiNK.set(m.dataPath, data);
+        riiErrors.delete(m.dataPath);
+        node.properties.riiDataPath = m.dataPath;
+        node.properties.riiLabel = `${m.bookName} (${m.pageName})`;
+        setProp(node, 'source', RII_OPTION);
+        riiTarget = null;
+        riiModal.hidden = true;
+        scheduleRun();
+      })
+      .catch((err) => { $('rii-status').textContent = `Fetch failed: ${err?.message || err}`; });
+  }
+  riiQuery.addEventListener('input', () => renderRiiResults(riiQuery.value));
+  riiQuery.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeRiiDialog(); });
+  $('rii-close').addEventListener('click', closeRiiDialog);
+  riiModal.addEventListener('pointerdown', (ev) => { if (ev.target === riiModal) closeRiiDialog(); });
+
+  // ── Export the inspected node (PNG of the chart, CSV of the spectrum) ──
+  const exportName = (ext: string) =>
+    `workbench_${(selectedNode?.title || 'node').toLowerCase().replace(/[^a-z0-9]+/g, '_')}.${ext}`;
+  $('btn-png').addEventListener('click', () => {
+    if (!selectedNode?._chart) return;
+    (inspCanvas as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, exportName('png')); }, 'image/png');
+  });
+  $('btn-csv').addEventListener('click', () => {
+    const cd: ChartData | undefined = selectedNode?._chart;
+    if (!cd) return;
+    const keys = cd.series.map((s) => s.key);
+    const header = [cd.xUnit === 'eV' ? 'energy_eV' : 'lambda_nm', ...keys];
+    const lines = [header.join(',')];
+    for (let i = 0; i < cd.spectrum.x.length; i++) {
+      lines.push([cd.spectrum.x[i], ...keys.map((k) => cd.spectrum.series[k][i])].join(','));
+    }
+    downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
   });
 
   // ── Boot ──
