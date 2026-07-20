@@ -211,14 +211,21 @@ p {
   opacity: 1;
 }
 
-/* animated loading rim — a flowing rainbow bar shown while a result is computing */
+/* loading rim — a spectrum progress bar that fills left→right (like the RCWA
+   loader) while a result is computing. Uses transform/opacity only, so it keeps
+   animating on the compositor even while the JS compute blocks the main thread. */
 .card.is-computing::before {
   opacity: 1;
-  background: linear-gradient(90deg, #7C3AED, #6366F1, #3B82F6, #06B6D4, #10B981, #F59E0B, #F97316, #EF4444, #7C3AED);
-  background-size: 200% 100%;
-  animation: rim-load-flow 1.1s linear infinite;
+  background: var(--spectrum);
+  transform-origin: left center;
+  animation: rim-fill 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
-@keyframes rim-load-flow { from { background-position: 0 0; } to { background-position: -200% 0; } }
+@keyframes rim-fill {
+  0%   { transform: scaleX(0);   opacity: 1; }
+  55%  { transform: scaleX(1);   opacity: 1; }
+  82%  { transform: scaleX(1);   opacity: 1; }
+  100% { transform: scaleX(1);   opacity: 0; }
+}
 
 .card,
 .card:hover,

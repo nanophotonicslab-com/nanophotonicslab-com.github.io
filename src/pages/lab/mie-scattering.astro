@@ -1845,6 +1845,15 @@ initPermalinks({
   let applyingDipolePreset = false;
   let dipoleInitialized = false;                    // apply sensible defaults the first time dipole mode is opened
   const RADIUS_GAP_NM = 5;
+  // Loading rim on the result box while a slow calculation runs (electron
+  // penetrating trajectories, b < R, are much heavier than aloof ones).
+  const setMieComputing = (on: boolean) => document.querySelector('.chart-panel')?.classList.toggle('is-computing', on);
+  function isPenetratingElectron(): boolean {
+    if (excitation !== 'electron') return false;
+    const radii = radiusParams().map(p => p.value).filter(v => Number.isFinite(v) && v > 0);
+    if (!radii.length) return false;
+    return electronBParam.value < Math.max(...radii);
+  }
   function runScheduledUpdate() {
     if (rafPending) return;
     rafPending = true;
@@ -1853,6 +1862,7 @@ initPermalinks({
       recompute();
       render();
       updateConfigCheck();
+      setMieComputing(false);   // clear the loading rim once the (possibly slow) compute finishes
     });
   }
   function scheduleUpdate() {
@@ -1863,6 +1873,9 @@ initPermalinks({
     // Electron EELS/CL is genuinely expensive → debounce. Plane wave and the dipole
     // decay-rate solver are both fast (~tens of ms) → update immediately (rAF-coalesced).
     if (excitation === 'electron') {
+      // Penetrating trajectories (b < R) are slow — show the loading rim right away
+      // (set synchronously so it paints during the debounce + compute).
+      if (isPenetratingElectron()) setMieComputing(true);
       updateTimer = window.setTimeout(() => {
         updateTimer = null;
         runScheduledUpdate();
