@@ -149,6 +149,7 @@ const thermalPresets = [
         </div>
         </ParamsDrawer>
 
+        <div class="results-col">
         <!-- ===== Chart ===== -->
         <div class="chart-panel card">
           <div class="chart-header">
@@ -277,6 +278,7 @@ const thermalPresets = [
           </p>
           <PresetStrip presets={thermalPresets} showCopy={false} />
         </div>
+        </div>
       </div>
 
       <dialog class="profile-dialog" id="profile-dialog" aria-labelledby="profile-dialog-title">
@@ -388,10 +390,9 @@ initPermalinks({
   }
   .controls {
     display: flex; flex-direction: column; gap: var(--space-md);
-    /* span all right-column rows (chart + output + notes) so the grid places them in col 2;
-       not sticky — params scroll together with the results, like the other labs */
-    grid-row: 1 / span 3;
   }
+  /* right column: chart + output + notes stacked, params scroll alongside (like the other labs) */
+  .results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .controls h3 { font-size: 1rem; }
 
   .param { display: flex; flex-direction: column; gap: 0.4rem; }
