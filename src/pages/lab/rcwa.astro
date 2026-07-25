@@ -485,17 +485,17 @@ import '../../styles/lab.css';
   }
   :global(.bz-order-btn:hover:not(.is-selected)) { background: rgba(99, 102, 241, 0.14); border-color: var(--primary); }
   :global(.bz-order-btn.is-selected) {
-    border-color: var(--primary); background: var(--primary); color: #fff;
+    border-color: var(--primary); background: var(--primary); color: white;
     box-shadow: 0 1px 5px rgba(99, 102, 241, 0.4);
   }
-  :global(.bz-order-btn.is-blaze:not(.is-selected)) { box-shadow: inset 0 0 0 1.5px #F59E0B; border-color: #F59E0B; }
+  :global(.bz-order-btn.is-blaze:not(.is-selected)) { box-shadow: inset 0 0 0 1.5px var(--amber); border-color: var(--amber); }
   :global(.bz-order-empty) { font-size: 0.8rem; color: var(--text-muted); }
 
   .bz-legend { display: inline-flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
   .bz-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
   .bz-legend-swatch { width: 16px; height: 0; border-top: 2.4px solid var(--text); border-radius: 2px; }
   .bz-legend-swatch--incident { border-top-color: var(--text); }
-  .bz-legend-swatch--blaze { border-top-style: dashed; border-top-color: #F59E0B; }
+  .bz-legend-swatch--blaze { border-top-style: dashed; border-top-color: var(--amber); }
   .bz-legend-warning { color: #B45309; font-weight: 700; }
   .bz-legend-warning[hidden] { display: none; }
 
@@ -635,7 +635,7 @@ import '../../styles/lab.css';
   .run-btn {
     display: block; width: 100%; padding: 0.6rem; margin-top: var(--space-md);
     font-size: 0.9rem; font-weight: 600; border: none; border-radius: var(--radius-sm);
-    background: var(--primary); color: #fff; cursor: pointer; transition: background 0.15s;
+    background: var(--primary); color: white; cursor: pointer; transition: background 0.15s;
   }
   .run-btn:hover { background: var(--primary-dark); }
   .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -692,7 +692,7 @@ import '../../styles/lab.css';
     stroke: var(--bg-muted);
   }
   .rcwa-superstrate {
-    fill: url(#rcwa-top-fill);
+    fill: url("#rcwa-top-fill");
     stroke: rgba(59, 130, 246, 0.25);
   }
   .rcwa-groove {
@@ -700,10 +700,10 @@ import '../../styles/lab.css';
     stroke: rgba(245, 158, 11, 0.22);
   }
   .rcwa-substrate {
-    fill: url(#rcwa-sub-fill);
+    fill: url("#rcwa-sub-fill");
     stroke: rgba(16, 185, 129, 0.25);
   }
-  .rcwa-hatch { fill: url(#rcwa-sub-hatch); color: var(--text); }
+  .rcwa-hatch { fill: url("#rcwa-sub-hatch"); color: var(--text); }
   .rcwa-interface {
     stroke: var(--text-muted);
     stroke-width: 1;
@@ -751,7 +751,7 @@ import '../../styles/lab.css';
     font-weight: 650;
   }
   .rcwa-incidence {
-    color: #EF4444;
+    color: var(--red);
   }
   .rcwa-incidence line,
   .rcwa-incidence path {

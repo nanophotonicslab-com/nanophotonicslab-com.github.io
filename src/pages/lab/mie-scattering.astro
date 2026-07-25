@@ -757,7 +757,7 @@ initPermalinks({
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: #ef4444;
+    background: var(--red);
     border: 2px solid var(--bg);
     box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
     transform: translate(-50%, -50%);
@@ -768,9 +768,9 @@ initPermalinks({
   .param-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
   .param-slider::-moz-range-track { height: 5px; background: var(--bg-muted); border-radius: 3px; border: none; }
   /* illumination-λ thumb in rose, matching the dashed marker in the σabs chart */
-  #thermal-lambda-slider::-webkit-slider-thumb { background: #F43F5E; }
+  #thermal-lambda-slider::-webkit-slider-thumb { background: var(--rose); }
   #thermal-lambda-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(244,63,94,0.18); }
-  #thermal-lambda-slider::-moz-range-thumb { background: #F43F5E; }
+  #thermal-lambda-slider::-moz-range-thumb { background: var(--rose); }
   .param-limits { display: flex; align-items: center; gap: 0.25rem; }
   .param-limit-dash { flex: 1; text-align: center; color: var(--bg-muted); font-size: 0.75rem; }
   .param-limit {
@@ -795,7 +795,7 @@ initPermalinks({
   .shell-header { display: flex; justify-content: space-between; align-items: center; }
   .shell-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
   .remove-shell-btn { padding: 0.15rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
-  .remove-shell-btn:hover { border-color: #ef4444; color: #ef4444; }
+  .remove-shell-btn:hover { border-color: var(--red); color: var(--red); }
   .shell-eps-group.hidden { display: none !important; }
   .reset-btn { width: 100%; color: var(--text-muted) !important; }
   .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
@@ -841,7 +841,7 @@ initPermalinks({
   .dipole-ref b { color: var(--text); font-weight: 700; }
   :global(.dipole-fig-btn) { font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.22rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
   :global(.dipole-fig-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
-  :global(.dipole-fig-btn.active) { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
+  :global(.dipole-fig-btn.active) { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
   :global(.dipole-fig-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
   :global(.dipole-fig-label) { font-size: 0.7rem; font-weight: 700; color: var(--text-soft); margin: 0.6rem 0 0.35rem; }
   .toolbar-control {
@@ -977,7 +977,7 @@ initPermalinks({
   :global(.thermal-preset-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; }
   :global(.thermal-preset-btn) { font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.22rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
   :global(.thermal-preset-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
-  :global(.thermal-preset-btn.active) { border-color: var(--primary); color: #fff; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
+  :global(.thermal-preset-btn.active) { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
   .references { width: 100%; margin-top: var(--space-lg); padding: var(--space-md); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li {

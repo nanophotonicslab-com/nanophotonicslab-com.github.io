@@ -202,7 +202,7 @@ import '../../styles/lab.css';
     border: none; border-radius: var(--radius-sm);
     background: #8B5CF6; color: white; cursor: pointer;
   }
-  .btn-primary:hover { background: #7C3AED; }
+  .btn-primary:hover { background: var(--violet); }
 
   /* Chat card */
   .chat-card {
@@ -226,7 +226,7 @@ import '../../styles/lab.css';
   .chat-avatar {
     width: 36px; height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    background: linear-gradient(135deg, #8B5CF6, var(--indigo));
     color: white;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
@@ -323,10 +323,10 @@ import '../../styles/lab.css';
     border-radius: var(--radius-md);
     font-size: 0.875rem;
     line-height: 1.55;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   .msg--user .msg-bubble {
-    background: #6366F1;
+    background: var(--indigo);
     color: white;
     border-top-right-radius: 4px;
   }
@@ -359,7 +359,7 @@ import '../../styles/lab.css';
     font-weight: 700;
   }
   .msg--assistant .msg-icon {
-    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    background: linear-gradient(135deg, #8B5CF6, var(--indigo));
     color: white;
   }
   .msg--user .msg-icon {
@@ -410,7 +410,7 @@ import '../../styles/lab.css';
     font-size: 0.8125rem;
     color: var(--text-soft);
     line-height: 1.55;
-    font-family: 'Iowan Old Style', 'Georgia', serif;
+    font-family: 'Iowan Old Style', Georgia, serif;
   }
   .passage-text p { margin: 0 0 0.5rem 0 !important; }
   .passage-text p:last-child { margin-bottom: 0 !important; }
@@ -462,7 +462,7 @@ import '../../styles/lab.css';
     transition: all 0.15s;
     flex-shrink: 0;
   }
-  .chat-send:hover { background: #7C3AED; }
+  .chat-send:hover { background: var(--violet); }
   .chat-send:disabled { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
 
   .chat-disclaimer {

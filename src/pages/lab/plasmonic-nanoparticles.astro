@@ -936,11 +936,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .nl-title-row { display: inline-flex; align-items: center; gap: 0.5rem; }
   .nl-log-btn { padding: 0.08rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.72rem; font-weight: 700; line-height: 1.5; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
   .nl-log-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .nl-log-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .nl-log-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: white; }
   .nl-qty-seg { display: inline-flex; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); overflow: hidden; }
   .nl-qty-btn { padding: 0.08rem 0.6rem; border: none; background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.82rem; font-weight: 700; line-height: 1.5; cursor: pointer; transition: background 0.15s, color 0.15s; }
   .nl-qty-btn:not(.active):hover { color: var(--primary); }
-  .nl-qty-btn.active { background: var(--primary); color: #fff; }
+  .nl-qty-btn.active { background: var(--primary); color: white; }
   .nl-response-row { display: flex; align-items: center; gap: 0.5rem; }
   .nl-response-row .param-select { flex: 1 1 auto; min-width: 0; }
   .nl-response-row .nl-qty-seg { flex: 0 0 auto; }
@@ -1013,8 +1013,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     transition: all 0.15s;
   }
   .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
-  .tool-btn.active:hover { color: #fff; }
+  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+  .tool-btn.active:hover { color: white; }
   .chart-wrap { position: relative; margin-bottom: 2.35rem; }
   .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
   .axis-overlay {
@@ -1201,7 +1201,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   /* runtime-generated buttons don't get the scoped .tool-btn style — replicate it globally (shared by the 2D and 3D reference boxes) */
   :global(#nl-ref-list .nl-fig2-btn), :global(#lin-references .nl-fig2-btn) { display: inline-flex; align-items: center; padding: 0.32rem 0.72rem; font-family: var(--font); font-size: 0.78rem; font-weight: 500; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   :global(#nl-ref-list .nl-fig2-btn:hover), :global(#lin-references .nl-fig2-btn:hover) { border-color: var(--primary); color: var(--primary); }
-  :global(#nl-ref-list .nl-fig2-btn.active), :global(#lin-references .nl-fig2-btn.active) { border-color: var(--primary); background: var(--primary); color: #fff; }
+  :global(#nl-ref-list .nl-fig2-btn.active), :global(#lin-references .nl-fig2-btn.active) { border-color: var(--primary); background: var(--primary); color: white; }
 
   @media (max-width: 980px) {
     .widget-layout { grid-template-columns: 1fr; }

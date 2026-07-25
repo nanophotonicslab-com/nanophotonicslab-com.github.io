@@ -262,7 +262,7 @@
   font-size: 0.875rem;
   font-weight: 800;
 }
-.module-card:hover:not(:disabled):not(.active) {
+.module-card:hover:not(:disabled, .active) {
   border-color: var(--primary-light);
   background: rgba(99,102,241,0.06);
 }

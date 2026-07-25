@@ -10,7 +10,10 @@
     "build": "astro build",
     "test": "vitest run",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "lint:css": "stylelint \"src/**/*.{css,astro}\"",
+    "lint:css:fix": "stylelint \"src/**/*.{css,astro}\" --fix",
+    "check": "astro check"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
@@ -23,8 +26,6 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "postcss-html": "^1.8.1",
-    "prettier": "^3.9.6",
-    "prettier-plugin-astro": "^0.14.1",
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "tsx": "^4.21.0",

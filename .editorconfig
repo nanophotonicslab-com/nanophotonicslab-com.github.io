@@ -1,0 +1,26 @@
+# Baseline whitespace rules, applied by the editor rather than a formatter.
+#
+# Deliberately not Prettier: this repo's CSS and physics code are written dense
+# (one rule per line, `cmul` mirroring the formula it implements) and Prettier
+# expands both, with no setting to preserve it — a trial run rewrote 90 files
+# (+35.8k/-12.2k lines) without improving anything. EditorConfig fixes the parts
+# that are genuinely mechanical and leaves the style alone.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[package-lock.json]
+insert_final_newline = false

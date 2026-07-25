@@ -432,7 +432,6 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     font-size: 0.9rem; font-weight: 700; color: var(--text); margin: var(--space-md) 0 0.5rem;
     padding-top: var(--space-md); border-top: 1px solid var(--bg-muted);
   }
-  .controls h3:first-of-type, .controls .ctrl-group h3 { }
   .controls-title { margin: 0 0 0.25rem !important; padding-top: 0 !important; border-top: none !important; font-size: 0.95rem !important; }
   .controls-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
   .seg.controls-head__toggle { flex: 0 0 auto; width: 104px; }   /* fixed width, hugs right margin */
@@ -475,7 +474,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   .seg-btn + .seg-btn { border-left: 1px solid var(--bg-muted); }
   .seg-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.06); color: var(--primary); }
-  .seg-btn.active { background: var(--primary); color: #fff; }
+  .seg-btn.active { background: var(--primary); color: white; }
   /* Graphene model: stack the label above the 3-way seg so "Nonlocal RPA" gets the full width;
      extra top margin separates it from the "Parameters" header. */
   #gr-model-field { flex-direction: column; align-items: stretch; gap: 0.4rem; margin-top: 0.6rem; }
@@ -496,7 +495,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   .header-toggle[hidden] { display: none; }
   .header-toggle:hover { border-color: var(--primary); color: var(--primary); }
-  .header-toggle[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .header-toggle[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: white; }
   .gr-slider { width: 100%; accent-color: var(--primary); cursor: pointer; margin: -0.15rem 0 0.1rem; }
   /* E_F: label + number + slider on one line */
   .gr-ef-field { display: flex; align-items: center; gap: 0.5rem; }
@@ -545,7 +544,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-muted);
     font-size: 1.1rem; line-height: 1; cursor: pointer; transition: border-color 0.15s, color 0.15s;
   }
-  .icon-btn:hover { border-color: #F43F5E; color: #F43F5E; }
+  .icon-btn:hover { border-color: var(--rose); color: var(--rose); }
   .icon-btn[hidden] { display: none; }
 
   /* Database search + file upload */
@@ -617,8 +616,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     padding: 0.3rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
     background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.74rem; font-weight: 600; cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
-  }  .share-btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
-  .share-btn--primary:hover { color: #fff; opacity: 0.92; }
+  }  .share-btn--primary { background: var(--primary); border-color: var(--primary); color: white; }
+  .share-btn--primary:hover { color: white; opacity: 0.92; }
   .share-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
   /* confirm-file-import dialog */

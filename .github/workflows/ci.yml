@@ -21,5 +21,17 @@ jobs:
             sleep 15
           done
           echo "npm ci failed after 3 attempts"; exit 1
+      # Blocking: no new raw hex colours, no broken CSS. Runs before the slower
+      # steps so a style slip fails in seconds rather than minutes.
+      - name: Lint styles
+        run: npm run lint:css
+
+      # Non-blocking for now: 16 pre-existing type errors (null guards in
+      # FeedbackButton/rcwa, missing three + katex types, worker globals).
+      # Drop continue-on-error once that backlog is cleared.
+      - name: Type-check .astro
+        run: npm run check
+        continue-on-error: true
+
       - run: npm test
       - run: npm run build
