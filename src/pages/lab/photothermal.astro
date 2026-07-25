@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const thermalPresets = [
   { label: 'Au NP, green laser', values: { 'material-select': 'au', 'r-num': 50, 'r-slider': 50, 'nh-num': 1.33, 'nh-slider': 1.33, 'lam-num': 532, 'lam-slider': 532, 'pow-num': 1, 'pow-slider': 1, 'w0-num': 1, 'w0-slider': 1, 'k-num': 0.606 } },
@@ -374,21 +375,7 @@ initPermalinks({
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  .widget-layout {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: var(--space-lg);
-    align-items: start;
-  }
-  .controls {
+<style>  .controls {
     display: flex; flex-direction: column; gap: var(--space-md);
   }
   /* right column: chart + output + notes stacked, params scroll alongside (like the other labs) */
@@ -428,21 +415,14 @@ initPermalinks({
   .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; }
   .file-input { font-size: 0.75rem; font-family: var(--font); color: var(--text-soft); }
   .file-input::file-selector-button { padding: 0.2rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-soft); cursor: pointer; margin-right: 0.4rem; transition: all 0.15s; }
-  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
-  .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
-  .file-error { font-size: 0.6875rem; color: var(--rose); }
-  .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
-  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
+  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
   .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
   .rii-results:empty { display: none; }
   .rii-result { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
   .rii-result:last-child { border-bottom: none; }
   .rii-result:hover { background: rgba(99,102,241,0.06); }
   .rii-result-book { font-weight: 600; color: var(--text); }
-  .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }
-
-  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-  .preset-btn {
+  .rii-result-page { color: var(--text-muted); font-size: 0.6875rem; }  .preset-btn {
     padding: 0.2rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
     background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
     color: var(--text-muted); cursor: pointer; transition: all 0.15s;
@@ -471,11 +451,7 @@ initPermalinks({
   .chart-wrap { position: relative; }
   .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
   .color-swatches { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
-  .swatch-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-  .swatch-item { display: flex; align-items: center; gap: 0.35rem; }
-  .swatch-box { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid var(--bg-muted); background: #222; transition: background 0.3s; }
-  .swatch-name { font-size: 0.75rem; color: var(--text-soft); }
-
+  .swatch-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }  .swatch-box { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid var(--bg-muted); background: #222; transition: background 0.3s; }
   /* Output card */
   .output-card {
     padding: var(--space-md);
@@ -560,8 +536,6 @@ initPermalinks({
     z-index: 20;
   }
   .stat-value { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); }
-  .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
-
   .budget { display: flex; flex-direction: column; gap: 0.5rem; }
   .budget-header { display: flex; justify-content: space-between; align-items: baseline; }
   .budget-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
@@ -694,87 +668,7 @@ initPermalinks({
     font-size: 0.78rem;
     color: var(--text-muted);
     line-height: 1.45;
-  }
-
-  .material-import-dialog {
-    width: min(860px, calc(100vw - 2rem));
-    padding: 0;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-lg);
-    background: var(--bg);
-    color: var(--text);
-  }
-  .material-import-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
-  .material-import-dialog__panel { padding: var(--space-md); }
-  .material-import-dialog__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-  }
-  .material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
-  .material-import-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
-  .material-import-dialog__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-  }
-  .material-import-dialog__grid label { display: flex; flex-direction: column; gap: 0.3rem; }
-  .material-import-dialog__grid span {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
-    color: var(--text-muted);
-  }
-  .material-import-dialog__preview canvas {
-    width: 100%;
-    aspect-ratio: 3 / 1;
-    display: block;
-  }
-  .material-import-dialog__table-wrap {
-    max-height: 132px;
-    overflow: auto;
-    margin-top: var(--space-sm);
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-  }
-  .material-import-dialog__table {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-  }
-  .material-import-dialog__table th,
-  .material-import-dialog__table td {
-    padding: 0.35rem 0.45rem;
-    border-bottom: 1px solid var(--bg-muted);
-    text-align: center;
-  }
-  .material-import-dialog__table th {
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    color: var(--text-soft);
-    font-weight: 700;
-  }
-  .material-import-dialog__status {
-    margin: var(--space-sm) 0 0;
-    min-height: 1.2em;
-    font-size: 0.8125rem;
-    color: var(--text-soft);
-  }
-  .material-import-dialog__status.error { color: var(--rose); }
-  .material-import-dialog__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-sm);
-    margin-top: var(--space-sm);
-  }
-  .chart-tool-btn { padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  }  .chart-tool-btn { padding: 0.25rem 0.6rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   .chart-tool-btn:hover { border-color: var(--primary-light); color: var(--primary); }
   .chart-tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
   @media (max-width: 640px) {

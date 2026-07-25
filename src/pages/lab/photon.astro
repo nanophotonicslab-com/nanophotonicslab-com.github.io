@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 ---
 
 <Layout title="Photon Calculator" description="Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons — with live spectral chart and common laser references.">
@@ -140,17 +141,7 @@ initPermalinks({ lam: 'lam' });
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>
-  /* Hero */
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  /* Layout */
-  .widget-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start; }
+<style>  .widget-layout { --sidebar-w: 280px; }
   .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
   .controls h3 { font-size: 1rem; }
 
@@ -199,8 +190,6 @@ initPermalinks({ lam: 'lam' });
     background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
     color: var(--text-soft); cursor: pointer; transition: all 0.15s;
   }
-  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
-
   /* Theory note */
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
   .theory-note strong { color: var(--text-soft); }

@@ -1,0 +1,276 @@
+/* ===== Lab widget chrome — shared component layer =====
+ *
+ * One definition for the furniture every tool page repeats: hero, back link,
+ * two-column layout, controls panel, chart frame, stat strip, export bar.
+ * Before this file each widget carried its own copy, and the copies had drifted
+ * (`.stat-value` had 4 different definitions, `.preset-btn` had 7).
+ *
+ * Imported by the pages under src/pages/lab/ — NOT global, because the homepage
+ * and /learn reuse a few of these class names with their own meaning.
+ *
+ * Per-widget variation goes through the custom properties below, set on the
+ * page's own scoped `<style>`. Add a knob here rather than re-declaring a
+ * component locally — a local copy is how the drift started.
+ *
+ *   --sidebar-w      controls-column width in .widget-layout   (default 300px)
+ *   --hero-measure   max line length of the hero subtitle      (default 660px)
+ *   --chart-aspect   aspect-ratio of .chart-wrap canvas        (default 5 / 3)
+ *   --stats-cols     column count of the .stats grid           (default 4)
+ */
+
+/* ===== Hero ===== */
+.widget-hero {
+  padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
+  background: var(--bg-soft);
+}
+.widget-hero h1 { margin-bottom: var(--space-sm); }
+.widget-hero__subtitle {
+  font-size: 1.125rem;
+  max-width: var(--hero-measure, 660px);
+  color: var(--text-soft);
+}
+
+.gradient-text {
+  background: var(--spectrum);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: var(--space-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.back-link:hover { color: var(--primary); }
+
+/* ===== Layout ===== */
+.widget-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-w, 300px) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+.widget-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+/* ===== Controls panel ===== */
+.param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+
+/* ===== Charts ===== */
+.chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
+.chart-tip {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  z-index: 3;
+  background: var(--bg-glass);
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ===== Stats & results ===== */
+.rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+.stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
+.stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--space-sm); }
+
+/* ===== Notes & references ===== */
+.notes-card { padding: var(--space-md); }
+.references { margin-top: var(--space-lg); }
+
+/* ===== Export & file I/O ===== */
+.clear-btn:hover { border-color: var(--rose); color: var(--rose); }
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dl-btn:active { transform: scale(0.97); }
+.dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+.download-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--bg-muted);
+}
+.download-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-right: var(--space-xs);
+}
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--primary);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.export-btn:hover { border-color: var(--primary-light); }
+.file-error { font-size: 0.6875rem; color: var(--rose); }
+.file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
+.share-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ===== Other shared pieces ===== */
+.material-import-dialog {
+  width: min(860px,calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--text);
+}
+.material-import-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.material-import-dialog__grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.material-import-dialog__grid label { display: flex; flex-direction: column; gap: 0.3rem; }
+.material-import-dialog__grid span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  color: var(--text-muted);
+}
+.material-import-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+.material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
+.material-import-dialog__header p { margin: 0.15rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+.material-import-dialog__panel { padding: var(--space-md); }
+.material-import-dialog__preview canvas { width: 100%; aspect-ratio: 3 / 1; display: block; }
+.material-import-dialog__status {
+  margin: var(--space-sm) 0 0;
+  min-height: 1.2em;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+}
+.material-import-dialog__status.error { color: var(--rose); }
+.material-import-dialog__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.material-import-dialog__table td, .material-import-dialog__table th {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid var(--bg-muted);
+  text-align: center;
+}
+.material-import-dialog__table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  color: var(--text-soft);
+  font-weight: 700;
+}
+.material-import-dialog__table-wrap {
+  max-height: 132px;
+  overflow: auto;
+  margin-top: var(--space-sm);
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-sm);
+}
+.material-import-dialog::backdrop { background: rgba(15,23,42,0.42); }
+.module-bar { margin-bottom: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
+.module-bar__label {
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.module-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 66px;
+  text-align: left;
+  border: 1px solid var(--bg-muted);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+}
+.module-card__badge {
+  align-self: flex-start;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+}
+.module-card__desc { color: var(--text-soft); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; }
+.module-card__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+.module-card:hover:not(:disabled):not(.active) {
+  border-color: var(--primary-light);
+  background: rgba(99,102,241,0.06);
+}
+.module-card.active {
+  border-color: var(--primary);
+  background: rgba(99,102,241,0.08);
+  color: var(--primary);
+}
+.module-card.active .module-card__desc { color: var(--primary); opacity: 0.85; }
+.swatch-item { display: flex; align-items: center; gap: 0.35rem; }
+.swatch-name { font-size: 0.75rem; color: var(--text-soft); }

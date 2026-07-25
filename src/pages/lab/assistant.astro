@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import '../../styles/lab.css';
 ---
 
 <Layout title="Methods Assistant" description="Conversational assistant for picking the right numerical method in nanophotonics — Mie, BEM, DGTD, RCWA. Semantic search over course notes with optional Claude AI synthesis.">
@@ -138,13 +139,6 @@ import ToolMeta from '../../components/ToolMeta.astro';
 
 <!-- ===== Scoped styles ===== -->
 <style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
   /* Info banner */
   .info-banner {
     max-width: 760px;

@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
 import { MATERIALS } from '../../data/optical-constants';
+import '../../styles/lab.css';
 
 const materialOptions = Object.entries(MATERIALS).map(([id, m]) => ({ id, label: m.label }));
 ---
@@ -186,17 +187,7 @@ initPermalinks({
 </script>
 </Layout>
 
-<style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 660px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
-  .widget-column { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
-  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+<style>  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
   .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
   .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
   .param-select, .param-number {
@@ -219,9 +210,7 @@ initPermalinks({
   .chart-tool-btn:hover { border-color: var(--primary-light); }
   .theory-note { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
 
-  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
-  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-sm); }
-  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
+  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
   .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
   .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
   .stat-unit { font-size: 0.7rem; color: var(--text-muted); }
@@ -230,26 +219,11 @@ initPermalinks({
   .chart-header { margin-bottom: 0.3rem; }
   .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-soft); }
   .chart-wrap { position: relative; width: 100%; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
-  .chart-tip {
-    position: absolute; display: none; pointer-events: none; z-index: 3;
-    background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    padding: 0.3rem 0.5rem; font-size: 0.72rem; font-variant-numeric: tabular-nums;
-    color: var(--text); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
   .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
   .export-bar { display: flex; align-items: center; gap: 0.5rem; }
   .export-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
-  .export-btn {
-    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--primary); font-family: var(--font);
-    font-size: 0.78rem; font-weight: 600; cursor: pointer;
-  }
-  .export-btn:hover { border-color: var(--primary-light); }
-
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

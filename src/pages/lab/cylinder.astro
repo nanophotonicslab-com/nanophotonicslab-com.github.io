@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const cylPresets = [
   { label: 'Ag in air', values: { 'material-select': 'ag', 'r-num': 15, 'r-slider': 15, 'eh-num': 1.00, 'eh-slider': 1.00, 'w-min': 0.2, 'w-max': 4 } },
@@ -543,20 +544,9 @@ initPermalinks({
 </script>
 </Layout>
 
-<style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 640px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  .widget-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); align-items: start; }
-  .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
+<style>  .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
   .excitation-above { gap: 0.4rem; }
-  .results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
-  .notes-card { padding: var(--space-md); }
-  .notes-card h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }  .notes-card h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .notes-card .theory-note { border-top: none; padding-top: 0; }
   .notes-card :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; padding-top: var(--space-md); margin-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
   .controls {
@@ -625,10 +615,7 @@ initPermalinks({
     background: var(--primary); cursor: pointer; transition: box-shadow 0.15s;
   }
   .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
-  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
-
-  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-  .preset-btn {
+  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }  .preset-btn {
     padding: 0.2rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
     background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500;
     color: var(--text-muted); cursor: pointer; transition: all 0.15s;
@@ -911,13 +898,7 @@ initPermalinks({
   .legend-line {
     display: inline-block; width: 18px; height: 0;
     border-top: 2px dashed currentColor;
-  }
-  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
-  .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
-  .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
-  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
-  .dl-btn:active { transform: scale(0.97); }
-  .perp-map-panel {
+  }  .perp-map-panel {
     margin-top: var(--space-md);
     padding-top: var(--space-md);
     border-top: 1px solid var(--bg-muted);
@@ -1075,10 +1056,7 @@ initPermalinks({
   }
   .field-export-bar {
     margin-top: var(--space-md);
-  }
-
-  .references { margin-top: var(--space-lg); }
-  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  }  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li {
     display: grid;

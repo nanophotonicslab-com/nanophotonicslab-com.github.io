@@ -1,0 +1,11 @@
+dist/
+node_modules/
+.astro/
+package-lock.json
+public/
+paper/
+benchmarks/
+worker/
+packages/*/dist/
+*.min.js
+*.min.css

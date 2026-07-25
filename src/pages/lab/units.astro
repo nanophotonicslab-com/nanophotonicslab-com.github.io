@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
+import '../../styles/lab.css';
 ---
 
 <Layout title="Unit Converter" description="Convert between SI, CGS/ESU, and atomic units for 11 physical quantities used in nanophotonics and quantum mechanics.">
@@ -143,17 +144,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>
-  /* Hero */
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  /* Layout */
-  .widget-layout { display: grid; grid-template-columns: 260px 1fr; gap: var(--space-lg); align-items: start; }
+<style>  .widget-layout { --sidebar-w: 260px; }
   .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
   .controls h3 { font-size: 1rem; }
 
@@ -212,8 +203,6 @@ import ToolMeta from '../../components/ToolMeta.astro';
     background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
     color: var(--text-soft); cursor: pointer; transition: all 0.15s;
   }
-  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
-
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .controls { position: static; }

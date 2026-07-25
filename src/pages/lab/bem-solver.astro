@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const bemPresets = [
   { label: 'Au sphere in water', values: { 'shape-select': 'sphere', 'material-select': 'au', 'radius-input': 25, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 800, 'wl-npoints-input': 20 } },
@@ -183,19 +184,6 @@ initPermalinks({
 </script>
 
 <style>
-  /* Hero — same pattern as Mie page */
-  .widget-hero {
-    padding: var(--space-xl) 0 var(--space-lg);
-    text-align: center;
-  }
-  .widget-hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { color: var(--text-soft); max-width: 640px; margin: 0 auto; }
-  .back-link {
-    display: inline-block; margin-bottom: var(--space-md);
-    color: var(--primary); text-decoration: none; font-weight: 500;
-  }
-  .back-link:hover { text-decoration: underline; }
-
   /* Three-column layout */
   .bem-layout {
     display: grid;
@@ -367,13 +355,4 @@ initPermalinks({
     font-size: 0.8rem;
     color: var(--text-soft);
     border: 1px solid var(--bg-muted);
-  }
-
-  /* Gradient text — same as Mie */
-  .gradient-text {
-    background: var(--spectrum);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-</style>
+  }</style>

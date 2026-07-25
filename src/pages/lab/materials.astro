@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import { MATERIALS } from '../../data/optical-constants';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, ref: m.ref }));
 ---
@@ -423,31 +424,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 </Layout>
 
 <style>
-  .module-bar { margin-bottom: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
-  .module-bar__label { color: var(--text); font-size: 0.75rem; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.04em; }
-  .module-bar__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); align-items: stretch; }
-  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: repeat(2, 1fr); } }
-  .module-card {
-    display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
-    width: 100%; min-height: 66px; text-align: left;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text); font-family: var(--font);
-    padding: 0.6rem 0.7rem; cursor: pointer;
-  }
-  .module-card__name { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 800; }
-  .module-card__desc { color: var(--text-soft); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; }
-  .module-card__badge {
-    align-self: flex-start; border-radius: var(--radius-full); background: var(--bg-muted);
-    color: var(--text-muted); font-size: 0.625rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.04em; padding: 0.1rem 0.4rem;
-  }
-  .module-card:hover:not(:disabled):not(.active) { border-color: var(--primary-light); background: rgba(99, 102, 241, 0.06); }
-  .module-card.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
-  .module-card.active .module-card__desc { color: var(--primary); opacity: 0.85; }
-  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }
-
-  .widget-layout { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
-  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+  .widget-layout { --sidebar-w: minmax(0, 320px); }  .module-bar__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); align-items: stretch; }
+  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: repeat(2, 1fr); } }  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
   .controls { padding: var(--space-lg); position: relative; }
   .controls h3 {
@@ -528,10 +506,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .mini-row { display: flex; gap: 0.4rem; align-items: end; }
   .mini-field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
   .mini-field label { font-size: 0.8rem; font-weight: 400; color: var(--text-soft); line-height: 1.15; min-height: 1.6em; }
-  .mini-field .field-input { width: 100%; }
-  /* notes box */
-  .notes-card { padding: var(--space-md); }
-  .notes-card :global(h4) { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; }
+  .mini-field .field-input { width: 100%; }  .notes-card :global(h4) { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; }
   .notes-card :global(ul) { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .notes-card :global(li) { font-size: 0.76rem; line-height: 1.4; color: var(--text-soft); }
   .notes-card :global(b) { color: var(--text); }
@@ -548,9 +523,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .references :global(.reference-list) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
   .references :global(.reference-list li) { display: grid; grid-template-columns: 1.6rem 1fr; font-size: 0.74rem; line-height: 1.4; color: var(--text-soft); }
   .references :global(.ref-index) { font-weight: 700; color: var(--text-soft); }
-  .references :global(a) { color: var(--accent); }
-  .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
-  .mat-legend { display: inline-flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+  .references :global(a) { color: var(--accent); }  .mat-legend { display: inline-flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
   :global(.mat-legend-item) { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; font-weight: 600; color: var(--text-soft); }
   :global(.mat-legend-item--toggle) { cursor: pointer; user-select: none; }
   :global(.mat-legend-item--off) { opacity: 0.4; }
@@ -644,9 +617,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     padding: 0.3rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
     background: var(--bg); color: var(--text-soft); font-family: var(--font); font-size: 0.74rem; font-weight: 600; cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
-  }
-  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .share-btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  }  .share-btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
   .share-btn--primary:hover { color: #fff; opacity: 0.92; }
   .share-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 

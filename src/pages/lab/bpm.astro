@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 ---
 
 <Layout title="Beam Propagation Method" description="Simulate light propagation in waveguides using the Crank-Nicolson paraxial wave equation solver. Interactive 2D intensity heatmap with preset demo tasks.">
@@ -207,38 +208,7 @@ import ParamsDrawer from '../../components/ParamsDrawer.astro';
   </section>
 </Layout>
 
-<style>
-  /* ---- Layout ---- */
-  .widget-hero {
-    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
-    background: var(--bg-soft);
-  }
-  .widget-hero__subtitle {
-    font-size: 1.1rem;
-    max-width: 640px;
-    color: var(--text-soft);
-  }
-  .gradient-text {
-    background: var(--spectrum);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .back-link {
-    display: inline-block;
-    margin-bottom: var(--space-md);
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    text-decoration: none;
-  }
-  .back-link:hover { color: var(--primary); }
-
-  .widget-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: var(--space-lg);
-    align-items: start;
-  }
+<style>  .widget-layout { --sidebar-w: 280px; }
   @media (max-width: 900px) {
     .widget-layout { grid-template-columns: 1fr; }
   }
@@ -347,9 +317,7 @@ import ParamsDrawer from '../../components/ParamsDrawer.astro';
     align-items: center;
     margin-bottom: var(--space-sm);
   }
-  .chart-title { font-weight: 600; font-size: 0.95rem; }
-  .chart-header__right { display: flex; align-items: center; gap: 0.75rem; }
-  .chart-status { font-size: 0.8rem; color: var(--text-muted); }
+  .chart-title { font-weight: 600; font-size: 0.95rem; }  .chart-status { font-size: 0.8rem; color: var(--text-muted); }
   .share-btn {
     display: inline-flex;
     align-items: center;
@@ -364,8 +332,6 @@ import ParamsDrawer from '../../components/ParamsDrawer.astro';
     cursor: pointer;
     transition: all 0.15s;
   }
-  .share-btn:hover { border-color: var(--primary); color: var(--primary); }
-
   .chart-wrap { position: relative; }
   .chart-wrap canvas {
     width: 100%;

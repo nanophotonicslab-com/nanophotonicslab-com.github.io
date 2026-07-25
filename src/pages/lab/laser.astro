@@ -4,6 +4,7 @@ import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const laserPresets = [
   { label: 'Ti:sapphire (100 fs)', values: { 'tbp-lam': 800, 'tbp-dt': 100, 'peak-pavg': 1, 'peak-frep': 80, 'peak-dt': 100, 'gdd-wl': 800, 'gdd-dt': 100 } },
@@ -872,22 +873,7 @@ initPermalinks({
 </Layout>
 
 <style>
-  /* ---- Hero ---- */
-  .widget-hero {
-    padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl);
-    background: var(--bg-soft);
-  }
-  .widget-hero__subtitle { font-size: 1.1rem; max-width: 640px; color: var(--text-soft); }
-  .gradient-text {
-    background: var(--spectrum); background-clip: text;
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .back-link {
-    display: inline-block; margin-bottom: var(--space-md);
-    font-size: 0.875rem; color: var(--text-muted); text-decoration: none;
-  }
-  .back-link:hover { color: var(--primary); }
-
+  .widget-layout { --sidebar-w: 280px; }
   /* ---- Tabs ---- */
   .calc-tabs-row {
     margin-bottom: var(--space-lg);
@@ -897,13 +883,7 @@ initPermalinks({
     border-bottom: 2px solid var(--bg-muted); padding-bottom: 0;
     overflow-x: auto; scrollbar-width: none;
   }
-  .calc-tabs::-webkit-scrollbar { display: none; }
-  .download-bar { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
-  .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
-  .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
-  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
-  .dl-btn:active { transform: scale(0.97); }
-  .calc-tab {
+  .calc-tabs::-webkit-scrollbar { display: none; }  .calc-tab {
     padding: 0.6rem 1.2rem; font-size: 0.875rem; font-weight: 500;
     background: none; border: none; border-bottom: 2px solid transparent;
     margin-bottom: -2px; color: var(--text-muted); cursor: pointer;
@@ -913,13 +893,7 @@ initPermalinks({
   .calc-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
   .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* ---- Layout ---- */
-  .widget-layout {
-    display: grid; grid-template-columns: 280px 1fr; gap: var(--space-lg); align-items: start;
-  }
-  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+  .tab-panel.active { display: block; }  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
   /* Examples strip — sits below and matches the width of the result box */
   .examples-row { margin-top: var(--space-lg); }

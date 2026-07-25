@@ -5,6 +5,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
 import { MATERIALS } from '../../lib/materials';
 import { PLASMONIC_MATERIAL_IDS, SHAPE_OPTIONS } from '../../lib/plasmonic-nanoparticles';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 
 const materialOptions = PLASMONIC_MATERIAL_IDS
   .filter(id => MATERIALS[id])
@@ -636,11 +637,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   </section>
 </Layout>
 
-<style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 760px; }
-  .widget-hero__validity {
+<style>  .widget-hero__validity {
     max-width: 860px;
     margin: var(--space-sm) 0 0;
     color: var(--text-soft);
@@ -648,17 +645,6 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1.55;
   }
   .widget-hero__validity strong { color: var(--text); }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  .widget-layout {
-    display: grid;
-    grid-template-columns: 310px 1fr;
-    gap: var(--space-lg);
-    align-items: start;
-  }
-
   .controls {
     display: flex;
     flex-direction: column;
@@ -749,33 +735,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     margin-right: 0.4rem;
     transition: all 0.15s;
   }
-  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }
-  .file-name { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
-  .file-error { font-size: 0.6875rem; color: var(--rose); }
-  .material-import-dialog {
-    width: min(860px, calc(100vw - 2rem));
-    padding: 0;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-lg);
-    background: var(--bg);
-    color: var(--text);
-  }
-  .material-import-dialog::backdrop { background: rgba(15, 23, 42, 0.42); }
-  .material-import-dialog__panel { padding: var(--space-md); }
-  .material-import-dialog__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-  }
-  .material-import-dialog__header h3 { margin: 0; font-size: 1rem; }
-  .material-import-dialog__header p {
-    margin: 0.15rem 0 0;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-  .material-import-close {
+  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }  .material-import-close {
     width: 2rem;
     height: 2rem;
     border: 1px solid var(--bg-muted);
@@ -786,69 +746,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1;
     cursor: pointer;
   }
-  .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }
-  .material-import-dialog__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-  }
-  .material-import-dialog__grid label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-  .material-import-dialog__grid span {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
-    color: var(--text-muted);
-  }
-  .material-import-dialog__preview canvas {
-    width: 100%;
-    aspect-ratio: 3 / 1;
-    display: block;
-  }
-  .material-import-dialog__table-wrap {
-    max-height: 132px;
-    overflow: auto;
-    margin-top: var(--space-sm);
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-  }
-  .material-import-dialog__table {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-  }
-  .material-import-dialog__table th,
-  .material-import-dialog__table td {
-    padding: 0.35rem 0.45rem;
-    border-bottom: 1px solid var(--bg-muted);
-    text-align: center;
-  }
-  .material-import-dialog__table th {
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    color: var(--text-soft);
-    font-weight: 700;
-  }
-  .material-import-dialog__status {
-    margin: var(--space-sm) 0 0;
-    min-height: 1.2em;
-    font-size: 0.8125rem;
-    color: var(--text-soft);
-  }
-  .material-import-dialog__status.error { color: var(--rose); }
-  .material-import-dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-sm); }
-  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
-  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
-  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
+  .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
+  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
   .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
   .rii-results:empty { display: none; }
   :global(.rii-result) { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
@@ -864,10 +763,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .drude-formula { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
   .drude-grid { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
   .drude-grid label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: 0.75rem; color: var(--text-soft); }
-  .drude-grid .param-number { width: 5.2rem; }
-
-  .param-presets { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-  .preset-btn {
+  .drude-grid .param-number { width: 5.2rem; }  .preset-btn {
     padding: 0.22rem 0.58rem;
     border: 1px solid var(--bg-muted);
     border-radius: var(--radius-full);
@@ -1177,9 +1073,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-muted);
-  }
-  .swatch-item { display: flex; align-items: center; gap: 0.35rem; }
-  .swatch-box {
+  }  .swatch-box {
     width: 28px;
     height: 28px;
     border-radius: var(--radius-sm);
@@ -1187,8 +1081,6 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     background: #222;
     transition: background 0.25s;
   }
-  .swatch-name { font-size: 0.75rem; color: var(--text-soft); }
-
   .output-card {
     padding: var(--space-md);
     display: grid;
@@ -1210,9 +1102,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   }
   .stat-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
   .stat-label .lc { text-transform: none; }   /* keep Greek letters lowercase (α, λ) */
-  .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }
-  .stat-unit { font-size: 0.6875rem; color: var(--text-muted); }
-  .stat-info {
+  .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }  .stat-info {
     position: absolute;
     top: 0.42rem;
     right: 0.42rem;
@@ -1297,10 +1187,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1.35;
     color: var(--text-soft);
   }
-  .geometry-definitions strong { color: var(--text); font-weight: 700; }
-
-  .references { margin-top: var(--space-lg); }
-  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .geometry-definitions strong { color: var(--text); font-weight: 700; }  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
   .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
   .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
   /* NL reference list is generated at runtime (no scoped attribute) — style it globally.

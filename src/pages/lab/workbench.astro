@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import 'litegraph.js/css/litegraph.css';
+import '../../styles/lab.css';
 
 // v1 of the node-editor workbench: the real editable graph on litegraph.js
 // (decision 2026-07-18: canvas now, all four edit operations). Our node types
@@ -82,14 +83,7 @@ import 'litegraph.js/css/litegraph.css';
   </section>
 </Layout>
 
-<style>
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 680px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-  .bench-badge {
+<style>  .bench-badge {
     display: inline-block; margin-left: 0.5rem; padding: 0.1rem 0.55rem;
     background: var(--bg-muted); border-radius: var(--radius-full);
     font-size: 0.75rem; font-weight: 600; color: var(--text-soft); white-space: nowrap;
@@ -180,14 +174,7 @@ import 'litegraph.js/css/litegraph.css';
   .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }
 
   .chart-wrap { position: relative; width: 100%; max-width: 720px; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
-  .chart-tip {
-    position: absolute; display: none; pointer-events: none; z-index: 3;
-    background: var(--bg-glass); border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    padding: 0.3rem 0.5rem; font-size: 0.72rem; font-variant-numeric: tabular-nums;
-    color: var(--text); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.4rem; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.4rem; }
   .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
   .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
 

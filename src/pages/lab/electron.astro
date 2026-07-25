@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import '../../styles/lab.css';
 ---
 
 <Layout title="Relativistic Electron Calculator" description="Convert between velocity, energy, de Broglie wavelength, and Lorentz factor for relativistic electrons — with live chart and microscope references.">
@@ -700,42 +701,8 @@ initPermalinks({ kev: 'kev' });
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>
-  /* Hero */
-  .widget-hero { padding: calc(var(--space-3xl) + var(--space-lg)) 0 var(--space-xl); background: var(--bg-soft); }
-  .widget-hero h1 { margin-bottom: var(--space-sm); }
-  .widget-hero__subtitle { font-size: 1.125rem; max-width: 620px; }
-  .gradient-text { background: var(--spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back-link { display: inline-block; margin-bottom: var(--space-md); font-size: 0.875rem; font-weight: 500; color: var(--text-soft); }
-  .back-link:hover { color: var(--primary); }
-
-  /* Module bar (Fields / Smith–Purcell / PINEM) — same pattern as the Materials calculator */
-  .module-bar { margin-bottom: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
-  .module-bar__label { color: var(--text); font-size: 0.75rem; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.04em; }
-  .module-bar__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm); align-items: stretch; }
-  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }
-  .module-card {
-    display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
-    width: 100%; min-height: 66px; text-align: left;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text); font-family: var(--font);
-    padding: 0.6rem 0.7rem; cursor: pointer;
-  }
-  .module-card__name { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 800; }
-  .module-card__desc { color: var(--text-soft); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; }
-  .module-card__badge {
-    align-self: flex-start; border-radius: var(--radius-full); background: var(--bg-muted);
-    color: var(--text-muted); font-size: 0.625rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.04em; padding: 0.1rem 0.4rem;
-  }
-  .module-card:hover:not(:disabled):not(.active) { border-color: var(--primary-light); background: rgba(99, 102, 241, 0.06); }
-  .module-card.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
-  .module-card.active .module-card__desc { color: var(--primary); opacity: 0.85; }
-  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }
-
-  /* Layout */
-  .widget-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
-  .controls { display: flex; flex-direction: column; gap: var(--space-md); }
+<style>  .module-bar__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm); align-items: stretch; }
+  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }  .module-card:disabled { cursor: not-allowed; opacity: 0.5; }  .controls { display: flex; flex-direction: column; gap: var(--space-md); }
   .controls h3 { font-size: 1rem; }
 
   /* Fields */
@@ -790,8 +757,6 @@ initPermalinks({ kev: 'kev' });
     background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
     color: var(--text-soft); cursor: pointer; transition: all 0.15s;
   }
-  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
-
   /* Theory note */
   .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
   .theory-note strong { color: var(--text-soft); }
@@ -977,10 +942,7 @@ initPermalinks({ kev: 'kev' });
   .sp-readout { display: flex; flex-wrap: wrap; gap: 0.35rem 1.2rem; font-size: 0.78rem; color: var(--text-soft); }
   .sp-readout b { color: var(--text); font-variant-numeric: tabular-nums; }
   .sp-readout-link { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.15s; }
-  .sp-readout-link:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
-
-  .notes-card { padding: var(--space-md); }
-  .notes-card h4 { font-size: 0.875rem; margin: 0 0 var(--space-sm); }
+  .sp-readout-link:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }  .notes-card h4 { font-size: 0.875rem; margin: 0 0 var(--space-sm); }
   .sp-examples { margin-top: var(--space-sm); }
   .sp-example { display: flex; flex-direction: column; gap: 0.28rem; width: 100%; text-align: left; padding: 0.6rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); cursor: pointer; font-family: var(--font); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
   .sp-example:hover { border-color: var(--primary-light); }
