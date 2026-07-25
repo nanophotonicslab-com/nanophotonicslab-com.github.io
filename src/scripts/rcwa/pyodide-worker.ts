@@ -1,8 +1,7 @@
+/// <reference lib="webworker" />
 /**
  * Web Worker: loads Pyodide + inkstone, runs 1D RCWA sweeps.
  */
-
-declare const self: DedicatedWorkerGlobalScope;
 
 // @ts-ignore — Pyodide loaded from CDN
 importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.6/full/pyodide.js');

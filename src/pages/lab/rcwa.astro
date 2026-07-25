@@ -974,7 +974,7 @@ import '../../styles/lab.css';
   // ===== Blazed gratings module (analytic, fully client-side) =====
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
-  const bzCanvas = document.getElementById('bz-canvas') as HTMLCanvasElement | null;
+  const bzCanvas = document.getElementById('bz-canvas') as HTMLCanvasElement;
   if (bzCanvas) {
     const ctx = bzCanvas.getContext('2d')!;
     const statusEl = document.getElementById('bz-status')!;

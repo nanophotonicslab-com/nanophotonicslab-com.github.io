@@ -6,7 +6,7 @@ import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
 import '../../styles/lab.css';
 
-const bemPresets = [
+const bemPresets: { label: string; values: Record<string, string | number> }[] = [
   { label: 'Au sphere in water', values: { 'shape-select': 'sphere', 'material-select': 'au', 'radius-input': 25, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 800, 'wl-npoints-input': 20 } },
   { label: 'Ag nanorod in air', values: { 'shape-select': 'rod', 'material-select': 'ag', 'radius-input': 15, 'length-input': 100, 'eps-medium-input': 1.00, 'wl-min-input': 300, 'wl-max-input': 600, 'wl-npoints-input': 20 } },
   { label: 'Au nanorod in water', values: { 'shape-select': 'rod', 'material-select': 'au', 'radius-input': 20, 'length-input': 80, 'eps-medium-input': 1.77, 'wl-min-input': 400, 'wl-max-input': 900, 'wl-npoints-input': 25 } },

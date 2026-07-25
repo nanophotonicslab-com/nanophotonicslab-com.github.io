@@ -4388,7 +4388,7 @@ initPermalinks({
   updateBNote();
 
   new ResizeObserver(drawChart).observe(chartWrap);
-  new ResizeObserver(drawPhaseVelocityPlot).observe(phasePlotPanel);
+  new ResizeObserver(() => drawPhaseVelocityPlot()).observe(phasePlotPanel);
   new ResizeObserver(drawPerpMap).observe($('perp-map-wrap'));
   new ResizeObserver(drawFieldProfile).observe(fieldProfilePanel);
 

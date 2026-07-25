@@ -26,12 +26,8 @@ jobs:
       - name: Lint styles
         run: npm run lint:css
 
-      # Non-blocking for now: 16 pre-existing type errors (null guards in
-      # FeedbackButton/rcwa, missing three + katex types, worker globals).
-      # Drop continue-on-error once that backlog is cleared.
       - name: Type-check .astro
         run: npm run check
-        continue-on-error: true
 
       - run: npm test
       - run: npm run build

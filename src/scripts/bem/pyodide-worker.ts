@@ -1,11 +1,10 @@
+/// <reference lib="webworker" />
 /**
  * Web Worker: loads Pyodide, installs nanobem, runs BEM solves.
  *
  * Communication via postMessage with typed message protocol.
  * Python computation runs here, never blocking the main thread.
  */
-
-declare const self: DedicatedWorkerGlobalScope;
 
 // @ts-ignore — Pyodide loaded from CDN
 importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.6/full/pyodide.js');

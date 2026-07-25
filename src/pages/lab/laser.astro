@@ -2753,7 +2753,8 @@ initPermalinks({
     const inputs = panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.field-input');
     for (const inp of inputs) {
       const label = inp.closest('.field')?.querySelector('label')?.textContent?.trim() || inp.id;
-      if (inp.value && !inp.readOnly) lines.push(`${label},${inp.value}`);
+      const readOnly = inp instanceof HTMLInputElement && inp.readOnly;
+      if (inp.value && !readOnly) lines.push(`${label},${inp.value}`);
     }
 
     lines.push(''); // separator

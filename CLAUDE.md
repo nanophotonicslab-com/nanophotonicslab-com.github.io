@@ -22,7 +22,17 @@ npm run dev       # dev server at localhost:4321
 npm run build     # production build -> ./dist/
 npm run preview   # serve ./dist/
 npm test          # vitest
+npm run lint:css  # stylelint — blocks CI
+npm run check     # astro check (types in .astro) — blocks CI
 ```
+
+## Styling rules (these are enforced, not suggestions)
+
+- **Shared widget chrome lives in `src/styles/lab.css`**, imported by the lab pages. Hero, layout, controls panel, presets, chart frame, stat strip, export bar, references — one definition each. Do **not** re-declare these in a widget's scoped `<style>`; that is exactly how the styles drifted apart before (`.stat-value` had 4 definitions, `.preset-btn` 7).
+- Per-widget variation goes through the knobs `lab.css` documents at the top (`--sidebar-w`, `--hero-measure`, `--chart-aspect`, `--stats-cols`). Need a new axis? Add a knob there rather than a local copy.
+- A local override is legitimate for **behaviour** the shared component can't know about — `cursor: crosshair` on a chart with a hover readout, `overflow`, `z-index`. Keep it to just those properties.
+- Widget styling follows the dense "Gen-A" style (compact pill buttons, `0.6875rem` labels, `--text-muted`), the convention cylinder / mie-scattering / photothermal already used.
+- **No hex colours.** Every colour has a token in `src/styles/global.css` — spectral palette, status (`--success` / `--warning` / `--danger` plus their `-soft` / `-ink` pairs), band inks, `--graph-canvas`. Stylelint fails the build on a raw hex; if the colour you need genuinely has no name, add the token.
 
 ## How we proceed (keep it cheap)
 

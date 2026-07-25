@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@types/three": "^0.185.1",
     "postcss-html": "^1.8.1",
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",

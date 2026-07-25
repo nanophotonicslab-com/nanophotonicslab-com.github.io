@@ -54,11 +54,11 @@ const feedbackUrl = import.meta.env.PUBLIC_FEEDBACK_URL || '';
     const retry = widget.querySelector('.feedback-retry');
     const apiUrl = widget.getAttribute('data-api');
 
-    function toggle() {
+    const toggle = () => {
       const open = widget.getAttribute('data-open') === 'true';
       widget.setAttribute('data-open', String(!open));
       if (open) widget.setAttribute('data-state', 'idle');
-    }
+    };
 
     pill?.addEventListener('click', toggle);
     close?.addEventListener('click', toggle);
