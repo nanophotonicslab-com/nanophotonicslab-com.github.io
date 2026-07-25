@@ -31,6 +31,14 @@ jobs:
             sleep 15
           done
           echo "npm ci failed after 3 attempts"; exit 1
+      # The same gates as ci.yml. They have to be repeated here, not just on
+      # pull_request: this repo publishes by pushing straight to main, so a PR
+      # gate alone would never run on the path that actually reaches the site.
+      - name: Lint styles
+        run: npm run lint:css
+      - name: Type-check .astro
+        run: npm run check
+
       - run: npm test
       - run: npm run build
         env:
