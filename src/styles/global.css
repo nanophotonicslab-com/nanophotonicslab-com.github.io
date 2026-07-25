@@ -24,6 +24,43 @@
   --rose: #F43F5E;
   --red: #EF4444;
 
+  /* Status — a soft surface paired with strong ink. Model badges, validity
+     notes, error states. Named rather than pasted so dark mode can override
+     them in one place later; today they are the values already in use. */
+  --success: #059669;
+  --success-soft: #ECFDF5;
+  --warning: #D97706;
+  --warning-soft: #FEF3C7;
+  --warning-ink: #92400E;
+  --danger: #DC2626;
+  --danger-soft: #FEE2E2;
+  --danger-ink: #B91C1C;
+
+  /* Deeper inks and tinted surfaces, for small type on a coloured pill where
+     the spectral palette above does not carry enough contrast */
+  --violet-light: #8B5CF6;
+  --violet-strong: #6D28D9;
+  --violet-ink: #5B21B6;
+  --violet-soft: #EDE9FE;
+  --emerald-ink: #047857;
+  --emerald-soft: #D1FAE5;
+  --stone-ink: #44403C;
+  --stone-soft: #E7E5E4;
+  --rose-strong: #E11D48;
+  --amber-strong: #B45309;
+
+  /* Pale stops — the same colours --spectrum-soft interpolates through */
+  --violet-pale: #C4B5FD;
+  --blue-pale: #93C5FD;
+  --emerald-pale: #6EE7B7;
+  --amber-pale: #FCD34D;
+  /* link/code ink on a filled accent surface (assistant user bubble) */
+  --link-on-accent: #FDE68A;
+
+  /* Node-graph canvas (workbench) — dark in both themes by design */
+  --graph-canvas: #12102B;
+  --graph-canvas-border: #2A2945;
+
   /* Primary / accent */
   --primary: #5B5EE0;
   --primary-dark: #4F46E5;

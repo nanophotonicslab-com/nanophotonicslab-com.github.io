@@ -432,7 +432,9 @@ import '../../styles/lab.css';
 <style>  .widget-hero__subtitle a { color: var(--primary); text-decoration: underline; }
   #module-panel-blazed[hidden] { display: none; }
   .bz-results { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
-  .bz-range { width: 100%; accent-color: var(--primary); margin: -0.1rem 0 0.35rem; cursor: pointer; }  .stat--wide { grid-column: 1 / -1; }  .stat-value.is-muted { color: var(--text-muted); }
+  .bz-range { width: 100%; accent-color: var(--primary); margin: -0.1rem 0 0.35rem; cursor: pointer; }
+  .stat--wide { grid-column: 1 / -1; }
+  .stat-value.is-muted { color: var(--text-muted); }
   .bz-order-select {
     display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
     padding: 0.55rem 0.65rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg-soft);
@@ -461,14 +463,16 @@ import '../../styles/lab.css';
   .bz-legend-swatch { width: 16px; height: 0; border-top: 2.4px solid var(--text); border-radius: 2px; }
   .bz-legend-swatch--incident { border-top-color: var(--text); }
   .bz-legend-swatch--blaze { border-top-style: dashed; border-top-color: var(--amber); }
-  .bz-legend-warning { color: #B45309; font-weight: 700; }
+  .bz-legend-warning { color: var(--amber-strong); font-weight: 700; }
   .bz-legend-warning[hidden] { display: none; }
 
   .bz-export-bar {
     display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
     margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
   }
-  .bz-export-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }  @media (max-width: 640px) { .output-card { grid-template-columns: 1fr 1fr; } }  .widget-layout[hidden] { display: none; }
+  .bz-export-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
+  @media (max-width: 640px) { .output-card { grid-template-columns: 1fr 1fr; } }
+  .widget-layout[hidden] { display: none; }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }  /* Tooltips must escape the card, so it can't use overflow:hidden to clip the
      hover spectrum bar against the rounded corners. Instead make the ::before
      tall enough to render the full corner radius, but paint the 3px spectrum
@@ -480,7 +484,8 @@ import '../../styles/lab.css';
     border-top-right-radius: var(--radius-lg);
     background: var(--spectrum) top / 100% 3px no-repeat;
     pointer-events: none;
-  }  .controls h3.controls-title {
+  }
+  .controls h3.controls-title {
     font-size: 1rem; font-weight: 700; text-transform: none; letter-spacing: 0;
     color: var(--text); margin: 0 0 var(--space-sm); padding-top: 0; border-top: none;
   }
@@ -640,7 +645,8 @@ import '../../styles/lab.css';
     .rcwa-conventions { padding: 0.55rem; }
     .rcwa-conventions__header { align-items: flex-start; flex-direction: column; }
     .rcwa-convention-list { font-size: 0.72rem; }
-  }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
   /* Keyboard focus visibility (a11y) */
   .module-card:focus-visible,
   .param-slider:focus-visible,

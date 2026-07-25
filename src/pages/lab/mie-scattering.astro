@@ -720,7 +720,10 @@ initPermalinks({
   .dipole-unit-toggle .plot-tab { padding: 0.12rem 0.5rem; font-size: 0.7rem; font-weight: 700; }
   .dipole-yrange-row { margin-top: 0.4rem; }
   .dipole-ref-sel { font-family: var(--font); font-size: inherit; font-weight: 700; color: var(--primary); background: transparent; border: none; border-bottom: 1px dotted var(--primary-light); padding: 0 0.1rem; margin: 0 0.05rem; cursor: pointer; }
-  .dipole-ref-sel:focus { outline: none; border-bottom-style: solid; }  .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }  .param-number:focus { border-color: var(--primary-light); }  .radius-threshold-marker {
+  .dipole-ref-sel:focus { outline: none; border-bottom-style: solid; }
+  .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
+  .param-number:focus { border-color: var(--primary-light); }
+  .radius-threshold-marker {
     position: absolute;
     left: 0;
     top: 50%;
@@ -733,25 +736,29 @@ initPermalinks({
     box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
     transform: translate(-50%, -50%);
     pointer-events: none;
-  }  .param-slider::-moz-range-track { height: 5px; background: var(--bg-muted); border-radius: 3px; border: none; }
+  }
+  .param-slider::-moz-range-track { height: 5px; background: var(--bg-muted); border-radius: 3px; border: none; }
   /* illumination-λ thumb in rose, matching the dashed marker in the σabs chart */
   #thermal-lambda-slider::-webkit-slider-thumb { background: var(--rose); }
   #thermal-lambda-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(244,63,94,0.18); }
   #thermal-lambda-slider::-moz-range-thumb { background: var(--rose); }
-  .param-limits { display: flex; align-items: center; gap: 0.25rem; }  .param-limit {
+  .param-limits { display: flex; align-items: center; gap: 0.25rem; }
+  .param-limit {
+    -moz-appearance: textfield;
     width: 3.5rem; padding: 0.1rem 0.25rem; border: 1px solid transparent; border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.6875rem; font-variant-numeric: tabular-nums; color: var(--text-muted);
     text-align: center; background: var(--bg-soft); outline: none; transition: border-color 0.15s, color 0.15s;
   }
   .param-limit:focus { border-color: var(--primary-light); color: var(--text-soft); }
   .param-limit::-webkit-inner-spin-button, .param-limit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .param-limit { -moz-appearance: textfield; }  #eps-group.hidden { display: none; }
+  #eps-group.hidden { display: none; }
   .shell-section { display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); }
   .shell-header { display: flex; justify-content: space-between; align-items: center; }
   .shell-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
   .remove-shell-btn { padding: 0.15rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   .remove-shell-btn:hover { border-color: var(--red); color: var(--red); }
-  .shell-eps-group.hidden { display: none !important; }  .plot-tabs--sm { padding: 3px; }
+  .shell-eps-group.hidden { display: none !important; }
+  .plot-tabs--sm { padding: 3px; }
   .plot-tabs--sm .plot-tab { padding: 0.45rem 0.85rem; font-size: 0.8125rem; font-weight: 600; }
   .plot-tabs--toolbar { padding: 2px; }
   .plot-tabs--toolbar .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
@@ -772,10 +779,13 @@ initPermalinks({
   :global(.dipole-fig-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
   :global(.dipole-fig-btn.active) { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
   :global(.dipole-fig-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
-  :global(.dipole-fig-label) { font-size: 0.7rem; font-weight: 700; color: var(--text-soft); margin: 0.6rem 0 0.35rem; }  @media (max-width: 640px) {
+  :global(.dipole-fig-label) { font-size: 0.7rem; font-weight: 700; color: var(--text-soft); margin: 0.6rem 0 0.35rem; }
+  @media (max-width: 640px) {
     .material-import-dialog__grid { grid-template-columns: 1fr; }
-  }  .notes-card h4,
-  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }  .notes-card :global(li)::marker {
+  }
+  .notes-card h4,
+  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
+  .notes-card :global(li)::marker {
     color: var(--text-soft);
   }
   .notes-card :global(strong) { color: var(--text); }
@@ -816,17 +826,22 @@ initPermalinks({
   :global(.thermal-preset-grid) { display: flex; flex-wrap: wrap; gap: 0.3rem; }
   :global(.thermal-preset-btn) { font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.22rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
   :global(.thermal-preset-btn:hover) { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
-  :global(.thermal-preset-btn.active) { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }  .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
+  :global(.thermal-preset-btn.active) { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 1px 3px rgba(99,102,241,0.4); }
+  .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
   .plot-tab { flex: 1; padding: 0.35rem 0.4rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.75rem; font-weight: 500; cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center; }
   .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .plot-tab:hover:not(.active) { color: var(--text); }
   .plot-tab:disabled,
   .plot-tab[aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
   .plot-tab:disabled:hover,
-  .plot-tab[aria-disabled="true"]:hover { color: var(--text-soft); }  .ref-list { margin: 0; padding-left: 1.35em; }
+  .plot-tab[aria-disabled="true"]:hover { color: var(--text-soft); }
+  .ref-list { margin: 0; padding-left: 1.35em; }
   .ref-list li { margin-bottom: 0.25rem; padding-left: 0.15em; }
-  .ref-list li:last-child { margin-bottom: 0; }  .chart-hint { font-size: 0.6875rem; color: var(--text-muted); display: none; }
-  .chart-hint.visible { display: inline; }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; }  .axis-overlay .plot-tabs {
+  .ref-list li:last-child { margin-bottom: 0; }
+  .chart-hint { font-size: 0.6875rem; color: var(--text-muted); display: none; }
+  .chart-hint.visible { display: inline; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; }
+  .axis-overlay .plot-tabs {
     box-shadow: 0 1px 8px rgba(30, 27, 75, 0.08);
     background: rgba(241, 240, 251, 0.9);
     backdrop-filter: blur(6px);

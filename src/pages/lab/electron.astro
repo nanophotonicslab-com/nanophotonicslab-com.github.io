@@ -701,7 +701,8 @@ initPermalinks({ kev: 'kev' });
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }  .param-box {
+<style>  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }
+  .param-box {
     padding: var(--space-sm);
     border: 1px solid var(--bg-muted);
     border-radius: var(--radius-sm);
@@ -709,7 +710,9 @@ initPermalinks({ kev: 'kev' });
   }
   /* Results */
   .results-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); min-width: 0; }
-  .result-panel { min-width: 0; padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }  .chart-stat { font-size: 0.75rem; font-weight: 600; color: var(--text-soft); font-variant-numeric: tabular-nums; }  .chart-wrap canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: var(--radius-sm); }
+  .result-panel { min-width: 0; padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
+  .chart-stat { font-size: 0.75rem; font-weight: 600; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: var(--radius-sm); }
   #freq-field-chart,
   #time-field-chart { cursor: crosshair; }
   /* ===================== Smith–Purcell module ===================== */
@@ -764,7 +767,8 @@ initPermalinks({ kev: 'kev' });
   .sp-geo__png:hover { border-color: var(--primary); color: var(--primary); }
   .sp-geo-dialog__png { position: absolute; top: 0.45rem; right: 3rem; z-index: 2; }
   /* result-box export bar + shared tool-btn (not defined elsewhere in this file) */
-  .sp-export-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: var(--space-xs); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }  .sp-geo-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 92vw; }
+  .sp-export-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: var(--space-xs); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .sp-geo-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); max-width: 92vw; }
   .sp-geo-dialog::backdrop { background: rgba(15, 18, 30, 0.55); }
   .sp-geo-dialog__panel { position: relative; padding: var(--space-md); }
   .sp-geo-dialog__panel canvas { width: min(760px, 86vw); aspect-ratio: 3 / 2; display: block; }
@@ -807,8 +811,9 @@ initPermalinks({ kev: 'kev' });
   .sp-alpha-dialog__table th, .sp-alpha-dialog__table td { padding: 0.2rem 0.4rem; text-align: right; border-bottom: 1px solid var(--bg-muted); white-space: nowrap; }
   .sp-alpha-dialog__table th { position: sticky; top: 0; background: var(--bg-soft, var(--bg)); color: var(--text-soft); font-weight: 700; }
   .sp-alpha-dialog__status { margin: 0; font-size: 0.72rem; color: var(--text-muted); min-height: 1em; }
-  .sp-alpha-dialog__status.error { color: var(--rose, #e11d48); }
-  .sp-alpha-dialog__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }  .chart-tool-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .sp-alpha-dialog__status.error { color: var(--rose); }
+  .sp-alpha-dialog__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  .chart-tool-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
   /* Plasmonic NPs: embedded real lab in a large modal with a floating corner action bar */
   .sp-plas-frame-dialog { border: none; border-radius: var(--radius-md); padding: 0; background: var(--bg); box-shadow: var(--shadow-lg); width: 95vw; max-width: 1240px; height: 90vh; overflow: hidden; }
   .sp-plas-frame-dialog::backdrop { background: rgba(15, 18, 30, 0.6); }
@@ -816,7 +821,7 @@ initPermalinks({ kev: 'kev' });
   .sp-plas-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
   .sp-plas-frame-bar { position: absolute; top: 0.7rem; right: 0.9rem; display: flex; align-items: center; gap: 0.5rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-full); padding: 0.35rem 0.55rem; box-shadow: var(--shadow-md); z-index: 3; }
   .sp-plas-frame-status { font-size: 0.7rem; color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sp-plas-frame-status.error { color: var(--rose, #e11d48); }
+  .sp-plas-frame-status.error { color: var(--rose); }
 
   /* results column + two-level tabs */
   .sp-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
@@ -864,7 +869,8 @@ initPermalinks({ kev: 'kev' });
   .sp-readout { display: flex; flex-wrap: wrap; gap: 0.35rem 1.2rem; font-size: 0.78rem; color: var(--text-soft); }
   .sp-readout b { color: var(--text); font-variant-numeric: tabular-nums; }
   .sp-readout-link { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.5rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.15s; }
-  .sp-readout-link:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }  .sp-examples { margin-top: var(--space-sm); }
+  .sp-readout-link:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .sp-examples { margin-top: var(--space-sm); }
   .sp-example { display: flex; flex-direction: column; gap: 0.28rem; width: 100%; text-align: left; padding: 0.6rem 0.7rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); cursor: pointer; font-family: var(--font); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
   .sp-example:hover { border-color: var(--primary-light); }
   .sp-example.active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); box-shadow: inset 0 0 0 1px var(--primary); }

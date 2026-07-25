@@ -190,7 +190,10 @@ initPermalinks({
 <style>  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
   .chart-tool-btn:focus-visible, .export-btn:focus-visible {
     outline: 2px solid var(--primary); outline-offset: 2px;
-  }  .validity-note { font-size: 0.78rem; color: var(--amber); margin: 0; font-weight: 600; }  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }  @media (max-width: 768px) {
+  }
+  .validity-note { font-size: 0.78rem; color: var(--amber); margin: 0; font-weight: 600; }
+  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
+  @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }

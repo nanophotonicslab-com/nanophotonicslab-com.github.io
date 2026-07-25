@@ -1000,7 +1000,7 @@
   height: 28px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--bg-muted);
-  background: #222;
+  background: var(--text);
   transition: background 0.3s;
 }
 .swatch-label {

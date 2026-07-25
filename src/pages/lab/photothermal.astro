@@ -156,9 +156,9 @@ const thermalPresets = [
           <div class="chart-header">
             <span class="chart-title">Cross-sections vs wavelength</span>
             <div class="chart-legend">
-              <span class="legend-item"><span class="legend-swatch" style="background:#EF4444"></span>&sigma;<sub>abs</sub></span>
-              <span class="legend-item"><span class="legend-swatch" style="background:#3B82F6"></span>&sigma;<sub>sca</sub></span>
-              <span class="legend-item"><span class="legend-swatch" style="background:#F43F5E"></span>laser &lambda;</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>&sigma;<sub>abs</sub></span>
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--blue)"></span>&sigma;<sub>sca</sub></span>
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--rose)"></span>laser &lambda;</span>
             </div>
             <div class="toolbar-actions">
               <button id="dl-png" class="tool-btn" title="Download spectrum as PNG" data-umami-event="photothermal-export" data-umami-event-format="png">
@@ -239,12 +239,12 @@ const thermalPresets = [
             </div>
             <div class="budget-rows">
               <div class="budget-row">
-                <span class="budget-dot" style="background:#EF4444"></span>
+                <span class="budget-dot" style="background:var(--red)"></span>
                 <span class="budget-name">absorbed</span>
                 <span class="budget-value" id="out-pabs">&mdash;</span>
               </div>
               <div class="budget-row">
-                <span class="budget-dot" style="background:#3B82F6"></span>
+                <span class="budget-dot" style="background:var(--blue)"></span>
                 <span class="budget-name">scattered</span>
                 <span class="budget-value" id="out-psca">&mdash;</span>
               </div>
@@ -375,17 +375,22 @@ initPermalinks({
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>  .hidden { display: none !important; }  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }  .output-card.card,
+<style>  .hidden { display: none !important; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+  .output-card.card,
   .output-card,
   .stats,
   .stat,
   .stat-info { overflow: visible; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }  .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }  .stat:has(.stat-info:hover),
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
+  .stat:has(.stat-info:hover),
   .stat:has(.stat-info:focus-visible),
   .output-card:hover,
   .output-card:focus-within {
     z-index: 20;
-  }  .budget { display: flex; flex-direction: column; gap: 0.5rem; }
+  }
+  .budget { display: flex; flex-direction: column; gap: 0.5rem; }
   .budget-header { display: flex; justify-content: space-between; align-items: baseline; }
   .budget-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
   .budget-i { font-size: 0.75rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
@@ -517,7 +522,8 @@ initPermalinks({
     font-size: 0.78rem;
     color: var(--text-muted);
     line-height: 1.45;
-  }  @media (max-width: 640px) {
+  }
+  @media (max-width: 640px) {
     .material-import-dialog__grid { grid-template-columns: 1fr; }
   }
 

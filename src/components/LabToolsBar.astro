@@ -330,6 +330,13 @@ function isActive(href: string): boolean {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
+    min-width: 190px;
+    background: var(--bg);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 0.3rem;
+    z-index: 100;
   }
   /* Invisible bridge covering the gap between the button and the menu so the
      pointer stays within the category while moving down to the dropdown. */
@@ -340,15 +347,6 @@ function isActive(href: string): boolean {
     right: 0;
     top: -0.45rem;
     height: 0.45rem;
-  }
-  .lab-bar__dropdown {
-    min-width: 190px;
-    background: var(--bg);
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-md);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    padding: 0.3rem;
-    z-index: 100;
   }
 
   .lab-bar__cat.open .lab-bar__dropdown {

@@ -28,13 +28,11 @@ export default {
   ],
 
   rules: {
-    /* Every hex that had an exact token equivalent is already converted. The
-     * ~67 that remain are status colours (success / warning / danger surfaces)
-     * the palette simply doesn't define yet — promoting them needs new tokens
-     * in global.css, which is a design call. Kept at `warning` so the guard is
-     * visible on new code without blocking the build on that backlog; flip to
-     * `true` once the tokens exist. */
-    'color-no-hex': [true, { severity: 'warning' }],
+    /* Hard error: every colour in the codebase now has a name in global.css,
+     * including the status and spectral-band scales. A hex literal here is
+     * either a duplicate of an existing token or a colour that needs adding to
+     * the palette — both are worth stopping for. */
+    'color-no-hex': true,
 
     // blank lines around at-rules are used for grouping here, not structure
     'at-rule-empty-line-before': null,
@@ -54,11 +52,6 @@ export default {
     'comment-empty-line-before': null,
     'declaration-empty-line-before': null,
     'custom-property-empty-line-before': null,
-
-    /* Pre-existing split declarations (e.g. `.param-number` declared once for
-     * layout and again for the Firefox spinner reset). Worth merging, but not
-     * worth blocking a build over. */
-    'no-duplicate-selectors': [true, { severity: 'warning' }],
 
     // naming and specificity are the author's call, not the linter's
     'selector-class-pattern': null,

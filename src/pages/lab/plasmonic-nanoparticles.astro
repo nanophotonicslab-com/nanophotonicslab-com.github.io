@@ -647,13 +647,17 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .widget-hero__validity strong { color: var(--text); }
   .param, .preset-block { display: flex; flex-direction: column; gap: 0.4rem; }
   .param[hidden], [hidden].nl-box { display: none; }
-  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }  .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .param-label-wrap { display: inline-flex; align-items: center; }
   /* inline info button for control labels (mirrors .stat-info, tooltip left-aligned for the left column) */
   .param-info { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 1rem; height: 1rem; margin-left: 0.3rem; padding: 0; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-muted); font-family: var(--font); font-size: 0.66rem; font-weight: 750; line-height: 1; cursor: help; }
   .param-info:hover, .param-info:focus-visible { border-color: var(--primary-light); color: var(--primary); outline: none; }
   .param-info .stat-tooltip { right: auto; left: 0; }
-  .param-info:hover .stat-tooltip, .param-info:focus-visible .stat-tooltip { opacity: 1; transform: translateY(0); }  .param-number--wide { width: 100%; text-align: left; }  .param-slider:disabled, .param-number:disabled { opacity: 0.55; cursor: not-allowed; }  .material-import-close {
+  .param-info:hover .stat-tooltip, .param-info:focus-visible .stat-tooltip { opacity: 1; transform: translateY(0); }
+  .param-number--wide { width: 100%; text-align: left; }
+  .param-slider:disabled, .param-number:disabled { opacity: 0.55; cursor: not-allowed; }
+  .material-import-close {
     width: 2rem;
     height: 2rem;
     border: 1px solid var(--bg-muted);
@@ -664,8 +668,10 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1;
     cursor: pointer;
   }
-  .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
-  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
+  .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }
+  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
+  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
   .shape-strip {
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
@@ -789,7 +795,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     font-weight: 600;
     cursor: pointer;
   }
-  .tab-btn.active { color: var(--primary); background: var(--bg); box-shadow: var(--shadow-sm); }  .chart-subtitle { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-muted); }  :global(.legend-item) { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  .tab-btn.active { color: var(--primary); background: var(--bg); box-shadow: var(--shadow-sm); }
+  .chart-subtitle { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-muted); }
+  :global(.legend-item) { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
   :global(.legend-swatch) { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
   .resonance-controls {
     display: inline-flex;
@@ -798,7 +806,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     border: 1px solid var(--bg-muted);
     border-radius: var(--radius-full);
     background: var(--bg-soft);
-  }  .controls-head h3 { margin: 0; }  .nl-panel { padding: var(--space-lg); position: relative; }
+  }
+  .controls-head h3 { margin: 0; }
+  .nl-panel { padding: var(--space-lg); position: relative; }
   .nl-panel__badge { position: absolute; top: var(--space-md); right: var(--space-md); font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--primary); background: var(--bg-soft); border: 1px solid var(--bg-muted); border-radius: var(--radius-full); padding: 0.15rem 0.55rem; }
   .nl-panel h3 { margin: 0 0 0.6rem; padding-right: 6rem; }
   .nl-panel p { color: var(--text-soft); font-size: 0.85rem; line-height: 1.5; margin: 0 0 0.7rem; }
@@ -827,23 +837,30 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   #nl-controls-box { display: flex; flex-direction: column; gap: var(--space-md); }
   #nl-controls-box[hidden] { display: none; }
   .nl-box { display: flex; flex-direction: column; gap: var(--space-md); }
-  .nl-range-head { margin: 0.3rem 0 -0.2rem; font-size: 1rem; }  .field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
-  .field .field-input { flex: 1 1 auto; }  .nl-seg-field { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .nl-range-head { margin: 0.3rem 0 -0.2rem; font-size: 1rem; }
+  .field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
+  .field .field-input { flex: 1 1 auto; }
+  .nl-seg-field { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .nl-seg-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
   .nl-hint { font-weight: 400; font-size: 0.68rem; color: var(--text-muted); }
   #nl-modes-param > .nl-seg-field > label { font-weight: 700; color: var(--text); }
   #nl-modes .seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .nl-temp-input { max-width: 6rem; }
   #nl-model-param { display: flex; flex-direction: column; gap: 0.5rem; }
-  #nl-model-param[hidden] { display: none; }  .gr-ef-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }  /* keep the μ^DC [cm²/Vs] label on one line: give it more width, squeeze γ/τ a touch */
+  #nl-model-param[hidden] { display: none; }
+  .gr-ef-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }  /* keep the μ^DC [cm²/Vs] label on one line: give it more width, squeeze γ/τ a touch */
   #nl-graphene-box .mini-field label { white-space: nowrap; }
   #nl-graphene-box .mini-field:nth-child(1), #nl-graphene-box .mini-field:nth-child(2) { flex: 0.85 1 0; }
   #nl-graphene-box .mini-field:nth-child(3) { flex: 1.5 1 0; }
   .nl-chart-wrap { margin-bottom: 2.35rem; }
   .nl-note { margin-top: 0.6rem; }
   .nl-note p { font-size: 0.78rem; line-height: 1.5; color: var(--text-soft); margin: 0 0 0.4rem; }
-  .nl-note__cite { font-size: 0.72rem !important; color: var(--text-muted) !important; }  .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
-  .tool-btn.active:hover { color: white; }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }  .axis-toggle {
+  .nl-note__cite { font-size: 0.72rem !important; color: var(--text-muted) !important; }
+  .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+  .tool-btn.active:hover { color: white; }
+  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
+  .axis-toggle {
     display: inline-flex;
     gap: 0.2rem;
     padding: 0.18rem;
@@ -877,8 +894,10 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     color: var(--text-soft);
     font-size: 0.75rem;
     line-height: 1.45;
-  }  #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  @media (max-width: 720px) { #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }  .stat-label .lc { text-transform: none; }
+  }
+  #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 720px) { #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat-label .lc { text-transform: none; }
   .model-note { padding: var(--space-md); }
   .model-note__header {
     display: flex;
