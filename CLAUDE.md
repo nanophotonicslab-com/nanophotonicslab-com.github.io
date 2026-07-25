@@ -34,6 +34,20 @@ npm run check     # astro check (types in .astro) — blocks CI
 - Widget styling follows the dense "Gen-A" style (compact pill buttons, `0.6875rem` labels, `--text-muted`), the convention cylinder / mie-scattering / photothermal already used.
 - **No hex colours.** Every colour has a token in `src/styles/global.css` — spectral palette, status (`--success` / `--warning` / `--danger` plus their `-soft` / `-ink` pairs), band inks, `--graph-canvas`. Stylelint fails the build on a raw hex; if the colour you need genuinely has no name, add the token.
 
+## Checking a styling change didn't break a widget
+
+Editing `lab.css` touches all 18 widgets at once, so verify by comparison, not by opening one page:
+
+```sh
+npm run dev &
+npm run visual:snap -- .visual/before     # current code
+# ...make the change...
+npm run visual:snap -- .visual/after
+npm run visual:diff -- .visual/before .visual/after
+```
+
+Screenshots are never byte-identical (the spectrum rule animates, canvases finish drawing at different times), so **snapshot the same code twice first** to learn each page's noise floor and judge against that. `workbench` (litegraph) and `bem-solver` (three.js) sit far above the rest — eyeball those. A percentage is not a verdict: a 10px vertical shift moves everything below it and scores high while looking fine, and the two real regressions in this refactor were both found by looking at the rendered page, not by the number.
+
 ## How we proceed (keep it cheap)
 
 - Lab widgets live in `src/pages/lab/*.astro`. Components in `src/components/`, data modules in `src/data/`, shared layout `src/layouts/Layout.astro`.

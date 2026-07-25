@@ -13,7 +13,9 @@
     "astro": "astro",
     "lint:css": "stylelint \"src/**/*.{css,astro}\"",
     "lint:css:fix": "stylelint \"src/**/*.{css,astro}\" --fix",
-    "check": "astro check"
+    "check": "astro check",
+    "visual:snap": "node scripts/visual-snapshot.mjs",
+    "visual:diff": "node scripts/visual-diff.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",

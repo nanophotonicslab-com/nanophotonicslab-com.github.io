@@ -35,3 +35,6 @@ scripts/.venv/
 scripts/out/
 **/__pycache__/
 packages/optics/dist/
+
+# local visual-regression snapshots
+.visual/
