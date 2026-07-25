@@ -187,44 +187,10 @@ initPermalinks({
 </script>
 </Layout>
 
-<style>  .controls { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
-  .param-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
-  .param-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); }
-  .param-select, .param-number {
-    padding: 0.25rem 0.45rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    font-family: var(--font); font-size: 0.875rem; font-weight: 600; color: var(--primary);
-    background: var(--bg); outline: none; text-align: right;
-  }
-  .param-select { width: 100%; text-align: left; }
-  .param-number { width: 5.2rem; }
-  .param-slider { width: 100%; accent-color: var(--primary); }
-  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
+<style>  .param-select:focus-visible, .param-number:focus-visible, .param-slider:focus-visible,
   .chart-tool-btn:focus-visible, .export-btn:focus-visible {
     outline: 2px solid var(--primary); outline-offset: 2px;
-  }
-  .chart-tool-btn {
-    padding: 0.4rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--primary); font-family: var(--font);
-    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
-  }
-  .chart-tool-btn:hover { border-color: var(--primary-light); }
-  .theory-note { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
-
-  .chart-panel { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }  .stat { display: flex; flex-direction: column; padding: 0.5rem 0.65rem; background: var(--bg-soft); border-radius: var(--radius-md); }
-  .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
-  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-  .stat-unit { font-size: 0.7rem; color: var(--text-muted); }
-  .validity-note { font-size: 0.78rem; color: var(--amber); margin: 0; font-weight: 600; }
-
-  .chart-header { margin-bottom: 0.3rem; }
-  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-soft); }
-  .chart-wrap { position: relative; width: 100%; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.3rem; }
-  .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
-  .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
-  .export-bar { display: flex; align-items: center; gap: 0.5rem; }
-  .export-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
-  @media (max-width: 768px) {
+  }  .validity-note { font-size: 0.78rem; color: var(--amber); margin: 0; font-weight: 600; }  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }  @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }

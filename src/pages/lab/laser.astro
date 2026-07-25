@@ -898,92 +898,7 @@ initPermalinks({
   /* Examples strip — sits below and matches the width of the result box */
   .examples-row { margin-top: var(--space-lg); }
   .examples-row :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-  @media (max-width: 900px) { .examples-spacer { display: none; } }
-
-  /* ---- Controls ---- */
-  /* Not sticky: the controls card is shorter than the results, so pinning it
-     made the results appear to slide/detach on scroll. Scroll as one unit. */
-  .controls { align-self: start; }
-  .controls h3 { margin-bottom: var(--space-md); }
-  .param-group {
-    margin-bottom: var(--space-md); padding-top: var(--space-sm);
-    border-top: 1px solid var(--bg-muted);
-  }
-  .param-group__title {
-    display: block; font-size: 0.7rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-muted); margin-bottom: 0.5rem;
-  }
-  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
-  .field { display: flex; align-items: center; gap: 0.5rem; }
-  .field label {
-    flex: 0 0 auto; min-width: 80px; max-width: 100px;
-    font-size: 0.78rem; color: var(--text-soft);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .field-label-with-info {
-    position: relative;
-    flex: 0 0 auto; min-width: 80px; max-width: 100px;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  .field-label-with-info label {
-    flex: 0 1 auto; min-width: 0; max-width: none;
-  }
-  .field-info {
-    width: 1rem;
-    height: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-full);
-    background: var(--bg);
-    color: var(--text-muted);
-    font-family: var(--font);
-    font-size: 0.68rem;
-    font-weight: 750;
-    line-height: 1;
-    cursor: help;
-  }
-  .field-info:hover,
-  .field-info:focus-visible {
-    border-color: var(--primary-light);
-    color: var(--primary);
-    outline: none;
-  }
-  .field-tooltip {
-    position: absolute;
-    left: 0;
-    top: calc(100% + 0.35rem);
-    width: min(240px, 72vw);
-    padding: 0.55rem 0.65rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text-soft);
-    box-shadow: var(--shadow-md);
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1.35;
-    text-align: left;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(-3px);
-    transition: opacity 0.15s, transform 0.15s;
-    z-index: 20;
-  }
-  .field-label-with-info:hover .field-tooltip,
-  .field-label-with-info:focus-within .field-tooltip,
-  .field-info:hover + .field-tooltip,
-  .field-info:focus + .field-tooltip,
-  .field-info:focus-visible + .field-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .waist-fields {
+  @media (max-width: 900px) { .examples-spacer { display: none; } }  .waist-fields {
     gap: 0.65rem;
   }
   .waist-fields .field {
@@ -995,19 +910,7 @@ initPermalinks({
     max-width: none; min-width: 0;
     white-space: normal; line-height: 1.25;
   }
-  .waist-fields .field-input { flex: none; width: 100%; }
-  .field-input {
-    flex: 1; min-width: 0; padding: 0.35rem 0.55rem; font-size: 0.85rem;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text); font-family: var(--font);
-  }
-  .field-input:focus {
-    outline: none; border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
-  }
-  .field-input[readonly] { opacity: 0.7; cursor: default; }
-  select.field-input { cursor: pointer; }
-
+  .waist-fields .field-input { flex: none; width: 100%; }  .field-input[readonly] { opacity: 0.7; cursor: default; }
   .input-with-unit { flex: 1; display: flex; gap: 0; min-width: 0; }
   .input-with-unit .field-input {
     border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none;
@@ -1020,31 +923,13 @@ initPermalinks({
   }
 
   .shape-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-  .preset-btn {
-    padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 500;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
-    background: transparent; color: var(--text-soft); cursor: pointer;
-    transition: all 0.15s;
-  }
-  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .preset-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-  .theory-note {
-    margin-top: var(--space-md); font-size: 0.78rem;
-    line-height: 1.5; color: var(--text-muted);
-  }
-
   /* ---- Results ---- */
   .results h3 { margin-bottom: var(--space-md); }
   .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
   @media (max-width: 600px) { .result-grid { grid-template-columns: 1fr; } }
   .result-item { display: flex; flex-direction: column; gap: 0.2rem; }
   .result-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .result-value { font-size: 1.4rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-
-  /* ---- Charts ---- */
-  .chart-wrap { margin-top: var(--space-lg); }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 2; display: block; border-radius: var(--radius-sm); }
+  .result-value { font-size: 1.4rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 2; display: block; border-radius: var(--radius-sm); }
   .dual-chart { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .dual-chart canvas { aspect-ratio: 4 / 3; }
   @media (max-width: 600px) { .dual-chart { grid-template-columns: 1fr; } }
@@ -1059,6 +944,9 @@ initPermalinks({
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
+
+  /* behaviour this widget needs on top of the shared component in lab.css */
+  .field label { overflow: hidden; }
 </style>
 
 <script>

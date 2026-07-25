@@ -105,14 +105,7 @@ import '../../styles/lab.css';
   .guide kbd {
     padding: 0.05rem 0.35rem; border: 1px solid var(--bg-muted); border-bottom-width: 2px;
     border-radius: 4px; font-size: 0.72rem; background: var(--bg-soft);
-  }
-  .tool-btn {
-    padding: 0.35rem 0.8rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--primary); font-family: var(--font);
-    font-size: 0.8125rem; font-weight: 600; cursor: pointer;
-  }
-  .tool-btn:hover { border-color: var(--primary-light); }
-  .tool-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  }  .tool-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .bench-hint { font-size: 0.75rem; color: var(--text-muted); }
 
   .graph-wrap {
@@ -145,9 +138,7 @@ import '../../styles/lab.css';
     border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.9rem; color: var(--text); background: var(--bg-soft); outline: none;
   }
-  .rii-query:focus-visible { border-color: var(--primary-light); }
-  .rii-results { overflow-y: auto; min-height: 0; }
-  .rii-results :global(button) {
+  .rii-query:focus-visible { border-color: var(--primary-light); }  .rii-results :global(button) {
     display: block; width: 100%; text-align: left; padding: 0.4rem 0.55rem;
     border: none; background: none; cursor: pointer; border-radius: var(--radius-sm);
     font-family: var(--font); font-size: 0.8125rem; color: var(--text-soft);
@@ -171,13 +162,7 @@ import '../../styles/lab.css';
     width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
     background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   }
-  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }
-
-  .chart-wrap { position: relative; width: 100%; max-width: 720px; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.8rem; margin-top: 0.4rem; }
-  .chart-legend :global(span) { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); }
-  .chart-legend :global(i) { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
-
+  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
   @media (max-width: 640px) {
     .graph-wrap { height: 55vh; min-height: 360px; }
   }

@@ -207,55 +207,11 @@ initPermalinks({
     letter-spacing: 0.05em; color: var(--text-soft);
     margin: 0 0 var(--space-sm);
   }
-
-  /* Controls panel */
-  .controls {
-    padding: var(--space-md);
-    overflow-y: auto;
-    max-height: 80vh;
-  }
-  .controls h3 {
-    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.05em; color: var(--text-soft);
-    margin: var(--space-md) 0 var(--space-sm);
-    padding-bottom: var(--space-xs);
-    border-bottom: 1px solid var(--bg-muted);
-  }
-  .controls h3:first-child { margin-top: 0; }
-
-  .param { margin-bottom: var(--space-sm); }
-  .param-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 4px;
-  }
-  .param-header label { font-size: 0.85rem; font-weight: 500; color: var(--text); }
-  .param-number {
-    width: 80px; padding: 4px 8px; border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm); font-size: 0.85rem; text-align: right;
-    background: var(--bg); color: var(--text);
-  }
-  .param-select {
-    width: 100%; padding: 6px 8px; border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm); font-size: 0.85rem;
-    background: var(--bg); color: var(--text);
-  }
-
   .range-row {
     display: flex; align-items: center; gap: var(--space-xs);
   }
   .range-row .param-number { flex: 1; }
   .range-row span { color: var(--text-muted); }
-
-  .preset-row {
-    display: flex; gap: 4px; margin-top: 4px;
-  }
-  .preset-btn {
-    flex: 1; padding: 4px; font-size: 0.75rem; border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm); background: var(--bg-soft); color: var(--text-soft);
-    cursor: pointer; transition: all 0.15s;
-  }
-  .preset-btn:hover { background: var(--primary-light); color: var(--primary-dark); }
-
   /* Solve / Cancel buttons */
   .solve-row {
     display: flex; gap: var(--space-sm); margin-top: var(--space-md);
@@ -269,19 +225,7 @@ initPermalinks({
   }
   .cancel-btn:hover {
     background: var(--rose, var(--rose)); color: white;
-  }
-
-  /* Progress */
-  .progress-bar {
-    width: 100%; height: 4px; background: var(--bg-muted);
-    border-radius: 2px; margin-top: var(--space-sm); overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; width: 0%; background: var(--spectrum);
-    background-size: 200% 100%;
-    transition: width 0.3s ease;
-  }
-  .progress-text {
+  }  .progress-text {
     font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;
     min-height: 1.2em;
   }
@@ -355,4 +299,7 @@ initPermalinks({
     font-size: 0.8rem;
     color: var(--text-soft);
     border: 1px solid var(--bg-muted);
-  }</style>
+  }
+  /* behaviour this widget needs on top of the shared component in lab.css */
+  .controls { overflow-y: auto; }
+</style>

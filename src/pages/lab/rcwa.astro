@@ -429,45 +429,10 @@ import '../../styles/lab.css';
   </section>
 </Layout>
 
-<style>  .widget-hero__subtitle a { color: var(--primary); text-decoration: underline; }  .module-bar__grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-sm); align-items: stretch;
-  }  .module-card:disabled { cursor: not-allowed; opacity: 0.55; }
-
+<style>  .widget-hero__subtitle a { color: var(--primary); text-decoration: underline; }
   #module-panel-blazed[hidden] { display: none; }
   .bz-results { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
-  .bz-range { width: 100%; accent-color: var(--primary); margin: -0.1rem 0 0.35rem; cursor: pointer; }
-
-  /* Result stats (Plasmonic-nanoparticles style) */
-  .output-card {
-    padding: var(--space-md);
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-sm);
-  }
-  .stat {
-    position: relative; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0;
-    padding: var(--space-sm); border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm); background: var(--bg-soft);
-  }
-  .stat--wide { grid-column: 1 / -1; }
-  .stat-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-  .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.15; overflow-wrap: anywhere; }
-  .stat-value.is-muted { color: var(--text-muted); }  .stat-info {
-    position: absolute; top: 0.42rem; right: 0.42rem; width: 1.1rem; height: 1.1rem;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg);
-    color: var(--text-muted); font-family: var(--font); font-size: 0.72rem; font-weight: 750;
-    line-height: 1; cursor: help; z-index: 1;
-  }
-  .stat-info:hover, .stat-info:focus-visible { border-color: var(--primary-light); color: var(--primary); outline: none; }
-  .stat-tooltip {
-    position: absolute; top: calc(100% + 0.4rem); right: 0; width: min(220px, 70vw);
-    padding: 0.55rem 0.65rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text-soft); box-shadow: var(--shadow-md);
-    font-size: 0.72rem; font-weight: 500; line-height: 1.35; text-align: left;
-    pointer-events: none; opacity: 0; transform: translateY(-3px); transition: opacity 0.15s, transform 0.15s;
-  }
-  .stat-info:hover .stat-tooltip, .stat-info:focus-visible .stat-tooltip { opacity: 1; transform: translateY(0); }
-
+  .bz-range { width: 100%; accent-color: var(--primary); margin: -0.1rem 0 0.35rem; cursor: pointer; }  .stat--wide { grid-column: 1 / -1; }  .stat-value.is-muted { color: var(--text-muted); }
   .bz-order-select {
     display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
     padding: 0.55rem 0.65rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg-soft);
@@ -503,19 +468,8 @@ import '../../styles/lab.css';
     display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
     margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
   }
-  .bz-export-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
-  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
-  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
-  .references a { color: var(--primary); }
-  @media (max-width: 640px) { .output-card { grid-template-columns: 1fr 1fr; } }  .widget-layout[hidden] { display: none; }
-  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
-
-  .controls {
-    position: sticky;
-    top: calc(var(--nav-height) + var(--lab-bar-height, 40px) + 16px);
-    z-index: 4;
-  }
-  /* Tooltips must escape the card, so it can't use overflow:hidden to clip the
+  .bz-export-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }  @media (max-width: 640px) { .output-card { grid-template-columns: 1fr 1fr; } }  .widget-layout[hidden] { display: none; }
+  @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }  /* Tooltips must escape the card, so it can't use overflow:hidden to clip the
      hover spectrum bar against the rounded corners. Instead make the ::before
      tall enough to render the full corner radius, but paint the 3px spectrum
      only across the top — so it wraps the corners exactly like other cards. */
@@ -526,93 +480,10 @@ import '../../styles/lab.css';
     border-top-right-radius: var(--radius-lg);
     background: var(--spectrum) top / 100% 3px no-repeat;
     pointer-events: none;
-  }
-  .controls h3 {
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-muted); margin: var(--space-md) 0 0.5rem;
-    padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted);
-  }
-  .controls h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-  .controls h3.controls-title {
+  }  .controls h3.controls-title {
     font-size: 1rem; font-weight: 700; text-transform: none; letter-spacing: 0;
     color: var(--text); margin: 0 0 var(--space-sm); padding-top: 0; border-top: none;
   }
-
-  .param-group { margin-bottom: 0.5rem; }
-  .fields { display: flex; flex-direction: column; gap: 0.5rem; }
-  .field { display: flex; align-items: center; gap: 0.5rem; }
-  .field label { flex: 0 0 auto; min-width: 100px; font-size: 0.8rem; color: var(--text-soft); }
-  .field-label-with-info {
-    position: relative;
-    flex: 0 0 auto;
-    min-width: 100px;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  .field-label-with-info label {
-    min-width: 0;
-  }
-  .field-info {
-    position: relative;
-    width: 1rem;
-    height: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-full);
-    background: var(--bg);
-    color: var(--text-muted);
-    font-family: var(--font);
-    font-size: 0.68rem;
-    font-weight: 750;
-    line-height: 1;
-    cursor: help;
-  }
-  .field-info:hover,
-  .field-info:focus-visible {
-    border-color: var(--primary-light);
-    color: var(--primary);
-    outline: none;
-  }
-  .field-tooltip {
-    position: absolute;
-    left: calc(100% + 0.45rem);
-    top: 50%;
-    width: min(230px, 70vw);
-    padding: 0.55rem 0.65rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text-soft);
-    box-shadow: var(--shadow-md);
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1.35;
-    text-align: left;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(-50%) translateX(-3px);
-    transition: opacity 0.15s, transform 0.15s;
-    z-index: 20;
-  }
-  .field-label-with-info:hover .field-tooltip,
-  .field-label-with-info:focus-within .field-tooltip,
-  .field-info:hover + .field-tooltip,
-  .field-info:focus + .field-tooltip,
-  .field-info:focus-visible + .field-tooltip {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
-  }
-  .field-input {
-    flex: 1; min-width: 0; padding: 0.35rem 0.55rem;
-    font-size: 0.85rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text); font-family: var(--font);
-  }
-  .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
-  select.field-input { cursor: pointer; }
-
   .eps-fields { display: flex; flex-direction: column; gap: 0.4rem; }
   .eps-field {
     display: grid;
@@ -623,29 +494,6 @@ import '../../styles/lab.css';
   .eps-label { font-size: 0.8rem; color: var(--text-soft); }
   .eps-field .field-input { min-width: 0; }
   .plus { font-size: 0.75rem; color: var(--text-muted); }
-
-  .preset-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
-  .preset-btn {
-    padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 500;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
-    background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s;
-  }
-  .preset-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-  .run-btn {
-    display: block; width: 100%; padding: 0.6rem; margin-top: var(--space-md);
-    font-size: 0.9rem; font-weight: 600; border: none; border-radius: var(--radius-sm);
-    background: var(--primary); color: white; cursor: pointer; transition: background 0.15s;
-  }
-  .run-btn:hover { background: var(--primary-dark); }
-  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .theory-note { margin-top: var(--space-md); font-size: 0.78rem; line-height: 1.5; color: var(--text-muted); }
-
-  .chart-panel { display: flex; flex-direction: column; }
-  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm); }
-  .chart-title { font-weight: 600; font-size: 0.95rem; }  .chart-status { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-
   .rcwa-conventions {
     margin-top: var(--space-md);
     padding: 0.75rem;
@@ -792,25 +640,7 @@ import '../../styles/lab.css';
     .rcwa-conventions { padding: 0.55rem; }
     .rcwa-conventions__header { align-items: flex-start; flex-direction: column; }
     .rcwa-convention-list { font-size: 0.72rem; }
-  }
-
-  .share-btn {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.3rem 0.7rem; font-size: 0.78rem; font-weight: 500;
-    border: 1px solid var(--bg-muted); border-radius: var(--radius-sm);
-    background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-  }
-  .chart-wrap { position: relative; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
-
-  .progress-bar {
-    width: 100%; height: 3px; background: var(--bg-muted); border-radius: 2px;
-    margin-top: var(--space-sm); overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; width: 0%; background: var(--spectrum); transition: width 0.2s ease;
-  }
-
+  }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
   /* Keyboard focus visibility (a11y) */
   .module-card:focus-visible,
   .param-slider:focus-visible,
@@ -820,6 +650,9 @@ import '../../styles/lab.css';
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
+
+  /* behaviour this widget needs on top of the shared component in lab.css */
+  .controls { z-index: 4; }
 </style>
 
 <script>

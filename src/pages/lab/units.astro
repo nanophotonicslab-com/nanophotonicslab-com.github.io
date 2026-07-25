@@ -145,9 +145,6 @@ import '../../styles/lab.css';
 
 <!-- ===== Scoped styles ===== -->
 <style>  .widget-layout { --sidebar-w: 260px; }
-  .controls { display: flex; flex-direction: column; gap: var(--space-md); position: sticky; top: calc(var(--nav-height) + var(--lab-bar-height) + var(--space-lg)); }
-  .controls h3 { font-size: 1rem; }
-
   /* Magnitude selector */
   .mag-group { display: flex; flex-direction: column; gap: 0.35rem; }
   .mag-group-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
@@ -197,13 +194,7 @@ import '../../styles/lab.css';
 
   .conv-divider { border: none; height: 1px; background: var(--bg-muted); margin: 0; }
 
-  .conv-actions { display: flex; padding-top: var(--space-sm); }
-  .clear-btn {
-    padding: 0.4rem 1rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
-    background: var(--bg); font-family: var(--font); font-size: 0.8125rem; font-weight: 500;
-    color: var(--text-soft); cursor: pointer; transition: all 0.15s;
-  }
-  @media (max-width: 768px) {
+  .conv-actions { display: flex; padding-top: var(--space-sm); }  @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .controls { position: static; }
     .conv-row { grid-template-columns: 80px 1fr auto auto; }

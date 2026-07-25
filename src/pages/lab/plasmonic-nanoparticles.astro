@@ -645,97 +645,15 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1.55;
   }
   .widget-hero__validity strong { color: var(--text); }
-  .controls {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-  }
-  .controls h3 { font-size: 1rem; }
-
   .param, .preset-block { display: flex; flex-direction: column; gap: 0.4rem; }
   .param[hidden], [hidden].nl-box { display: none; }
-  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
-  .param-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
-  .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }  .param-header label, .preset-label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .param-label-wrap { display: inline-flex; align-items: center; }
   /* inline info button for control labels (mirrors .stat-info, tooltip left-aligned for the left column) */
   .param-info { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 1rem; height: 1rem; margin-left: 0.3rem; padding: 0; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); color: var(--text-muted); font-family: var(--font); font-size: 0.66rem; font-weight: 750; line-height: 1; cursor: help; }
   .param-info:hover, .param-info:focus-visible { border-color: var(--primary-light); color: var(--primary); outline: none; }
   .param-info .stat-tooltip { right: auto; left: 0; }
-  .param-info:hover .stat-tooltip, .param-info:focus-visible .stat-tooltip { opacity: 1; transform: translateY(0); }
-
-  .param-number {
-    width: 5.4rem;
-    padding: 0.25rem 0.45rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    font-family: var(--font);
-    font-size: 0.875rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--primary);
-    text-align: right;
-    outline: none;
-    background: var(--bg);
-  }
-  .param-number--wide { width: 100%; text-align: left; }
-  .param-number::-webkit-inner-spin-button,
-  .param-number::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .param-number { -moz-appearance: textfield; }
-
-  .param-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 6px;
-    background: var(--bg-muted);
-    border-radius: 3px;
-    outline: none;
-    cursor: pointer;
-  }
-  .param-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--primary);
-    cursor: pointer;
-    transition: box-shadow 0.15s;
-  }
-  .param-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(99,102,241,0.15); }
-  .param-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; cursor: pointer; }
-  .param-slider:disabled, .param-number:disabled { opacity: 0.55; cursor: not-allowed; }
-
-  .param-select {
-    width: 100%;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    font-family: var(--font);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--text);
-    background: var(--bg);
-    outline: none;
-    cursor: pointer;
-  }
-  .material-ref { font-size: 0.6875rem; color: var(--text-muted); font-style: italic; }
-  .file-upload-row { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
-  .file-input { font-size: 0.75rem; font-family: var(--font); color: var(--text-soft); }
-  .file-input::file-selector-button {
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-full);
-    background: var(--bg);
-    font-family: var(--font);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    color: var(--text-soft);
-    cursor: pointer;
-    margin-right: 0.4rem;
-    transition: all 0.15s;
-  }
-  .file-input::file-selector-button:hover { border-color: var(--primary-light); color: var(--primary); }  .material-import-close {
+  .param-info:hover .stat-tooltip, .param-info:focus-visible .stat-tooltip { opacity: 1; transform: translateY(0); }  .param-number--wide { width: 100%; text-align: left; }  .param-slider:disabled, .param-number:disabled { opacity: 0.55; cursor: not-allowed; }  .material-import-close {
     width: 2rem;
     height: 2rem;
     border: 1px solid var(--bg-muted);
@@ -747,38 +665,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     cursor: pointer;
   }
   .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }  .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
-  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }  .rii-input { width: 100% !important; text-align: left !important; font-weight: 500 !important; color: var(--text) !important; }
-  .rii-results { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
-  .rii-results:empty { display: none; }
-  :global(.rii-result) { padding: 0.3rem 0.5rem; font-size: 0.75rem; cursor: pointer; line-height: 1.4; border-bottom: 1px solid var(--bg-soft); }
-  :global(.rii-result:hover) { background: var(--bg-soft); color: var(--primary); }
-  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
-
-  .drude-panel {
-    padding: var(--space-sm);
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg-soft);
-  }
-  .drude-formula { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
-  .drude-grid { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
-  .drude-grid label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: 0.75rem; color: var(--text-soft); }
-  .drude-grid .param-number { width: 5.2rem; }  .preset-btn {
-    padding: 0.22rem 0.58rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-full);
-    background: var(--bg);
-    font-family: var(--font);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .preset-btn:hover { border-color: var(--primary-light); color: var(--primary); }
-  .preset-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--primary); }
-  .theory-note { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.55; border-top: 1px solid var(--bg-muted); padding-top: var(--space-md); }
-
+  .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
   .shape-strip {
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
@@ -902,14 +789,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     font-weight: 600;
     cursor: pointer;
   }
-  .tab-btn.active { color: var(--primary); background: var(--bg); box-shadow: var(--shadow-sm); }
-
-  .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm); }
-  .chart-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); }
-  .chart-title { display: block; font-size: 0.875rem; font-weight: 700; color: var(--text); }
-  .chart-subtitle { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-muted); }
-  .chart-legend { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
-  :global(.legend-item) { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  .tab-btn.active { color: var(--primary); background: var(--bg); box-shadow: var(--shadow-sm); }  .chart-subtitle { display: block; margin-top: 0.1rem; font-size: 0.75rem; color: var(--text-muted); }  :global(.legend-item) { font-size: 0.75rem; color: var(--text-soft); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
   :global(.legend-swatch) { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
   .resonance-controls {
     display: inline-flex;
@@ -918,11 +798,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     border: 1px solid var(--bg-muted);
     border-radius: var(--radius-full);
     background: var(--bg-soft);
-  }
-  .controls-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
-  .controls-head h3 { margin: 0; }
-  .controls-head__toggle .seg-btn { padding: 0.22rem 0.7rem; font-weight: 700; }
-  .nl-panel { padding: var(--space-lg); position: relative; }
+  }  .controls-head h3 { margin: 0; }  .nl-panel { padding: var(--space-lg); position: relative; }
   .nl-panel__badge { position: absolute; top: var(--space-md); right: var(--space-md); font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--primary); background: var(--bg-soft); border: 1px solid var(--bg-muted); border-radius: var(--radius-full); padding: 0.15rem 0.55rem; }
   .nl-panel h3 { margin: 0 0 0.6rem; padding-right: 6rem; }
   .nl-panel p { color: var(--text-soft); font-size: 0.85rem; line-height: 1.5; margin: 0 0 0.7rem; }
@@ -951,80 +827,23 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   #nl-controls-box { display: flex; flex-direction: column; gap: var(--space-md); }
   #nl-controls-box[hidden] { display: none; }
   .nl-box { display: flex; flex-direction: column; gap: var(--space-md); }
-  .nl-range-head { margin: 0.3rem 0 -0.2rem; font-size: 1rem; }
-  /* graphene controls — replicated verbatim from the Materials / Graphene module */
-  .field-input { width: 100%; min-width: 0; padding: 0.4rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: var(--font); font-size: 0.85rem; }
-  .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
-  .field { display: flex; align-items: center; gap: 0.5rem; }
-  .field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
-  .field .field-input { flex: 1 1 auto; }
-  .drude-formula { font-size: 0.78rem; color: var(--text-soft); margin: 0; }
-  .nl-seg-field { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .nl-range-head { margin: 0.3rem 0 -0.2rem; font-size: 1rem; }  .field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
+  .field .field-input { flex: 1 1 auto; }  .nl-seg-field { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .nl-seg-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
   .nl-hint { font-weight: 400; font-size: 0.68rem; color: var(--text-muted); }
   #nl-modes-param > .nl-seg-field > label { font-weight: 700; color: var(--text); }
   #nl-modes .seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .nl-temp-input { max-width: 6rem; }
   #nl-model-param { display: flex; flex-direction: column; gap: 0.5rem; }
-  #nl-model-param[hidden] { display: none; }   /* id-level display must re-assert hidden (else the Model + T row leaks into non-graphene materials) */
-  .gr-slider { width: 100%; accent-color: var(--primary); cursor: pointer; }
-  .gr-ef-field { display: flex; align-items: center; gap: 0.5rem; }
-  .gr-ef-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }
-  .gr-ef-num { flex: 0 0 4rem; }
-  .gr-ef-field .gr-slider { flex: 1 1 auto; margin: 0; min-width: 0; }
-  .mini-row { display: flex; gap: 0.4rem; align-items: end; }
-  .mini-field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
-  .mini-field label { font-size: 0.8rem; font-weight: 400; color: var(--text-soft); line-height: 1.15; min-height: 1.6em; }
-  .mini-field .field-input { width: 100%; }
-  /* keep the μ^DC [cm²/Vs] label on one line: give it more width, squeeze γ/τ a touch */
+  #nl-model-param[hidden] { display: none; }  .gr-ef-field > label { flex: 0 0 auto; min-width: 70px; font-size: 0.8rem; color: var(--text-soft); }  /* keep the μ^DC [cm²/Vs] label on one line: give it more width, squeeze γ/τ a touch */
   #nl-graphene-box .mini-field label { white-space: nowrap; }
   #nl-graphene-box .mini-field:nth-child(1), #nl-graphene-box .mini-field:nth-child(2) { flex: 0.85 1 0; }
   #nl-graphene-box .mini-field:nth-child(3) { flex: 1.5 1 0; }
   .nl-chart-wrap { margin-bottom: 2.35rem; }
   .nl-note { margin-top: 0.6rem; }
   .nl-note p { font-size: 0.78rem; line-height: 1.5; color: var(--text-soft); margin: 0 0 0.4rem; }
-  .nl-note__cite { font-size: 0.72rem !important; color: var(--text-muted) !important; }
-  .seg-btn {
-    border: 0;
-    border-radius: var(--radius-full);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-family: var(--font);
-    font-size: 0.72rem;
-    font-weight: 650;
-    padding: 0.3rem 0.62rem;
-  }
-  .seg-btn.active { background: var(--bg); color: var(--primary); box-shadow: var(--shadow-sm); }
-  .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .toolbar-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-  .tool-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.32rem 0.72rem;
-    font-size: 0.78rem;
-    font-weight: 500;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .tool-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
-  .tool-btn.active:hover { color: white; }
-  .chart-wrap { position: relative; margin-bottom: 2.35rem; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }
-  .axis-overlay {
-    position: absolute;
-    left: 6px;
-    bottom: -2.15rem;
-    z-index: 2;
-    pointer-events: auto;
-  }
-  .axis-toggle {
+  .nl-note__cite { font-size: 0.72rem !important; color: var(--text-muted) !important; }  .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }  .tool-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+  .tool-btn.active:hover { color: white; }  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; border-radius: var(--radius-sm); }  .axis-toggle {
     display: inline-flex;
     gap: 0.2rem;
     padding: 0.18rem;
@@ -1058,99 +877,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     color: var(--text-soft);
     font-size: 0.75rem;
     line-height: 1.45;
-  }
-  .color-swatches {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--bg-muted);
-    flex-wrap: wrap;
-  }
-  .swatch-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-  }  .swatch-box {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--bg-muted);
-    background: #222;
-    transition: background 0.25s;
-  }
-  .output-card {
-    padding: var(--space-md);
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-sm);
-  }
-  #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  @media (max-width: 720px) { #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .stat {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    min-width: 0;
-    padding: var(--space-sm);
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg-soft);
-  }
-  .stat-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-  .stat-label .lc { text-transform: none; }   /* keep Greek letters lowercase (α, λ) */
-  .stat-value { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }  .stat-info {
-    position: absolute;
-    top: 0.42rem;
-    right: 0.42rem;
-    width: 1.1rem;
-    height: 1.1rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-full);
-    background: var(--bg);
-    color: var(--text-muted);
-    font-family: var(--font);
-    font-size: 0.72rem;
-    font-weight: 750;
-    line-height: 1;
-    cursor: help;
-    z-index: 1;
-  }
-  .stat-info:hover,
-  .stat-info:focus-visible {
-    border-color: var(--primary-light);
-    color: var(--primary);
-    outline: none;
-  }
-  .stat-tooltip {
-    position: absolute;
-    top: calc(100% + 0.4rem);
-    right: 0;
-    width: min(220px, 70vw);
-    padding: 0.55rem 0.65rem;
-    border: 1px solid var(--bg-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text-soft);
-    box-shadow: var(--shadow-md);
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1.35;
-    text-align: left;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(-3px);
-    transition: opacity 0.15s, transform 0.15s;
-  }
-  .stat-info:hover .stat-tooltip,
-  .stat-info:focus-visible .stat-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
+  }  #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 720px) { #nl-readout, #nl-spec-readout, #nl-mat-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }  .stat-label .lc { text-transform: none; }
   .model-note { padding: var(--space-md); }
   .model-note__header {
     display: flex;
@@ -1187,10 +915,7 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     line-height: 1.35;
     color: var(--text-soft);
   }
-  .geometry-definitions strong { color: var(--text); font-weight: 700; }  .references h4 { font-size: 0.875rem; margin-bottom: var(--space-sm); }
-  .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
-  .references li { font-size: 0.8125rem; color: var(--text-soft); line-height: 1.5; }
-  /* NL reference list is generated at runtime (no scoped attribute) — style it globally.
+  .geometry-definitions strong { color: var(--text); font-weight: 700; }  /* NL reference list is generated at runtime (no scoped attribute) — style it globally.
      2rem index column + 0.35rem gap ⇒ reference text starts at 2.35rem, same as the note
      text (2rem padding + 0.35rem li padding); [n] is right-aligned under the note bullets. */
   :global(#nl-ref-list) { list-style: none; margin: 0; padding-left: 0; display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -1232,6 +957,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
+
+  /* behaviour this widget needs on top of the shared component in lab.css */
+  .param-number { -moz-appearance: textfield; }
+  .param-select { cursor: pointer; }
+  .param-slider { -webkit-appearance: none; appearance: none; cursor: pointer; }
 </style>
 
 <script>
