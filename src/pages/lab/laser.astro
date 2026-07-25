@@ -933,8 +933,7 @@ initPermalinks({
   @media (max-width: 600px) { .result-grid { grid-template-columns: 1fr; } }
   .result-item { display: flex; flex-direction: column; gap: 0.2rem; }
   .result-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .result-value { font-size: 1.4rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 2; display: block; border-radius: var(--radius-sm); }
+  .result-value { font-size: 1.4rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }.chart-wrap canvas { --chart-aspect: 5 / 2; }
   .dual-chart { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .dual-chart canvas { aspect-ratio: 4 / 3; }
   @media (max-width: 600px) { .dual-chart { grid-template-columns: 1fr; } }

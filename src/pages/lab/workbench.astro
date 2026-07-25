@@ -164,8 +164,7 @@ import '../../styles/lab.css';
     width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
     background: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
   }
-  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
+  .node-headline { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0 0 0.4rem; font-variant-numeric: tabular-nums; min-height: 1.1em; }.chart-wrap canvas { --chart-aspect: 16 / 9; }
   @media (max-width: 640px) {
     .graph-wrap { height: 55vh; min-height: 360px; }
   }

@@ -375,14 +375,12 @@ initPermalinks({
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>  .hidden { display: none !important; }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius-sm); }
+<style>  .hidden { display: none !important; }.chart-wrap canvas { --chart-aspect: 16 / 9; }
   .output-card.card,
   .output-card,
   .stats,
   .stat,
-  .stat-info { overflow: visible; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .stat-info { overflow: visible; }.stats { --stats-cols: 2; }
   .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
   .stat:has(.stat-info:hover),
   .stat:has(.stat-info:focus-visible),

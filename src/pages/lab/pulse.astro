@@ -158,8 +158,7 @@ initPermalinks({
 </script>
 </Layout>
 
-<style>  .sub-readout { font-size: 0.78rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }
-  .chart-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 7; }
+<style>  .sub-readout { font-size: 0.78rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }.chart-wrap canvas { --chart-aspect: 16 / 7; }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

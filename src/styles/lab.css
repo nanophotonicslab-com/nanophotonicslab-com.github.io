@@ -82,7 +82,12 @@
 }
 
 /* ===== Stats & results ===== */
-.rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }.stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--space-sm); }
+.rii-search { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(var(--stats-cols, 4), minmax(0, 1fr));
+  gap: var(--space-sm);
+}
 
 /* ===== Notes & references ===== */
 .notes-card { padding: var(--space-md); }
@@ -480,6 +485,12 @@
 .preset-row { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
 
 /* ===== Charts ===== */
+.chart-wrap canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--chart-aspect, 5 / 3);
+  border-radius: var(--radius-sm);
+}
 .chart-header {
   min-height: 1.35rem;
   display: flex;

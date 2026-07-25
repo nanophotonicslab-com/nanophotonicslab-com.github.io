@@ -512,8 +512,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   :global(.rii-result__book) { font-weight: 700; color: var(--text); }
   :global(.rii-result__page) { color: var(--text-muted); }
   :global(.rii-empty) { padding: 0.4rem 0.5rem; font-size: 0.76rem; color: var(--text-muted); }
-  .rii-status.err, .ctrl-note.err { color: var(--danger); }
-  .chart-wrap canvas { width: 100%; aspect-ratio: 5 / 3; display: block; cursor: crosshair; border-radius: var(--radius-sm); }
+  .rii-status.err, .ctrl-note.err { color: var(--danger); }  .chart-wrap canvas { cursor: crosshair; }
   :global(.readout-row) { display: grid; gap: 0.5rem; align-items: stretch; }
   :global(.readout-shared) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   :global(.readout-mat) { grid-template-columns: minmax(84px, 0.8fr) repeat(5, minmax(0, 1fr)); }
