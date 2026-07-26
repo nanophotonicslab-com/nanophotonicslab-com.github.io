@@ -28,7 +28,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       <dt>Validity</dt>
       <dd>Exact within the transfer-matrix formalism for any stack of isotropic homogeneous layers. The plasmon dispersion uses the lossless Drude branch.</dd>
       <dt>Limitations</dt>
-      <dd>No in-plane structure or roughness, no spatial dispersion (nonlocality), no absorption in the dispersion-pole branch. Graphene module not yet available.</dd>
+      <dd>No in-plane structure or roughness, no spatial dispersion (nonlocality), no absorption in the dispersion-pole branch. The PyRAMIDS module assumes the emitting layer is transparent (LDOS is undefined inside an absorbing source layer).</dd>
       <dt>References</dt>
       <dd>E. N. Economou, Phys. Rev. <strong>182</strong>, 539 (1969); P. Yeh, <em>Optical Waves in Layered Media</em> (Wiley, 1988).</dd>
     </dl>
@@ -47,9 +47,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             <span class="module-card__name">Layered structure</span>
             <span class="module-card__desc">Transfer-matrix R/T spectra &amp; field profiles</span>
           </button>
-          <button type="button" class="module-card" id="module-graphene" role="radio" aria-checked="false" aria-disabled="true" disabled>
-            <span class="module-card__name">Graphene</span>
-            <span class="module-card__badge">Soon</span>
+          <button type="button" class="module-card" id="module-pyramids" role="radio" aria-checked="false">
+            <span class="module-card__name">PyRAMIDS</span>
+            <span class="module-card__desc">Dipole emission &amp; LDOS in stratified media</span>
           </button>
         </div>
       </div>
@@ -155,16 +155,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
               <div>
                 <span class="chart-title" id="chart-title">Surface plasmons dispersion relation</span>
               </div>
-              <div class="toolbar-actions">
-                <button type="button" id="dl-png" class="tool-btn" title="Download plot as PNG">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                  PNG
-                </button>
-                <button type="button" id="dl-csv" class="tool-btn" title="Download current curve as CSV">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  CSV
-                </button>
-              </div>
             </div>
             <div class="chart-options" aria-label="Reference lines">
               <label class="check-row check-row--compact">
@@ -187,6 +177,21 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             <div class="interface-tabs" id="interface-tabs" role="group" aria-label="Displayed layers"></div>
           </div>
           <div class="chart-legend" id="chart-legend"></div>
+            <div class="download-bar">
+              <span class="download-label">Export</span>
+              <button id="dl-png" class="dl-btn" title="Download plot as PNG">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="dl-csv" class="dl-btn" title="Download current curve as CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="dl-share" class="dl-btn" title="Copy shareable link to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
+            </div>
           </section>
 
           <section class="model-note card">
@@ -331,16 +336,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 <button type="button" class="seg-btn" data-mode="fields" role="radio" aria-checked="false">Fields</button>
                 <button type="button" class="seg-btn" data-mode="structure" role="radio" aria-checked="false">Structure</button>
               </div>
-              <div class="toolbar-actions">
-                <button type="button" id="tmm-dl-png" class="tool-btn" title="Download plot as PNG">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                  PNG
-                </button>
-                <button type="button" id="tmm-dl-csv" class="tool-btn" title="Download current curve as CSV">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  CSV
-                </button>
-              </div>
             </div>
             <div class="chart-options" id="tmm-spectrum-options">
               <label class="check-row check-row--compact"><input type="checkbox" id="tmm-show-r" checked><span>Reflectance &rho;</span></label>
@@ -364,6 +359,21 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
               <div class="chart-tooltip" id="tmm-chart-tooltip" hidden></div>
             </div>
             <div class="chart-legend" id="tmm-chart-legend"></div>
+            <div class="download-bar">
+              <span class="download-label">Export</span>
+              <button id="tmm-dl-png" class="dl-btn" title="Download plot as PNG">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="tmm-dl-csv" class="dl-btn" title="Download current curve as CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="tmm-dl-share" class="dl-btn" title="Copy shareable link to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
+            </div>
           </section>
 
           <section class="model-note card">
@@ -421,6 +431,205 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             </p>
           </section>
         </main>
+      </div>
+
+      <!-- ===== PyRAMIDS module — dipole emission / LDOS in stratified media ===== -->
+      <div id="module-panel-pyramids" hidden>
+      <div class="excitation-bar">
+        <div class="param excitation-param excitation-above">
+          <div class="param-header"><label>Excitation</label></div>
+          <div class="plot-tabs" id="pr-exc-tabs" role="radiogroup" aria-label="Excitation">
+            <button class="plot-tab" type="button" data-prexc="pw" role="radio" aria-checked="false">Plane wave</button>
+            <button class="plot-tab active" type="button" data-prexc="dip" role="radio" aria-checked="true">Dipole</button>
+          </div>
+        </div>
+      </div>
+      <div class="widget-layout">
+        <ParamsDrawer>
+        <aside class="controls card">
+          <div class="panel-title-row">
+            <h3>Stack</h3>
+            <div class="preset-actions" aria-label="Quick presets">
+              <button type="button" class="preset-chip" id="pr-preset-drexhage" title="Emitter above a silver mirror (Drexhage)">Ag mirror</button>
+              <button type="button" class="preset-chip" id="pr-preset-glass" title="Emitter above a glass half-space">Glass</button>
+              <button type="button" class="preset-chip" id="pr-preset-slab" title="High-index dielectric slab waveguide on glass">Slab WG</button>
+            </div>
+          </div>
+
+          <div class="tmm-ends pr-ends">
+            <label class="layer-field"><span>Substrate n<sub>s</sub> (below)</span><input type="number" class="param-number" id="pr-n-sub" step="0.01" value="0.052"></label>
+            <label class="layer-field"><span>Substrate &kappa;<sub>s</sub></span><input type="number" class="param-number" id="pr-k-sub" step="0.01" min="0" value="4.41"></label>
+            <label class="layer-field"><span>Superstrate n<sub>c</sub> (above)</span><input type="number" class="param-number" id="pr-n-clad" step="0.01" value="1"></label>
+            <label class="layer-field"><span>Superstrate &kappa;<sub>c</sub></span><input type="number" class="param-number" id="pr-k-clad" step="0.01" min="0" value="0"></label>
+          </div>
+
+          <div class="param">
+            <div class="param-header">
+              <label>Layers</label>
+              <span class="param-readout" id="pr-layer-count">0</span>
+            </div>
+            <div class="stepper-row">
+              <button type="button" class="icon-btn" id="pr-remove-layer" title="Remove layer" aria-label="Remove layer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+              </button>
+              <button type="button" class="icon-btn" id="pr-add-layer" title="Add layer" aria-label="Add layer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="tmm-stack" id="pr-stack-preview" aria-label="Layer stack preview"></div>
+          <div class="layer-editor" id="pr-layer-editor"></div>
+
+          <h3 id="pr-source-title">Emitter &amp; light</h3>
+          <div class="param">
+            <span class="axis-section-label">Wavelength (nm)</span>
+            <div class="tmm-slider-row">
+              <input type="range" class="slope-slider" id="pr-lam-slider" aria-label="Wavelength (nm)" min="200" max="2000" step="5" value="550">
+              <input type="number" class="param-number param-number--sm" id="pr-lam" step="5" min="200" max="2000" value="550">
+            </div>
+          </div>
+          <div class="param" id="pr-dipole-controls">
+            <span class="axis-section-label" id="pr-z-label">Emitter position z (nm)</span>
+            <div class="tmm-slider-row">
+              <input type="range" class="slope-slider" id="pr-z-slider" aria-labelledby="pr-z-label" min="0" max="1000" step="1" value="150">
+              <input type="number" class="param-number param-number--sm" id="pr-z" step="1" value="150">
+            </div>
+          </div>
+          <div id="pr-pw-controls" hidden>
+            <div class="param">
+              <span class="axis-section-label" id="pr-angle-label">Angle of incidence &theta; (&deg;) &mdash; from the substrate</span>
+              <div class="tmm-slider-row">
+                <input type="range" class="slope-slider" id="pr-angle-slider" aria-labelledby="pr-angle-label" min="0" max="89" step="0.5" value="0">
+                <input type="number" class="param-number param-number--sm" id="pr-angle" step="1" min="0" max="89" value="0">
+              </div>
+            </div>
+            <div class="param">
+              <span class="axis-section-label">Polarization</span>
+              <div class="segmented segmented--compact" id="pr-pol-tabs" role="radiogroup" aria-label="Polarization">
+                <button type="button" class="seg-btn" data-prpol="s" role="radio" aria-checked="false">s (TE)</button>
+                <button type="button" class="seg-btn" data-prpol="p" role="radio" aria-checked="false">p (TM)</button>
+                <button type="button" class="seg-btn active" data-prpol="avg" role="radio" aria-checked="true">unpol.</button>
+              </div>
+            </div>
+          </div>
+
+          <details class="pr-range-details" id="pr-range-details">
+            <summary>Range</summary>
+            <div class="param">
+              <span class="axis-section-label">z range (nm) &mdash; blank = auto</span>
+              <div class="range-grid range-grid--compact">
+                <label><span>Min</span><input type="number" class="param-number" id="pr-zmin" step="50" placeholder="auto"></label>
+                <label><span>Max</span><input type="number" class="param-number" id="pr-zmax" step="50" placeholder="auto"></label>
+              </div>
+            </div>
+            <div class="param">
+              <span class="axis-section-label">y max &mdash; blank = auto</span>
+              <div class="range-grid range-grid--compact">
+                <label><span>Max</span><input type="number" class="param-number" id="pr-ymax" step="0.5" min="0" placeholder="auto"></label>
+              </div>
+            </div>
+            <div class="param" id="pr-lamrange-field" hidden>
+              <span class="axis-section-label">Spectrum &lambda; range (nm)</span>
+              <div class="range-grid range-grid--compact">
+                <label><span>Min</span><input type="number" class="param-number" id="pr-lammin" step="10" min="200" value="400"></label>
+                <label><span>Max</span><input type="number" class="param-number" id="pr-lammax" step="10" min="200" value="800"></label>
+              </div>
+            </div>
+          </details>
+          <div class="pr-geo" id="pr-geo">
+            <span class="pr-geo__cap">System</span>
+            <canvas id="pr-geo-canvas" aria-label="Layered system schematic"></canvas>
+          </div>
+
+          <button type="button" class="reset-btn" id="pr-reset">Reset</button>
+        </aside>
+        </ParamsDrawer>
+
+        <main class="lab-main">
+          <section class="chart-panel card">
+            <div class="chart-header">
+              <div class="segmented segmented--compact" id="pr-view-tabs" role="radiogroup" aria-label="Chart view"></div>
+            </div>
+            <!-- clickable decay-channel legend (LDOS view) — click an item to show/hide its curve -->
+            <div class="pr-ldos-legend" id="pr-ldos-legend" aria-label="Decay channels — click to show or hide"></div>
+            <div class="chart-options" id="pr-kpar-options" hidden>
+              <span class="axis-section-label">Integrand channel</span>
+              <div class="segmented segmented--compact" id="pr-kpar-ch" role="radiogroup" aria-label="Integrand channel">
+                <button type="button" class="seg-btn active" data-prch="mean" role="radio" aria-checked="true">mean</button>
+                <button type="button" class="seg-btn" data-prch="epar" role="radio" aria-checked="false">E&parallel;</button>
+                <button type="button" class="seg-btn" data-prch="eperp" role="radio" aria-checked="false">E&perp;</button>
+              </div>
+            </div>
+            <div class="chart-wrap" id="pr-chart-wrap">
+              <canvas id="pr-chart" aria-label="PyRAMIDS LDOS chart"></canvas>
+            </div>
+            <div class="download-bar">
+              <span class="download-label">Export</span>
+              <button id="pr-dl-png" class="dl-btn" title="Download plot as PNG">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="pr-dl-csv" class="dl-btn" title="Download data as CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="pr-dl-share" class="dl-btn" title="Copy shareable link to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Share
+              </button>
+            </div>
+          </section>
+
+          <!-- calculation box — stat tiles matching the Plasmonic NPs lab -->
+          <section class="output-card card" id="pr-metrics" aria-label="Calculated quantities"></section>
+
+          <section class="model-note card">
+            <div class="model-note__header">
+              <span>Notes</span>
+            </div>
+            <ul class="tmm-note-list">
+              <li id="pr-note-text">
+                Place a point dipole at height <em>z</em> in a stratified stack and read out its
+                <strong>local density of optical states</strong> (LDOS) &mdash; the normalized
+                spontaneous-emission / decay rate relative to vacuum (the Purcell factor). The
+                <em>LDOS vs position</em> view sweeps the emitter through the structure; the
+                <em>k&parallel; map</em> resolves the emission over in-plane momentum, exposing
+                radiative, evanescent and guided/plasmonic channels (guided modes appear as bright poles).
+              </li>
+              <li>
+                <strong>Editing layers.</strong> Set each layer's thickness, <em>n</em> and &kappa;.
+                <strong>+</strong> duplicates a layer below, <strong>&uarr;/&darr;</strong> reorder it,
+                <strong>&times;</strong> removes it. Click a layer's colour circle to <em>lock</em> its
+                group so edits apply to all members at once. The semi-infinite substrate (below, z&lt;0)
+                and superstrate (above) may be absorbing (e.g. a metal mirror); the emitting medium
+                itself must be transparent.
+              </li>
+              <li>
+                <strong>Method.</strong> Electric, magnetic and magnetoelectric LDOS from a stable
+                <em>S</em>-matrix (Redheffer star product) with a contour integral of the dyadic Green
+                tensor over in-plane momentum, following Amos &amp; Barnes. This is an in-browser
+                TypeScript port of <strong>PyRAMIDS</strong>, validated against it to &lt;1&times;10<sup>&minus;3</sup>.
+              </li>
+            </ul>
+          </section>
+
+          <section class="references-card card">
+            <div class="references-card__header">
+              <h3>References</h3>
+            </div>
+            <p>
+              [1] D. Pal &amp; A. F. Koenderink, <em>PyRAMIDS: a Python package for Radiation,
+              Magnetoelectric Interactions, and Dipoles in Stratified layers</em>,
+              <a href="https://github.com/AMOLFResonantNanophotonics/PyRAMIDS" target="_blank" rel="noopener">GitHub</a>.
+            </p>
+            <p>
+              [2] R. M. Amos &amp; W. L. Barnes, <em>Modification of the spontaneous emission rate of
+              Eu<sup>3+</sup> ions close to a thin metal mirror</em>, Phys. Rev. B <strong>55</strong>, 7249 (1997).
+            </p>
+          </section>
+        </main>
+      </div>
       </div>
     </div>
   </section>
@@ -1791,6 +2000,142 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     outline: 2px solid var(--primary);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
+  }
+
+  /* Export / share bar below a results box (matches the Mie lab) */
+  .download-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--bg-muted); }
+  .download-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: var(--space-xs); }
+  .dl-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full); background: var(--bg); font-family: var(--font); font-size: 0.75rem; font-weight: 600; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
+  .dl-btn:active { transform: scale(0.97); }
+
+  /* PyRAMIDS module — excitation bar above the parameter box (Mie style) */
+  #module-panel-pyramids[hidden] { display: none; }
+  .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
+  .excitation-param { padding-bottom: 0; border-bottom: none; gap: 0.4rem; display: flex; flex-direction: column; }
+  .excitation-param .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
+  .plot-tab { flex: 1; padding: 0.35rem 0.4rem; border: none; background: none; border-radius: var(--radius-full); font-family: var(--font); font-size: 0.75rem; font-weight: 500; cursor: pointer; color: var(--text-soft); transition: all 0.2s; white-space: nowrap; text-align: center; }
+  .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+  .plot-tab:hover:not(.active) { color: var(--text); }
+  @media (max-width: 640px) { .excitation-bar { max-width: none; } }
+
+  /* PyRAMIDS module — collapsible plot-range controls */
+  .pr-range-details { border-top: 1px solid var(--bg-muted); padding-top: var(--space-xs); }
+  .pr-range-details summary {
+    font-size: 0.8125rem; font-weight: 600; color: var(--text-soft);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    cursor: pointer; padding: 0.3rem 0; user-select: none; list-style: none;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .pr-range-details summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; }
+  .pr-range-details[open] summary::before { transform: rotate(90deg); }
+  .pr-range-details summary::-webkit-details-marker { display: none; }
+  .pr-range-details > .param { margin-top: var(--space-xs); }
+
+  /* PyRAMIDS module — system schematic below the parameter box */
+  .pr-geo {
+    position: relative;
+    margin-top: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+    overflow: hidden;
+  }
+  .pr-geo canvas { display: block; width: 100%; height: 168px; }
+  .pr-geo__cap {
+    position: absolute; top: 6px; left: 8px;
+    font-size: 0.625rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--text-muted); pointer-events: none;
+  }
+
+  /* PyRAMIDS module — clickable decay-channel legend below the view tabs.
+     Matches the lab's shared .legend-item / .legend-line style (colored line +
+     label), dimmed when a channel is toggled off — like the Mie dipole legend. */
+  .pr-ldos-legend { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: var(--space-sm); }
+  .pr-ldos-legend[hidden] { display: none; }
+  /* :global because the legend buttons are injected via innerHTML at runtime */
+  :global(.pr-leg-item) {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.1rem 0; border: none; background: none;
+    font-family: var(--font); font-size: 0.75rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s; color: inherit;
+  }
+  :global(.pr-leg-item:hover) { opacity: 0.72; }
+  :global(.pr-leg-item--off) { opacity: 0.4; }
+
+  /* PyRAMIDS module — calculation box: stat tiles matching the Plasmonic NPs lab.
+     Children are injected via innerHTML, hence :global. */
+  .output-card {
+    padding: var(--space-md);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+  @media (max-width: 720px) { .output-card { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 460px) { .output-card { grid-template-columns: 1fr; } }
+  :global(.output-card .stat) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    padding: var(--space-sm);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+  }
+  :global(.output-card .stat-label) { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  :global(.output-card .stat-value) { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.1; overflow-wrap: anywhere; }
+  :global(.output-card .stat-unit) { font-size: 0.6875rem; color: var(--text-muted); }
+  :global(.output-card .stat-info) {
+    position: absolute;
+    top: 0.42rem;
+    right: 0.42rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1;
+    cursor: help;
+    z-index: 1;
+  }
+  :global(.output-card .stat-info:hover),
+  :global(.output-card .stat-info:focus-visible) {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    outline: none;
+  }
+  :global(.output-card .stat-tooltip) {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    width: min(220px, 70vw);
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    box-shadow: var(--shadow-md);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 2;
+  }
+  :global(.output-card .stat-info:hover .stat-tooltip),
+  :global(.output-card .stat-info:focus-visible .stat-tooltip) {
+    opacity: 1;
+    transform: translateY(0);
   }
 </style>
 
@@ -4128,6 +4473,38 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   $('dl-csv').addEventListener('click', () => {
     downloadBlob(new Blob([currentCsv()], { type: 'text/csv' }), 'heterostructures_surface_plasmons.csv');
   });
+  function spSerialize(): string {
+    const s = { L: state.layers, ai: state.activeInterface, sel: state.selectedLayerIndices, xu: state.xUnit, yu: state.yUnit, qmin: state.qMin, qmax: state.qMax, umin: state.uMin, umax: state.uMax, ts: state.tailoredSlope, sl: state.showLight, stl: state.showTailored };
+    return 'sp=' + encodeURIComponent(btoa(JSON.stringify(s)));
+  }
+  function spRestore(hash: string): boolean {
+    const m = /(?:^|&)sp=([^&]+)/.exec(hash); if (!m) return false;
+    try {
+      const s = JSON.parse(atob(decodeURIComponent(m[1])));
+      if (Array.isArray(s.L) && s.L.length >= 2) state.layers = s.L;
+      if (Number.isFinite(s.ai)) state.activeInterface = s.ai;
+      if (Array.isArray(s.sel)) state.selectedLayerIndices = s.sel;
+      if (s.xu) state.xUnit = s.xu as AxisX;
+      if (s.yu) state.yUnit = s.yu as AxisY;
+      if (Number.isFinite(s.qmin)) state.qMin = s.qmin;
+      if (Number.isFinite(s.qmax)) state.qMax = s.qmax;
+      if (Number.isFinite(s.umin)) state.uMin = s.umin;
+      if (Number.isFinite(s.umax)) state.uMax = s.umax;
+      if (Number.isFinite(s.ts)) state.tailoredSlope = s.ts;
+      if (typeof s.sl === 'boolean') state.showLight = s.sl;
+      if (typeof s.stl === 'boolean') state.showTailored = s.stl;
+      return true;
+    } catch { return false; }
+  }
+  const spShareBtn = $('dl-share');
+  spShareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + spSerialize();
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = spShareBtn.innerHTML;
+      spShareBtn.textContent = 'Copied!';
+      setTimeout(() => { spShareBtn.innerHTML = orig; }, 1500);
+    });
+  });
 
   canvas.addEventListener('mousemove', handleCanvasHover);
   canvas.addEventListener('mouseleave', () => {
@@ -4143,6 +4520,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   // (the canvas may have been sized while hidden / the window resized).
   window.addEventListener('heterostructures:show-surface-plasmons', () => drawChart());
 
+  spRestore(location.hash.slice(1));
   renderAll(true);
 </script>
 
@@ -5439,6 +5817,31 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   $t('tmm-dl-csv').addEventListener('click', () => {
     downloadBlobTmm(new Blob([tmmCsv()], { type: 'text/csv' }), `heterostructures_tmm_${tmm.mode}.csv`);
   });
+  function tmmSerialize(): string {
+    const s = { nS: tmm.nSub, nC: tmm.nClad, pol: tmm.pol, ang: tmm.angleDeg, mode: tmm.mode, xu: tmm.xUnit, lmin: tmm.lamMin, lmax: tmm.lamMax, fl: tmm.fieldLam, L: tmm.layers.map(l => [l.thicknessNm, l.n, l.kappa]) };
+    return 'tmm=' + encodeURIComponent(btoa(JSON.stringify(s)));
+  }
+  function tmmRestore(hash: string): boolean {
+    const m = /(?:^|&)tmm=([^&]+)/.exec(hash); if (!m) return false;
+    try {
+      const s = JSON.parse(atob(decodeURIComponent(m[1])));
+      tmm.nSub = +s.nS; tmm.nClad = +s.nC; tmm.pol = s.pol === 'TM' ? 'TM' : 'TE';
+      tmm.angleDeg = +s.ang; tmm.mode = ['spectrum', 'angles', 'fields', 'structure'].includes(s.mode) ? s.mode : 'spectrum';
+      tmm.xUnit = s.xu === 'ev' ? 'ev' : 'nm'; tmm.lamMin = +s.lmin; tmm.lamMax = +s.lmax; tmm.fieldLam = +s.fl;
+      if (Array.isArray(s.L) && s.L.length) tmm.layers = s.L.map((a: number[]) => ({ thicknessNm: +a[0], n: +a[1], kappa: +a[2], color: '#000' }));
+      tmm.preset = 'custom';
+      return true;
+    } catch { return false; }
+  }
+  const tmmShareBtn = $t('tmm-dl-share');
+  tmmShareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + tmmSerialize();
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = tmmShareBtn.innerHTML;
+      tmmShareBtn.textContent = 'Copied!';
+      setTimeout(() => { tmmShareBtn.innerHTML = orig; }, 1500);
+    });
+  });
 
   tCanvas.addEventListener('mousemove', handleTmmHover);
   tCanvas.addEventListener('mouseleave', () => { if (tHover) { tHover = null; tTooltip.hidden = true; drawTmm(); } });
@@ -5448,6 +5851,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   window.addEventListener('heterostructures:show-layered-structure', () => drawTmm());
 
   // initial render (panel may be hidden; canvas is min-sized, redrawn on reveal)
+  tmmRestore(location.hash.slice(1));
   renderTmmLayerEditor();
   renderTmmStack();
   syncTmmControls();
@@ -5456,15 +5860,1197 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
 </script>
 
 <script>
+  // ===== PyRAMIDS module: dipole emission / LDOS in stratified media =====
+  // In-browser TypeScript port of PyRAMIDS (Amos & Barnes LDOS), validated in
+  // src/lib/pyramids-ldos.test.ts.
+  import { onThemeChange } from '../../../lib/chart-theme';
+  import {
+    ldos, ldosIntegrandTrace, radiationPattern, intensityRT, perLayerAbsorption,
+    planeWaveFieldsAtZ, fresnelAmplitudes, cx, type Cx,
+  } from '../../../lib/pyramids-ldos';
+
+  const $p = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const cvarP = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+  const clampP = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  function pfmt(v: number, digits = 4): string {
+    if (!Number.isFinite(v)) return '0';
+    if (v !== 0 && (Math.abs(v) < 1e-3 || Math.abs(v) >= 1e5)) return v.toExponential(2);
+    return String(Number(v.toPrecision(digits)));
+  }
+
+  // ---- state -------------------------------------------------------------
+  type PrLayer = { n: number; kappa: number; thicknessNm: number; color: string };
+  const prPalette = ['#38BDF8', '#F59E0B', '#10B981', '#7C3AED', '#EF4444', '#0EA5E9', '#64748B'];
+  const PR_MIN_LAYERS = 0;
+  const PR_MAX_LAYERS = 40;
+  type PrPreset = 'drexhage' | 'glass' | 'slab' | 'custom';
+
+  const CH = {
+    iso: { key: 'iso', label: 'Isotropic', color: '#6366F1' },
+    epar: { key: 'epar', label: 'Electric ∥', color: '#3B82F6' },
+    eperp: { key: 'eperp', label: 'Electric ⊥', color: '#EF4444' },
+    mpar: { key: 'mpar', label: 'Magnetic ∥', color: '#10B981' },
+    mperp: { key: 'mperp', label: 'Magnetic ⊥', color: '#F59E0B' },
+  } as const;
+  type ChKey = keyof typeof CH;
+
+  type PrView = 'ldos' | 'kpar' | 'farfield' | 'pwspec' | 'pwang' | 'pwfields' | 'pwkpar';
+  const pr = {
+    layers: [] as PrLayer[],
+    subN: 0.052, subK: 4.41,
+    cladN: 1.0, cladK: 0.0,
+    lamNm: 550,
+    zNm: 150,
+    exc: 'dip' as 'dip' | 'pw',
+    view: 'ldos' as PrView,
+    kparCh: 'mean' as 'mean' | 'epar' | 'eperp',
+    ch: { iso: true, epar: true, eperp: true, mpar: false, mperp: false } as Record<ChKey, boolean>,
+    pol: 'avg' as 's' | 'p' | 'avg',
+    angleDeg: 0,
+    pwch: { R: true, T: true, A: true } as Record<'R' | 'T' | 'A', boolean>,
+    pwf: { Es: true, Ep: true, Aabs: true } as Record<'Es' | 'Ep' | 'Aabs', boolean>,
+    pwk: { rs: true, rp: true } as Record<'rs' | 'rp', boolean>,
+    rng: { zMin: null as number | null, zMax: null as number | null, yMax: null as number | null, lamMin: 400, lamMax: 800 },
+    preset: 'drexhage' as PrPreset,
+  };
+
+  const prEditor = $p('pr-layer-editor');
+  const prStackPrev = $p('pr-stack-preview');
+  const prWrap = $p('pr-chart-wrap');
+  const prCanvas = $p('pr-chart') as HTMLCanvasElement;
+  const prCard = prCanvas.closest('.card') as HTMLElement;
+
+  // ---- group colouring (identical thickness/n/kappa share a colour) ------
+  const prGroupKey = (l: PrLayer) => `${l.thicknessNm}|${l.n}|${l.kappa}`;
+  function assignPrColors() {
+    const map = new Map<string, string>(); let next = 0;
+    for (const l of pr.layers) {
+      const k = prGroupKey(l);
+      let c = map.get(k);
+      if (c === undefined) { c = prPalette[next % prPalette.length]; next++; map.set(k, c); }
+      l.color = c;
+    }
+  }
+  let prSelGroup: number[] | null = null;
+  const prSelected = (i: number) => prSelGroup !== null && prSelGroup.includes(i);
+  function prRefreshRings() {
+    prEditor.querySelectorAll<HTMLElement>('[data-pr-swatch]').forEach(el => {
+      const i = Number.parseInt(el.dataset.prSwatch ?? '-1', 10);
+      const on = prSelected(i);
+      el.classList.toggle('layer-swatch--sel', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function prToggleGroup(i: number) {
+    if (!Number.isInteger(i) || i < 0 || i >= pr.layers.length) return;
+    if (prSelected(i)) { prSelGroup = null; }
+    else {
+      const k = prGroupKey(pr.layers[i]);
+      prSelGroup = pr.layers.reduce<number[]>((a, l, j) => { if (prGroupKey(l) === k) a.push(j); return a; }, []);
+    }
+    prRefreshRings();
+  }
+
+  // ---- editor + schematic render -----------------------------------------
+  function renderPrStack() {
+    assignPrColors();
+    const total = pr.layers.reduce((s, l) => s + Math.max(1e-6, l.thicknessNm), 0) || 1;
+    const inner = pr.layers.map(l => {
+      const pct = (Math.max(1e-6, l.thicknessNm) / total) * 100;
+      const label = pct > 7 ? pfmt(l.thicknessNm, 3) : '';
+      return `<div class="tmm-stack__layer" style="flex:${pct} 1 0;background:${l.color}" title="n=${l.n}+${l.kappa}i, ${pfmt(l.thicknessNm, 4)} nm">${label}</div>`;
+    }).join('');
+    prStackPrev.innerHTML =
+      `<div class="tmm-stack__end" title="Substrate (below)">n<sub>s</sub><br>${pfmt(pr.subN, 3)}</div>` +
+      (inner || '<div class="tmm-stack__layer" style="flex:1;background:var(--bg-muted);color:var(--text-muted)">no layers</div>') +
+      `<div class="tmm-stack__end" title="Superstrate (above)">n<sub>c</sub><br>${pfmt(pr.cladN, 3)}</div>`;
+    $p('pr-layer-count').textContent = String(pr.layers.length);
+    ($p('pr-remove-layer') as HTMLButtonElement).disabled = pr.layers.length <= PR_MIN_LAYERS;
+    ($p('pr-add-layer') as HTMLButtonElement).disabled = pr.layers.length >= PR_MAX_LAYERS;
+  }
+  function renderPrEditor() {
+    assignPrColors();
+    const removable = pr.layers.length > PR_MIN_LAYERS;
+    const canAdd = pr.layers.length < PR_MAX_LAYERS;
+    const last = pr.layers.length - 1;
+    prEditor.innerHTML = pr.layers.map((layer, index) => `
+      <div class="layer-row" data-pr-row="${index}">
+        <div class="layer-row__header">
+          <span class="layer-chip"><button type="button" class="layer-swatch layer-swatch--btn${prSelected(index) ? ' layer-swatch--sel' : ''}" data-pr-swatch="${index}" style="background:${layer.color}" title="Click to lock this group — edits then apply to all its layers" aria-label="Select layer group" aria-pressed="${prSelected(index)}"></button>Layer ${index + 1}</span>
+          <span class="layer-row__actions">
+            <button type="button" class="tmm-layer-btn" data-pr-dup="${index}" title="Add a copy of this layer below" aria-label="Duplicate layer ${index + 1}"${canAdd ? '' : ' disabled'}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn" data-pr-up="${index}" title="Move layer up" aria-label="Move layer ${index + 1} up"${index === 0 ? ' disabled' : ''}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn" data-pr-down="${index}" title="Move layer down" aria-label="Move layer ${index + 1} down"${index === last ? ' disabled' : ''}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            </button>
+            <button type="button" class="tmm-layer-btn tmm-layer-remove" data-pr-remove="${index}" title="Remove layer" aria-label="Remove layer ${index + 1}"${removable ? '' : ' disabled'}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </span>
+        </div>
+        <div class="tmm-layer-fields">
+          <label class="layer-field"><span>Thickness (nm)</span><input type="number" class="layer-input" data-pr-layer="${index}" data-key="thicknessNm" value="${pfmt(layer.thicknessNm, 6)}" step="5" min="0"></label>
+          <label class="layer-field"><span>n</span><input type="number" class="layer-input" data-pr-layer="${index}" data-key="n" value="${pfmt(layer.n, 6)}" step="0.05" min="0.05"></label>
+          <label class="layer-field"><span>&kappa;</span><input type="number" class="layer-input" data-pr-layer="${index}" data-key="kappa" value="${pfmt(layer.kappa, 6)}" step="0.01" min="0"></label>
+        </div>
+      </div>`).join('');
+  }
+  function prRefreshSwatches() {
+    const sw = prEditor.querySelectorAll<HTMLElement>('.layer-swatch');
+    pr.layers.forEach((l, i) => { if (sw[i]) sw[i].style.background = l.color; });
+  }
+
+  // ---- mutations ---------------------------------------------------------
+  function prMarkPreset() {
+    ['pr-preset-drexhage', 'pr-preset-glass', 'pr-preset-slab'].forEach(id => {
+      const key = id.replace('pr-preset-', '');
+      $p(id).classList.toggle('is-active', pr.preset === key);
+    });
+  }
+  function prAddLayer() {
+    prSelGroup = null;
+    if (pr.layers.length >= PR_MAX_LAYERS) return;
+    pr.layers.push({ n: 2.0, kappa: 0, thicknessNm: 100, color: prPalette[pr.layers.length % prPalette.length] });
+    pr.preset = 'custom'; renderPrEditor(); afterStackChange();
+  }
+  function prRemoveLayer() {
+    prSelGroup = null;
+    if (pr.layers.length <= PR_MIN_LAYERS) return;
+    pr.layers.pop(); pr.preset = 'custom'; renderPrEditor(); afterStackChange();
+  }
+  function prRemoveAt(i: number) {
+    prSelGroup = null;
+    if (pr.layers.length <= PR_MIN_LAYERS || !Number.isInteger(i) || i < 0 || i >= pr.layers.length) return;
+    pr.layers.splice(i, 1); pr.preset = 'custom'; renderPrEditor(); afterStackChange();
+  }
+  function prDupAt(i: number) {
+    prSelGroup = null;
+    if (pr.layers.length >= PR_MAX_LAYERS || !Number.isInteger(i) || i < 0 || i >= pr.layers.length) return;
+    pr.layers.splice(i + 1, 0, { ...pr.layers[i] }); pr.preset = 'custom'; renderPrEditor(); afterStackChange();
+  }
+  function prMove(i: number, dir: -1 | 1) {
+    prSelGroup = null; const j = i + dir;
+    if (!Number.isInteger(i) || i < 0 || i >= pr.layers.length || j < 0 || j >= pr.layers.length) return;
+    [pr.layers[i], pr.layers[j]] = [pr.layers[j], pr.layers[i]];
+    pr.preset = 'custom'; renderPrEditor(); afterStackChange();
+  }
+  function prSetLayerValue(input: HTMLInputElement) {
+    const i = Number.parseInt(input.dataset.prLayer ?? '-1', 10);
+    const key = input.dataset.key as 'n' | 'kappa' | 'thicknessNm' | undefined;
+    if (!Number.isInteger(i) || i < 0 || i >= pr.layers.length || !key) return;
+    const value = Number.parseFloat(input.value);
+    if (!Number.isFinite(value)) return;
+    const v = key === 'n' ? Math.max(0.05, value) : Math.max(0, value);
+    const targets = prSelected(i) ? prSelGroup! : [i];
+    for (const t of targets) {
+      pr.layers[t][key] = v;
+      if (t !== i) {
+        const inp = prEditor.querySelector<HTMLInputElement>(`input[data-pr-layer="${t}"][data-key="${key}"]`);
+        if (inp) inp.value = pfmt(v, 6);
+      }
+    }
+    pr.preset = 'custom'; prMarkPreset();
+    renderPrStack(); prRefreshSwatches(); prRefreshRings(); afterStackChange();
+  }
+
+  // ---- physics glue ------------------------------------------------------
+  function buildStack(): { nstack: Cx[]; dstack: number[]; total: number } {
+    const dstack = pr.layers.map(l => l.thicknessNm);
+    const nstack: Cx[] = [cx(pr.subN, pr.subK), ...pr.layers.map(l => cx(l.n, l.kappa)), cx(pr.cladN, pr.cladK)];
+    return { nstack, dstack, total: dstack.reduce((a, b) => a + b, 0) };
+  }
+  const nReAt = (z: number, nstack: Cx[], dstack: number[]) => {
+    if (z <= 0) return nstack[0].re;
+    let acc = 0;
+    for (let i = 0; i < dstack.length; i++) { if (z <= acc + dstack[i]) return nstack[i + 1].re; acc += dstack[i]; }
+    return nstack[nstack.length - 1].re;
+  };
+  const k0Of = () => (2 * Math.PI) / pr.lamNm;
+
+  // plotting z-range: auto = ±1.4λ around the stack, overridable via Range
+  function prZRange(): { zmin: number; zmax: number } {
+    const { total } = buildStack();
+    const margin = 1.4 * pr.lamNm;
+    let zmin = pr.rng.zMin ?? -margin;
+    let zmax = pr.rng.zMax ?? total + margin;
+    if (zmax <= zmin) { zmin = -margin; zmax = total + margin; }
+    return { zmin, zmax };
+  }
+  // The emitter must sit in a transparent medium (LDOS is undefined inside an
+  // absorbing layer). Restrict its range to the contiguous transparent span
+  // containing the emitter — absorbing regions (metal mirror etc.) act as walls.
+  function prTransparentSpan(): { lo: number; hi: number } {
+    const { dstack, total } = buildStack();
+    const { zmin, zmax } = prZRange();
+    // The physics lib requires the source medium to be strictly lossless, so
+    // ANY absorbing medium (κ > 0) is a wall the emitter cannot enter.
+    const eps = 1e-7;
+    type Reg = { z0: number; z1: number; abs: boolean };
+    const regs: Reg[] = [{ z0: zmin, z1: 0, abs: pr.subK > eps }];
+    let acc = 0;
+    for (let i = 0; i < dstack.length; i++) { regs.push({ z0: acc, z1: acc + dstack[i], abs: pr.layers[i].kappa > eps }); acc += dstack[i]; }
+    regs.push({ z0: total, z1: zmax, abs: pr.cladK > eps });
+    if (regs.every(r => r.abs)) return { lo: zmin, hi: zmax };   // degenerate — don't restrict
+    const z = clampP(pr.zNm, zmin, zmax);
+    let idx = regs.findIndex(r => z >= r.z0 && z <= r.z1);
+    if (idx < 0) idx = regs.length - 1;
+    if (regs[idx].abs) {   // snap out of an absorbing region to the nearest transparent one
+      let best = -1, bestDist = Infinity;
+      regs.forEach((r, i) => { if (!r.abs) { const d = Math.abs((r.z0 + r.z1) / 2 - z); if (d < bestDist) { bestDist = d; best = i; } } });
+      idx = best;
+    }
+    let lo = idx, hi = idx;
+    while (lo > 0 && !regs[lo - 1].abs) lo--;
+    while (hi < regs.length - 1 && !regs[hi + 1].abs) hi++;
+    // A point exactly ON an interface belongs to the UPPER domain (lib tie-break),
+    // so when an absorbing region sits above the span, keep 1 nm below the wall.
+    const hiZ = regs[hi].z1 - (hi < regs.length - 1 ? 1 : 0);
+    return { lo: regs[lo].z0, hi: Math.max(regs[lo].z0, hiZ) };
+  }
+  function syncPrZSlider() {
+    const { lo, hi } = prTransparentSpan();
+    const s = $p('pr-z-slider') as HTMLInputElement;
+    s.min = String(Math.round(lo)); s.max = String(Math.round(hi));
+    pr.zNm = clampP(pr.zNm, lo, hi);
+    s.value = String(Math.round(pr.zNm));
+    ($p('pr-z') as HTMLInputElement).value = String(Math.round(pr.zNm));
+  }
+
+  // ---- canvas helpers ----------------------------------------------------
+  function ctx2dP(canvas: HTMLCanvasElement) {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return null;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    return { ctx, w: r.width, h: r.height };
+  }
+  type Frame = { px: (x: number) => number; py: (y: number) => number; m: { l: number; r: number; t: number; b: number }; w: number; h: number };
+  function frameP(ctx: CanvasRenderingContext2D, w: number, h: number, xmin: number, xmax: number, ymin: number, ymax: number, xlabel: string, ylabel: string, xticks: number[], yticks: number[], fmtX = (v: number) => String(v), fmtY = (v: number) => String(v), rpad = 30): Frame {
+    const m = { l: 60, r: rpad, t: 14, b: 42 };
+    const px = (x: number) => m.l + (x - xmin) / (xmax - xmin) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / (ymax - ymin) * (h - m.t - m.b);
+    ctx.font = '11px ' + (cvarP('--font') || 'sans-serif');
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const y of yticks) { const Y = py(y); if (Y < m.t - 1 || Y > h - m.b + 1) continue; ctx.strokeStyle = 'rgba(140,140,150,0.14)'; ctx.beginPath(); ctx.moveTo(m.l, Y); ctx.lineTo(w - m.r, Y); ctx.stroke(); ctx.fillStyle = cvarP('--text-muted'); ctx.fillText(fmtY(y), m.l - 6, Y); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const x of xticks) { const X = px(x); if (X < m.l - 1 || X > w - m.r + 1) continue; ctx.fillStyle = cvarP('--text-muted'); ctx.fillText(fmtX(x), X, h - m.b + 6); }
+    ctx.fillStyle = cvarP('--text-soft'); ctx.fillText(xlabel, (m.l + w - m.r) / 2, h - 14);
+    ctx.save(); ctx.translate(14, (m.t + h - m.b) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(ylabel, 0, 0); ctx.restore();
+    return { px, py, m, w, h };
+  }
+  function ticksNiceP(min: number, max: number, n = 6): number[] {
+    const span = max - min; if (span <= 0) return [min];
+    const raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
+    const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    const out: number[] = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + step * 0.01; v += step) out.push(Math.abs(v) < step * 1e-6 ? 0 : v);
+    return out;
+  }
+  // magma-ish colormap
+  const MAGMA: [number, number, number][] = [
+    [0, 0, 4], [28, 16, 68], [79, 18, 123], [129, 37, 129], [181, 54, 122], [229, 80, 100], [251, 135, 97], [254, 194, 135], [252, 253, 191],
+  ];
+  function magma(t: number): number[] {
+    t = clampP(t, 0, 1) * (MAGMA.length - 1);
+    const i = Math.min(MAGMA.length - 2, Math.floor(t)), f = t - i;
+    const a = MAGMA[i], b = MAGMA[i + 1];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+  }
+
+  // ---- LDOS vs position --------------------------------------------------
+  // ---- cached compute (keyed on stack + wavelength; z / channel / view reuse it,
+  //      so dragging the emitter or toggling a channel never re-runs the integral) ----
+  function stackKey(): string {
+    const { nstack, dstack } = buildStack();
+    return pr.lamNm + '|' + nstack.map(n => n.re + ',' + n.im).join(';') + '|' + dstack.join(',')
+      + '|' + pr.rng.zMin + ',' + pr.rng.zMax;
+  }
+  let ldosCache: { key: string; zGrid: number[]; r: ReturnType<typeof ldos>; iso: number[] } | null = null;
+  function getLdos() {
+    const key = stackKey();
+    if (ldosCache && ldosCache.key === key) return ldosCache;
+    const { nstack, dstack } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const NZ = 200;
+    const zGrid = Array.from({ length: NZ }, (_, i) => zmin + (zmax - zmin) * i / (NZ - 1));
+    const r = ldos(k0Of(), zGrid, nstack, dstack);
+    const iso = zGrid.map((_, i) => (2 * r.E_par[i] + r.E_perp[i]) / 3);
+    ldosCache = { key, zGrid, r, iso };
+    return ldosCache;
+  }
+  let kparCache: { key: string; kparMax: number; kparList: number[]; zList: number[]; trace: number[][][] } | null = null;
+  function getKparTrace() {
+    const key = stackKey();
+    if (kparCache && kparCache.key === key) return kparCache;
+    const { nstack, dstack } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const NZ = 150, NK = 220;
+    const kparMax = Math.max(1.5, ...nstack.map(n => Math.abs(n.re))) + 0.4;
+    const kparList = Array.from({ length: NK }, (_, i) => kparMax * i / (NK - 1));
+    const zList = Array.from({ length: NZ }, (_, i) => zmin + (zmax - zmin) * i / (NZ - 1));
+    const trace = ldosIntegrandTrace(k0Of(), kparList, zList, nstack, dstack);
+    kparCache = { key, kparMax, kparList, zList, trace };
+    return kparCache;
+  }
+
+  function drawLdosZ() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { dstack, total } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const { zGrid, r, iso } = getLdos();
+    const NZ = zGrid.length;
+    const series: { key: ChKey; y: number[] }[] = [];
+    if (pr.ch.iso) series.push({ key: 'iso', y: iso });
+    if (pr.ch.epar) series.push({ key: 'epar', y: r.E_par });
+    if (pr.ch.eperp) series.push({ key: 'eperp', y: r.E_perp });
+    if (pr.ch.mpar) series.push({ key: 'mpar', y: r.M_par });
+    if (pr.ch.mperp) series.push({ key: 'mperp', y: r.M_perp });
+    // y-range: robust 95th-percentile scaling so near-field divergences at a
+    // metal interface (LDOS → ∞) clip rather than crush the oscillations.
+    const vals: number[] = [];
+    for (const s of series) for (let i = 0; i < NZ; i++) { const v = s.y[i]; if (Number.isFinite(v) && v > 0) vals.push(v); }
+    vals.sort((a, b) => a - b);
+    const p95 = vals.length ? vals[Math.floor(0.95 * (vals.length - 1))] : 1.2;
+    const ymax = pr.rng.yMax ?? clampP(p95 * 1.18, 1.5, 6);
+    const xt = ticksNiceP(zmin, zmax), yt = ticksNiceP(0, ymax);
+    const fr = frameP(ctx, w, h, zmin, zmax, 0, ymax, 'emitter position z (nm)', 'LDOS / vacuum', xt, yt, v => String(Math.round(v)), v => pfmt(v, 2));
+
+    // shade finite layers with their group colours
+    let acc = 0;
+    ctx.save();
+    for (let i = 0; i < dstack.length; i++) {
+      const x0 = fr.px(acc), x1 = fr.px(acc + dstack[i]);
+      ctx.fillStyle = pr.layers[i].color; ctx.globalAlpha = 0.13;
+      ctx.fillRect(x0, fr.m.t, x1 - x0, h - fr.m.t - fr.m.b);
+      acc += dstack[i];
+    }
+    ctx.restore();
+    // interface + baseline lines
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+    for (const zb of [0, total]) { const X = fr.px(zb); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke(); }
+    const y1 = fr.py(1); ctx.beginPath(); ctx.moveTo(fr.m.l, y1); ctx.lineTo(w - fr.m.r, y1); ctx.stroke();
+    ctx.setLineDash([]);
+    // emitter marker
+    const zx = fr.px(pr.zNm);
+    ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(zx, fr.m.t); ctx.lineTo(zx, h - fr.m.b); ctx.stroke();
+    // curves (skip zero = absorbing/undefined regions)
+    for (const s of series) {
+      ctx.strokeStyle = CH[s.key].color; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < NZ; i++) {
+        const v = s.y[i];
+        if (!Number.isFinite(v) || v === 0) { started = false; continue; }
+        const X = fr.px(zGrid[i]), Y = fr.py(clampP(v, 0, ymax));
+        if (!started) { ctx.moveTo(X, Y); started = true; } else { ctx.lineTo(X, Y); }
+      }
+      ctx.stroke();
+    }
+  }
+
+  // ---- k-parallel integrand map ------------------------------------------
+  function drawKparMap() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { total } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const { kparMax, zList, trace } = getKparTrace();  // cached — z-only changes reuse it
+    const NZ = zList.length, NK = trace[0][0].length;
+    const pick = (zi: number, ki: number): number => {
+      if (pr.kparCh === 'epar') return trace[0][zi][ki];
+      if (pr.kparCh === 'eperp') return trace[1][zi][ki];
+      return 0.5 * ((2 * trace[0][zi][ki] + trace[1][zi][ki]) / 3 + (2 * trace[2][zi][ki] + trace[3][zi][ki]) / 3);
+    };
+    const CLIP0 = -2, CLIP1 = 2;
+    const data = new Float64Array(NZ * NK);
+    for (let zi = 0; zi < NZ; zi++) for (let ki = 0; ki < NK; ki++) {
+      const v = Math.log10(Math.abs(pick(zi, ki)) + 1e-12);
+      data[zi * NK + ki] = clampP((v - CLIP0) / (CLIP1 - CLIP0), 0, 1);
+    }
+    const xt = ticksNiceP(0, kparMax), yt = ticksNiceP(zmin, zmax);
+    const fr = frameP(ctx, w, h, 0, kparMax, zmin, zmax, 'k∥ / k₀', 'emitter position z (nm)', xt, yt, v => pfmt(v, 2), v => String(Math.round(v)), 64);
+    // heatmap (rows: z increasing upward → build image with y flipped)
+    const off = document.createElement('canvas'); off.width = NK; off.height = NZ;
+    const octx = off.getContext('2d')!; const img = octx.createImageData(NK, NZ);
+    for (let zi = 0; zi < NZ; zi++) for (let ki = 0; ki < NK; ki++) {
+      const t = data[zi * NK + ki]; const rgb = magma(t);
+      const pi = ((NZ - 1 - zi) * NK + ki) * 4;
+      img.data[pi] = rgb[0]; img.data[pi + 1] = rgb[1]; img.data[pi + 2] = rgb[2]; img.data[pi + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b);
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.strokeRect(fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b);
+    // overlays: interfaces (horizontal) + light lines n_s/n_c/layers (vertical dashed)
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+    for (const zb of [0, total]) { const Y = fr.py(zb); ctx.beginPath(); ctx.moveTo(fr.m.l, Y); ctx.lineTo(w - fr.m.r, Y); ctx.stroke(); }
+    ctx.setLineDash([4, 3]);
+    const nLines = Array.from(new Set([pr.subN, pr.cladN, ...pr.layers.map(l => l.n)].filter(v => v <= kparMax)));
+    for (const nv of nLines) { const X = fr.px(nv); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // emitter marker
+    ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 1.5;
+    const Ye = fr.py(clampP(pr.zNm, zmin, zmax)); ctx.beginPath(); ctx.moveTo(fr.m.l, Ye); ctx.lineTo(w - fr.m.r, Ye); ctx.stroke();
+    // colorbar
+    const cbx = w - fr.m.r + 14, cbw = 12, cbt = fr.m.t, cbh = h - fr.m.t - fr.m.b;
+    for (let i = 0; i < cbh; i++) { const rgb = magma(1 - i / cbh); ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`; ctx.fillRect(cbx, cbt + i, cbw, 1); }
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.strokeRect(cbx, cbt, cbw, cbh);
+    ctx.fillStyle = cvarP('--text-muted'); ctx.font = '10px ' + (cvarP('--font') || 'sans-serif');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(CLIP1), cbx + cbw + 3, cbt); ctx.fillText(String(CLIP0), cbx + cbw + 3, cbt + cbh);
+    ctx.save(); ctx.translate(cbx + cbw + 22, cbt + cbh / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillStyle = cvarP('--text-soft'); ctx.fillText('log₁₀ integrand', 0, 0); ctx.restore();
+  }
+
+  // ---- view tabs (per excitation) + clickable series legend ---------------
+  const PR_CH_ORDER: ChKey[] = ['iso', 'epar', 'eperp', 'mpar', 'mperp'];
+  const PR_VIEWS: Record<'dip' | 'pw', [PrView, string][]> = {
+    dip: [['ldos', 'LDOS vs position'], ['kpar', 'k∥ map'], ['farfield', 'Far-field']],
+    pw: [['pwspec', 'Spectrum'], ['pwang', 'Angle scan'], ['pwfields', 'Fields'], ['pwkpar', 'k∥ scan']],
+  };
+  function renderPrViewTabs() {
+    $p('pr-view-tabs').innerHTML = PR_VIEWS[pr.exc].map(([v, label]) =>
+      `<button type="button" class="seg-btn${pr.view === v ? ' active' : ''}" data-prview="${v}" role="radio" aria-checked="${pr.view === v}">${label}</button>`).join('');
+  }
+  // series legend per view: click an item to show/hide its curve
+  type LegSpec = { key: string; label: string; color: string; store: Record<string, boolean> };
+  function prLegendSpecs(): LegSpec[] {
+    if (pr.view === 'ldos' || pr.view === 'farfield')
+      return PR_CH_ORDER.map(k => ({ key: k, label: CH[k].label, color: CH[k].color, store: pr.ch }));
+    if (pr.view === 'pwspec' || pr.view === 'pwang')
+      return [
+        { key: 'R', label: 'Reflectance R', color: '#3B82F6', store: pr.pwch },
+        { key: 'T', label: 'Transmittance T', color: '#10B981', store: pr.pwch },
+        { key: 'A', label: 'Absorptance A', color: '#EF4444', store: pr.pwch },
+      ];
+    if (pr.view === 'pwfields')
+      return [
+        { key: 'Es', label: '|E| s-pol', color: '#3B82F6', store: pr.pwf },
+        { key: 'Ep', label: '|E| p-pol', color: '#EF4444', store: pr.pwf },
+        { key: 'Aabs', label: 'abs. density (a.u.)', color: '#F59E0B', store: pr.pwf },
+      ];
+    if (pr.view === 'pwkpar')
+      return [
+        { key: 'rs', label: '|r| s-pol', color: '#3B82F6', store: pr.pwk },
+        { key: 'rp', label: '|r| p-pol', color: '#EF4444', store: pr.pwk },
+      ];
+    return [];
+  }
+  function renderPrChannelLegend() {
+    $p('pr-ldos-legend').innerHTML = prLegendSpecs().map(s =>
+      `<button type="button" class="pr-leg-item${s.store[s.key] ? '' : ' pr-leg-item--off'}" style="color:${s.color}" data-prch-toggle="${s.key}" aria-pressed="${s.store[s.key]}"><span class="legend-line"></span>${s.label}</button>`).join('');
+  }
+  function updatePrViewChrome() {
+    $p('pr-ldos-legend').hidden = pr.view === 'kpar';
+    $p('pr-kpar-options').hidden = pr.view !== 'kpar';
+    $p('pr-dipole-controls').hidden = pr.exc !== 'dip';
+    $p('pr-pw-controls').hidden = pr.exc !== 'pw';
+    $p('pr-lamrange-field').hidden = pr.view !== 'pwspec';
+    $p('pr-source-title').textContent = pr.exc === 'dip' ? 'Emitter & light' : 'Illumination';
+  }
+
+  // ---- plane-wave helpers -------------------------------------------------
+  const pwInputOk = () => pr.subK <= 1e-7;   // incidence from the substrate side
+  const pwKparAt = (k0v: number) => pr.subN * k0v * Math.sin(pr.angleDeg * Math.PI / 180);
+  const pwPick = (s: number, p: number): number => (pr.pol === 's' ? s : pr.pol === 'p' ? p : 0.5 * (s + p));
+  function drawPwMessage(msg: string) {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    ctx.fillStyle = cvarP('--text-soft'); ctx.font = '13px ' + (cvarP('--font') || 'sans-serif');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(msg, w / 2, h / 2);
+  }
+
+  // ---- plane wave: R/T/A spectrum & angle scan ---------------------------
+  const PW_COLS = { R: '#3B82F6', T: '#10B981', A: '#EF4444' } as const;
+  function drawPwRta(xGrid: number[], series: Record<'R' | 'T' | 'A', number[]>, xlabel: string, marker: number | null, fr0?: { xmin: number; xmax: number }) {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const xmin = fr0 ? fr0.xmin : xGrid[0], xmax = fr0 ? fr0.xmax : xGrid[xGrid.length - 1];
+    const ymax = pr.rng.yMax ?? 1;
+    const ylabel = pr.pol === 'avg' ? 'R / T / A (unpolarized)' : `R / T / A (${pr.pol}-pol)`;
+    const fr = frameP(ctx, w, h, xmin, xmax, 0, ymax, xlabel, ylabel, ticksNiceP(xmin, xmax), ticksNiceP(0, ymax, 5), v => String(Math.round(v * 100) / 100), v => pfmt(v, 2));
+    (['R', 'T', 'A'] as const).forEach(k => {
+      if (!pr.pwch[k]) return;
+      ctx.strokeStyle = PW_COLS[k]; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      xGrid.forEach((x, i) => {
+        const X = fr.px(x), Y = fr.py(clampP(series[k][i], 0, ymax));
+        if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+      });
+      ctx.stroke();
+    });
+    if (marker !== null && marker >= xmin && marker <= xmax) {
+      ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      const X = fr.px(marker); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  function drawPwSpectrum() {
+    if (!pwInputOk()) { drawPwMessage('Plane-wave incidence needs a transparent substrate (κs = 0).'); return; }
+    const { nstack, dstack } = buildStack();
+    const lmin = Math.min(pr.rng.lamMin, pr.rng.lamMax), lmax = Math.max(pr.rng.lamMin, pr.rng.lamMax);
+    const N = 240;
+    const lam = Array.from({ length: N }, (_, i) => lmin + (lmax - lmin) * i / (N - 1));
+    const series = { R: [] as number[], T: [] as number[], A: [] as number[] };
+    for (const l of lam) {
+      const k0v = 2 * Math.PI / l;
+      const rta = intensityRT(k0v, pwKparAt(k0v), nstack, dstack);
+      series.R.push(pwPick(rta.s.R, rta.p.R));
+      series.T.push(pwPick(rta.s.T, rta.p.T));
+      series.A.push(pwPick(rta.s.A, rta.p.A));
+    }
+    drawPwRta(lam, series, 'wavelength λ (nm)', pr.lamNm, { xmin: lmin, xmax: lmax });
+  }
+  function drawPwAngles() {
+    if (!pwInputOk()) { drawPwMessage('Plane-wave incidence needs a transparent substrate (κs = 0).'); return; }
+    const { nstack, dstack } = buildStack();
+    const N = 240;
+    const ang = Array.from({ length: N }, (_, i) => 89.5 * i / (N - 1));
+    const k0v = k0Of();
+    const series = { R: [] as number[], T: [] as number[], A: [] as number[] };
+    for (const a of ang) {
+      const kp = pr.subN * k0v * Math.sin(a * Math.PI / 180);
+      const rta = intensityRT(k0v, kp, nstack, dstack);
+      series.R.push(pwPick(rta.s.R, rta.p.R));
+      series.T.push(pwPick(rta.s.T, rta.p.T));
+      series.A.push(pwPick(rta.s.A, rta.p.A));
+    }
+    drawPwRta(ang, series, 'angle of incidence θ (°)', pr.angleDeg, { xmin: 0, xmax: 90 });
+  }
+
+  // ---- plane wave: local fields |E|(z) + absorption density --------------
+  function drawPwFields() {
+    if (!pwInputOk()) { drawPwMessage('Plane-wave incidence needs a transparent substrate (κs = 0).'); return; }
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { nstack, dstack, total } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const N = 280;
+    const zGrid = Array.from({ length: N }, (_, i) => zmin + (zmax - zmin) * i / (N - 1));
+    const k0v = k0Of();
+    const f = planeWaveFieldsAtZ(k0v, pwKparAt(k0v), nstack, dstack, zGrid);
+    const aRaw = zGrid.map((_, i) => pwPick(f.As[i], f.Ap[i]));
+    const aMax = Math.max(1e-30, ...aRaw);
+    let ymax = pr.rng.yMax ?? 0;
+    if (!pr.rng.yMax) {
+      if (pr.pwf.Es) ymax = Math.max(ymax, ...f.Es);
+      if (pr.pwf.Ep) ymax = Math.max(ymax, ...f.Ep);
+      ymax = ymax > 0 ? ymax * 1.1 : 2;
+    }
+    const fr = frameP(ctx, w, h, zmin, zmax, 0, ymax, 'z (nm)', '|E| / |E_inc|', ticksNiceP(zmin, zmax), ticksNiceP(0, ymax, 5), v => String(Math.round(v)), v => pfmt(v, 2));
+    // layer shading + interfaces (same style as the LDOS view)
+    let acc = 0;
+    ctx.save();
+    for (let i = 0; i < dstack.length; i++) {
+      const x0 = fr.px(acc), x1 = fr.px(acc + dstack[i]);
+      ctx.fillStyle = pr.layers[i].color; ctx.globalAlpha = 0.13;
+      ctx.fillRect(x0, fr.m.t, x1 - x0, h - fr.m.t - fr.m.b);
+      acc += dstack[i];
+    }
+    ctx.restore();
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+    for (const zb of [0, total]) { const X = fr.px(zb); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke(); }
+    ctx.setLineDash([]);
+    const strokeSeries = (y: number[], color: string) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < N; i++) {
+        const v = y[i]; if (!Number.isFinite(v)) { started = false; continue; }
+        const X = fr.px(zGrid[i]), Y = fr.py(clampP(v, 0, ymax));
+        if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+      }
+      ctx.stroke();
+    };
+    if (pr.pwf.Aabs && aMax > 1e-20) strokeSeries(aRaw.map(v => v / aMax * ymax * 0.92), '#F59E0B');
+    if (pr.pwf.Es) strokeSeries(f.Es, '#3B82F6');
+    if (pr.pwf.Ep) strokeSeries(f.Ep, '#EF4444');
+  }
+
+  // ---- plane wave: |r| vs k∥ (guided modes beyond the light lines) -------
+  function drawPwKpar() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { nstack, dstack } = buildStack();
+    const k0v = k0Of();
+    const qmax = Math.max(1.5, ...nstack.map(n => Math.abs(n.re))) + 0.4;
+    const N = 500;
+    const q = Array.from({ length: N }, (_, i) => qmax * (i + 0.5) / N);
+    const rs: number[] = [], rp: number[] = [];
+    for (const qi of q) {
+      const a = fresnelAmplitudes(k0v, qi * k0v, nstack, dstack);
+      rs.push(Math.sqrt(a.rs.re * a.rs.re + a.rs.im * a.rs.im));
+      rp.push(Math.sqrt(a.rp.re * a.rp.re + a.rp.im * a.rp.im));
+    }
+    const lg = (v: number) => Math.log10(v + 1e-8);
+    let ymaxL = 1;
+    if (pr.pwk.rs) ymaxL = Math.max(ymaxL, ...rs.map(lg));
+    if (pr.pwk.rp) ymaxL = Math.max(ymaxL, ...rp.map(lg));
+    ymaxL = Math.ceil(ymaxL);
+    const yminL = -2;
+    const fr = frameP(ctx, w, h, 0, qmax, yminL, ymaxL, 'k∥ / k₀', 'log₁₀ |r|  (from the substrate)', ticksNiceP(0, qmax), ticksNiceP(yminL, ymaxL, 6), v => pfmt(v, 2), v => String(v));
+    // light lines of every distinct medium
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = cvarP('--text-muted'); ctx.lineWidth = 1;
+    const nLines = Array.from(new Set([pr.subN, pr.cladN, ...pr.layers.map(l => l.n)].filter(v => v <= qmax)));
+    ctx.fillStyle = cvarP('--text-muted'); ctx.font = '10px ' + (cvarP('--font') || 'sans-serif'); ctx.textAlign = 'center';
+    for (const nv of nLines) {
+      const X = fr.px(nv);
+      ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke();
+      ctx.fillText(`n=${pfmt(nv, 3)}`, X, fr.m.t + 4);
+    }
+    ctx.setLineDash([]);
+    const strokeR = (arr: number[], color: string) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < N; i++) {
+        const Y = fr.py(clampP(lg(arr[i]), yminL, ymaxL));
+        const X = fr.px(q[i]);
+        if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+      }
+      ctx.stroke();
+    };
+    if (pr.pwk.rs) strokeR(rs, '#3B82F6');
+    if (pr.pwk.rp) strokeR(rp, '#EF4444');
+  }
+
+  // ---- dipole far-field radiation pattern (polar, φ = 0 / π plane) -------
+  function drawFarfield() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { nstack, dstack } = buildStack();
+    const k0v = k0Of();
+    const NTH = 181;
+    const th = Array.from({ length: NTH }, (_, i) => Math.PI * i / (NTH - 1));
+    const phiR = th.map(() => 0), phiL = th.map(() => Math.PI);
+    const zeroV = [cx(0), cx(0), cx(0)];
+    const chDip: Record<ChKey, { pu: Cx[]; mu: Cx[] }[]> = {
+      epar: [{ pu: [cx(1), cx(0), cx(0)], mu: zeroV }],
+      eperp: [{ pu: [cx(0), cx(0), cx(1)], mu: zeroV }],
+      mpar: [{ pu: zeroV, mu: [cx(1), cx(0), cx(0)] }],
+      mperp: [{ pu: zeroV, mu: [cx(0), cx(0), cx(1)] }],
+      iso: [
+        { pu: [cx(1), cx(0), cx(0)], mu: zeroV },
+        { pu: [cx(0), cx(1), cx(0)], mu: zeroV },
+        { pu: [cx(0), cx(0), cx(1)], mu: zeroV },
+      ],
+    };
+    const curves: { key: ChKey; R: number[]; L: number[] }[] = [];
+    for (const k of PR_CH_ORDER) {
+      if (!pr.ch[k]) continue;
+      const parts = chDip[k];
+      const R = new Array(NTH).fill(0), L = new Array(NTH).fill(0);
+      for (const d of parts) {
+        const pR = radiationPattern(k0v, pr.zNm, d.pu, d.mu, th, phiR, nstack, dstack);
+        const pL = radiationPattern(k0v, pr.zNm, d.pu, d.mu, th, phiL, nstack, dstack);
+        for (let i = 0; i < NTH; i++) { R[i] += pR[i] / parts.length; L[i] += pL[i] / parts.length; }
+      }
+      curves.push({ key: k, R, L });
+    }
+    let rmax = pr.rng.yMax ?? 0;
+    if (!pr.rng.yMax) {
+      for (const cv of curves) rmax = Math.max(rmax, ...cv.R, ...cv.L);
+      rmax = rmax > 0 ? rmax * 1.08 : 1;
+    }
+    const cx0 = w / 2, cy0 = h / 2 + 4;
+    const rad = Math.min(w, h) / 2 - 36;
+    // hemisphere shading: top = superstrate, bottom = substrate
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = prEndFill(pr.cladN, pr.cladK);
+    ctx.beginPath(); ctx.arc(cx0, cy0, rad, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = prEndFill(pr.subN, pr.subK);
+    ctx.beginPath(); ctx.arc(cx0, cy0, rad, 0, Math.PI); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.lineWidth = 1;
+    for (const fgrid of [1 / 3, 2 / 3, 1]) { ctx.beginPath(); ctx.arc(cx0, cy0, rad * fgrid, 0, 2 * Math.PI); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(cx0 - rad, cy0); ctx.lineTo(cx0 + rad, cy0); ctx.stroke();
+    ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(cx0, cy0 - rad); ctx.lineTo(cx0, cy0 + rad); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = cvarP('--text-muted'); ctx.font = '10px ' + (cvarP('--font') || 'sans-serif'); ctx.textAlign = 'center';
+    ctx.fillText('θ = 0° · up (superstrate)', cx0, cy0 - rad - 16);
+    ctx.fillText('θ = 180° · down (substrate)', cx0, cy0 + rad + 10);
+    ctx.textAlign = 'left';
+    ctx.fillText(`r max = ${pfmt(rmax, 3)} · dP/dΩ normalized to a free dipole`, 8, 12);
+    for (const cv of curves) {
+      ctx.strokeStyle = CH[cv.key].color; ctx.lineWidth = 2; ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < NTH; i++) {
+        const r = rad * clampP(cv.R[i] / rmax, 0, 1);
+        const X = cx0 + r * Math.sin(th[i]), Y = cy0 - r * Math.cos(th[i]);
+        if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+      }
+      for (let i = NTH - 1; i >= 0; i--) {
+        const r = rad * clampP(cv.L[i] / rmax, 0, 1);
+        ctx.lineTo(cx0 - r * Math.sin(th[i]), cy0 - r * Math.cos(th[i]));
+      }
+      ctx.closePath(); ctx.stroke();
+    }
+  }
+
+  // system schematic: layered cross-section (z up) with the emitter dipole
+  const prEndFill = (n: number, kappa: number) =>
+    kappa > 0.15 ? '#475569' : `hsl(205, 60%, ${clampP(94 - n * 11, 60, 94)}%)`;
+  function drawPrGeo() {
+    const cv = $p('pr-geo-canvas') as HTMLCanvasElement;
+    const c = ctx2dP(cv); if (!c) return;
+    const { ctx, w, h } = c;
+    const { dstack, total } = buildStack();
+    const { zmin, zmax } = prZRange();
+    const span = (zmax - zmin) || 1;
+    const y = (z: number) => h - (z - zmin) / span * h;   // top = zmax (superstrate up)
+    type Reg = { z0: number; z1: number; fill: string; text: string; dark: boolean };
+    const regions: Reg[] = [];
+    regions.push({ z0: zmin, z1: 0, fill: prEndFill(pr.subN, pr.subK), text: `nₛ=${pfmt(pr.subN, 3)}${pr.subK ? `+${pfmt(pr.subK, 2)}i` : ''}`, dark: pr.subK > 0.15 });
+    let acc = 0;
+    for (let i = 0; i < dstack.length; i++) { regions.push({ z0: acc, z1: acc + dstack[i], fill: pr.layers[i].color, text: `n=${pfmt(pr.layers[i].n, 3)}`, dark: true }); acc += dstack[i]; }
+    regions.push({ z0: total, z1: zmax, fill: prEndFill(pr.cladN, pr.cladK), text: `n_c=${pfmt(pr.cladN, 3)}${pr.cladK ? `+${pfmt(pr.cladK, 2)}i` : ''}`, dark: pr.cladK > 0.15 });
+    ctx.font = '10px ' + (cvarP('--font') || 'sans-serif'); ctx.textBaseline = 'middle';
+    for (const rg of regions) {
+      const yt = y(rg.z1), yb = y(rg.z0);
+      ctx.fillStyle = rg.fill; ctx.fillRect(0, yt, w, yb - yt);
+      if (yb - yt > 13) { ctx.fillStyle = rg.dark ? 'rgba(255,255,255,0.92)' : cvarP('--text-soft'); ctx.textAlign = 'left'; ctx.fillText(rg.text, 26, (yt + yb) / 2); }
+    }
+    ctx.strokeStyle = 'rgba(15,23,42,0.35)'; ctx.lineWidth = 1;
+    for (const zb of [0, total]) { const Y = y(zb); ctx.beginPath(); ctx.moveTo(0, Y); ctx.lineTo(w, Y); ctx.stroke(); }
+    if (pr.exc === 'dip') {
+      // emitter dipole glyph
+      const Ye = y(clampP(pr.zNm, zmin, zmax)), ex = w * 0.72;
+      ctx.strokeStyle = cvarP('--primary'); ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
+      for (const rr of [7, 12, 17]) { ctx.beginPath(); ctx.arc(ex, Ye, rr, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.globalAlpha = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(0, Ye); ctx.lineTo(ex - 20, Ye); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex, Ye - 9); ctx.lineTo(ex, Ye + 9);
+      ctx.moveTo(ex - 3, Ye - 6); ctx.lineTo(ex, Ye - 10); ctx.lineTo(ex + 3, Ye - 6);
+      ctx.moveTo(ex - 3, Ye + 6); ctx.lineTo(ex, Ye + 10); ctx.lineTo(ex + 3, Ye + 6); ctx.stroke();
+      ctx.fillStyle = cvarP('--primary'); ctx.beginPath(); ctx.arc(ex, Ye, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = cvarP('--text-soft'); ctx.textAlign = 'right'; ctx.fillText(`z=${Math.round(pr.zNm)} nm`, w - 6, Ye < 16 ? Ye + 12 : Ye - 12);
+    } else {
+      // plane-wave: incident + reflected rays from the substrate side (below)
+      const thr = pr.angleDeg * Math.PI / 180;
+      const y0i = y(0), x0 = w * 0.62;
+      const L = Math.min(52, Math.max(24, h - y0i - 10));
+      const sx = x0 - L * Math.sin(thr), sy = y0i + L * Math.cos(thr);
+      const arrow = (x1: number, y1: number, x2: number, y2: number, dash: boolean) => {
+        ctx.setLineDash(dash ? [4, 3] : []);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.setLineDash([]);
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 7 * Math.cos(a - 0.42), y2 - 7 * Math.sin(a - 0.42));
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 7 * Math.cos(a + 0.42), y2 - 7 * Math.sin(a + 0.42));
+        ctx.stroke();
+      };
+      ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 2;
+      arrow(sx, sy, x0, y0i, false);                                        // incident
+      ctx.globalAlpha = 0.55;
+      arrow(x0, y0i, x0 + L * Math.sin(thr), y0i + L * Math.cos(thr), true); // reflected
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = cvarP('--text-soft'); ctx.textAlign = 'right';
+      ctx.fillText(`θ=${pfmt(pr.angleDeg, 3)}°`, w - 6, y0i + 14);
+    }
+    // z-axis arrow (left)
+    ctx.strokeStyle = cvarP('--text-muted'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(10, h - 6); ctx.lineTo(10, 22); ctx.moveTo(7, 26); ctx.lineTo(10, 20); ctx.lineTo(13, 26); ctx.stroke();
+    ctx.fillStyle = cvarP('--text-muted'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('z', 15, 16);
+  }
+
+  // ---- metrics (calculation box — same stat-tile style as the Plasmonic NPs lab) ----
+  const kappaAt = (z: number): number => {
+    if (z < 0) return pr.subK;
+    let acc = 0;
+    for (let i = 0; i < pr.layers.length; i++) { acc += pr.layers[i].thicknessNm; if (z < acc) return pr.layers[i].kappa; }
+    return pr.cladK;
+  };
+  function renderMetrics() {
+    if (pr.exc === 'pw') { renderPwMetrics(); return; }
+    const { nstack, dstack } = buildStack();
+    // LDOS is undefined inside an absorbing medium — never compute there.
+    const inLossy = kappaAt(pr.zNm) > 1e-7;
+    const r = inLossy ? null : ldos(k0Of(), [pr.zNm], nstack, dstack);
+    const iso = r ? (2 * r.E_par[0] + r.E_perp[0]) / 3 : NaN;
+    const nz = nReAt(pr.zNm, nstack, dstack);
+    const val = (v: number) => (r && Number.isFinite(v) ? pfmt(v, 3) : '&mdash;');
+    const tiles = [
+      { label: 'Purcell (iso)', value: val(iso), unit: 'γ/γ₀', tip: 'Orientation-averaged decay-rate enhancement (2ρ∥ + ρ⊥)/3 relative to vacuum, at the emitter position.' },
+      { label: 'LDOS E∥', value: val(r ? r.E_par[0] : NaN), unit: 'ρ/ρ₀', tip: 'Electric LDOS for a dipole oriented parallel to the layers (in-plane), normalized to vacuum.' },
+      { label: 'LDOS E⊥', value: val(r ? r.E_perp[0] : NaN), unit: 'ρ/ρ₀', tip: 'Electric LDOS for a dipole oriented perpendicular to the layers (along z), normalized to vacuum.' },
+      { label: 'n at z', value: pfmt(nz, 3), unit: 'index', tip: 'Refractive index of the (transparent) medium at the emitter position.' },
+    ];
+    $p('pr-metrics').innerHTML = tiles.map(t =>
+      `<div class="stat"><button class="stat-info" type="button" aria-label="${t.label} info">i<span class="stat-tooltip" role="tooltip">${t.tip}</span></button><span class="stat-label">${t.label}</span><span class="stat-value">${t.value}</span><span class="stat-unit">${t.unit}</span></div>`).join('');
+  }
+  function renderPwMetrics() {
+    const polTag = pr.pol === 'avg' ? 'unpolarized' : `${pr.pol}-pol`;
+    let tiles: { label: string; value: string; unit: string; tip: string }[];
+    if (!pwInputOk()) {
+      tiles = [{ label: 'Input medium', value: '&mdash;', unit: 'lossy', tip: 'Plane-wave incidence is defined from the substrate side, which must be transparent (κs = 0).' }];
+    } else {
+      const { nstack, dstack } = buildStack();
+      const k0v = k0Of();
+      const kp = pwKparAt(k0v);
+      const rta = intensityRT(k0v, kp, nstack, dstack);
+      const pl = perLayerAbsorption(k0v, kp, nstack, dstack);
+      tiles = [
+        { label: 'Reflectance R', value: pfmt(pwPick(rta.s.R, rta.p.R), 3), unit: polTag, tip: `Fraction of the incident power reflected back into the substrate at θ = ${pfmt(pr.angleDeg, 3)}°, λ = ${Math.round(pr.lamNm)} nm.` },
+        { label: 'Transmittance T', value: pfmt(pwPick(rta.s.T, rta.p.T), 3), unit: polTag, tip: 'Fraction of the incident power transmitted into the superstrate.' },
+        { label: 'Absorptance A', value: pfmt(pwPick(rta.s.A, rta.p.A), 3), unit: polTag, tip: 'Fraction of the incident power absorbed anywhere in the stack: A = 1 − R − T.' },
+      ];
+      pr.layers.forEach((l, i) => {
+        if (l.kappa > 1e-7) tiles.push({
+          label: `Abs. layer ${i + 1}`, value: pfmt(pwPick(pl.s[i], pl.p[i]), 3), unit: 'fraction',
+          tip: `Power absorbed in layer ${i + 1} (n = ${pfmt(l.n, 3)} + ${pfmt(l.kappa, 3)}i, d = ${pfmt(l.thicknessNm, 4)} nm) — layer-resolved absorption.`,
+        });
+      });
+      if (pr.cladK > 1e-7) tiles.push({
+        label: 'Abs. superstrate', value: pfmt(pwPick(pl.s[pl.s.length - 1], pl.p[pl.p.length - 1]), 3), unit: 'fraction',
+        tip: 'Power absorbed in the (lossy) exit half-space.',
+      });
+    }
+    $p('pr-metrics').innerHTML = tiles.map(t =>
+      `<div class="stat"><button class="stat-info" type="button" aria-label="${t.label} info">i<span class="stat-tooltip" role="tooltip">${t.tip}</span></button><span class="stat-label">${t.label}</span><span class="stat-value">${t.value}</span><span class="stat-unit">${t.unit}</span></div>`).join('');
+  }
+
+  // ---- compute orchestration (deferred + loading bar) --------------------
+  const setPrComputing = (on: boolean) => prCard.classList.toggle('is-computing', on);
+  function drawCurrentView() {
+    if (pr.view === 'ldos') drawLdosZ();
+    else if (pr.view === 'kpar') drawKparMap();
+    else if (pr.view === 'farfield') drawFarfield();
+    else if (pr.view === 'pwspec') drawPwSpectrum();
+    else if (pr.view === 'pwang') drawPwAngles();
+    else if (pr.view === 'pwfields') drawPwFields();
+    else drawPwKpar();
+  }
+  function renderPrNow() {
+    updatePrViewChrome();
+    renderPrChannelLegend();
+    drawCurrentView();
+    renderMetrics();
+    drawPrGeo();
+  }
+  let prTimer: number | undefined;
+  function schedulePr() {
+    if ($p('module-panel-pyramids').hidden) return;
+    window.clearTimeout(prTimer);
+    setPrComputing(true);
+    prTimer = window.setTimeout(() => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        try { renderPrNow(); } finally { setPrComputing(false); }
+      }));
+    }, 90);
+  }
+  // stack geometry changed → resync z slider then recompute
+  function afterStackChange() { syncPrZSlider(); schedulePr(); }
+
+  // ---- presets -----------------------------------------------------------
+  function applyPrPreset(p: PrPreset) {
+    pr.preset = p; prSelGroup = null;
+    if (p === 'drexhage') { pr.subN = 0.052; pr.subK = 4.41; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 140; }
+    else if (p === 'glass') { pr.subN = 1.5; pr.subK = 0; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 200; }
+    else if (p === 'slab') { pr.subN = 1.5; pr.subK = 0; pr.cladN = 1; pr.cladK = 0; pr.layers = [{ n: 2.0, kappa: 0, thicknessNm: 180, color: prPalette[0] }]; pr.lamNm = 550; pr.zNm = 90; }
+    // reflect into inputs
+    ($p('pr-n-sub') as HTMLInputElement).value = String(pr.subN);
+    ($p('pr-k-sub') as HTMLInputElement).value = String(pr.subK);
+    ($p('pr-n-clad') as HTMLInputElement).value = String(pr.cladN);
+    ($p('pr-k-clad') as HTMLInputElement).value = String(pr.cladK);
+    ($p('pr-lam') as HTMLInputElement).value = String(pr.lamNm);
+    ($p('pr-lam-slider') as HTMLInputElement).value = String(pr.lamNm);
+    renderPrEditor(); renderPrStack(); prMarkPreset(); afterStackChange();
+  }
+
+  // ---- events ------------------------------------------------------------
+  $p('pr-add-layer').addEventListener('click', prAddLayer);
+  $p('pr-remove-layer').addEventListener('click', prRemoveLayer);
+  $p('pr-preset-drexhage').addEventListener('click', () => applyPrPreset('drexhage'));
+  $p('pr-preset-glass').addEventListener('click', () => applyPrPreset('glass'));
+  $p('pr-preset-slab').addEventListener('click', () => applyPrPreset('slab'));
+  $p('pr-reset').addEventListener('click', () => applyPrPreset('drexhage'));
+
+  prEditor.addEventListener('change', e => {
+    const input = e.target as HTMLInputElement;
+    if (input?.dataset?.prLayer) prSetLayerValue(input);
+  });
+  prEditor.addEventListener('click', e => {
+    const t = e.target as HTMLElement;
+    const sw = t.closest<HTMLButtonElement>('[data-pr-swatch]'); if (sw) { prToggleGroup(Number.parseInt(sw.dataset.prSwatch ?? '-1', 10)); return; }
+    const dup = t.closest<HTMLButtonElement>('[data-pr-dup]'); if (dup) { prDupAt(Number.parseInt(dup.dataset.prDup ?? '-1', 10)); return; }
+    const up = t.closest<HTMLButtonElement>('[data-pr-up]'); if (up) { prMove(Number.parseInt(up.dataset.prUp ?? '-1', 10), -1); return; }
+    const dn = t.closest<HTMLButtonElement>('[data-pr-down]'); if (dn) { prMove(Number.parseInt(dn.dataset.prDown ?? '-1', 10), 1); return; }
+    const rm = t.closest<HTMLButtonElement>('[data-pr-remove]'); if (rm) { prRemoveAt(Number.parseInt(rm.dataset.prRemove ?? '-1', 10)); }
+  });
+
+  // scalar end inputs
+  const bindEnd = (id: string, set: (v: number) => void, min = -Infinity) => {
+    const el = $p(id) as HTMLInputElement;
+    el.addEventListener('change', () => { const v = Number.parseFloat(el.value); if (Number.isFinite(v)) { set(Math.max(min, v)); pr.preset = 'custom'; prMarkPreset(); renderPrStack(); afterStackChange(); } });
+  };
+  bindEnd('pr-n-sub', v => pr.subN = v, 0.001);
+  bindEnd('pr-k-sub', v => pr.subK = v, 0);
+  bindEnd('pr-n-clad', v => pr.cladN = v, 0.001);
+  bindEnd('pr-k-clad', v => pr.cladK = v, 0);
+
+  // wavelength (slider + number, linked; shared range so they never desync)
+  const lamNum = $p('pr-lam') as HTMLInputElement, lamSl = $p('pr-lam-slider') as HTMLInputElement;
+  const LAM_MIN = 200, LAM_MAX = 2000;
+  const setLam = (v: number) => { pr.lamNm = clampP(v, LAM_MIN, LAM_MAX); lamNum.value = String(pr.lamNm); lamSl.value = String(pr.lamNm); afterStackChange(); };
+  lamSl.addEventListener('input', () => setLam(Number.parseFloat(lamSl.value)));
+  lamNum.addEventListener('change', () => setLam(Number.parseFloat(lamNum.value)));
+
+  // emitter z (slider + number) — reuses cached LDOS/integrand, so dragging is cheap
+  const zNum = $p('pr-z') as HTMLInputElement, zSl = $p('pr-z-slider') as HTMLInputElement;
+  const setZ = (v: number) => { const { lo, hi } = prTransparentSpan(); pr.zNm = clampP(v, lo, hi); zNum.value = String(Math.round(pr.zNm)); zSl.value = String(Math.round(pr.zNm)); renderPrNow(); };
+  zSl.addEventListener('input', () => setZ(Number.parseFloat(zSl.value)));
+  zNum.addEventListener('change', () => setZ(Number.parseFloat(zNum.value)));
+
+  // clickable series legend — click an item to show/hide its curve (no recompute)
+  $p('pr-ldos-legend').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prch-toggle]'); if (!b) return;
+    const spec = prLegendSpecs().find(s => s.key === b.dataset.prchToggle); if (!spec) return;
+    spec.store[spec.key] = !spec.store[spec.key];
+    renderPrChannelLegend();
+    drawCurrentView();
+  });
+
+  // excitation tabs (above the parameter box)
+  $p('pr-exc-tabs').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prexc]'); if (!b) return;
+    const v = b.dataset.prexc as 'dip' | 'pw'; if (v === pr.exc) return;
+    pr.exc = v;
+    pr.view = v === 'dip' ? 'ldos' : 'pwspec';
+    $p('pr-exc-tabs').querySelectorAll('[data-prexc]').forEach(btn => {
+      const on = (btn as HTMLElement).dataset.prexc === v;
+      btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    renderPrViewTabs();
+    schedulePr();
+  });
+
+  // view tabs (rendered per excitation)
+  $p('pr-view-tabs').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prview]'); if (!b) return;
+    const v = b.dataset.prview as PrView; if (v === pr.view) return;
+    pr.view = v;
+    renderPrViewTabs();
+    updatePrViewChrome();
+    schedulePr();
+  });
+
+  // polarization (plane wave)
+  $p('pr-pol-tabs').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prpol]'); if (!b) return;
+    pr.pol = b.dataset.prpol as 's' | 'p' | 'avg';
+    $p('pr-pol-tabs').querySelectorAll('[data-prpol]').forEach(btn => {
+      const on = (btn as HTMLElement).dataset.prpol === pr.pol;
+      btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    drawCurrentView(); renderMetrics();
+  });
+
+  // angle of incidence (plane wave) — fast recompute, direct render
+  const angNum = $p('pr-angle') as HTMLInputElement, angSl = $p('pr-angle-slider') as HTMLInputElement;
+  const setAngle = (v: number) => {
+    pr.angleDeg = clampP(v, 0, 89);
+    angNum.value = String(Math.round(pr.angleDeg * 10) / 10); angSl.value = String(pr.angleDeg);
+    drawCurrentView(); renderMetrics(); drawPrGeo();
+  };
+  angSl.addEventListener('input', () => setAngle(Number.parseFloat(angSl.value)));
+  angNum.addEventListener('change', () => setAngle(Number.parseFloat(angNum.value)));
+
+  // plot-range controls (blank = auto)
+  const numOrNull = (el: HTMLInputElement): number | null => {
+    const v = Number.parseFloat(el.value);
+    return el.value.trim() === '' || !Number.isFinite(v) ? null : v;
+  };
+  const bindRange = (id: string, set: (v: number | null) => void) => {
+    const el = $p(id) as HTMLInputElement;
+    el.addEventListener('change', () => { set(numOrNull(el)); afterStackChange(); });
+  };
+  bindRange('pr-zmin', v => { pr.rng.zMin = v; });
+  bindRange('pr-zmax', v => { pr.rng.zMax = v; });
+  bindRange('pr-ymax', v => { pr.rng.yMax = v !== null && v > 0 ? v : null; });
+  bindRange('pr-lammin', v => { pr.rng.lamMin = clampP(v ?? 400, 200, 3000); });
+  bindRange('pr-lammax', v => { pr.rng.lamMax = clampP(v ?? 800, 200, 3000); });
+  $p('pr-kpar-ch').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prch]'); if (!b) return;
+    pr.kparCh = b.dataset.prch as 'mean' | 'epar' | 'eperp';
+    $p('pr-kpar-ch').querySelectorAll('[data-prch]').forEach(btn => {
+      const on = (btn as HTMLElement).dataset.prch === pr.kparCh;
+      btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    if (pr.view === 'kpar') drawKparMap();   // trace cached — only the displayed channel changes
+  });
+
+  // ---- export / share ----------------------------------------------------
+  function prCsv(): string {
+    const { nstack, dstack } = buildStack();
+    const k0v = k0Of();
+    if (pr.view === 'farfield') {
+      const NTH = 181;
+      const th = Array.from({ length: NTH }, (_, i) => Math.PI * i / (NTH - 1));
+      const phi0 = th.map(() => 0);
+      const zeroV = [cx(0), cx(0), cx(0)];
+      const cols: [string, Cx[], Cx[]][] = [
+        ['P_epar', [cx(1), cx(0), cx(0)], zeroV],
+        ['P_eperp', [cx(0), cx(0), cx(1)], zeroV],
+        ['P_mpar', zeroV, [cx(1), cx(0), cx(0)]],
+        ['P_mperp', zeroV, [cx(0), cx(0), cx(1)]],
+      ];
+      const data = cols.map(([, pu, mu]) => radiationPattern(k0v, pr.zNm, pu, mu, th, phi0, nstack, dstack));
+      const lines = ['theta_deg,' + cols.map(c => c[0]).join(',')];
+      th.forEach((t, i) => lines.push([t * 180 / Math.PI, ...data.map(d => d[i])].map(v => pfmt(v, 6)).join(',')));
+      return lines.join('\n') + '\n';
+    }
+    if (pr.view === 'pwspec' || pr.view === 'pwang') {
+      const isSpec = pr.view === 'pwspec';
+      const lines = [(isSpec ? 'lambda_nm' : 'theta_deg') + ',R_s,T_s,A_s,R_p,T_p,A_p'];
+      const N = 240;
+      for (let i = 0; i < N; i++) {
+        let k0i = k0v, kp = 0, x = 0;
+        if (isSpec) {
+          const lmin = Math.min(pr.rng.lamMin, pr.rng.lamMax), lmax = Math.max(pr.rng.lamMin, pr.rng.lamMax);
+          x = lmin + (lmax - lmin) * i / (N - 1); k0i = 2 * Math.PI / x;
+          kp = pr.subN * k0i * Math.sin(pr.angleDeg * Math.PI / 180);
+        } else {
+          x = 89.5 * i / (N - 1);
+          kp = pr.subN * k0v * Math.sin(x * Math.PI / 180);
+        }
+        const rta = intensityRT(k0i, kp, nstack, dstack);
+        lines.push([x, rta.s.R, rta.s.T, rta.s.A, rta.p.R, rta.p.T, rta.p.A].map(v => pfmt(v, 6)).join(','));
+      }
+      return lines.join('\n') + '\n';
+    }
+    if (pr.view === 'pwfields') {
+      const { zmin, zmax } = prZRange();
+      const N = 280;
+      const zGrid = Array.from({ length: N }, (_, i) => zmin + (zmax - zmin) * i / (N - 1));
+      const f = planeWaveFieldsAtZ(k0v, pwKparAt(k0v), nstack, dstack, zGrid);
+      const lines = ['z_nm,absE_s,absE_p,absDensity_s,absDensity_p'];
+      zGrid.forEach((z, i) => lines.push([z, f.Es[i], f.Ep[i], f.As[i], f.Ap[i]].map(v => pfmt(v, 6)).join(',')));
+      return lines.join('\n') + '\n';
+    }
+    if (pr.view === 'pwkpar') {
+      const qmax = Math.max(1.5, ...nstack.map(n => Math.abs(n.re))) + 0.4;
+      const N = 500;
+      const lines = ['kpar_over_k0,abs_rs,abs_rp'];
+      for (let i = 0; i < N; i++) {
+        const q = qmax * (i + 0.5) / N;
+        const a = fresnelAmplitudes(k0v, q * k0v, nstack, dstack);
+        lines.push([q, Math.hypot(a.rs.re, a.rs.im), Math.hypot(a.rp.re, a.rp.im)].map(v => pfmt(v, 6)).join(','));
+      }
+      return lines.join('\n') + '\n';
+    }
+    const { zGrid, r, iso } = getLdos();
+    const lines = ['z_nm,LDOS_E_par,LDOS_E_perp,LDOS_M_par,LDOS_M_perp,LDOS_iso'];
+    for (let i = 0; i < zGrid.length; i++)
+      lines.push([zGrid[i], r.E_par[i], r.E_perp[i], r.M_par[i], r.M_perp[i], iso[i]].map(v => pfmt(v, 6)).join(','));
+    return lines.join('\n') + '\n';
+  }
+  function prSerialize(): string {
+    const s = {
+      sN: pr.subN, sK: pr.subK, cN: pr.cladN, cK: pr.cladK, lam: pr.lamNm, z: Math.round(pr.zNm),
+      x: pr.exc, v: pr.view, kc: pr.kparCh, ch: pr.ch, pol: pr.pol, ang: pr.angleDeg,
+      rng: pr.rng, L: pr.layers.map(l => [l.thicknessNm, l.n, l.kappa]),
+    };
+    return 'pyr=' + encodeURIComponent(btoa(JSON.stringify(s)));
+  }
+  const PR_ALL_VIEWS: PrView[] = ['ldos', 'kpar', 'farfield', 'pwspec', 'pwang', 'pwfields', 'pwkpar'];
+  function prRestore(hash: string): boolean {
+    const m = /(?:^|&)pyr=([^&]+)/.exec(hash); if (!m) return false;
+    try {
+      const s = JSON.parse(atob(decodeURIComponent(m[1])));
+      pr.subN = +s.sN; pr.subK = +s.sK; pr.cladN = +s.cN; pr.cladK = +s.cK;
+      pr.lamNm = clampP(+s.lam, LAM_MIN, LAM_MAX); pr.zNm = +s.z;
+      pr.exc = s.x === 'pw' ? 'pw' : 'dip';
+      pr.view = PR_ALL_VIEWS.includes(s.v) ? s.v : (pr.exc === 'pw' ? 'pwspec' : 'ldos');
+      if ((pr.exc === 'pw') !== pr.view.startsWith('pw')) pr.view = pr.exc === 'pw' ? 'pwspec' : 'ldos';
+      pr.kparCh = ['mean', 'epar', 'eperp'].includes(s.kc) ? s.kc : 'mean';
+      if (s.ch) for (const k of PR_CH_ORDER) pr.ch[k] = !!s.ch[k];
+      pr.pol = ['s', 'p', 'avg'].includes(s.pol) ? s.pol : 'avg';
+      pr.angleDeg = clampP(+s.ang || 0, 0, 89);
+      if (s.rng) {
+        pr.rng.zMin = Number.isFinite(+s.rng.zMin) && s.rng.zMin !== null ? +s.rng.zMin : null;
+        pr.rng.zMax = Number.isFinite(+s.rng.zMax) && s.rng.zMax !== null ? +s.rng.zMax : null;
+        pr.rng.yMax = Number.isFinite(+s.rng.yMax) && s.rng.yMax !== null ? +s.rng.yMax : null;
+        pr.rng.lamMin = clampP(+s.rng.lamMin || 400, 200, 3000);
+        pr.rng.lamMax = clampP(+s.rng.lamMax || 800, 200, 3000);
+      }
+      pr.layers = Array.isArray(s.L) ? s.L.map((a: number[]) => ({ thicknessNm: +a[0], n: +a[1], kappa: +a[2], color: '#000' })) : [];
+      pr.preset = 'custom';
+      ($p('pr-n-sub') as HTMLInputElement).value = String(pr.subN);
+      ($p('pr-k-sub') as HTMLInputElement).value = String(pr.subK);
+      ($p('pr-n-clad') as HTMLInputElement).value = String(pr.cladN);
+      ($p('pr-k-clad') as HTMLInputElement).value = String(pr.cladK);
+      lamNum.value = String(pr.lamNm); lamSl.value = String(pr.lamNm);
+      angNum.value = String(pr.angleDeg); angSl.value = String(pr.angleDeg);
+      ($p('pr-zmin') as HTMLInputElement).value = pr.rng.zMin === null ? '' : String(pr.rng.zMin);
+      ($p('pr-zmax') as HTMLInputElement).value = pr.rng.zMax === null ? '' : String(pr.rng.zMax);
+      ($p('pr-ymax') as HTMLInputElement).value = pr.rng.yMax === null ? '' : String(pr.rng.yMax);
+      ($p('pr-lammin') as HTMLInputElement).value = String(pr.rng.lamMin);
+      ($p('pr-lammax') as HTMLInputElement).value = String(pr.rng.lamMax);
+      $p('pr-exc-tabs').querySelectorAll('[data-prexc]').forEach(btn => {
+        const on = (btn as HTMLElement).dataset.prexc === pr.exc;
+        btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      $p('pr-pol-tabs').querySelectorAll('[data-prpol]').forEach(btn => {
+        const on = (btn as HTMLElement).dataset.prpol === pr.pol;
+        btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      $p('pr-kpar-ch').querySelectorAll('[data-prch]').forEach(btn => {
+        const on = (btn as HTMLElement).dataset.prch === pr.kparCh;
+        btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      return true;
+    } catch { return false; }
+  }
+  $p('pr-dl-png').addEventListener('click', () => {
+    const url = prCanvas.toDataURL('image/png');
+    const a = document.createElement('a'); a.href = url; a.download = `pyramids-${pr.view}.png`; a.click();
+  });
+  $p('pr-dl-csv').addEventListener('click', () => {
+    const blob = new Blob([prCsv()], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `pyramids-${pr.view}.csv`; a.click(); URL.revokeObjectURL(url);
+  });
+  const prShareBtn = $p('pr-dl-share');
+  prShareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + prSerialize();
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = prShareBtn.innerHTML;
+      prShareBtn.textContent = 'Copied!';
+      setTimeout(() => { prShareBtn.innerHTML = orig; }, 1500);
+    });
+  });
+
+  // redraw hooks
+  new ResizeObserver(() => { if (!$p('module-panel-pyramids').hidden) renderPrNow(); }).observe(prWrap);
+  onThemeChange(() => { if (!$p('module-panel-pyramids').hidden) renderPrNow(); });
+  window.addEventListener('heterostructures:show-pyramids', () => { syncPrZSlider(); schedulePr(); });
+
+  // ---- init --------------------------------------------------------------
+  const prHasShare = prRestore(location.hash.slice(1));
+  (window as unknown as { __prHasShare?: boolean }).__prHasShare = prHasShare;
+  renderPrEditor(); renderPrStack(); prMarkPreset(); syncPrZSlider();
+  renderPrViewTabs(); renderPrChannelLegend(); updatePrViewChrome(); drawPrGeo();
+  // (panel starts hidden; first compute happens on reveal)
+</script>
+
+<script>
   // ===== Module switcher: toggle between the two heterostructure modules =====
   (() => {
     const panels: Record<string, string> = {
       'module-surface-plasmons': 'module-panel-surface-plasmons',
       'module-layered-structure': 'module-panel-layered-structure',
+      'module-pyramids': 'module-panel-pyramids',
     };
     const revealEvents: Record<string, string> = {
       'module-surface-plasmons': 'heterostructures:show-surface-plasmons',
       'module-layered-structure': 'heterostructures:show-layered-structure',
+      'module-pyramids': 'heterostructures:show-pyramids',
     };
     const buttons = Object.keys(panels).map(id => document.getElementById(id)).filter(Boolean) as HTMLButtonElement[];
 
@@ -5484,5 +7070,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     buttons.forEach(btn => {
       btn.addEventListener('click', () => { if (!btn.disabled) activate(btn.id); });
     });
+
+    // A shared link opens directly on the relevant module.
+    const h = location.hash.slice(1);
+    if (/(?:^|&)pyr=/.test(h)) activate('module-pyramids');
+    else if (/(?:^|&)tmm=/.test(h)) activate('module-layered-structure');
+    else if (/(?:^|&)sp=/.test(h)) activate('module-surface-plasmons');
   })();
 </script>
