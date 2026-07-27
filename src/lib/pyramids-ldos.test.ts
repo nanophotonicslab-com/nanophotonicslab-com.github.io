@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ldos, ldosIntegrandTrace, radiationPattern, intensityRT, perLayerAbsorption,
-  planeWaveFieldsAtZ, cx, type Cx,
+  ldos, ldosIntegrandTrace, radiationPattern, radiationFields, totalRadiated, totalRadiatedMulti,
+  intensityRT, perLayerAbsorption, planeWaveFieldsAtZ, cx, type Cx,
 } from './pyramids-ldos';
 import fixture from './pyramids-ldos.fixture.json';
 
@@ -68,6 +68,48 @@ describe('PyRAMIDS far-field radiation pattern port', () => {
       closeArr(got, c.P, 1e-5, 3e-3);
     });
   }
+
+  // complex far-field amplitudes (phases matter for Stokes S2/S3)
+  for (const name of ['glass_pz', 'slab_mix'] as const) {
+    it(`reproduces complex (Es, Ep) far fields for "${name}"`, () => {
+      const c = fixture.radiation[name] as RadCase & { EsRe: number[]; EsIm: number[]; EpRe: number[]; EpIm: number[] };
+      const got = radiationFields(k0, c.z, toCx(c.pu), toCx(c.mu), c.theta, c.phi, toCx(c.nstack), c.dstack);
+      closeArr(got.Es.map(v => v.re), c.EsRe, 1e-4, 3e-3);
+      closeArr(got.Es.map(v => v.im), c.EsIm, 1e-4, 3e-3);
+      closeArr(got.Ep.map(v => v.re), c.EpRe, 1e-4, 3e-3);
+      closeArr(got.Ep.map(v => v.im), c.EpIm, 1e-4, 3e-3);
+    });
+  }
+});
+
+type TotCase = { nstack: number[][]; dstack: number[]; z: number; pu: number[][]; mu: number[][]; total: number; up: number; down: number };
+
+describe('PyRAMIDS hemisphere-integrated Poynting flux (totalRadiated)', () => {
+  for (const [name, c] of Object.entries(fixture.total_radiated as Record<string, TotCase>)) {
+    it(`reproduces (total, up, down) radiated power for "${name}"`, () => {
+      const got = totalRadiated(k0, c.z, toCx(c.pu), toCx(c.mu), toCx(c.nstack), c.dstack);
+      expect(Math.abs(got.total - c.total), `total: ${got.total} vs ${c.total}`).toBeLessThan(1e-3 + 5e-3 * Math.abs(c.total));
+      expect(Math.abs(got.up - c.up), `up: ${got.up} vs ${c.up}`).toBeLessThan(1e-3 + 5e-3 * Math.abs(c.up));
+      expect(Math.abs(got.down - c.down), `down: ${got.down} vs ${c.down}`).toBeLessThan(1e-3 + 5e-3 * Math.abs(c.down));
+    });
+  }
+
+  it('totalRadiatedMulti matches per-config totalRadiated (shared-node integration)', () => {
+    const nstack = toCx([[1.5, 0], [2.0, 0], [1.0, 0]]);
+    const dstack = [0.33];
+    const configs = [
+      { pu: [cx(1), cx(0), cx(0)], mu: [cx(0), cx(0), cx(0)] },
+      { pu: [cx(0), cx(0), cx(1)], mu: [cx(0), cx(0), cx(0)] },
+      { pu: [cx(0), cx(0), cx(0)], mu: [cx(1), cx(0), cx(0)] },
+      { pu: [cx(1), cx(0, 1), cx(0.5)], mu: [cx(0), cx(0.3), cx(0)] },
+    ];
+    const multi = totalRadiatedMulti(k0, 0.15, configs, nstack, dstack);
+    configs.forEach((cf, i) => {
+      const single = totalRadiated(k0, 0.15, cf.pu, cf.mu, nstack, dstack);
+      expect(Math.abs(multi.up[i] - single.up), `config ${i} up`).toBeLessThan(1e-4 + 1e-4 * Math.abs(single.up));
+      expect(Math.abs(multi.down[i] - single.down), `config ${i} down`).toBeLessThan(1e-4 + 1e-4 * Math.abs(single.down));
+    });
+  });
 });
 
 type RtaCase = { nstack: number[][]; dstack: number[]; cases: { q: number; s: { R: number; T: number; A: number }; p: { R: number; T: number; A: number } }[] };

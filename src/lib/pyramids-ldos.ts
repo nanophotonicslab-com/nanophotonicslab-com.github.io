@@ -343,109 +343,198 @@ export function ldosAtAnyPandM(pu: Cx[], mu: Cx[], k0: number, zlist: number[], 
 // power of the same dipole in free space (prefactor 3/(8π)·nslab).
 // ══════════════════════════════════════════════════════════════════════════
 
-// far field into the UPPER half-space n3 (θ measured from +z, cosθ > 0)
-function peUp(
-  pu: Cx[], mu: Cx[], th: number, ph: number, k0: number,
+// The four S-matrix recursions and the propagation phases depend only on
+// (θ, hemisphere, geometry) — not on φ or the dipole moment — so they are
+// hoisted into a per-θ precompute (FfPre) shared by every azimuth and every
+// dipole configuration, leaving a handful of complex multiplies per (φ, dipole).
+type FfPre = {
+  up: boolean;
+  As: Cx;      // s-field from in-plane p:  √(n/ns)·(kz/kzs)·gtsp
+  ApPerp: Cx;  // p-field from p_z (× −sinθ)
+  ApPar: Cx;   // p-field from in-plane p (× cosθ)
+  Am: Cx;      // p-field from in-plane m (leading −)
+  AmPerp: Cx;  // s-field from m_z (× −sinθ, leading −)
+  AmPar: Cx;   // s-field from in-plane m (× cosθ, leading −)
+  st: number; ct: number;
+  pref: number; // 3/(8π)·Re(nslab)
+};
+
+// far-field coefficients at polar angle θ into the upper (n3) or lower (n2)
+// half-space; θ measured from +z (up: cosθ > 0, down: cosθ ≤ 0)
+function ffPre(
+  th: number, up: boolean, k0: number,
   h: number, dslab: number, nslab: Cx, n2: Cx, n3: Cx, nd2: ND[], nd3: ND[],
-): number {
-  const kpar = cx(k0 * n3.re * Math.sin(th));
-  const kzs = kz(nslab, k0, kpar), kz3 = kz(n3, k0, kpar);
+): FfPre {
+  const nOut = up ? n3 : n2;
+  const kpar = cx(k0 * nOut.re * Math.sin(th));
+  const kzs = kz(nslab, k0, kpar), kzOut = kz(nOut, k0, kpar);
   const ed = cexp(mul(I, scale(kzs, dslab)));
   const eh = cexp(mul(I, scale(kzs, h)));
-  const P1 = div(ed, eh), P2 = mul(ed, eh), P3 = ed;
+  // direct and once-reflected source phases toward the exit side
+  const Pa = up ? div(ed, eh) : eh;
+  const Pb = up ? mul(ed, eh) : div(mul(ed, ed), eh);
   const one = cx(1);
-  const { r: rp3, t: tp3 } = rtPFull(k0, kpar, nslab, n3, nd3);
-  const { r: rs3, t: ts3 } = rtSFull(k0, kpar, nslab, n3, nd3);
-  const rp2 = rP(k0, kpar, nslab, n2, nd2);
-  const rs2 = rS(k0, kpar, nslab, n2, nd2);
-  const P3sq = mul(P3, P3);
-  const prep = div(tp3, sub(one, mul(mul(rp3, rp2), P3sq)));
-  const pres = div(ts3, sub(one, mul(mul(rs3, rs2), P3sq)));
-  const gtpp = mul(prep, sub(P1, mul(P2, rp2)));
-  const gtpm = mul(prep, add(P1, mul(P2, rp2)));
-  const gtsp = mul(pres, add(P1, mul(P2, rs2)));
-  const gtsm = mul(pres, sub(P1, mul(P2, rs2)));
-  const sq = csqrt(div(n3, nslab));
-  const ratio = div(kz3, kzs);
-  const nr = div(n3, nslab);
-  const st = Math.sin(th), ct = Math.cos(th), sp = Math.sin(ph), cp = Math.cos(ph);
-  // E from electric dipole
-  const EsP = mul(mul(mul(sq, ratio), gtsp), add(scale(pu[0], -sp), scale(pu[1], cp)));
-  const EpP = mul(mul(sq, nr), add(
-    scale(mul(mul(ratio, gtpp), pu[2]), -st),
-    scale(mul(gtpm, add(scale(pu[0], cp), scale(pu[1], sp))), ct)));
-  // E from magnetic dipole (s↔p swap + sign, see PyRAMIDS)
-  const EpM = neg(mul(mul(mul(sq, ratio), gtpp), add(scale(mu[0], sp), scale(mu[1], cp))));
-  const EsM = neg(mul(mul(sq, nr), add(
-    scale(mul(mul(ratio, gtsp), mu[2]), -st),
-    scale(mul(gtsm, sub(scale(mu[0], cp), scale(mu[1], sp))), ct))));
-  const Es = add(EsP, EsM), Ep = add(EpP, EpM);
-  return (3 / (8 * Math.PI)) * nslab.re * (abs2(Es) + abs2(Ep));
+  // full r,t through the exit side; reflection off the far side
+  const { r: rpT, t: tp } = rtPFull(k0, kpar, nslab, nOut, up ? nd3 : nd2);
+  const { r: rsT, t: ts } = rtSFull(k0, kpar, nslab, nOut, up ? nd3 : nd2);
+  const rpB = rP(k0, kpar, nslab, up ? n2 : n3, up ? nd2 : nd3);
+  const rsB = rS(k0, kpar, nslab, up ? n2 : n3, up ? nd2 : nd3);
+  const edsq = mul(ed, ed);
+  const prep = div(tp, sub(one, mul(mul(rpT, rpB), edsq)));
+  const pres = div(ts, sub(one, mul(mul(rsT, rsB), edsq)));
+  const gtpp = mul(prep, sub(Pa, mul(Pb, rpB)));
+  const gtpm = mul(prep, add(Pa, mul(Pb, rpB)));
+  const gtsp = mul(pres, add(Pa, mul(Pb, rsB)));
+  const gtsm = mul(pres, sub(Pa, mul(Pb, rsB)));
+  const sq = csqrt(div(nOut, nslab));
+  const ratio = div(kzOut, kzs);
+  const nr = div(nOut, nslab);
+  const sqr = mul(sq, ratio), sqn = mul(sq, nr);
+  return {
+    up,
+    As: mul(sqr, gtsp),
+    ApPerp: mul(mul(sqn, ratio), gtpp),
+    ApPar: mul(sqn, gtpm),
+    Am: mul(sqr, gtpp),
+    AmPerp: mul(mul(sqn, ratio), gtsp),
+    AmPar: mul(sqn, gtsm),
+    st: Math.sin(th), ct: Math.cos(th),
+    pref: (3 / (8 * Math.PI)) * nslab.re,
+  };
 }
 
-// far field into the LOWER half-space n2 (cosθ ≤ 0; sinθ ≥ 0)
-function peDown(
-  pu: Cx[], mu: Cx[], th: number, ph: number, k0: number,
-  h: number, dslab: number, nslab: Cx, n2: Cx, n3: Cx, nd2: ND[], nd3: ND[],
-): number {
-  const kpar = cx(k0 * n2.re * Math.sin(th));
-  const kzs = kz(nslab, k0, kpar), kz2 = kz(n2, k0, kpar);
-  const ed = cexp(mul(I, scale(kzs, dslab)));
-  const eh = cexp(mul(I, scale(kzs, h)));
-  const P3 = ed, P4 = div(mul(ed, ed), eh), P5 = eh;
-  const one = cx(1);
-  const { r: rp2, t: tp2 } = rtPFull(k0, kpar, nslab, n2, nd2);
-  const { r: rs2, t: ts2 } = rtSFull(k0, kpar, nslab, n2, nd2);
-  const rp3 = rP(k0, kpar, nslab, n3, nd3);
-  const rs3 = rS(k0, kpar, nslab, n3, nd3);
-  const P3sq = mul(P3, P3);
-  const prep = div(tp2, sub(one, mul(mul(rp3, rp2), P3sq)));
-  const pres = div(ts2, sub(one, mul(mul(rs3, rs2), P3sq)));
-  const gtpp = mul(prep, sub(P5, mul(P4, rp3)));
-  const gtpm = mul(prep, add(P5, mul(P4, rp3)));
-  const gtsp = mul(pres, add(P5, mul(P4, rs3)));
-  const gtsm = mul(pres, sub(P5, mul(P4, rs3)));
-  const sq = csqrt(div(n2, nslab));
-  const ratio = div(kz2, kzs);
-  const nr = div(n2, nslab);
-  const st = Math.sin(th), ct = Math.cos(th), sp = Math.sin(ph), cp = Math.cos(ph);
-  const EsP = mul(mul(mul(sq, ratio), gtsp), add(scale(pu[0], sp), scale(pu[1], cp)));
-  const EpP = mul(mul(sq, nr), add(
-    scale(mul(mul(ratio, gtpp), pu[2]), -st),
-    scale(mul(gtpm, sub(scale(pu[0], cp), scale(pu[1], sp))), ct)));
-  const EpM = neg(mul(mul(mul(sq, ratio), gtpp), add(scale(mu[0], -sp), scale(mu[1], cp))));
-  const EsM = neg(mul(mul(sq, nr), add(
-    scale(mul(mul(ratio, gtsp), mu[2]), -st),
-    scale(mul(gtsm, add(scale(mu[0], cp), scale(mu[1], sp))), ct))));
+// assemble (P, Es, Ep) for one dipole (pu, mu) and azimuth φ from shared FfPre.
+// The two hemispheres differ only by the sign s on the φ-combinations
+// (electric dipole per Novotny & Hecht; magnetic via s↔p swap + sign).
+function ffEval(pre: FfPre, pu: Cx[], mu: Cx[], ph: number): { P: number; Es: Cx; Ep: Cx } {
+  const sp = Math.sin(ph), cp = Math.cos(ph);
+  const s = pre.up ? -1 : 1;
+  const { st, ct } = pre;
+  const EsP = mul(pre.As, add(scale(pu[0], s * sp), scale(pu[1], cp)));
+  const EpP = add(
+    scale(mul(pre.ApPerp, pu[2]), -st),
+    scale(mul(pre.ApPar, add(scale(pu[0], cp), scale(pu[1], -s * sp))), ct));
+  const EpM = neg(mul(pre.Am, add(scale(mu[0], -s * sp), scale(mu[1], cp))));
+  const EsM = neg(add(
+    scale(mul(pre.AmPerp, mu[2]), -st),
+    scale(mul(pre.AmPar, add(scale(mu[0], cp), scale(mu[1], s * sp))), ct)));
   const Es = add(EsP, EsM), Ep = add(EpP, EpM);
-  return (3 / (8 * Math.PI)) * nslab.re * (abs2(Es) + abs2(Ep));
+  return { P: pre.pref * (abs2(Es) + abs2(Ep)), Es, Ep };
 }
+
+export type RadiationFields = { P: number[]; Es: Cx[]; Ep: Cx[] };
 
 /**
- * Angle-resolved far-field power of a dipole (pu, mu) at user-centric height z.
- * θ ∈ [0, π] measured from +z: cosθ > 0 radiates into the superstrate (top),
- * cosθ ≤ 0 into the substrate. Absorbing half-spaces (and an absorbing source
- * layer) contribute zero. Power per solid angle, normalized to the free-space
- * total power of the same dipole.
+ * Angle-resolved far field of a dipole (pu, mu) at user-centric height z:
+ * power per solid angle (normalized to the free-space total power of the same
+ * dipole) plus the complex s- and p-polarized field amplitudes (for Stokes
+ * polarimetry). θ ∈ [0, π] from +z: cosθ > 0 → superstrate, cosθ ≤ 0 →
+ * substrate. Absorbing half-spaces (and an absorbing source layer) give zero.
  */
+export function radiationFields(
+  k0: number, z: number, pu: Cx[], mu: Cx[],
+  thetaList: number[], phiList: number[], nstack: Cx[], dstack: number[],
+): RadiationFields {
+  const m = pinpointDomain(z, dstack);
+  const c = provideCoordinates(m, z, nstack, dstack);
+  const n = thetaList.length;
+  const out: RadiationFields = {
+    P: new Array(n).fill(0),
+    Es: Array.from({ length: n }, () => cx(0)),
+    Ep: Array.from({ length: n }, () => cx(0)),
+  };
+  if (!realPositive(c.nslab)) return out;
+  const upOk = realPositive(c.n3), downOk = realPositive(c.n2);
+  // grids repeat θ values across azimuths — memoize the per-θ coefficients
+  const memoUp = new Map<number, FfPre>(), memoDown = new Map<number, FfPre>();
+  const getPre = (th: number, up: boolean): FfPre => {
+    const memo = up ? memoUp : memoDown;
+    let p = memo.get(th);
+    if (!p) {
+      p = ffPre(th, up, k0, c.zz, c.dslab, c.nslab, c.n2, c.n3, c.nd2, c.nd3);
+      memo.set(th, p);
+    }
+    return p;
+  };
+  for (let i = 0; i < n; i++) {
+    const th = thetaList[i], ph = phiList[i];
+    let r: { P: number; Es: Cx; Ep: Cx } | null = null;
+    if (Math.cos(th) > 0) {
+      if (upOk) r = ffEval(getPre(th, true), pu, mu, ph);
+    } else if (downOk) {
+      r = ffEval(getPre(th, false), pu, mu, ph);
+    }
+    if (r) { out.P[i] = r.P; out.Es[i] = r.Es; out.Ep[i] = r.Ep; }
+  }
+  return out;
+}
+
+/** Power-only convenience wrapper over radiationFields. */
 export function radiationPattern(
   k0: number, z: number, pu: Cx[], mu: Cx[],
   thetaList: number[], phiList: number[], nstack: Cx[], dstack: number[],
 ): number[] {
+  return radiationFields(k0, z, pu, mu, thetaList, phiList, nstack, dstack).P;
+}
+
+/**
+ * Total far-field Poynting flux radiated into each half-space: the radiation
+ * pattern integrated over the upper (θ < π/2, superstrate) and lower
+ * hemispheres, normalized per unit dipole — i.e. the radiative decay rate
+ * relative to the same dipole in free space (PyRAMIDS TotalRadiatedatanyPandM).
+ * The φ-integral of a dipole pattern is a quadratic form on the unit circle,
+ * integrated EXACTLY by a 3-point DFT; θ uses composite Simpson.
+ */
+export function totalRadiated(
+  k0: number, z: number, pu: Cx[], mu: Cx[], nstack: Cx[], dstack: number[],
+): { total: number; up: number; down: number } {
+  const { up, down } = totalRadiatedMulti(k0, z, [{ pu, mu }], nstack, dstack);
+  return { total: up[0] + down[0], up: up[0], down: down[0] };
+}
+
+export type DipoleConfig = { pu: Cx[]; mu: Cx[] };
+
+/**
+ * totalRadiated for MANY dipole configurations at once. The S-matrix
+ * recursions depend only on θ, so each quadrature node computes them once and
+ * evaluates every configuration (and all three exact φ nodes) from the shared
+ * coefficients — the per-config cost is a few complex multiplies. The vector
+ * quadrature refines wherever ANY configuration still has error, so each
+ * result is at least as converged as a per-config adaptive pass.
+ */
+export function totalRadiatedMulti(
+  k0: number, z: number, configs: DipoleConfig[], nstack: Cx[], dstack: number[],
+): { up: number[]; down: number[] } {
   const m = pinpointDomain(z, dstack);
   const c = provideCoordinates(m, z, nstack, dstack);
-  const out = new Array(thetaList.length).fill(0);
-  if (!realPositive(c.nslab)) return out;
-  const upOk = realPositive(c.n3), downOk = realPositive(c.n2);
-  for (let i = 0; i < thetaList.length; i++) {
-    const th = thetaList[i], ph = phiList[i];
-    if (Math.cos(th) > 0) {
-      if (upOk) out[i] = peUp(pu, mu, th, ph, k0, c.zz, c.dslab, c.nslab, c.n2, c.n3, c.nd2, c.nd3);
-    } else if (downOk) {
-      out[i] = peDown(pu, mu, th, ph, k0, c.zz, c.dslab, c.nslab, c.n2, c.n3, c.nd2, c.nd3);
+  const N = configs.length;
+  const zeros = () => new Array(N).fill(0) as number[];
+  if (N === 0 || !realPositive(c.nslab)) return { up: zeros(), down: zeros() };
+  const norms = configs.map(cf =>
+    cf.pu.reduce((a, v) => a + abs2(v), 0) + cf.mu.reduce((a, v) => a + abs2(v), 0) || 1);
+  const PHIS = [0, 2 * Math.PI / 3, 4 * Math.PI / 3];
+  const ringVec = (th: number, up: boolean): number[] => {
+    const pre = ffPre(th, up, k0, c.zz, c.dslab, c.nslab, c.n2, c.n3, c.nd2, c.nd3);
+    const s = zeros();
+    for (const ph of PHIS) {
+      for (let i = 0; i < N; i++) s[i] += ffEval(pre, configs[i].pu, configs[i].mu, ph).P;
     }
-  }
-  return out;
+    const w = Math.abs(Math.sin(th)) * (2 * Math.PI / 3);
+    for (let i = 0; i < N; i++) s[i] *= w;
+    return s;
+  };
+  // adaptive integration — the pattern has a sharp kink at each critical angle
+  // (forbidden-light peak), which a fixed-step rule under-resolves
+  const up = realPositive(c.n3)
+    ? adaptiveSimpsonVec(x => ringVec(x, true), 0, Math.PI / 2, 1e-6, N)
+    : zeros();
+  const down = realPositive(c.n2)
+    ? adaptiveSimpsonVec(x => ringVec(x, false), Math.PI / 2, Math.PI, 1e-6, N)
+    : zeros();
+  return {
+    up: up.map((v, i) => v / norms[i]),
+    down: down.map((v, i) => v / norms[i]),
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════

@@ -54,6 +54,19 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
         </div>
       </div>
 
+      <!-- Fixed excitation slot: reserves the same row for every module so the
+           parameter/result boxes never shift when switching. Only PyRAMIDS
+           shows it (visibility toggled by the module switcher). -->
+      <div class="excitation-bar excitation-bar--hidden" id="pr-excitation">
+        <div class="param excitation-param excitation-above">
+          <div class="param-header"><label>Excitation</label></div>
+          <div class="plot-tabs" id="pr-exc-tabs" role="radiogroup" aria-label="Excitation">
+            <button class="plot-tab" type="button" data-prexc="pw" role="radio" aria-checked="false">Plane wave</button>
+            <button class="plot-tab active" type="button" data-prexc="dip" role="radio" aria-checked="true">Dipole</button>
+          </div>
+        </div>
+      </div>
+
       <div class="widget-layout" id="module-panel-surface-plasmons">
         <ParamsDrawer>
         <aside class="controls card">
@@ -434,31 +447,16 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       </div>
 
       <!-- ===== PyRAMIDS module — dipole emission / LDOS in stratified media ===== -->
-      <div id="module-panel-pyramids" hidden>
-      <div class="excitation-bar">
-        <div class="param excitation-param excitation-above">
-          <div class="param-header"><label>Excitation</label></div>
-          <div class="plot-tabs" id="pr-exc-tabs" role="radiogroup" aria-label="Excitation">
-            <button class="plot-tab" type="button" data-prexc="pw" role="radio" aria-checked="false">Plane wave</button>
-            <button class="plot-tab active" type="button" data-prexc="dip" role="radio" aria-checked="true">Dipole</button>
-          </div>
-        </div>
-      </div>
-      <div class="widget-layout">
+      <div class="widget-layout" id="module-panel-pyramids" hidden>
         <ParamsDrawer>
         <aside class="controls card">
           <div class="panel-title-row">
-            <h3>Stack</h3>
-            <div class="preset-actions" aria-label="Quick presets">
-              <button type="button" class="preset-chip" id="pr-preset-drexhage" title="Emitter above a silver mirror (Drexhage)">Ag mirror</button>
-              <button type="button" class="preset-chip" id="pr-preset-glass" title="Emitter above a glass half-space">Glass</button>
-              <button type="button" class="preset-chip" id="pr-preset-slab" title="High-index dielectric slab waveguide on glass">Slab WG</button>
-            </div>
+            <h3>Parameters</h3>
           </div>
 
           <div class="tmm-ends pr-ends">
-            <label class="layer-field"><span>Substrate n<sub>s</sub> (below)</span><input type="number" class="param-number" id="pr-n-sub" step="0.01" value="0.052"></label>
-            <label class="layer-field"><span>Substrate &kappa;<sub>s</sub></span><input type="number" class="param-number" id="pr-k-sub" step="0.01" min="0" value="4.41"></label>
+            <label class="layer-field"><span>Substrate n<sub>s</sub> (below)</span><input type="number" class="param-number" id="pr-n-sub" step="0.01" value="1.41421"></label>
+            <label class="layer-field"><span>Substrate &kappa;<sub>s</sub></span><input type="number" class="param-number" id="pr-k-sub" step="0.01" min="0" value="0"></label>
             <label class="layer-field"><span>Superstrate n<sub>c</sub> (above)</span><input type="number" class="param-number" id="pr-n-clad" step="0.01" value="1"></label>
             <label class="layer-field"><span>Superstrate &kappa;<sub>c</sub></span><input type="number" class="param-number" id="pr-k-clad" step="0.01" min="0" value="0"></label>
           </div>
@@ -492,7 +490,10 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
           <div class="param" id="pr-dipole-controls">
             <span class="axis-section-label" id="pr-z-label">Emitter position z (nm)</span>
             <div class="tmm-slider-row">
-              <input type="range" class="slope-slider" id="pr-z-slider" aria-labelledby="pr-z-label" min="0" max="1000" step="1" value="150">
+              <div class="pr-z-track">
+                <input type="range" class="slope-slider" id="pr-z-slider" aria-labelledby="pr-z-label" min="0" max="1000" step="1" value="150">
+                <span class="pr-z-mark" id="pr-z-zero" title="First interface (z = 0)" aria-hidden="true"></span>
+              </div>
               <input type="number" class="param-number param-number--sm" id="pr-z" step="1" value="150">
             </div>
           </div>
@@ -561,8 +562,94 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 <button type="button" class="seg-btn" data-prch="eperp" role="radio" aria-checked="false">E&perp;</button>
               </div>
             </div>
+            <div class="chart-options" id="pr-ff-options" hidden>
+              <span class="axis-section-label">Display</span>
+              <div class="segmented segmented--compact" id="pr-ff-mode" role="radiogroup" aria-label="Far-field display">
+                <button type="button" class="seg-btn active" data-prffm="pattern" role="radio" aria-checked="true">Pattern</button>
+                <button type="button" class="seg-btn" data-prffm="rosette" role="radio" aria-checked="false">Rosette</button>
+                <button type="button" class="seg-btn" data-prffm="spectrum" role="radio" aria-checked="false">Spectrum</button>
+                <button type="button" class="seg-btn" data-prffm="fluxz" role="radio" aria-checked="false">Flux vs z</button>
+              </div>
+              <span class="pr-info-wrap">
+                <button type="button" class="pr-info-btn" id="pr-rosette-info" aria-label="How to read the rosette" title="How to read the rosette" aria-expanded="false" hidden>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </button>
+                <div class="pr-info-pop" id="pr-rosette-pop" role="dialog" aria-label="Rosette coordinate guide" hidden>
+                  <div class="pr-info-pop__head">
+                    <span>Reading the rosette</span>
+                    <button type="button" class="pr-info-pop__close" id="pr-rosette-pop-close" aria-label="Close">&times;</button>
+                  </div>
+                  <svg class="pr-info-pop__svg" viewBox="0 0 260 236" role="img" aria-label="Empty rosette disk showing polar angle θ (radial) and azimuth φ (angular) labelling">
+                    <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.55">
+                      <circle cx="130" cy="118" r="90"/>
+                      <circle cx="130" cy="118" r="60"/>
+                      <circle cx="130" cy="118" r="30"/>
+                      <line x1="40" y1="118" x2="220" y2="118"/>
+                      <line x1="130" y1="28" x2="130" y2="208"/>
+                    </g>
+                    <path d="M 196 78 A 82 82 0 0 0 182 62" fill="none" stroke="var(--primary)" stroke-width="1.6" marker-end="url(#pr-rose-arr)"/>
+                    <defs><marker id="pr-rose-arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--primary)"/></marker></defs>
+                    <circle cx="130" cy="118" r="2.6" fill="currentColor"/>
+                    <g font-size="10.5" font-style="italic" fill="currentColor">
+                      <text x="130" y="112" text-anchor="middle">&theta;=0</text>
+                      <text x="130" y="132" text-anchor="middle" font-style="normal" font-size="8.5" opacity="0.7">pole (&plusmn;z)</text>
+                      <text x="171" y="114" font-size="8.5" font-style="normal" opacity="0.75">30&deg;</text>
+                      <text x="201" y="114" font-size="8.5" font-style="normal" opacity="0.75">60&deg;</text>
+                    </g>
+                    <text x="130" y="228" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.85">&theta; = 90&deg; (grazing, stack plane) at rim &middot; radial = polar angle</text>
+                    <g font-size="10" fill="currentColor">
+                      <text x="226" y="121" font-weight="600">&phi;=0</text>
+                      <text x="226" y="133" font-size="7.5" opacity="0.7">x &rarr;</text>
+                      <text x="130" y="22" text-anchor="middle">&phi;=90&deg;</text>
+                      <text x="34" y="121" text-anchor="end">180&deg;</text>
+                      <text x="130" y="220" text-anchor="middle">270&deg;</text>
+                    </g>
+                  </svg>
+                  <p class="pr-info-pop__note">
+                    A full disk is <b>one hemisphere</b> (2&pi;&nbsp;sr) seen from along its
+                    pole — a bird's-eye view of a dome: the 360&deg; of the circle is the
+                    azimuth &phi; sweep, while &theta; only runs 0&ndash;90&deg; radially.
+                    Each Stokes panel holds <b>two disks</b>: <b>&uarr; up</b> looks into the
+                    superstrate (&theta; from +z) and <b>&darr; down</b> into the substrate
+                    (&theta; from &minus;z) — together they cover the full 4&pi;.
+                    <b>Radial</b> = polar angle &theta; from the pole (centre) to 90&deg;
+                    grazing at the rim; <b>angular</b> = azimuth &phi;, &phi;=0 (East) along
+                    x — the in-plane dipole axis — increasing counter-clockwise. Ellipses on
+                    S&#8320; show the local polarization ellipse: <b>cyan</b> right-handed
+                    (S&#8323;&gt;0), <b>magenta</b> left-handed. S&#8321;&#8323; are
+                    intensity-weighted (S&#7522;/max S&#8320;), so colour appears only where
+                    the dipole emits.
+                  </p>
+                </div>
+              </span>
+            </div>
+            <div class="chart-options" id="pr-kmap-options" hidden>
+              <span class="axis-section-label">Quantity</span>
+              <div class="segmented segmented--compact" id="pr-kmap-q" role="radiogroup" aria-label="Reflection quantity">
+                <button type="button" class="seg-btn" data-prkq="re" role="radio" aria-checked="false">Re r</button>
+                <button type="button" class="seg-btn" data-prkq="im" role="radio" aria-checked="false">Im r</button>
+                <button type="button" class="seg-btn active" data-prkq="abs" role="radio" aria-checked="true">|r|</button>
+              </div>
+              <label class="check-row check-row--compact"><input type="checkbox" id="pr-kmap-log" checked><span>log&#8321;&#8320;</span></label>
+              <span class="axis-section-label">Vertical</span>
+              <div class="segmented segmented--compact" id="pr-kmap-y" role="radiogroup" aria-label="Vertical axis unit">
+                <button type="button" class="seg-btn active" data-prky="nm" role="radio" aria-checked="true">&lambda; (nm)</button>
+                <button type="button" class="seg-btn" data-prky="ev" role="radio" aria-checked="false">E (eV)</button>
+              </div>
+              <span class="axis-section-label">Horizontal</span>
+              <div class="segmented segmented--compact" id="pr-kmap-x" role="radiogroup" aria-label="Horizontal axis unit">
+                <button type="button" class="seg-btn active" data-prkx="inm" role="radio" aria-checked="true">k&parallel; (nm&#8315;&sup1;)</button>
+                <button type="button" class="seg-btn" data-prkx="deg" role="radio" aria-checked="false">&theta; (&deg;)</button>
+              </div>
+            </div>
             <div class="chart-wrap" id="pr-chart-wrap">
               <canvas id="pr-chart" aria-label="PyRAMIDS LDOS chart"></canvas>
+              <div class="pr-axis-overlay" id="pr-ff-axis" hidden>
+                <div class="segmented segmented--compact" role="radiogroup" aria-label="Spectrum x-axis unit">
+                  <button type="button" class="seg-btn active" data-prffx="nm" role="radio" aria-checked="true">&lambda; (nm)</button>
+                  <button type="button" class="seg-btn" data-prffx="ev" role="radio" aria-checked="false">E (eV)</button>
+                </div>
+              </div>
             </div>
             <div class="download-bar">
               <span class="download-label">Export</span>
@@ -614,6 +701,18 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             </ul>
           </section>
 
+          <!-- Examples: quick preset stacks (below the Notes, like the other labs) -->
+          <section class="model-note card">
+            <div class="model-note__header">
+              <span>Examples</span>
+            </div>
+            <div class="preset-actions" aria-label="Quick preset stacks">
+              <button type="button" class="preset-chip" id="pr-preset-drexhage" title="Emitter above a silver mirror (Drexhage)">Ag mirror</button>
+              <button type="button" class="preset-chip" id="pr-preset-glass" title="Emitter above a glass half-space">Glass</button>
+              <button type="button" class="preset-chip" id="pr-preset-slab" title="High-index dielectric slab waveguide on glass">Slab WG</button>
+            </div>
+          </section>
+
           <section class="references-card card">
             <div class="references-card__header">
               <h3>References</h3>
@@ -629,7 +728,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             </p>
           </section>
         </main>
-      </div>
       </div>
     </div>
   </section>
@@ -693,7 +791,10 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   }
 
   .module-bar {
-    margin-bottom: var(--space-lg);
+    /* Pulled up by the height of the excitation slot below it (see the
+       PyRAMIDS section) so the parameter/result boxes keep their position. */
+    margin-top: -53px;
+    margin-bottom: var(--space-sm);
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -2009,9 +2110,14 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   .dl-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--bg-soft); }
   .dl-btn:active { transform: scale(0.97); }
 
-  /* PyRAMIDS module — excitation bar above the parameter box (Mie style) */
+  /* PyRAMIDS module — excitation bar above the parameter box (Mie style).
+     It sits in a fixed slot after the module selector for EVERY module, so the
+     parameter/result boxes never shift when switching; only PyRAMIDS shows it
+     (visibility toggled by the switcher). The module bar is pulled up by the
+     slot's height so everything stays where it used to be. */
   #module-panel-pyramids[hidden] { display: none; }
   .excitation-bar { max-width: 300px; margin-bottom: var(--space-md); }
+  .excitation-bar--hidden { visibility: hidden; }
   .excitation-param { padding-bottom: 0; border-bottom: none; gap: 0.4rem; display: flex; flex-direction: column; }
   .excitation-param .param-header label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
   .plot-tabs { display: flex; background: var(--bg-muted); border-radius: var(--radius-full); padding: 3px; }
@@ -2019,6 +2125,91 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   .plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
   .plot-tab:hover:not(.active) { color: var(--text); }
   @media (max-width: 640px) { .excitation-bar { max-width: none; } }
+
+  /* PyRAMIDS view tabs are injected at runtime (innerHTML), so Astro's scoped
+     .seg-btn rules don't reach them — mirror the module tabs' look via :global. */
+  :global(#pr-view-tabs .seg-btn) {
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text-soft);
+    font-family: var(--font);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.22rem 0.45rem;
+    cursor: pointer;
+    min-height: 28px;
+  }
+  :global(#pr-view-tabs .seg-btn.active) {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--primary);
+  }
+
+  /* PyRAMIDS spectrum axis toggle — Mie-style overlay at the chart's bottom-left */
+  .pr-axis-overlay {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    z-index: 2;
+  }
+  .pr-axis-overlay[hidden] { display: none; }
+  .pr-axis-overlay .segmented {
+    background: var(--bg-glass);
+    backdrop-filter: blur(6px);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* PyRAMIDS rosette "how to read" info button + popover (Smith–Purcell style) */
+  .pr-info-wrap { position: relative; display: inline-flex; align-items: center; }
+  .pr-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; padding: 0; border: none; border-radius: var(--radius-full); background: none; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+  .pr-info-btn[hidden] { display: none; }
+  .pr-info-btn:hover, .pr-info-btn[aria-expanded="true"] { background: var(--bg-muted); color: var(--primary); }
+  .pr-info-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 300px; max-width: 88vw; padding: 0.7rem 0.8rem 0.8rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+  .pr-info-pop[hidden] { display: none; }
+  .pr-info-pop__head { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+  .pr-info-pop__close { border: none; background: none; color: var(--text-soft); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.15rem; }
+  .pr-info-pop__close:hover { color: var(--text); }
+  .pr-info-pop__svg { display: block; width: 100%; height: auto; color: var(--text-muted); margin: 0.1rem 0 0.35rem; }
+  .pr-info-pop__note { font-size: 0.72rem; line-height: 1.45; color: var(--text-soft); margin: 0; max-width: none; }
+  .pr-info-pop__note b { color: var(--text); font-weight: 600; }
+
+  /* PyRAMIDS stack preview — bare-interface variant (no layers): two
+     half-spaces meeting at a single interface line (injected via innerHTML) */
+  :global(.pr-stack-half) {
+    display: grid;
+    place-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.2rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text-soft);
+  }
+  :global(.pr-stack-half--right) { border-left: 2px solid var(--text-soft); }
+
+  /* PyRAMIDS emitter-z slider — red dot marks the first interface (z = 0) */
+  .pr-z-track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .pr-z-track .slope-slider { width: 100%; }
+  .pr-z-mark {
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%);
+    border-radius: var(--radius-full);
+    background: var(--danger);
+    pointer-events: none;
+  }
+  .pr-z-mark[hidden] { display: none; }
 
   /* PyRAMIDS module — collapsible plot-range controls */
   .pr-range-details { border-top: 1px solid var(--bg-muted); padding-top: var(--space-xs); }
@@ -5865,9 +6056,10 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   // src/lib/pyramids-ldos.test.ts.
   import { onThemeChange } from '../../../lib/chart-theme';
   import {
-    ldos, ldosIntegrandTrace, radiationPattern, intensityRT, perLayerAbsorption,
-    planeWaveFieldsAtZ, fresnelAmplitudes, cx, type Cx,
+    ldos, ldosIntegrandTrace, radiationPattern, radiationFields, totalRadiatedMulti, intensityRT,
+    perLayerAbsorption, planeWaveFieldsAtZ, fresnelAmplitudes, cx, type Cx,
   } from '../../../lib/pyramids-ldos';
+  import { stokes } from '../../../lib/smith-purcell';
 
   const $p = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const cvarP = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
@@ -5883,7 +6075,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   const prPalette = ['#38BDF8', '#F59E0B', '#10B981', '#7C3AED', '#EF4444', '#0EA5E9', '#64748B'];
   const PR_MIN_LAYERS = 0;
   const PR_MAX_LAYERS = 40;
-  type PrPreset = 'drexhage' | 'glass' | 'slab' | 'custom';
+  type PrPreset = 'eps2' | 'drexhage' | 'glass' | 'slab' | 'custom';
 
   const CH = {
     iso: { key: 'iso', label: 'Isotropic', color: '#6366F1' },
@@ -5894,10 +6086,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   } as const;
   type ChKey = keyof typeof CH;
 
-  type PrView = 'ldos' | 'kpar' | 'farfield' | 'pwspec' | 'pwang' | 'pwfields' | 'pwkpar';
+  type PrView = 'ldos' | 'kpar' | 'farfield' | 'pwspec' | 'pwang' | 'pwfields' | 'pwkpar' | 'pwkmap';
   const pr = {
     layers: [] as PrLayer[],
-    subN: 0.052, subK: 4.41,
+    // default: air–dielectric interface (ε = 2 → n = √2 below, air above)
+    subN: 1.41421, subK: 0,
     cladN: 1.0, cladK: 0.0,
     lamNm: 550,
     zNm: 150,
@@ -5910,8 +6103,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     pwch: { R: true, T: true, A: true } as Record<'R' | 'T' | 'A', boolean>,
     pwf: { Es: true, Ep: true, Aabs: true } as Record<'Es' | 'Ep' | 'Aabs', boolean>,
     pwk: { rs: true, rp: true } as Record<'rs' | 'rp', boolean>,
+    kmap: { q: 'abs' as 're' | 'im' | 'abs', log: true, yUnit: 'nm' as 'nm' | 'ev', xUnit: 'inm' as 'inm' | 'deg' },
+    ffMode: 'pattern' as 'pattern' | 'rosette' | 'spectrum' | 'fluxz',
+    ffXUnit: 'nm' as 'nm' | 'ev',
     rng: { zMin: null as number | null, zMax: null as number | null, yMax: null as number | null, lamMin: 400, lamMax: 800 },
-    preset: 'drexhage' as PrPreset,
+    preset: 'eps2' as PrPreset,
   };
 
   const prEditor = $p('pr-layer-editor');
@@ -5960,10 +6156,22 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       const label = pct > 7 ? pfmt(l.thicknessNm, 3) : '';
       return `<div class="tmm-stack__layer" style="flex:${pct} 1 0;background:${l.color}" title="n=${l.n}+${l.kappa}i, ${pfmt(l.thicknessNm, 4)} nm">${label}</div>`;
     }).join('');
-    prStackPrev.innerHTML =
-      `<div class="tmm-stack__end" title="Substrate (below)">n<sub>s</sub><br>${pfmt(pr.subN, 3)}</div>` +
-      (inner || '<div class="tmm-stack__layer" style="flex:1;background:var(--bg-muted);color:var(--text-muted)">no layers</div>') +
-      `<div class="tmm-stack__end" title="Superstrate (above)">n<sub>c</sub><br>${pfmt(pr.cladN, 3)}</div>`;
+    if (pr.layers.length === 0) {
+      // bare stack = a single interface: two half-spaces meeting at a line
+      const half = (n: number, k: number, sub: string, title: string, right: boolean) => {
+        const dark = k > 0.15;
+        const label = `n<sub>${sub}</sub> = ${pfmt(n, 3)}${k > 0 ? ` + ${pfmt(k, 3)}i` : ''}`;
+        return `<div class="pr-stack-half${right ? ' pr-stack-half--right' : ''}" style="background:${prEndFill(n, k)};${dark ? 'color:rgba(255,255,255,0.92);text-shadow:none;' : ''}" title="${title}">${label}</div>`;
+      };
+      prStackPrev.innerHTML =
+        half(pr.subN, pr.subK, 's', 'Substrate (below)', false) +
+        half(pr.cladN, pr.cladK, 'c', 'Superstrate (above)', true);
+    } else {
+      prStackPrev.innerHTML =
+        `<div class="tmm-stack__end" title="Substrate (below)">n<sub>s</sub><br>${pfmt(pr.subN, 3)}</div>` +
+        inner +
+        `<div class="tmm-stack__end" title="Superstrate (above)">n<sub>c</sub><br>${pfmt(pr.cladN, 3)}</div>`;
+    }
     $p('pr-layer-count').textContent = String(pr.layers.length);
     ($p('pr-remove-layer') as HTMLButtonElement).disabled = pr.layers.length <= PR_MIN_LAYERS;
     ($p('pr-add-layer') as HTMLButtonElement).disabled = pr.layers.length >= PR_MAX_LAYERS;
@@ -6085,7 +6293,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   // containing the emitter — absorbing regions (metal mirror etc.) act as walls.
   function prTransparentSpan(): { lo: number; hi: number } {
     const { dstack, total } = buildStack();
-    const { zmin, zmax } = prZRange();
+    // The plot z-range margins scale with λ, but they are cosmetic — only
+    // absorbing walls may constrain the emitter. Extend the half-space ends to
+    // always include the current position, so sliding λ never drags the dipole.
+    const rng0 = prZRange();
+    const zmin = Math.min(rng0.zmin, pr.zNm), zmax = Math.max(rng0.zmax, pr.zNm);
     // The physics lib requires the source medium to be strictly lossless, so
     // ANY absorbing medium (κ > 0) is a wall the emitter cannot enter.
     const eps = 1e-7;
@@ -6118,6 +6330,17 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     pr.zNm = clampP(pr.zNm, lo, hi);
     s.value = String(Math.round(pr.zNm));
     ($p('pr-z') as HTMLInputElement).value = String(Math.round(pr.zNm));
+    // red dot on the track marking the first interface (z = 0); a range thumb
+    // (~16 px) insets the usable track, so interpolate between its half-widths
+    const mark = $p('pr-z-zero');
+    const min = Number(s.min), max = Number(s.max);
+    if (max > min && 0 >= min && 0 <= max) {
+      const pct = (0 - min) / (max - min);
+      mark.hidden = false;
+      mark.style.left = `calc(${(pct * 100).toFixed(3)}% + ${(8 - 16 * pct).toFixed(2)}px)`;
+    } else {
+      mark.hidden = true;
+    }
   }
 
   // ---- canvas helpers ----------------------------------------------------
@@ -6241,14 +6464,15 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     // emitter marker
     const zx = fr.px(pr.zNm);
     ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(zx, fr.m.t); ctx.lineTo(zx, h - fr.m.b); ctx.stroke();
-    // curves (skip zero = absorbing/undefined regions)
+    // curves — skip zero (absorbing/undefined regions) AND anything above the
+    // y-range: clamping to the top rim drew a misleading flat line there.
     for (const s of series) {
       ctx.strokeStyle = CH[s.key].color; ctx.lineWidth = 2; ctx.beginPath();
       let started = false;
       for (let i = 0; i < NZ; i++) {
         const v = s.y[i];
-        if (!Number.isFinite(v) || v === 0) { started = false; continue; }
-        const X = fr.px(zGrid[i]), Y = fr.py(clampP(v, 0, ymax));
+        if (!Number.isFinite(v) || v === 0 || v > ymax) { started = false; continue; }
+        const X = fr.px(zGrid[i]), Y = fr.py(v);
         if (!started) { ctx.moveTo(X, Y); started = true; } else { ctx.lineTo(X, Y); }
       }
       ctx.stroke();
@@ -6312,7 +6536,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   const PR_CH_ORDER: ChKey[] = ['iso', 'epar', 'eperp', 'mpar', 'mperp'];
   const PR_VIEWS: Record<'dip' | 'pw', [PrView, string][]> = {
     dip: [['ldos', 'LDOS vs position'], ['kpar', 'k∥ map'], ['farfield', 'Far-field']],
-    pw: [['pwspec', 'Spectrum'], ['pwang', 'Angle scan'], ['pwfields', 'Fields'], ['pwkpar', 'k∥ scan']],
+    pw: [['pwspec', 'Spectrum'], ['pwang', 'Angle scan'], ['pwfields', 'Fields'], ['pwkpar', 'k∥ scan'], ['pwkmap', 'k∥ map']],
   };
   function renderPrViewTabs() {
     $p('pr-view-tabs').innerHTML = PR_VIEWS[pr.exc].map(([v, label]) =>
@@ -6347,11 +6571,18 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       `<button type="button" class="pr-leg-item${s.store[s.key] ? '' : ' pr-leg-item--off'}" style="color:${s.color}" data-prch-toggle="${s.key}" aria-pressed="${s.store[s.key]}"><span class="legend-line"></span>${s.label}</button>`).join('');
   }
   function updatePrViewChrome() {
-    $p('pr-ldos-legend').hidden = pr.view === 'kpar';
+    $p('pr-ldos-legend').hidden = pr.view === 'kpar' || pr.view === 'pwkmap';
     $p('pr-kpar-options').hidden = pr.view !== 'kpar';
+    $p('pr-kmap-options').hidden = pr.view !== 'pwkmap';
+    $p('pr-ff-options').hidden = pr.view !== 'farfield';
+    const rosetteOn = pr.view === 'farfield' && pr.ffMode === 'rosette';
+    $p('pr-rosette-info').hidden = !rosetteOn;
+    if (!rosetteOn) closePrRosettePop();
+    const ffSpecOn = pr.view === 'farfield' && pr.ffMode === 'spectrum';
+    $p('pr-ff-axis').hidden = !ffSpecOn;
     $p('pr-dipole-controls').hidden = pr.exc !== 'dip';
     $p('pr-pw-controls').hidden = pr.exc !== 'pw';
-    $p('pr-lamrange-field').hidden = pr.view !== 'pwspec';
+    $p('pr-lamrange-field').hidden = pr.view !== 'pwspec' && pr.view !== 'pwkmap' && !ffSpecOn;
     $p('pr-source-title').textContent = pr.exc === 'dip' ? 'Emitter & light' : 'Illumination';
   }
 
@@ -6519,8 +6750,406 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     if (pr.pwk.rp) strokeR(rp, '#EF4444');
   }
 
+  // ---- plane wave: 2D k∥ map of the complex reflection coefficient -------
+  const EV_NM = 1239.8419;   // photon energy (eV) × wavelength (nm)
+  type KmapCache = { key: string; NK: number; NL: number; xs: number[]; lamRows: number[]; rsRe: Float64Array; rsIm: Float64Array; rpRe: Float64Array; rpIm: Float64Array };
+  let kmapCache: KmapCache | null = null;
+  function kmapKey(): string {
+    const { nstack, dstack } = buildStack();
+    return nstack.map(n => n.re + ',' + n.im).join(';') + '|' + dstack.join(',')
+      + '|' + pr.kmap.xUnit + pr.kmap.yUnit + '|' + pr.rng.lamMin + ',' + pr.rng.lamMax;
+  }
+  function getKmap(): KmapCache {
+    const key = kmapKey();
+    if (kmapCache && kmapCache.key === key) return kmapCache;
+    const { nstack, dstack } = buildStack();
+    const NK = 200, NL = 120;
+    const lmin = Math.min(pr.rng.lamMin, pr.rng.lamMax), lmax = Math.max(pr.rng.lamMin, pr.rng.lamMax);
+    // vertical rows uniform in the CHOSEN unit (λ or E); stored as λ(nm), j = 0 ↔ axis bottom
+    const lamRows: number[] = [];
+    for (let j = 0; j < NL; j++) {
+      if (pr.kmap.yUnit === 'nm') lamRows.push(lmin + (lmax - lmin) * j / (NL - 1));
+      else {
+        const eMin = EV_NM / lmax, eMax = EV_NM / lmin;
+        lamRows.push(EV_NM / (eMin + (eMax - eMin) * j / (NL - 1)));
+      }
+    }
+    const maxN = Math.max(...nstack.map(n => Math.abs(n.re)));
+    const kMax = pr.kmap.xUnit === 'inm' ? 1.15 * maxN * 2 * Math.PI / lmin : 89.5;
+    const xs: number[] = [];
+    for (let i = 0; i < NK; i++) xs.push(kMax * (i + 0.5) / NK);
+    const rsRe = new Float64Array(NK * NL), rsIm = new Float64Array(NK * NL);
+    const rpRe = new Float64Array(NK * NL), rpIm = new Float64Array(NK * NL);
+    for (let j = 0; j < NL; j++) {
+      const k0v = 2 * Math.PI / lamRows[j];
+      for (let i = 0; i < NK; i++) {
+        const kp = pr.kmap.xUnit === 'inm' ? xs[i] : pr.subN * k0v * Math.sin(xs[i] * Math.PI / 180);
+        const a = fresnelAmplitudes(k0v, kp, nstack, dstack);
+        const idx = j * NK + i;
+        rsRe[idx] = a.rs.re; rsIm[idx] = a.rs.im; rpRe[idx] = a.rp.re; rpIm[idx] = a.rp.im;
+      }
+    }
+    kmapCache = { key, NK, NL, xs, lamRows, rsRe, rsIm, rpRe, rpIm };
+    return kmapCache;
+  }
+  // diverging colormap for signed quantities (blue → white → red)
+  function divmap(t: number): number[] {
+    t = clampP(t, 0, 1);
+    if (t < 0.5) { const u = t / 0.5; return [37 + 210 * u, 99 + 148 * u, 235 + 12 * u]; }
+    const u = (t - 0.5) / 0.5; return [247 - 27 * u, 247 - 209 * u, 247 - 209 * u];
+  }
+  function drawPwKmap() {
+    if (!pwInputOk()) { drawPwMessage('Plane-wave incidence needs a transparent substrate (κs = 0).'); return; }
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const m = getKmap();
+    const q = pr.kmap.q, useLog = pr.kmap.log && q === 'abs';
+    const val = (idx: number): number => {
+      const vs = q === 're' ? m.rsRe[idx] : q === 'im' ? m.rsIm[idx] : Math.hypot(m.rsRe[idx], m.rsIm[idx]);
+      const vp = q === 're' ? m.rpRe[idx] : q === 'im' ? m.rpIm[idx] : Math.hypot(m.rpRe[idx], m.rpIm[idx]);
+      return pwPick(vs, vp);
+    };
+    const polTag = pr.pol === 'avg' ? 'unpol' : pr.pol + '-pol';
+    let lo: number, hi: number, cmap: (t: number) => number[], label: string;
+    if (q === 'abs') {
+      if (useLog) { lo = -2; hi = 2; label = `log₁₀|r| (${polTag})`; }
+      else { lo = 0; hi = 1.5; label = `|r| (${polTag})`; }
+      cmap = magma;
+    } else {
+      lo = -1.5; hi = 1.5; cmap = divmap;
+      label = `${q === 're' ? 'Re' : 'Im'} r (${polTag})`;
+    }
+    const yLo = pr.kmap.yUnit === 'nm' ? m.lamRows[0] : EV_NM / m.lamRows[0];
+    const yHi = pr.kmap.yUnit === 'nm' ? m.lamRows[m.NL - 1] : EV_NM / m.lamRows[m.NL - 1];
+    const xHi = m.xs[m.NK - 1] + (m.xs[1] - m.xs[0]) / 2;
+    const xlabel = pr.kmap.xUnit === 'inm' ? 'k∥ (nm⁻¹)' : 'angle of incidence θ (°)';
+    const ylabel = pr.kmap.yUnit === 'nm' ? 'wavelength λ (nm)' : 'photon energy E (eV)';
+    const fr = frameP(ctx, w, h, 0, xHi, yLo, yHi, xlabel, ylabel, ticksNiceP(0, xHi), ticksNiceP(Math.min(yLo, yHi), Math.max(yLo, yHi)), v => pfmt(v, 3), v => pfmt(v, 4), 64);
+    const off = document.createElement('canvas'); off.width = m.NK; off.height = m.NL;
+    const octx = off.getContext('2d')!; const img = octx.createImageData(m.NK, m.NL);
+    for (let j = 0; j < m.NL; j++) for (let i = 0; i < m.NK; i++) {
+      const v = val(j * m.NK + i);
+      const t = clampP(((useLog ? Math.log10(Math.abs(v) + 1e-8) : v) - lo) / (hi - lo), 0, 1);
+      const rgb = cmap(t);
+      const p = ((m.NL - 1 - j) * m.NK + i) * 4;
+      img.data[p] = rgb[0]; img.data[p + 1] = rgb[1]; img.data[p + 2] = rgb[2]; img.data[p + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b);
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.strokeRect(fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b);
+    // overlays: light lines (k∥ mode) / critical angle (θ mode)
+    ctx.save();
+    ctx.beginPath(); ctx.rect(fr.m.l, fr.m.t, w - fr.m.l - fr.m.r, h - fr.m.t - fr.m.b); ctx.clip();
+    ctx.setLineDash([4, 3]); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    if (pr.kmap.xUnit === 'inm') {
+      const ns = Array.from(new Set([pr.subN, pr.cladN, ...pr.layers.map(l => l.n)]));
+      for (const nv of ns) {
+        ctx.beginPath();
+        let started = false;
+        for (let j = 0; j < m.NL; j++) {
+          const lam = m.lamRows[j];
+          const X = fr.px(nv * 2 * Math.PI / lam);
+          const Y = fr.py(pr.kmap.yUnit === 'nm' ? lam : EV_NM / lam);
+          if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+        }
+        ctx.stroke();
+      }
+    } else if (pr.cladN < pr.subN) {
+      const thc = Math.asin(pr.cladN / pr.subN) * 180 / Math.PI;
+      const X = fr.px(thc);
+      ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke();
+    }
+    ctx.restore(); ctx.setLineDash([]);
+    // colorbar
+    const cbx = w - fr.m.r + 14, cbw = 12, cbt = fr.m.t, cbh = h - fr.m.t - fr.m.b;
+    for (let i = 0; i < cbh; i++) { const rgb = cmap(1 - i / cbh); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(cbx, cbt + i, cbw, 1); }
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.strokeRect(cbx, cbt, cbw, cbh);
+    ctx.fillStyle = cvarP('--text-muted'); ctx.font = '10px ' + (cvarP('--font') || 'sans-serif');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(pfmt(hi, 3), cbx + cbw + 3, cbt); ctx.fillText(pfmt(lo, 3), cbx + cbw + 3, cbt + cbh);
+    ctx.save(); ctx.translate(cbx + cbw + 24, cbt + cbh / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillStyle = cvarP('--text-soft'); ctx.fillText(label, 0, 0); ctx.restore();
+  }
+
+  // canonical dipole configurations per channel (iso = incoherent 3-orientation average)
+  const PR_ZERO_V = [cx(0), cx(0), cx(0)];
+  const PR_CH_DIPOLES: Record<ChKey, { pu: Cx[]; mu: Cx[] }[]> = {
+    epar: [{ pu: [cx(1), cx(0), cx(0)], mu: PR_ZERO_V }],
+    eperp: [{ pu: [cx(0), cx(0), cx(1)], mu: PR_ZERO_V }],
+    mpar: [{ pu: PR_ZERO_V, mu: [cx(1), cx(0), cx(0)] }],
+    mperp: [{ pu: PR_ZERO_V, mu: [cx(0), cx(0), cx(1)] }],
+    iso: [
+      { pu: [cx(1), cx(0), cx(0)], mu: PR_ZERO_V },
+      { pu: [cx(0), cx(1), cx(0)], mu: PR_ZERO_V },
+      { pu: [cx(0), cx(0), cx(1)], mu: PR_ZERO_V },
+    ],
+  };
+
+  // ---- dipole far-field: polarization rosette (two hemispheres) ----------
+  // Same representation as the Smith–Purcell lab's hemisphere Stokes maps,
+  // but each Stokes panel holds TWO disks: up (superstrate) and down
+  // (substrate). θ is radial from the hemisphere pole, φ azimuthal (φ=0 East).
+  const ROS_INT_STOPS = [[33, 49, 138], [92, 143, 207], [243, 246, 251], [244, 169, 59], [184, 49, 42]];
+  const rosInt = (t: number) => {
+    t = clampP(t, 0, 1);
+    const x = t * 4, i = Math.min(3, Math.floor(x)), f = x - i, a = ROS_INT_STOPS[i], b = ROS_INT_STOPS[i + 1];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+  };
+  const rosDiv = (v: number) => {
+    const t = (clampP(v, -1, 1) + 1) / 2, lo = t < 0.5, f = lo ? t * 2 : (t - 0.5) * 2;
+    const A = lo ? [33, 49, 138] : [243, 246, 251], B = lo ? [243, 246, 251] : [184, 49, 42];
+    return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f];
+  };
+  function drawFarfieldRosette() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const { nstack, dstack } = buildStack();
+    const k0v = k0Of();
+    const parts: { pu: Cx[]; mu: Cx[]; wgt: number }[] = [];
+    for (const k of PR_CH_ORDER) if (pr.ch[k]) for (const d of PR_CH_DIPOLES[k]) parts.push({ ...d, wgt: 1 / PR_CH_DIPOLES[k].length });
+    if (!parts.length) { drawPwMessage('Enable at least one channel in the legend above.'); return; }
+    // hemisphere grids: θd = angle from the pole (1..89°), φ ∈ [0, 360)
+    const NPH = 96, NTH = 32, NG = NPH * NTH;
+    const thUp: number[] = [], thDn: number[] = [], phL: number[] = [];
+    for (let ip = 0; ip < NPH; ip++) for (let it = 0; it < NTH; it++) {
+      const phi = 2 * Math.PI * ip / (NPH - 1);
+      const thd = (1 + 88 * it / (NTH - 1)) * Math.PI / 180;
+      thUp.push(thd); thDn.push(Math.PI - thd); phL.push(phi);
+    }
+    // incoherent Stokes sum over the enabled channels, both hemispheres.
+    // s-pol ↔ φ̂, p-pol ↔ θ̂ → stokes(fθ = Ep, fφ = Es).
+    type SG = { S0: Float64Array; S1: Float64Array; S2: Float64Array; S3: Float64Array };
+    const mk = (): SG => ({ S0: new Float64Array(NG), S1: new Float64Array(NG), S2: new Float64Array(NG), S3: new Float64Array(NG) });
+    const hemis: { tag: string; th: number[]; g: SG }[] = [
+      { tag: 'up', th: thUp, g: mk() },
+      { tag: 'down', th: thDn, g: mk() },
+    ];
+    for (const hemi of hemis) {
+      for (const pt of parts) {
+        const f = radiationFields(k0v, pr.zNm, pt.pu, pt.mu, hemi.th, phL, nstack, dstack);
+        for (let g = 0; g < NG; g++) {
+          const [s0, s1, s2, s3] = stokes(f.Ep[g], f.Es[g]);
+          hemi.g.S0[g] += pt.wgt * s0; hemi.g.S1[g] += pt.wgt * s1;
+          hemi.g.S2[g] += pt.wgt * s2; hemi.g.S3[g] += pt.wgt * s3;
+        }
+      }
+    }
+    let s0max = 1e-30;
+    for (const hemi of hemis) for (let g = 0; g < NG; g++) if (hemi.g.S0[g] > s0max) s0max = hemi.g.S0[g];
+    const sample = (arr: Float64Array, thDeg: number, phiRad: number) => {
+      let ph = phiRad % (2 * Math.PI); if (ph < 0) ph += 2 * Math.PI;
+      const ip = Math.min(NPH - 1, Math.max(0, Math.round(ph / (2 * Math.PI) * (NPH - 1))));
+      const it = Math.min(NTH - 1, Math.max(0, Math.round((thDeg - 1) / 88 * (NTH - 1))));
+      return arr[ip * NTH + it];
+    };
+    // 2×2 Stokes panels, each with two disks (up | down)
+    const pad = 6, gap = 12, legendH = 30, titleH = 14, diskCapH = 11;
+    const cellW = (w - 2 * pad - gap) / 2, cellH = (h - 2 * pad - gap - legendH) / 2;
+    const PANELS: { key: 'S0' | 'S1' | 'S2' | 'S3'; title: string; div: boolean }[] = [
+      { key: 'S0', title: 'S₀  √intensity + ellipses', div: false },
+      { key: 'S1', title: 'S₁  (p vs s)', div: true },
+      { key: 'S2', title: 'S₂  (±45°)', div: true },
+      { key: 'S3', title: 'S₃  (circular)', div: true },
+    ];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    PANELS.forEach((pan, idx) => {
+      const ccx = idx % 2, rr = (idx / 2) | 0;
+      const cellX = pad + ccx * (cellW + gap), cellY = pad + rr * (cellH + gap);
+      ctx.font = '10px ' + (cvarP('--font') || 'sans-serif'); ctx.fillStyle = cvarP('--text-soft');
+      ctx.fillText(pan.title, cellX + cellW / 2, cellY + 10);
+      const Rp = Math.min(cellW / 4 - 6, (cellH - titleH - diskCapH) / 2 - 4);
+      hemis.forEach((hemi, hi) => {
+        const pcx = cellX + cellW * (hi === 0 ? 0.27 : 0.73), pcy = cellY + titleH + (cellH - titleH - diskCapH) / 2;
+        const S = Math.max(16, Math.round(2 * Rp));
+        const off = document.createElement('canvas'); off.width = S; off.height = S;
+        const octx = off.getContext('2d')!, img = octx.createImageData(S, S);
+        for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+          const dx = px - S / 2 + 0.5, dy = py - S / 2 + 0.5, rrad = Math.hypot(dx, dy) / (S / 2);
+          const pi = (py * S + px) * 4;
+          if (rrad > 1) { img.data[pi + 3] = 0; continue; }
+          let phi = Math.atan2(-dy, dx); if (phi < 0) phi += 2 * Math.PI;
+          const thDeg = Math.max(1, rrad * 90);
+          let rgb: number[];
+          if (!pan.div) rgb = rosInt(Math.sqrt(Math.max(0, sample(hemi.g.S0, thDeg, phi)) / s0max));
+          else rgb = rosDiv(sample(hemi.g[pan.key], thDeg, phi) / s0max);
+          img.data[pi] = rgb[0]; img.data[pi + 1] = rgb[1]; img.data[pi + 2] = rgb[2]; img.data[pi + 3] = 255;
+        }
+        octx.putImageData(img, 0, 0);
+        ctx.imageSmoothingEnabled = true; ctx.drawImage(off, pcx - Rp, pcy - Rp, 2 * Rp, 2 * Rp);
+        // polar grid + labels
+        ctx.strokeStyle = 'rgba(140,140,150,0.45)'; ctx.lineWidth = 0.8;
+        for (const t of [30, 60, 90]) { ctx.beginPath(); ctx.arc(pcx, pcy, Rp * t / 90, 0, 2 * Math.PI); ctx.stroke(); }
+        for (const ad of [0, 90, 180, 270]) { const a = ad * Math.PI / 180; ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(pcx + Rp * Math.cos(a), pcy - Rp * Math.sin(a)); ctx.stroke(); }
+        ctx.fillStyle = cvarP('--text-muted'); ctx.font = '8px ' + (cvarP('--font') || 'sans-serif');
+        ctx.fillText(hemi.tag === 'up' ? '↑ up (superstrate)' : '↓ down (substrate)', pcx, pcy + Rp + 9);
+        // polarization-ellipse glyphs on the S₀ disks, from the summed Stokes
+        if (pan.key === 'S0') {
+          for (const th0 of [30, 55, 78]) for (let pd = 0; pd < 360; pd += 45) {
+            const phi0 = pd * Math.PI / 180;
+            const s0 = sample(hemi.g.S0, th0, phi0); if (!(s0 / s0max > 0.03)) continue;
+            const s1 = sample(hemi.g.S1, th0, phi0), s2 = sample(hemi.g.S2, th0, phi0), s3 = sample(hemi.g.S3, th0, phi0);
+            const sp3 = Math.sqrt(s1 * s1 + s2 * s2 + s3 * s3) || 1e-30;
+            const psi = 0.5 * Math.atan2(s2, s1);
+            const chi = 0.5 * Math.asin(clampP(s3 / sp3, -1, 1));
+            const a = Math.cos(chi), b = Math.abs(Math.sin(chi));
+            const gs = 7, sinth = Math.max(0.25, Math.sin(th0 * Math.PI / 180));
+            ctx.strokeStyle = s3 >= 0 ? '#0891b2' : '#c026d3'; ctx.lineWidth = 1; ctx.beginPath();
+            for (let i = 0; i <= 40; i++) {
+              const t = 2 * Math.PI * i / 40;
+              const u = a * Math.cos(t) * Math.cos(psi) - b * Math.sin(t) * Math.sin(psi);
+              const v = a * Math.cos(t) * Math.sin(psi) + b * Math.sin(t) * Math.cos(psi);
+              const thp = th0 + gs * u, php = phi0 + (gs * v / sinth) * Math.PI / 180;
+              const rad = Rp * Math.max(0, thp) / 90;
+              const X = pcx + rad * Math.cos(php), Y = pcy - rad * Math.sin(php);
+              i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+            }
+            ctx.closePath(); ctx.stroke();
+          }
+        }
+      });
+    });
+    // bottom legend: diverging bar + handedness swatches
+    const ly = h - legendH + 8, barW = 120, bx = pad + 74, NB = 60;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '9px ' + (cvarP('--font') || 'sans-serif');
+    ctx.fillStyle = cvarP('--text-muted'); ctx.fillText('S₁₋₃ / max S₀', pad, ly + 5);
+    for (let i = 0; i < NB; i++) { const rgb = rosDiv(i / (NB - 1) * 2 - 1); ctx.fillStyle = `rgb(${rgb[0] | 0},${rgb[1] | 0},${rgb[2] | 0})`; ctx.fillRect(bx + i / NB * barW, ly, barW / NB + 1, 9); }
+    ctx.strokeStyle = cvarP('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(bx, ly, barW, 9);
+    ctx.fillStyle = cvarP('--text-muted'); ctx.textAlign = 'center';
+    ctx.fillText('−1', bx, ly + 18); ctx.fillText('0', bx + barW / 2, ly + 18); ctx.fillText('+1', bx + barW, ly + 18);
+    let hx = bx + barW + 30; ctx.textAlign = 'left';
+    ctx.strokeStyle = '#0891b2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx, ly + 4); ctx.lineTo(hx + 14, ly + 4); ctx.stroke();
+    ctx.fillStyle = cvarP('--text-muted'); ctx.fillText('right-handed', hx + 18, ly + 5);
+    hx += 100; ctx.strokeStyle = '#c026d3'; ctx.beginPath(); ctx.moveTo(hx, ly + 4); ctx.lineTo(hx + 14, ly + 4); ctx.stroke();
+    ctx.fillText('left-handed', hx + 18, ly + 5);
+  }
+
+  // ---- dipole far-field: radiated-flux spectrum P↑(λ), P↓(λ) -------------
+  // Hemisphere-integrated Poynting flux per enabled channel vs wavelength.
+  type FfSpecCache = { key: string; mode: 'lam' | 'z'; x: number[]; series: { key: ChKey; up: number[]; down: number[] }[] };
+  let ffSpecCache: FfSpecCache | null = null;
+  function getFfSpectrum(): FfSpecCache {
+    const mode: 'lam' | 'z' = pr.ffMode === 'fluxz' ? 'z' : 'lam';
+    const chOn = PR_CH_ORDER.filter(k => pr.ch[k]).join(',');
+    const key = stackKey() + '|ffspec|' + mode + '|'
+      + (mode === 'lam' ? Math.round(pr.zNm) : Math.round(pr.lamNm)) + '|' + chOn
+      + '|' + pr.rng.lamMin + ',' + pr.rng.lamMax;
+    if (ffSpecCache && ffSpecCache.key === key) return ffSpecCache;
+    const { nstack, dstack } = buildStack();
+    const NL = 101;
+    let x: number[];
+    if (mode === 'lam') {
+      const lmin = Math.min(pr.rng.lamMin, pr.rng.lamMax), lmax = Math.max(pr.rng.lamMin, pr.rng.lamMax);
+      x = Array.from({ length: NL }, (_, i) => lmin + (lmax - lmin) * i / (NL - 1));
+    } else {
+      const { zmin, zmax } = prZRange();
+      x = Array.from({ length: NL }, (_, i) => zmin + (zmax - zmin) * i / (NL - 1));
+    }
+    const chans = PR_CH_ORDER.filter(k => pr.ch[k]);
+    // one shared-coefficient multi-dipole call per scan point covers every
+    // enabled channel; identical dipoles (iso ∩ E∥/E⊥) are deduplicated
+    const uniq: { pu: Cx[]; mu: Cx[] }[] = [];
+    const seen = new Map<string, number>();
+    const chIdx = chans.map(k => PR_CH_DIPOLES[k].map(d => {
+      const dk = [...d.pu, ...d.mu].map(v => v.re + ',' + v.im).join(';');
+      let ii = seen.get(dk);
+      if (ii === undefined) { ii = uniq.length; uniq.push(d); seen.set(dk, ii); }
+      return ii;
+    }));
+    const series: FfSpecCache['series'] = chans.map(k => ({
+      key: k, up: new Array(NL).fill(0), down: new Array(NL).fill(0),
+    }));
+    x.forEach((xv, i) => {
+      const k0v = 2 * Math.PI / (mode === 'lam' ? xv : pr.lamNm);
+      const zv = mode === 'lam' ? pr.zNm : xv;
+      if (mode === 'z' && kappaAt(zv) > 1e-7) { // lossy region — no emitter here
+        for (const s of series) { s.up[i] = NaN; s.down[i] = NaN; }
+        return;
+      }
+      const t = totalRadiatedMulti(k0v, zv, uniq, nstack, dstack);
+      chans.forEach((_, ci) => {
+        const ids = chIdx[ci];
+        for (const ii of ids) {
+          series[ci].up[i] += t.up[ii] / ids.length;
+          series[ci].down[i] += t.down[ii] / ids.length;
+        }
+      });
+    });
+    ffSpecCache = { key, mode, x, series };
+    return ffSpecCache;
+  }
+  function drawFarfieldSpectrum() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const spec = getFfSpectrum();
+    if (!spec.series.length) { drawPwMessage('Enable at least one channel in the legend above.'); return; }
+    const isZ = spec.mode === 'z';
+    const isEv = pr.ffXUnit === 'ev';
+    const xOf = (v: number) => (isZ ? v : isEv ? EV_NM / v : v);
+    const xs = spec.x.map(xOf);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    let ymax = pr.rng.yMax ?? 0;
+    if (!pr.rng.yMax) {
+      for (const s of spec.series) for (const v of [...s.up, ...s.down]) if (Number.isFinite(v)) ymax = Math.max(ymax, v);
+      ymax = ymax > 0 ? ymax * 1.12 : 1;
+    }
+    const xlabel = isZ ? `emitter position z (nm) — λ = ${Math.round(pr.lamNm)} nm`
+      : isEv ? 'photon energy E (eV)' : 'wavelength λ (nm)';
+    const fr = frameP(ctx, w, h, xmin, xmax, 0, ymax, xlabel,
+      'radiated flux / free-space dipole',
+      ticksNiceP(xmin, xmax), ticksNiceP(0, ymax, 5), v => pfmt(v, 4), v => pfmt(v, 2));
+    if (isZ) {
+      // layer shading + interfaces for orientation (like the LDOS view)
+      const { dstack, total } = buildStack();
+      let acc = 0;
+      ctx.save();
+      for (let i = 0; i < dstack.length; i++) {
+        const x0 = fr.px(acc), x1 = fr.px(acc + dstack[i]);
+        ctx.fillStyle = pr.layers[i].color; ctx.globalAlpha = 0.13;
+        ctx.fillRect(x0, fr.m.t, x1 - x0, h - fr.m.t - fr.m.b);
+        acc += dstack[i];
+      }
+      ctx.restore();
+      ctx.strokeStyle = cvarP('--bg-muted'); ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+      for (const zb of [0, total]) { const X = fr.px(zb); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+    // marker: current λ (spectral modes) or current emitter position (z mode)
+    const xNow = isZ ? pr.zNm : xOf(pr.lamNm);
+    if (xNow >= xmin && xNow <= xmax) {
+      ctx.strokeStyle = cvarP('--primary'); ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      const X = fr.px(xNow); ctx.beginPath(); ctx.moveTo(X, fr.m.t); ctx.lineTo(X, h - fr.m.b); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    const strokeSpec = (ys: number[], color: string, dash: number[]) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash); ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < xs.length; i++) {
+        const v = ys[i];
+        if (!Number.isFinite(v) || v > ymax) { started = false; continue; }
+        const X = fr.px(xs[i]), Y = fr.py(v);
+        if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    for (const s of spec.series) {
+      strokeSpec(s.up, CH[s.key].color, []);        // solid = up (superstrate)
+      strokeSpec(s.down, CH[s.key].color, [5, 4]);  // dashed = down (substrate)
+    }
+    // up/down key
+    ctx.font = '10px ' + (cvarP('--font') || 'sans-serif'); ctx.fillStyle = cvarP('--text-muted');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const kx = fr.m.l + 8, ky = fr.m.t + 10;
+    ctx.strokeStyle = cvarP('--text-soft'); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(kx + 16, ky); ctx.stroke();
+    ctx.fillText('↑ up (superstrate)', kx + 20, ky);
+    ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(kx + 128, ky); ctx.lineTo(kx + 144, ky); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillText('↓ down (substrate)', kx + 148, ky);
+  }
+
   // ---- dipole far-field radiation pattern (polar, φ = 0 / π plane) -------
   function drawFarfield() {
+    if (pr.ffMode === 'rosette') { drawFarfieldRosette(); return; }
+    if (pr.ffMode === 'spectrum' || pr.ffMode === 'fluxz') { drawFarfieldSpectrum(); return; }
     const c = ctx2dP(prCanvas); if (!c) return;
     const { ctx, w, h } = c;
     const { nstack, dstack } = buildStack();
@@ -6528,18 +7157,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     const NTH = 181;
     const th = Array.from({ length: NTH }, (_, i) => Math.PI * i / (NTH - 1));
     const phiR = th.map(() => 0), phiL = th.map(() => Math.PI);
-    const zeroV = [cx(0), cx(0), cx(0)];
-    const chDip: Record<ChKey, { pu: Cx[]; mu: Cx[] }[]> = {
-      epar: [{ pu: [cx(1), cx(0), cx(0)], mu: zeroV }],
-      eperp: [{ pu: [cx(0), cx(0), cx(1)], mu: zeroV }],
-      mpar: [{ pu: zeroV, mu: [cx(1), cx(0), cx(0)] }],
-      mperp: [{ pu: zeroV, mu: [cx(0), cx(0), cx(1)] }],
-      iso: [
-        { pu: [cx(1), cx(0), cx(0)], mu: zeroV },
-        { pu: [cx(0), cx(1), cx(0)], mu: zeroV },
-        { pu: [cx(0), cx(0), cx(1)], mu: zeroV },
-      ],
-    };
+    const chDip = PR_CH_DIPOLES;
     const curves: { key: ChKey; R: number[]; L: number[] }[] = [];
     for (const k of PR_CH_ORDER) {
       if (!pr.ch[k]) continue;
@@ -6675,11 +7293,20 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     const iso = r ? (2 * r.E_par[0] + r.E_perp[0]) / 3 : NaN;
     const nz = nReAt(pr.zNm, nstack, dstack);
     const val = (v: number) => (r && Number.isFinite(v) ? pfmt(v, 3) : '&mdash;');
+    // far-field Poynting flux per hemisphere (isotropic dipole average)
+    let radUp = NaN, radDn = NaN;
+    if (r) {
+      const t = totalRadiatedMulti(k0Of(), pr.zNm, PR_CH_DIPOLES.iso, nstack, dstack);
+      radUp = (t.up[0] + t.up[1] + t.up[2]) / 3;
+      radDn = (t.down[0] + t.down[1] + t.down[2]) / 3;
+    }
     const tiles = [
       { label: 'Purcell (iso)', value: val(iso), unit: 'γ/γ₀', tip: 'Orientation-averaged decay-rate enhancement (2ρ∥ + ρ⊥)/3 relative to vacuum, at the emitter position.' },
       { label: 'LDOS E∥', value: val(r ? r.E_par[0] : NaN), unit: 'ρ/ρ₀', tip: 'Electric LDOS for a dipole oriented parallel to the layers (in-plane), normalized to vacuum.' },
       { label: 'LDOS E⊥', value: val(r ? r.E_perp[0] : NaN), unit: 'ρ/ρ₀', tip: 'Electric LDOS for a dipole oriented perpendicular to the layers (along z), normalized to vacuum.' },
       { label: 'n at z', value: pfmt(nz, 3), unit: 'index', tip: 'Refractive index of the (transparent) medium at the emitter position.' },
+      { label: 'Radiated ↑', value: val(radUp), unit: 'γ/γ₀', tip: 'Far-field Poynting flux radiated into the upper half-space (superstrate): the radiation pattern integrated over the upper hemisphere, isotropic dipole average, normalized to a free-space dipole.' },
+      { label: 'Radiated ↓', value: val(radDn), unit: 'γ/γ₀', tip: 'Far-field Poynting flux radiated into the lower half-space (substrate), isotropic dipole average. Purcell − (↑ + ↓) is the non-radiated part (guided modes and absorption).' },
     ];
     $p('pr-metrics').innerHTML = tiles.map(t =>
       `<div class="stat"><button class="stat-info" type="button" aria-label="${t.label} info">i<span class="stat-tooltip" role="tooltip">${t.tip}</span></button><span class="stat-label">${t.label}</span><span class="stat-value">${t.value}</span><span class="stat-unit">${t.unit}</span></div>`).join('');
@@ -6724,7 +7351,8 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     else if (pr.view === 'pwspec') drawPwSpectrum();
     else if (pr.view === 'pwang') drawPwAngles();
     else if (pr.view === 'pwfields') drawPwFields();
-    else drawPwKpar();
+    else if (pr.view === 'pwkpar') drawPwKpar();
+    else drawPwKmap();
   }
   function renderPrNow() {
     updatePrViewChrome();
@@ -6745,12 +7373,15 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     }, 90);
   }
   // stack geometry changed → resync z slider then recompute
-  function afterStackChange() { syncPrZSlider(); schedulePr(); }
+  // every stack mutation funnels through here — keep the stack drawing, preset
+  // chips, and emitter-z bounds in sync before scheduling the recompute
+  function afterStackChange() { renderPrStack(); prMarkPreset(); syncPrZSlider(); schedulePr(); }
 
   // ---- presets -----------------------------------------------------------
   function applyPrPreset(p: PrPreset) {
     pr.preset = p; prSelGroup = null;
-    if (p === 'drexhage') { pr.subN = 0.052; pr.subK = 4.41; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 140; }
+    if (p === 'eps2') { pr.subN = 1.41421; pr.subK = 0; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 150; }
+    else if (p === 'drexhage') { pr.subN = 0.052; pr.subK = 4.41; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 140; }
     else if (p === 'glass') { pr.subN = 1.5; pr.subK = 0; pr.cladN = 1; pr.cladK = 0; pr.layers = []; pr.lamNm = 550; pr.zNm = 200; }
     else if (p === 'slab') { pr.subN = 1.5; pr.subK = 0; pr.cladN = 1; pr.cladK = 0; pr.layers = [{ n: 2.0, kappa: 0, thicknessNm: 180, color: prPalette[0] }]; pr.lamNm = 550; pr.zNm = 90; }
     // reflect into inputs
@@ -6769,7 +7400,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   $p('pr-preset-drexhage').addEventListener('click', () => applyPrPreset('drexhage'));
   $p('pr-preset-glass').addEventListener('click', () => applyPrPreset('glass'));
   $p('pr-preset-slab').addEventListener('click', () => applyPrPreset('slab'));
-  $p('pr-reset').addEventListener('click', () => applyPrPreset('drexhage'));
+  $p('pr-reset').addEventListener('click', () => applyPrPreset('eps2'));
 
   prEditor.addEventListener('change', e => {
     const input = e.target as HTMLInputElement;
@@ -6803,7 +7434,13 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
 
   // emitter z (slider + number) — reuses cached LDOS/integrand, so dragging is cheap
   const zNum = $p('pr-z') as HTMLInputElement, zSl = $p('pr-z-slider') as HTMLInputElement;
-  const setZ = (v: number) => { const { lo, hi } = prTransparentSpan(); pr.zNm = clampP(v, lo, hi); zNum.value = String(Math.round(pr.zNm)); zSl.value = String(Math.round(pr.zNm)); renderPrNow(); };
+  const setZ = (v: number) => {
+    const { lo, hi } = prTransparentSpan();
+    pr.zNm = clampP(v, lo, hi);
+    zNum.value = String(Math.round(pr.zNm)); zSl.value = String(Math.round(pr.zNm));
+    // rosette / flux spectrum recompute full grids — debounce with the loading bar
+    if (pr.view === 'farfield' && pr.ffMode !== 'pattern') schedulePr(); else renderPrNow();
+  };
   zSl.addEventListener('input', () => setZ(Number.parseFloat(zSl.value)));
   zNum.addEventListener('change', () => setZ(Number.parseFloat(zNum.value)));
 
@@ -6885,10 +7522,86 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     if (pr.view === 'kpar') drawKparMap();   // trace cached — only the displayed channel changes
   });
 
+  // rosette coordinate-guide popover (Smith–Purcell pattern)
+  function closePrRosettePop() {
+    ($p('pr-rosette-pop') as HTMLElement).hidden = true;
+    $p('pr-rosette-info').setAttribute('aria-expanded', 'false');
+  }
+  $p('pr-rosette-info').addEventListener('click', e => {
+    e.stopPropagation();
+    const pop = $p('pr-rosette-pop') as HTMLElement, open = pop.hidden;
+    pop.hidden = !open;
+    $p('pr-rosette-info').setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  $p('pr-rosette-pop-close').addEventListener('click', e => { e.stopPropagation(); closePrRosettePop(); });
+  $p('pr-rosette-pop').addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => closePrRosettePop());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePrRosettePop(); });
+
+  // far-field display mode (pattern | rosette | spectrum | flux vs z)
+  $p('pr-ff-mode').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prffm]'); if (!b) return;
+    pr.ffMode = b.dataset.prffm as 'pattern' | 'rosette' | 'spectrum' | 'fluxz';
+    segPick('pr-ff-mode', 'prffm', pr.ffMode);
+    if (pr.view === 'farfield') schedulePr();
+  });
+  // spectrum x-axis unit (λ ↔ eV) — Mie-style overlay at the chart's bottom
+  // left; a pure display change, so redraw straight from the cached scan
+  $p('pr-ff-axis').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prffx]'); if (!b) return;
+    pr.ffXUnit = b.dataset.prffx as 'nm' | 'ev';
+    segPick('pr-ff-axis', 'prffx', pr.ffXUnit);
+    if (pr.view === 'farfield' && pr.ffMode === 'spectrum') drawCurrentView();
+  });
+
+  // k∥ map controls — quantity/log re-render from the cached complex grid;
+  // axis-unit changes require a recompute (grid layout changes)
+  const segPick = (groupId: string, attr: string, val: string) => {
+    $p(groupId).querySelectorAll(`[data-${attr}]`).forEach(btn => {
+      const on = (btn as HTMLElement).dataset[attr.replace(/-(.)/g, (_, ch) => ch.toUpperCase())] === val;
+      btn.classList.toggle('active', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  };
+  $p('pr-kmap-q').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prkq]'); if (!b) return;
+    pr.kmap.q = b.dataset.prkq as 're' | 'im' | 'abs';
+    segPick('pr-kmap-q', 'prkq', pr.kmap.q);
+    ($p('pr-kmap-log') as HTMLInputElement).disabled = pr.kmap.q !== 'abs';
+    if (pr.view === 'pwkmap') drawCurrentView();
+  });
+  $p('pr-kmap-log').addEventListener('change', () => {
+    pr.kmap.log = ($p('pr-kmap-log') as HTMLInputElement).checked;
+    if (pr.view === 'pwkmap') drawCurrentView();
+  });
+  $p('pr-kmap-y').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prky]'); if (!b) return;
+    pr.kmap.yUnit = b.dataset.prky as 'nm' | 'ev';
+    segPick('pr-kmap-y', 'prky', pr.kmap.yUnit);
+    if (pr.view === 'pwkmap') schedulePr();
+  });
+  $p('pr-kmap-x').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-prkx]'); if (!b) return;
+    pr.kmap.xUnit = b.dataset.prkx as 'inm' | 'deg';
+    segPick('pr-kmap-x', 'prkx', pr.kmap.xUnit);
+    if (pr.view === 'pwkmap') schedulePr();
+  });
+
   // ---- export / share ----------------------------------------------------
   function prCsv(): string {
     const { nstack, dstack } = buildStack();
     const k0v = k0Of();
+    if (pr.view === 'farfield' && (pr.ffMode === 'spectrum' || pr.ffMode === 'fluxz')) {
+      const spec = getFfSpectrum();
+      const isZ = spec.mode === 'z';
+      const isEv = pr.ffXUnit === 'ev';
+      const head = [isZ ? 'z_nm' : isEv ? 'energy_eV' : 'lambda_nm', ...spec.series.flatMap(s => [`${s.key}_up`, `${s.key}_down`])];
+      const lines = [head.join(',')];
+      spec.x.forEach((xv, i) => {
+        const x0 = isZ ? xv : isEv ? EV_NM / xv : xv;
+        lines.push([x0, ...spec.series.flatMap(s => [s.up[i], s.down[i]])].map(v => pfmt(v, 6)).join(','));
+      });
+      return lines.join('\n') + '\n';
+    }
     if (pr.view === 'farfield') {
       const NTH = 181;
       const th = Array.from({ length: NTH }, (_, i) => Math.PI * i / (NTH - 1));
@@ -6933,6 +7646,20 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       zGrid.forEach((z, i) => lines.push([z, f.Es[i], f.Ep[i], f.As[i], f.Ap[i]].map(v => pfmt(v, 6)).join(',')));
       return lines.join('\n') + '\n';
     }
+    if (pr.view === 'pwkmap') {
+      const m = getKmap();
+      const xName = pr.kmap.xUnit === 'inm' ? 'kpar_inv_nm' : 'theta_deg';
+      const yName = pr.kmap.yUnit === 'nm' ? 'lambda_nm' : 'energy_eV';
+      const lines = [`${xName},${yName},re_rs,im_rs,re_rp,im_rp`];
+      for (let j = 0; j < m.NL; j++) {
+        const yv = pr.kmap.yUnit === 'nm' ? m.lamRows[j] : EV_NM / m.lamRows[j];
+        for (let i = 0; i < m.NK; i++) {
+          const idx = j * m.NK + i;
+          lines.push([m.xs[i], yv, m.rsRe[idx], m.rsIm[idx], m.rpRe[idx], m.rpIm[idx]].map(v => pfmt(v, 6)).join(','));
+        }
+      }
+      return lines.join('\n') + '\n';
+    }
     if (pr.view === 'pwkpar') {
       const qmax = Math.max(1.5, ...nstack.map(n => Math.abs(n.re))) + 0.4;
       const N = 500;
@@ -6954,7 +7681,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     const s = {
       sN: pr.subN, sK: pr.subK, cN: pr.cladN, cK: pr.cladK, lam: pr.lamNm, z: Math.round(pr.zNm),
       x: pr.exc, v: pr.view, kc: pr.kparCh, ch: pr.ch, pol: pr.pol, ang: pr.angleDeg,
-      rng: pr.rng, L: pr.layers.map(l => [l.thicknessNm, l.n, l.kappa]),
+      km: pr.kmap, ffm: pr.ffMode, fx: pr.ffXUnit, rng: pr.rng, L: pr.layers.map(l => [l.thicknessNm, l.n, l.kappa]),
     };
     return 'pyr=' + encodeURIComponent(btoa(JSON.stringify(s)));
   }
@@ -6972,6 +7699,21 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       if (s.ch) for (const k of PR_CH_ORDER) pr.ch[k] = !!s.ch[k];
       pr.pol = ['s', 'p', 'avg'].includes(s.pol) ? s.pol : 'avg';
       pr.angleDeg = clampP(+s.ang || 0, 0, 89);
+      pr.ffMode = ['rosette', 'spectrum', 'fluxz'].includes(s.ffm) ? s.ffm : 'pattern';
+      segPick('pr-ff-mode', 'prffm', pr.ffMode);
+      pr.ffXUnit = s.fx === 'ev' ? 'ev' : 'nm';
+      segPick('pr-ff-axis', 'prffx', pr.ffXUnit);
+      if (s.km) {
+        pr.kmap.q = ['re', 'im', 'abs'].includes(s.km.q) ? s.km.q : 'abs';
+        pr.kmap.log = !!s.km.log;
+        pr.kmap.yUnit = s.km.yUnit === 'ev' ? 'ev' : 'nm';
+        pr.kmap.xUnit = s.km.xUnit === 'deg' ? 'deg' : 'inm';
+        segPick('pr-kmap-q', 'prkq', pr.kmap.q);
+        segPick('pr-kmap-y', 'prky', pr.kmap.yUnit);
+        segPick('pr-kmap-x', 'prkx', pr.kmap.xUnit);
+        const lg = $p('pr-kmap-log') as HTMLInputElement;
+        lg.checked = pr.kmap.log; lg.disabled = pr.kmap.q !== 'abs';
+      }
       if (s.rng) {
         pr.rng.zMin = Number.isFinite(+s.rng.zMin) && s.rng.zMin !== null ? +s.rng.zMin : null;
         pr.rng.zMax = Number.isFinite(+s.rng.zMax) && s.rng.zMax !== null ? +s.rng.zMax : null;
@@ -7064,6 +7806,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
         const panel = document.getElementById(panelId);
         if (panel) panel.hidden = id !== buttonId;
       });
+      // excitation slot: space is always reserved; visible only for PyRAMIDS
+      const exc = document.getElementById('pr-excitation');
+      if (exc) exc.classList.toggle('excitation-bar--hidden', buttonId !== 'module-pyramids');
       window.dispatchEvent(new CustomEvent(revealEvents[buttonId]));
     }
 
