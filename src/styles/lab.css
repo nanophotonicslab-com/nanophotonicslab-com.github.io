@@ -16,6 +16,7 @@
  *   --hero-measure   max line length of the hero subtitle      (default 660px)
  *   --chart-aspect   aspect-ratio of .chart-wrap canvas        (default 5 / 3)
  *   --stats-cols     column count of the .stats grid           (default 4)
+ *   --module-cols    column count of the .module-bar__grid     (default 3)
  */
 
 /* ===== Hero ===== */
@@ -117,6 +118,10 @@
   margin-top: var(--space-sm);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--bg-muted);
+  /* Only engages when the buttons would otherwise overflow, so bars that
+     already fit are unchanged; export rows with many buttons wrap instead of
+     spilling out of the card. */
+  flex-wrap: wrap;
 }
 .download-label {
   font-size: 0.75rem;
@@ -917,9 +922,12 @@
 .mini-row { display: flex; gap: 0.4rem; align-items: end; }
 .module-bar__grid {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(var(--module-cols, 3), minmax(0, 1fr));
   gap: var(--space-sm);
   align-items: stretch;
+}
+@media (max-width: 720px) {
+  .module-bar__grid { grid-template-columns: 1fr; }
 }
 .module-card:disabled { cursor: not-allowed; opacity: 0.5; }
 .progress-bar {
@@ -1032,3 +1040,96 @@
 }
 #chart-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
 select.field-input { cursor: pointer; }
+
+/* ===== Lab & module index cards =====
+ *
+ * The card grid used by /lab/ and by each lab-with-modules index (e.g.
+ * /lab/imaging/). These lived in /lab/index.astro's scoped <style> until a
+ * second page needed them, at which point the second page silently rendered
+ * unstyled cards — so they belong here, defined once.
+ */
+.widgets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--space-lg);
+}
+.widget-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.widget-card[data-status="Coming soon"],
+.widget-card[data-status="Planned"] {
+  opacity: 0.7;
+  cursor: default;
+}
+.widget-card[data-status="Coming soon"]:hover,
+.widget-card[data-status="Planned"]:hover {
+  transform: none;
+  box-shadow: none;
+}
+.widget-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.widget-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.widget-card h3 { font-size: 1.125rem; }
+.widget-card p { font-size: 0.9375rem; flex-grow: 1; }
+.widget-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+.widget-status--stable { background: var(--success-soft); color: var(--success); }
+.widget-status--beta { background: var(--warning-soft); color: var(--warning); }
+.widget-status--experimental { background: var(--danger-soft); color: var(--danger); }
+.widget-cta {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
+  transition: gap 0.2s;
+}
+.widget-card:hover .widget-cta { color: var(--primary-dark); }
+.cat-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-lg);
+}
+@media (max-width: 768px) {
+  .widgets-grid { grid-template-columns: 1fr; }
+}
+
+/* Label + ⓘ row inside a .stat tile. Photothermal defined this locally; the
+   spec-generated readout row needs the same thing, so it lives here now. */
+.stat-head { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
+/* A hovered tooltip must escape its neighbours' stacking order. */
+.stat:has(.stat-info:hover),
+.stat:has(.stat-info:focus-visible) { z-index: 20; }
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* global.css caps every <p> at 65ch for readability in prose columns. Inside a
+   notes or references card the paragraph IS the card, so the cap just leaves a
+   third of the box empty — these run to the card's own width instead. */
+.notes-card p,
+.references p { max-width: none; }

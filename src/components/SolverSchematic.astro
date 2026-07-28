@@ -1,0 +1,144 @@
+---
+/**
+ * Setup schematic drawn from a spec's `structure` field.
+ *
+ * The brief is explicit that this must not be hand-drawn per module: the
+ * drawing is a *view of the geometry object*, so a new module that declares a
+ * known `structure.kind` gets its schematic for free. Live parameter values are
+ * written into the labelled slots by the page script.
+ */
+import type { SolverStructure } from '../lib/solver-spec';
+
+interface Props {
+  structure: SolverStructure;
+  prefix?: string;
+}
+const { structure, prefix = 'sch-' } = Astro.props;
+---
+
+<figure class="schematic">
+  <figcaption class="schematic__caption">Setup <span>drawn from the parameters</span></figcaption>
+
+  {structure.kind === 'widefield' && (
+    <svg class="schematic__svg" viewBox="0 0 520 130" role="img"
+         aria-label="Widefield fluorescence microscope: sample, objective, tube lens, camera">
+      <!-- optical axis -->
+      <line x1="20" y1="65" x2="500" y2="65" class="schematic__axis" />
+
+      <!-- sample plane with point emitters -->
+      <line x1="60" y1="20" x2="60" y2="110" class="schematic__plane" />
+      <circle cx="60" cy="48" r="3.2" class="schematic__emitter" />
+      <circle cx="60" cy="65" r="3.2" class="schematic__emitter" />
+      <circle cx="60" cy="84" r="3.2" class="schematic__emitter" />
+      <text x="60" y="124" class="schematic__label">sample</text>
+      <text x="60" y="14" class="schematic__value" id={`${prefix}sample`}>&nbsp;</text>
+
+      <!-- diverging then collimated rays -->
+      <path d="M60 65 L150 34 M60 65 L150 96" class="schematic__ray" />
+      <path d="M175 34 L300 34 M175 96 L300 96" class="schematic__ray" />
+      <path d="M325 34 L430 62 M325 96 L430 68" class="schematic__ray" />
+
+      <!-- objective -->
+      <ellipse cx="162" cy="65" rx="13" ry="34" class="schematic__lens" />
+      <text x="162" y="124" class="schematic__label">objective</text>
+      <text x="162" y="14" class="schematic__value" id={`${prefix}objective`}>&nbsp;</text>
+
+      <!-- tube lens -->
+      <ellipse cx="312" cy="65" rx="11" ry="30" class="schematic__lens" />
+      <text x="312" y="124" class="schematic__label">tube lens</text>
+
+      <!-- camera -->
+      <rect x="432" y="38" width="46" height="54" rx="3" class="schematic__detector" />
+      <path d="M440 46 h30 M440 56 h30 M440 66 h30 M440 76 h30" class="schematic__pixels" />
+      <text x="455" y="124" class="schematic__label">camera</text>
+      <text x="455" y="14" class="schematic__value" id={`${prefix}detector`}>&nbsp;</text>
+    </svg>
+  )}
+</figure>
+
+<style>
+  .schematic {
+    margin: 0;
+    padding: var(--space-sm) var(--space-md) 0;
+    background: var(--graph-canvas);
+    border: 1px solid var(--graph-canvas-border);
+    border-radius: var(--radius-md);
+  }
+
+  .schematic__caption {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .schematic__caption span {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 0.75;
+  }
+
+  .schematic__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .schematic__axis {
+    stroke: var(--bg-muted);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+  }
+
+  .schematic__plane {
+    stroke: var(--text-muted);
+    stroke-width: 1.5;
+  }
+
+  .schematic__emitter {
+    fill: var(--emerald);
+  }
+
+  .schematic__ray {
+    stroke: var(--amber);
+    stroke-width: 1;
+    fill: none;
+    opacity: 0.8;
+  }
+
+  .schematic__lens {
+    fill: var(--blue-pale);
+    stroke: var(--blue);
+    stroke-width: 1.2;
+  }
+
+  .schematic__detector {
+    fill: var(--bg-soft);
+    stroke: var(--text-soft);
+    stroke-width: 1.2;
+  }
+
+  .schematic__pixels {
+    stroke: var(--text-muted);
+    stroke-width: 0.6;
+    opacity: 0.7;
+  }
+
+  .schematic__label {
+    fill: var(--text-muted);
+    font-size: 9px;
+    text-anchor: middle;
+  }
+
+  .schematic__value {
+    fill: var(--text-soft);
+    font-size: 9px;
+    font-weight: 700;
+    text-anchor: middle;
+  }
+</style>

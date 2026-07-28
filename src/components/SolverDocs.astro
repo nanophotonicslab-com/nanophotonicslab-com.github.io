@@ -1,0 +1,48 @@
+---
+/**
+ * Renders a solver spec's `docs{}` into the site's five-part Model &
+ * Assumptions block (Model · Assumptions · Validity · Limitations ·
+ * References), reusing the existing ModelInfo shell so the region looks
+ * identical to the hand-written tool pages.
+ */
+import ModelInfo from './ModelInfo.astro';
+import type { Solver } from '../lib/solver-spec';
+
+interface Props {
+  spec: Solver;
+}
+const { spec } = Astro.props;
+const { docs } = spec;
+---
+
+<ModelInfo status={spec.meta.status}>
+  <dl>
+    <dt>Model</dt>
+    <dd>{docs.model}</dd>
+
+    <dt>Assumptions</dt>
+    <dd>
+      <ul>{docs.assumptions.map(a => <li>{a}</li>)}</ul>
+    </dd>
+
+    <dt>Validity</dt>
+    <dd>{docs.validity} <em>Checked live against your inputs below.</em></dd>
+
+    <dt>Limitations</dt>
+    <dd>
+      <ul>{docs.limitations.map(l => <li>{l}</li>)}</ul>
+    </dd>
+
+    <dt>References</dt>
+    <dd>
+      <ul>{docs.references.map(r => <li>{r}</li>)}</ul>
+    </dd>
+
+    {docs.notes && (
+      <>
+        <dt>Notes</dt>
+        <dd>{docs.notes}</dd>
+      </>
+    )}
+  </dl>
+</ModelInfo>

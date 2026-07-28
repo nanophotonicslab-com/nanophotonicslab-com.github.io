@@ -1,0 +1,846 @@
+---
+/**
+ * Imaging lab — one page, several modules, selected by the module bar.
+ *
+ * The same shape Heterostructures uses: a module bar, then one panel per
+ * module. Everything inside a panel is generated from that module's solver
+ * spec, so adding a module means a spec, a compute binding and one registry
+ * entry — no layout, no route, no plot code.
+ *
+ * Element ids are namespaced per module (`p-<slug>-`, `o-<slug>-`, …) so two
+ * modules can be mounted on the same page without colliding.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ToolMeta from '../../../components/ToolMeta.astro';
+import SolverDocs from '../../../components/SolverDocs.astro';
+import SolverParams from '../../../components/SolverParams.astro';
+import SolverReadouts from '../../../components/SolverReadouts.astro';
+import SolverEnvelope from '../../../components/SolverEnvelope.astro';
+import SolverSchematic from '../../../components/SolverSchematic.astro';
+import FrameViewer from '../../../components/FrameViewer.astro';
+import FeedbackButton from '../../../components/FeedbackButton.astro';
+import { imagingLab } from '../../../lib/imaging/registry';
+import '../../../styles/lab.css';
+
+const { modules, planned } = imagingLab;
+
+/** Every reference across the modules, de-duplicated, for the shared block. */
+const references = [...new Set(modules.flatMap(m => m.spec.docs.references))];
+
+/**
+ * Turn bare URLs and DOIs in a reference string into links, so specs can stay
+ * plain text. The strings come from the specs in this repository, not from user
+ * input, but they are escaped first regardless.
+ */
+function linkify(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // A DOI may legitimately contain parentheses — 10.1016/S0006-3495(02)75618-X
+  // is a real one — so they must not terminate the match; only whitespace and a
+  // trailing sentence period do.
+  const trimTail = (s: string) => s.replace(/[.,;]+$/, '');
+  return escaped
+    .replace(/https?:\/\/\S+/g, url => {
+      const clean = trimTail(url);
+      return `<a href="${clean}" target="_blank" rel="noopener">${clean}</a>${url.slice(clean.length)}`;
+    })
+    .replace(/\bdoi:(10\.\S+)/g, (_, doi: string) => {
+      const clean = trimTail(doi);
+      return `<a href="https://doi.org/${clean}" target="_blank" rel="noopener">doi:${clean}</a>`
+        + doi.slice(clean.length);
+    });
+}
+---
+
+<Layout
+  title="Imaging Lab"
+  description="Simulated microscopy with exact ground truth: diffusion and tracking, PSF and aberrations, modality comparison."
+>
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Imaging <span class="gradient-text">Lab</span></h1>
+      <p class="widget-hero__subtitle">{imagingLab.blurb}</p>
+      <ToolMeta slug="imaging" name="Imaging Lab" />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="module-bar card" role="radiogroup" aria-label="Imaging module">
+        <span class="module-bar__label">Module</span>
+        <div class="module-bar__grid">
+          {modules.map((m, i) => (
+            <button
+              type="button"
+              class:list={['module-card', { active: i === 0 }]}
+              id={`module-${m.slug}`}
+              data-module={m.slug}
+              role="radio"
+              aria-checked={i === 0 ? 'true' : 'false'}
+            >
+              <span class="module-card__name">
+                {m.spec.meta.title}
+                <span class="module-card__badge">{m.spec.meta.code}</span>
+              </span>
+              <span class="module-card__desc">{m.tagline}</span>
+            </button>
+          ))}
+          {planned.map(p => (
+            <button type="button" class="module-card" disabled aria-disabled="true">
+              <span class="module-card__name">
+                {p.name}
+                <span class="module-card__badge">Soon</span>
+              </span>
+              <span class="module-card__desc">{p.tagline}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {modules.map((m, i) => (
+        <div class="module-panel" id={`module-panel-${m.slug}`} hidden={i !== 0}>
+          <SolverDocs spec={m.spec} />
+
+          <div class="widget-layout">
+            <!-- ── parameters ─────────────────────────────────────────── -->
+            <div class="controls card">
+              <h3>Parameters</h3>
+              <SolverParams spec={m.spec} prefix={`p-${m.slug}-`} />
+
+              <div class="param-group">
+                <span class="param-group__title">Presets</span>
+                <div class="preset-row">
+                  {m.spec.scenarios.map((s, si) => (
+                    <button
+                      class:list={['preset-btn', { active: si === 0 }]}
+                      type="button"
+                      data-scenario={si}
+                      data-scenario-module={m.slug}
+                      title={s.note}
+                    >{s.label}</button>
+                  ))}
+                </div>
+                <p class="preset-hint">
+                  The last three deliberately break a validity check &mdash; that is the point.
+                  Hover a preset to see which one and why.
+                </p>
+              </div>
+            </div>
+
+            <!-- ── results ────────────────────────────────────────────── -->
+            <div class="widget-column">
+              {m.spec.structure && (
+                <SolverSchematic structure={m.spec.structure} prefix={`s-${m.slug}-`} />
+              )}
+
+              <div class="chart-panel card">
+                <div class="chart-header">
+                  <h3>Simulated frame</h3>
+                  <div class="chart-header__right">
+                    <span class="chart-status" id={`t-${m.slug}`}>t = 0.000 s</span>
+                  </div>
+                </div>
+                <FrameViewer
+                  prefix={`v-${m.slug}-`}
+                  frames={Number(m.spec.params.find(p => p.key === 'frames')?.default ?? 100)}
+                />
+                <p class="truth-note">
+                  Ground truth is exact &mdash; it is an input, not a fit. The localizer never sees it.
+                </p>
+              </div>
+
+              <!-- Plain .card, not .output-card: the latter is itself a
+                   three-column results grid, which would squeeze the whole
+                   readout strip into a third of the width. -->
+              <div class="card results-card">
+                <h3>Readouts</h3>
+                <SolverReadouts spec={m.spec} prefix={`o-${m.slug}-`} />
+              </div>
+
+              <div class="card results-card">
+                <SolverEnvelope spec={m.spec} prefix={`e-${m.slug}-`} />
+              </div>
+
+              <div class="plot-grid">
+                {m.spec.plots.map(pl => (
+                  <div class="chart-panel card">
+                    <div class="chart-header">
+                      <h3>{pl.title}</h3>
+                      <div class="chart-header__right">
+                        <span class="chart-status" id={`n-${m.slug}-${pl.id}`}></span>
+                      </div>
+                    </div>
+                    <div class="chart-wrap chart-wrap--plot">
+                      <canvas id={`plot-${m.slug}-${pl.id}`}></canvas>
+                    </div>
+                    <div class="download-bar">
+                      <span class="download-label">Export</span>
+                      <button class="dl-btn" type="button" data-png={`plot-${m.slug}-${pl.id}`}>PNG</button>
+                      <button class="dl-btn" type="button" data-csv={pl.id} data-csv-module={m.slug}>CSV</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div class="card results-card">
+                <h3>Export</h3>
+                <div class="download-bar">
+                  <span class="download-label">Run</span>
+                  <button class="dl-btn" type="button" data-dl="share" data-dl-module={m.slug}>Permalink</button>
+                  <button class="dl-btn" type="button" data-dl="truth" data-dl-module={m.slug}>Ground truth (CSV)</button>
+                  <button class="dl-btn" type="button" data-dl="tracks" data-dl-module={m.slug}>Tracks (CSV)</button>
+                  <button class="dl-btn" type="button" data-dl="frames" data-dl-module={m.slug}>Frames (TIFF)</button>
+                  <button class="dl-btn" type="button" data-dl="python" data-dl-module={m.slug}>DeepTrack2 script (.py)</button>
+                </div>
+                <p class="export-hint">
+                  The TIFF is 16-bit photoelectrons with no display stretch. The Python script
+                  reproduces this run in DeepTrack2 &mdash; it runs unmodified against a current
+                  <code>deeptrack</code> install (<code>pip install deeptrack</code>).
+                </p>
+              </div>
+
+              <div class="notes-card card">
+                <h4>Notes</h4>
+                <p class="theory-note">{m.spec.docs.notes}</p>
+                <p class="theory-note">
+                  <strong>Validation.</strong> One in-focus emitter rendered by this module was
+                  compared with the same emitter rendered by DeepTrack2's own pupil-based
+                  <code>Fluorescence</code> optics. The Gaussian approximation
+                  &sigma;&nbsp;=&nbsp;0.21&thinsp;&lambda;/NA has a FWHM <strong>3.9% narrower than
+                  an ideal Airy pattern</strong> at every NA &mdash; inside the 5% target &mdash;
+                  while DeepTrack2's numerically sampled pupil sits 2.8% (NA&nbsp;0.9) to 7.8%
+                  (NA&nbsp;1.4) <em>above</em> that ideal, because it samples the pupil on the
+                  output grid. The two therefore differ by 7&ndash;12%, of which about 4% is the
+                  approximation and the rest is DeepTrack2's discretisation. The comparison runs in
+                  CI against a stored fixture.
+                </p>
+                <p class="theory-note">
+                  <strong>Definitions.</strong> SNR is the peak-pixel ratio
+                  peak/&radic;(peak&nbsp;+&nbsp;background&nbsp;+&nbsp;readNoise&sup2;).
+                  &sigma;<sub>loc</sub> is the Thompson&ndash;Larson&ndash;Webb estimate. MSD is
+                  fitted over the first five lags as 4D&tau;&nbsp;+&nbsp;4&sigma;<sub>loc</sub>&sup2;,
+                  with no motion-blur correction.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <div class="references card">
+        <h4>References</h4>
+        <ul class="reference-list">
+          {references.map((r, i) => (
+            <li><span class="ref-index">[{i + 1}]</span><span set:html={linkify(r)} /></li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <FeedbackButton />
+</Layout>
+
+<style>
+  /* Four module slots rather than the shared default of three. */
+  .module-bar { --module-cols: 4; }
+
+  .module-panel[hidden] { display: none; }
+
+  /* Padding to match .output-card, without its three-column results grid. */
+  .results-card { padding: var(--space-md); }
+
+  .results-card h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .widget-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .plot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-md);
+  }
+
+  .chart-wrap--plot canvas {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+  }
+
+  .truth-note,
+  .preset-hint,
+  .export-hint {
+    margin: var(--space-sm) 0 0;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    /* global.css caps prose at 65ch, which at this size stops well short of the
+       card edge; these captions belong to their card, so they run its width. */
+    max-width: none;
+  }
+
+  .preset-hint { margin-top: 0.4rem; }
+
+  .notes-card .theory-note:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+</style>
+
+<script>
+  import { bindSolver } from '../../../lib/solver-runtime';
+  import { fmt } from '../../../lib/solver-spec';
+  import { implFor } from '../../../lib/imaging/modules';
+  import type { FullResult, PlotData, QuickResult, SeriesColor, Values } from '../../../lib/imaging/modules/types';
+  import { renderDetected, stretchLimits, simulateTruth, type Truth } from '../../../lib/imaging';
+  import { chartTheme, onThemeChange } from '../../../lib/chart-theme';
+  import { downloadBlob } from '../../../lib/download';
+
+  const $ = (id: string) => document.getElementById(id);
+
+  function cvar(name: string, fallback: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  }
+
+  /** Map a module's semantic series colour onto a design token. */
+  function seriesColor(c: SeriesColor): string {
+    switch (c) {
+      case 'truth': return cvar('--emerald', 'green');
+      case 'fit': return cvar('--amber', 'orange');
+      case 'muted': return cvar('--text-muted', 'grey');
+      default: return cvar('--indigo', 'indigo');
+    }
+  }
+
+  /**
+   * 256-entry display lookup tables, built once. A per-pixel function returning
+   * a colour tuple allocated 65k short-lived arrays per frame.
+   */
+  const LUT_GREY = new Uint8Array(256 * 3);
+  const LUT_COLOR = new Uint8Array(256 * 3);
+  (function buildLuts() {
+    const stops = [[8, 6, 28], [49, 46, 129], [217, 119, 6], [255, 251, 235]];
+    for (let i = 0; i < 256; i++) {
+      LUT_GREY[i * 3] = i; LUT_GREY[i * 3 + 1] = i; LUT_GREY[i * 3 + 2] = i;
+      const x = (i / 255) * (stops.length - 1);
+      const k = Math.min(stops.length - 2, Math.floor(x));
+      const f = x - k;
+      for (let c = 0; c < 3; c++) {
+        LUT_COLOR[i * 3 + c] = Math.round(stops[k][c] + f * (stops[k + 1][c] - stops[k][c]));
+      }
+    }
+  })();
+
+  // ── generic XY plotting ──────────────────────────────────────────────────
+  interface Series {
+    x: Float64Array | number[];
+    y: Float64Array | number[];
+    color: string;
+    dash?: number[];
+  }
+  interface Marker { x: number; y?: number; label: string; }
+
+  const PAD = { l: 52, r: 12, t: 10, b: 34 };
+
+  function niceTicks(min: number, max: number, n: number): number[] {
+    const span = max - min || 1;
+    const mag = 10 ** Math.floor(Math.log10(span / n));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => span / s <= n + 1) || mag * 10;
+    const out: number[] = [];
+    for (let t = Math.ceil(min / step) * step; t <= max + 1e-9; t += step) out.push(t);
+    return out;
+  }
+
+  function drawXY(
+    id: string, series: Series[], xLabel: string, yLabel: string, markers: Marker[] = [],
+  ): void {
+    const cv = $(id) as HTMLCanvasElement | null;
+    if (!cv) return;
+    const th = chartTheme();
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const ctx = cv.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const withData = series.filter(s => s.x.length > 0);
+    if (!withData.length) return;
+    let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+    for (const s of withData) {
+      for (let i = 0; i < s.x.length; i++) {
+        const xv = s.x[i], yv = s.y[i];
+        if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+        if (xv < xmin) xmin = xv;
+        if (xv > xmax) xmax = xv;
+        if (yv < ymin) ymin = yv;
+        if (yv > ymax) ymax = yv;
+      }
+    }
+    if (!Number.isFinite(xmin) || !Number.isFinite(ymin)) return;
+    if (xmax <= xmin) xmax = xmin + 1;
+    ymin = Math.min(0, ymin);
+    if (ymax <= ymin) ymax = ymin + 1;
+    ymax += 0.08 * (ymax - ymin);
+
+    const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
+    const tx = (v: number) => PAD.l + ((v - xmin) / (xmax - xmin)) * pw;
+    const ty = (v: number) => PAD.t + ph - ((v - ymin) / (ymax - ymin)) * ph;
+
+    ctx.font = `10px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.strokeStyle = th.grid;
+    ctx.fillStyle = th.textMuted;
+    ctx.lineWidth = 1;
+    for (const yt of niceTicks(ymin, ymax, 4)) {
+      ctx.beginPath(); ctx.moveTo(PAD.l, ty(yt)); ctx.lineTo(W - PAD.r, ty(yt)); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmt(yt, 3), PAD.l - 5, ty(yt));
+    }
+    for (const xt of niceTicks(xmin, xmax, 5)) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(fmt(xt, 3), tx(xt), PAD.t + ph + 6);
+    }
+    ctx.textAlign = 'center';
+    ctx.fillText(xLabel, PAD.l + pw / 2, H - 11);
+    ctx.save();
+    ctx.translate(11, PAD.t + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    for (const s of withData) {
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash(s.dash ?? []);
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < s.x.length; i++) {
+        const xv = s.x[i], yv = s.y[i];
+        if (!Number.isFinite(xv) || !Number.isFinite(yv)) { started = false; continue; }
+        if (!started) { ctx.moveTo(tx(xv), ty(yv)); started = true; } else ctx.lineTo(tx(xv), ty(yv));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (const m of markers) {
+      ctx.strokeStyle = th.primary;
+      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tx(m.x), PAD.t);
+      ctx.lineTo(tx(m.x), PAD.t + ph);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (m.y !== undefined) {
+        ctx.fillStyle = th.primary;
+        ctx.beginPath();
+        ctx.arc(tx(m.x), ty(m.y), 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.fillStyle = th.textSoft;
+      ctx.textAlign = tx(m.x) > PAD.l + pw * 0.65 ? 'right' : 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(m.label, tx(m.x) + (ctx.textAlign === 'right' ? -4 : 4), PAD.t + 2);
+    }
+  }
+
+  /** Minimal baseline 16-bit multi-page TIFF, uncompressed, no display stretch. */
+  function buildTiff(frames: Uint16Array[], width: number, height: number): Blob {
+    const nTags = 10;
+    const ifdBytes = 2 + nTags * 12 + 4;
+    const imgBytes = width * height * 2;
+    const header = 8;
+    const buf = new ArrayBuffer(header + frames.length * (ifdBytes + imgBytes));
+    const dv = new DataView(buf);
+    dv.setUint16(0, 0x4949, true);
+    dv.setUint16(2, 42, true);
+    dv.setUint32(4, header, true);
+    let off = header;
+    frames.forEach((frame, i) => {
+      const ifdOff = off;
+      const dataOff = ifdOff + ifdBytes;
+      const nextIfd = i === frames.length - 1 ? 0 : dataOff + imgBytes;
+      dv.setUint16(ifdOff, nTags, true);
+      let t = ifdOff + 2;
+      const tag = (id: number, type: number, count: number, value: number) => {
+        dv.setUint16(t, id, true);
+        dv.setUint16(t + 2, type, true);
+        dv.setUint32(t + 4, count, true);
+        if (type === 3 && count === 1) {
+          dv.setUint16(t + 8, value, true);
+          dv.setUint16(t + 10, 0, true);
+        } else {
+          dv.setUint32(t + 8, value, true);
+        }
+        t += 12;
+      };
+      tag(256, 3, 1, width);   tag(257, 3, 1, height); tag(258, 3, 1, 16);
+      tag(259, 3, 1, 1);       tag(262, 3, 1, 1);      tag(273, 4, 1, dataOff);
+      tag(277, 3, 1, 1);       tag(278, 3, 1, height); tag(279, 4, 1, imgBytes);
+      tag(339, 3, 1, 1);
+      dv.setUint32(t, nextIfd, true);
+      for (let k = 0; k < frame.length; k++) dv.setUint16(dataOff + k * 2, frame[k], true);
+      off = dataOff + imgBytes;
+    });
+    return new Blob([buf], { type: 'image/tiff' });
+  }
+
+  function flash(btn: Element | null, text: string): void {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }
+
+  // ── one controller per module ────────────────────────────────────────────
+  /**
+   * Everything stateful for a single module panel. Modules are mounted lazily,
+   * on first reveal, so a hidden panel never simulates anything.
+   */
+  function mountModule(slug: string) {
+    const impl = implFor(slug);
+    const spec = impl.spec;
+    const v = (s: string) => `v-${slug}-${s}`;
+
+    let values: Values = {};
+    let quick: QuickResult | null = null;
+    let full: FullResult | null = null;
+    let truth: Truth | null = null;
+    let frameIndex = 0;
+    let playing = false;
+    let playTimer: number | undefined;
+    let fullTimer: number | undefined;
+    let scratch: { photons?: Float32Array; out?: Float32Array } = {};
+
+    const canvas = $(v('canvas')) as HTMLCanvasElement;
+    const scrub = $(v('scrub')) as HTMLInputElement;
+
+    const overlayOn = (name: string) =>
+      ($(v(`ov-${name}`)) as HTMLInputElement | null)?.checked ?? false;
+
+    function drawFrame(): void {
+      if (!truth || !canvas) return;
+      const sim = impl.sim(values);
+      const field = sim.field;
+      const t0 = performance.now();
+      const img = renderDetected(sim, truth, frameIndex, scratch);
+      const [lo, hi] = stretchLimits(img, 0.1, 99.9);
+
+      canvas.width = field;
+      canvas.height = field;
+      const ctx = canvas.getContext('2d')!;
+      const buf = ctx.createImageData(field, field);
+      const data = buf.data;
+      const lut = overlayOn('colormap') ? LUT_COLOR : LUT_GREY;
+      const scale = 255 / (hi - lo);
+      for (let i = 0, o = 0; i < field * field; i++, o += 4) {
+        let s = (img[i] - lo) * scale;
+        s = s < 0 ? 0 : s > 255 ? 255 : s;
+        const q = (s | 0) * 3;
+        data[o] = lut[q]; data[o + 1] = lut[q + 1]; data[o + 2] = lut[q + 2]; data[o + 3] = 255;
+      }
+      ctx.putImageData(buf, 0, 0);
+
+      const px = sim.pixel;
+      if (overlayOn('trails')) {
+        ctx.strokeStyle = 'rgba(217, 119, 6, 0.9)';
+        ctx.lineWidth = 0.4;
+        const back = Math.max(0, frameIndex - 10);
+        for (let n = 0; n < truth.N; n++) {
+          ctx.beginPath();
+          let started = false;
+          for (let t = back; t <= frameIndex; t++) {
+            const x = truth.x[t * truth.N + n] / px;
+            const y = truth.y[t * truth.N + n] / px;
+            if (t > back) {
+              // a periodic wrap must not be drawn as a line across the field
+              const xp = truth.x[(t - 1) * truth.N + n] / px;
+              const yp = truth.y[(t - 1) * truth.N + n] / px;
+              if (Math.abs(x - xp) > field / 2 || Math.abs(y - yp) > field / 2) started = false;
+            }
+            if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+      if (overlayOn('truth')) {
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.95)';
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([1.5, 1.5]);
+        const fwhm = quick?.observables.fwhmPx;
+        const r = Math.max(2, Number.isFinite(fwhm) ? (fwhm as number) * 0.7 : 3);
+        for (let n = 0; n < truth.N; n++) {
+          ctx.beginPath();
+          ctx.arc(truth.x[frameIndex * truth.N + n] / px, truth.y[frameIndex * truth.N + n] / px, r, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+      if (overlayOn('detections') && full) {
+        const dets = full.analysis.perFrame[frameIndex] ?? [];
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.95)';
+        ctx.lineWidth = 0.5;
+        for (const d of dets) {
+          ctx.beginPath();
+          ctx.moveTo(d.xPx - 2, d.yPx); ctx.lineTo(d.xPx + 2, d.yPx);
+          ctx.moveTo(d.xPx, d.yPx - 2); ctx.lineTo(d.xPx, d.yPx + 2);
+          ctx.stroke();
+        }
+      }
+
+      const dt = performance.now() - t0;
+      const time = $(`t-${slug}`);
+      if (time) {
+        time.textContent = `t = ${((frameIndex * sim.dt) / 1000).toFixed(3)} s · ${dt.toFixed(1)} ms/frame`;
+      }
+      const counter = $(v('counter'));
+      if (counter) counter.textContent = `frame ${frameIndex + 1} / ${sim.frames}`;
+    }
+
+    const plotData = (id: string): PlotData | undefined => full?.plots[id] ?? quick?.plots[id];
+
+    function drawPlots(): void {
+      for (const pl of spec.plots) {
+        const data = plotData(pl.id);
+        const xLabel = data?.xLabel ?? (pl.xUnit ? `${pl.xLabel} (${pl.xUnit})` : pl.xLabel);
+        const series: Series[] = (data?.series ?? []).map(s => ({
+          x: s.x, y: s.y, color: seriesColor(s.color), dash: s.dash,
+        }));
+        drawXY(`plot-${slug}-${pl.id}`, series, xLabel, data?.yLabel ?? pl.yLabel ?? '', data?.markers ?? []);
+        const note = $(`n-${slug}-${pl.id}`);
+        if (note) note.textContent = data?.note ?? '';
+      }
+    }
+
+    function updateSchematic(): void {
+      const has = (k: string) => values[k] !== undefined;
+      const parts: string[] = [];
+      if (has('N')) parts.push(`N=${values.N}`);
+      if (has('D')) parts.push(`D=${fmt(Number(values.D), 2)}`);
+      const s = $(`s-${slug}-sample`);
+      if (s) s.textContent = parts.join(', ');
+      const o = $(`s-${slug}-objective`);
+      if (o) o.textContent = has('NA') ? `NA ${fmt(Number(values.NA), 3)}` : '';
+      const d = $(`s-${slug}-detector`);
+      if (d) d.textContent = has('pixel') ? `${values.pixel} nm/px` : '';
+    }
+
+    function showBusy(on: boolean, fraction = 0): void {
+      const busy = $(v('busy'));
+      if (busy) busy.hidden = !on;
+      const fill = $(v('busy-fill'));
+      if (fill) fill.style.width = `${Math.round(fraction * 100)}%`;
+    }
+
+    function runQuick(): void {
+      quick = impl.quick(values);
+      binding.setObservables(quick.observables);
+      binding.setEnvelope({ p: values, o: quick.observables });
+      updateSchematic();
+      drawPlots();
+    }
+
+    /**
+     * The movie-wide analysis costs up to a couple of seconds, so it is
+     * debounced, and a progress bar appears if it runs past half a second.
+     */
+    function scheduleFull(): void {
+      if (fullTimer !== undefined) clearTimeout(fullTimer);
+      full = null;
+      fullTimer = window.setTimeout(() => {
+        fullTimer = undefined;
+        const slow = window.setTimeout(() => showBusy(true, 0), 500);
+        // a timeout, not requestAnimationFrame: rAF does not fire in a hidden
+        // tab, which would leave the analysis permanently pending
+        window.setTimeout(() => {
+          try {
+            full = impl.full(values, f => showBusy(true, f));
+            binding.setObservables(full.observables);
+            drawPlots();
+            drawFrame();
+          } catch (err) {
+            console.error(`${slug} analysis failed`, err);
+          } finally {
+            clearTimeout(slow);
+            showBusy(false);
+          }
+        }, 0);
+      }, 350);
+    }
+
+    function onChange(next: Values): void {
+      values = next;
+      const sim = impl.sim(values);
+      truth = simulateTruth(sim);
+      scratch = {
+        photons: new Float32Array(sim.field * sim.field),
+        out: new Float32Array(sim.field * sim.field),
+      };
+      if (frameIndex >= sim.frames) frameIndex = sim.frames - 1;
+      scrub.max = String(Math.max(0, sim.frames - 1));
+      scrub.value = String(frameIndex);
+      runQuick();
+      drawFrame();
+      scheduleFull();
+    }
+
+    const binding = bindSolver(spec, {
+      prefix: `p-${slug}-`,
+      outPrefix: `o-${slug}-`,
+      envPrefix: `e-${slug}-`,
+      scenarioSelector: `[data-scenario-module="${slug}"]`,
+      onChange,
+      debounceMs: 120,
+    });
+
+    // ── transport ──────────────────────────────────────────────────────────
+    scrub?.addEventListener('input', () => { frameIndex = Number(scrub.value); drawFrame(); });
+
+    function setPlaying(on: boolean): void {
+      playing = on;
+      const btn = $(v('play'));
+      if (btn) btn.innerHTML = on ? '&#10073;&#10073; pause' : '&#9654; play';
+      if (playTimer !== undefined) { clearInterval(playTimer); playTimer = undefined; }
+      if (on) {
+        playTimer = window.setInterval(() => {
+          frameIndex = (frameIndex + 1) % Number(values.frames);
+          scrub.value = String(frameIndex);
+          drawFrame();
+        }, 60);
+      }
+    }
+
+    $(v('play'))?.addEventListener('click', () => setPlaying(!playing));
+    $(v('reseed'))?.addEventListener('click', () => {
+      binding.setValues({ seed: Math.floor(Math.random() * 999999) });
+    });
+    for (const name of ['truth', 'trails', 'detections', 'colormap']) {
+      $(v(`ov-${name}`))?.addEventListener('change', drawFrame);
+    }
+
+    // ── exports ────────────────────────────────────────────────────────────
+    const stem = impl.exports.stem;
+    document.querySelectorAll<HTMLElement>(`[data-dl-module="${slug}"]`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        const kind = btn.dataset.dl;
+        if (kind === 'share') {
+          navigator.clipboard.writeText(binding.permalink()).then(() => flash(btn, 'Copied!'));
+        } else if (kind === 'truth') {
+          if (!truth) return;
+          downloadBlob(new Blob([impl.exports.groundTruth(truth, values)], { type: 'text/csv' }),
+            `${stem}-ground-truth.csv`);
+        } else if (kind === 'tracks') {
+          if (!full) { flash(btn, 'Analysing…'); return; }
+          downloadBlob(new Blob([impl.exports.tracks(full.analysis, values)], { type: 'text/csv' }),
+            `${stem}-tracks.csv`);
+        } else if (kind === 'python') {
+          const src = impl.exports.python(values, {
+            permalink: binding.permalink(), version: spec.meta.version,
+          });
+          downloadBlob(new Blob([src], { type: 'text/x-python' }),
+            `${stem}_${slug.replace(/-/g, '_')}.py`);
+        } else if (kind === 'frames') {
+          if (!truth) return;
+          flash(btn, 'Building…');
+          const sim = impl.sim(values);
+          const local = {
+            photons: new Float32Array(sim.field * sim.field),
+            out: new Float32Array(sim.field * sim.field),
+          };
+          const out: Uint16Array[] = [];
+          for (let t = 0; t < sim.frames; t++) {
+            const img = renderDetected(sim, truth, t, local);
+            const u16 = new Uint16Array(img.length);
+            for (let i = 0; i < img.length; i++) {
+              u16[i] = Math.max(0, Math.min(65535, Math.round(img[i])));
+            }
+            out.push(u16);
+          }
+          downloadBlob(buildTiff(out, sim.field, sim.field), `${stem}-frames-16bit.tif`);
+        }
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>(`[data-csv-module="${slug}"]`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        const csv = plotData(btn.dataset.csv!)?.csv?.();
+        if (!csv) { flash(btn, 'Analysing…'); return; }
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), `${stem}-${btn.dataset.csv}.csv`);
+      });
+    });
+
+    return { drawPlots, drawFrame, stop: () => setPlaying(false) };
+  }
+
+  // PNG export is identical for every plot on the page.
+  document.querySelectorAll<HTMLElement>('[data-png]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cv = $(btn.dataset.png!) as HTMLCanvasElement | null;
+      cv?.toBlob(b => { if (b) downloadBlob(b, `${btn.dataset.png}.png`); });
+    });
+  });
+
+  // ── module switcher ──────────────────────────────────────────────────────
+  (() => {
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-module]')];
+    const mounted = new Map<string, ReturnType<typeof mountModule>>();
+
+    function activate(slug: string): void {
+      buttons.forEach(btn => {
+        const active = btn.dataset.module === slug;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
+      for (const btn of buttons) {
+        const panel = $(`module-panel-${btn.dataset.module}`);
+        if (panel) panel.hidden = btn.dataset.module !== slug;
+      }
+      // pause whatever was playing in the panel we just left
+      for (const [id, ctl] of mounted) if (id !== slug) ctl.stop();
+      // mount on first reveal, so a hidden module never simulates
+      if (!mounted.has(slug)) mounted.set(slug, mountModule(slug));
+      else {
+        const ctl = mounted.get(slug)!;
+        ctl.drawPlots();
+        ctl.drawFrame();
+      }
+      if (location.hash.slice(1) !== slug) history.replaceState(null, '', `#${slug}`);
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => { if (!btn.disabled) activate(btn.dataset.module!); });
+    });
+
+    // a shared link opens directly on the relevant module
+    const wanted = location.hash.slice(1);
+    const initial = buttons.some(b => b.dataset.module === wanted)
+      ? wanted
+      : buttons[0]?.dataset.module;
+    if (initial) activate(initial);
+
+    // redraw the visible module on theme change and resize
+    let resizeTimer: number | undefined;
+    const redraw = () => {
+      for (const btn of buttons) {
+        if (btn.classList.contains('active')) mounted.get(btn.dataset.module!)?.drawPlots();
+      }
+    };
+    onThemeChange(() => { redraw(); });
+    window.addEventListener('resize', () => {
+      if (resizeTimer !== undefined) clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(redraw, 120);
+    });
+  })();
+</script>

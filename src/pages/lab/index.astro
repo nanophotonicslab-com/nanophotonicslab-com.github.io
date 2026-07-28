@@ -28,6 +28,12 @@ const categories: Category[] = [
     ],
   },
   {
+    name: 'Microscopy & imaging',
+    widgets: [
+      { title: 'Imaging', description: 'Modules for simulated microscopy with exact ground truth. Starts with diffusion and tracking: Brownian particles imaged through a fluorescence microscope, localized and tracked, with a DeepTrack2 script export.', color: '#6366F1', icon: 'diffusion', status: 'Experimental', url: `${base}lab/imaging/` },
+    ],
+  },
+  {
     name: 'Lab calculators',
     widgets: [
       { title: 'Photon Calculator', description: 'Convert between wavelength, energy, frequency, angular frequency, wavenumber, and period for photons. Live spectrum chart with common laser lines.', color: '#10B981', icon: 'photon', status: 'Stable', url: `${base}lab/photon/` },
@@ -139,6 +145,12 @@ const categories: Category[] = [
                     <path d="M8 9h8"/><path d="M8 13h4"/>
                   </svg>
                 )}
+                {widget.icon === 'diffusion' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="8" r="1.6"/><circle cx="16" cy="7" r="1.6"/><circle cx="12" cy="16" r="1.6"/>
+                    <path d="M7 8c2 2 1 5 5 8" stroke-dasharray="2 2"/><path d="M16 7c-1 3-3 3-4 9" stroke-dasharray="2 2"/>
+                  </svg>
+                )}
                 {widget.icon === 'grating' && (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 4v16"/><path d="M8 4v16"/><path d="M12 4v16"/><path d="M16 4v16"/><path d="M20 4v16"/>
@@ -197,104 +209,6 @@ const categories: Category[] = [
     -webkit-text-fill-color: transparent;
   }
 
-  .cat-heading {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: var(--space-lg);
-  }
-
-  .widgets-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: var(--space-lg);
-  }
-
-  .widget-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .widget-card[data-status="Coming soon"] {
-    opacity: 0.7;
-    cursor: default;
-  }
-
-  .widget-card[data-status="Coming soon"]:hover {
-    transform: none;
-    box-shadow: none;
-  }
-
-  .widget-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .widget-card__icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .widget-status {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    background: var(--bg-muted);
-    color: var(--text-muted);
-  }
-
-  .widget-status--stable {
-    background: var(--success-soft);
-    color: var(--success);
-  }
-
-  .widget-status--beta {
-    background: var(--warning-soft);
-    color: var(--warning);
-  }
-
-  .widget-status--experimental {
-    background: var(--danger-soft);
-    color: var(--danger);
-  }
-
-  .widget-card h3 {
-    font-size: 1.125rem;
-  }
-
-  .widget-card p {
-    font-size: 0.9375rem;
-    flex-grow: 1;
-  }
-
-  .widget-cta {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--primary);
-    transition: gap 0.2s;
-  }
-
-  .widget-card:hover .widget-cta {
-    color: var(--primary-dark);
-  }
-
-  @media (max-width: 768px) {
-    .widgets-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+  /* The card grid, status pills and category headings now live in lab.css,
+     because /lab/imaging/ renders the same cards. */
 </style>

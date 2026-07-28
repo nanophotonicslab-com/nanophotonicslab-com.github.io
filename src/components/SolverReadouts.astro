@@ -1,0 +1,38 @@
+---
+/**
+ * Renders a solver spec's `observables[]` as the readout row, each with its
+ * meaning in an ⓘ tooltip. Values are filled in by the client runtime, keyed
+ * by `${prefix}${observable.key}`.
+ *
+ * Tile markup follows the shared convention (`.stat` > `.stat-head` with the
+ * label and the ⓘ button, then value and unit), and the column count comes
+ * from the spec, so a module with three or six observables lays out correctly
+ * without touching this component.
+ */
+import type { Solver } from '../lib/solver-spec';
+
+interface Props {
+  spec: Solver;
+  prefix?: string;
+}
+const { spec, prefix = 'out-' } = Astro.props;
+
+// Cap the row at five columns; beyond that tiles get too narrow to read and
+// the shared responsive rule takes over on smaller screens anyway.
+const cols = Math.min(5, Math.max(1, spec.observables.length));
+---
+
+<div class="stats" style={`--stats-cols: ${cols}`}>
+  {spec.observables.map(o => (
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-label" set:html={o.label} />
+        <button class="stat-info" type="button" aria-label={`${o.label} — what this means`}>
+          i<span class="stat-tooltip" role="tooltip">{o.help}</span>
+        </button>
+      </div>
+      <span class="stat-value" id={`${prefix}${o.key}`}>&mdash;</span>
+      {o.unit && <span class="stat-unit" set:html={o.unit} />}
+    </div>
+  ))}
+</div>

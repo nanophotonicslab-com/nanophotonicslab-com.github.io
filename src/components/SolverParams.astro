@@ -1,0 +1,140 @@
+---
+/**
+ * Renders a solver spec's `params[]` as grouped controls, in declaration order.
+ *
+ * This is the shared spec renderer: a module supplies a spec and gets its
+ * parameter panel, with symbol + unit in every label and meaning in every
+ * tooltip. Do not hand-write parameter markup in a module page — add the
+ * capability here instead, so every solver picks it up.
+ *
+ * Element ids follow `${prefix}${param.key}` (plus `-slider`) so the client
+ * runtime can bind values back to keys without a second declaration.
+ */
+import {
+  groupParams, isChoice, hasSlider, isLogSlider, toSliderPos, paramLabel,
+  LOG_SLIDER_STEPS, type Solver, type Param,
+} from '../lib/solver-spec';
+
+interface Props {
+  spec: Solver;
+  /** Prefix for generated element ids; keeps two solvers on one page distinct. */
+  prefix?: string;
+}
+const { spec, prefix = 'sp-' } = Astro.props;
+
+/** Sensible step for the number field when the spec does not pin one. */
+function numberStep(p: Param): number {
+  if (typeof p.step === 'number') return p.step;
+  if (p.integer) return 1;
+  const span = (p.max ?? 1) - (p.min ?? 0);
+  return span > 0 ? Number((span / 200).toPrecision(1)) : 0.01;
+}
+
+/**
+ * Slider bounds. A logarithmic parameter drives the range input in integer
+ * position units and the runtime maps them back, so that a decade-spanning
+ * quantity is not crammed into the last few percent of the track.
+ */
+function sliderAttrs(p: Param): { min: number; max: number; step: number; value: number } {
+  if (isLogSlider(p)) {
+    return { min: 0, max: LOG_SLIDER_STEPS, step: 1, value: toSliderPos(p, Number(p.default)) };
+  }
+  return { min: p.min as number, max: p.max as number, step: numberStep(p), value: Number(p.default) };
+}
+---
+
+{spec.groups.map(group => {
+  const params = groupParams(spec, group.id).filter(p => !p.advanced);
+  const advanced = groupParams(spec, group.id).filter(p => p.advanced);
+  if (params.length === 0 && advanced.length === 0) return null;
+  return (
+    <details class="param-group solver-group" open={!group.collapsed}>
+      <summary class="param-group__title solver-group__title">{group.label}</summary>
+      {[...params, ...advanced].map(p => (
+        <div class="param" data-advanced={p.advanced ? 'true' : undefined}>
+          <div class="param-header">
+            {p.help ? (
+              <div class="field-label-with-info">
+                <label for={`${prefix}${p.key}`} set:html={paramLabel(p)} />
+                <button
+                  class="field-info"
+                  type="button"
+                  aria-label={`${p.label} — what this means`}
+                  aria-describedby={`${prefix}${p.key}-tip`}
+                >i</button>
+                <span class="field-tooltip" id={`${prefix}${p.key}-tip`} role="tooltip">{p.help}</span>
+              </div>
+            ) : (
+              <label for={`${prefix}${p.key}`} set:html={paramLabel(p)} />
+            )}
+            {!isChoice(p) && (
+              <input
+                type="number"
+                class="param-number"
+                id={`${prefix}${p.key}`}
+                data-param={p.key}
+                value={String(p.default)}
+                min={p.min}
+                max={p.max}
+                step={numberStep(p)}
+              />
+            )}
+          </div>
+
+          {isChoice(p) && (
+            <select class="param-select" id={`${prefix}${p.key}`} data-param={p.key}>
+              {p.choices!.map(c => (
+                <option value={String(c)} selected={c === p.default}>{String(c)}</option>
+              ))}
+            </select>
+          )}
+
+          {hasSlider(p) && (
+            <input
+              type="range"
+              class="param-slider"
+              id={`${prefix}${p.key}-slider`}
+              data-param-slider={p.key}
+              data-scale={isLogSlider(p) ? 'log' : 'linear'}
+              aria-label={p.label}
+              min={sliderAttrs(p).min}
+              max={sliderAttrs(p).max}
+              step={sliderAttrs(p).step}
+              value={String(sliderAttrs(p).value)}
+            />
+          )}
+
+          {p.presets && p.presets.length > 0 && (
+            <div class="param-presets">
+              {p.presets.map(v => (
+                <button
+                  class:list={['preset-btn', { active: v === p.default }]}
+                  type="button"
+                  data-param-preset={`${prefix}${p.key}`}
+                  data-val={String(v)}
+                >{String(v)}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </details>
+  );
+})}
+
+<style>
+  /* Only the disclosure behaviour the shared .param-group cannot know about:
+     it is a <details> here so groups collapse, as BPM's groups do. */
+  .solver-group__title {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .solver-group__title::marker {
+    color: var(--text-muted);
+  }
+
+  .solver-group[open] > .solver-group__title {
+    margin-bottom: 0.5rem;
+  }
+</style>

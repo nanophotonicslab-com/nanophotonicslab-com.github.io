@@ -1,0 +1,186 @@
+---
+/**
+ * Movie viewer for the Imaging lab: canvas, scrub bar, play/pause, reseed and
+ * overlay toggles.
+ *
+ * Shared on purpose — every Imaging module shows a simulated movie, so this
+ * lives here rather than inside one module. It renders only the chrome; the page
+ * script owns the pixels, because what a frame contains is module physics.
+ */
+interface Props {
+  /** Id prefix, so two viewers can coexist. */
+  prefix?: string;
+  frames: number;
+}
+const { prefix = 'fv-', frames } = Astro.props;
+---
+
+<div class="frame-viewer" id={`${prefix}root`}>
+  <div class="frame-viewer__stage">
+    <canvas id={`${prefix}canvas`} class="frame-viewer__canvas"></canvas>
+    <div class="frame-viewer__busy" id={`${prefix}busy`} hidden>
+      <span class="frame-viewer__busy-bar"><span id={`${prefix}busy-fill`}></span></span>
+      <span class="frame-viewer__busy-text" id={`${prefix}busy-text`}>analysing sequence…</span>
+    </div>
+  </div>
+
+  <div class="frame-viewer__transport">
+    <button class="dl-btn" type="button" id={`${prefix}play`} aria-label="Play or pause">
+      &#9654; play
+    </button>
+    <button class="dl-btn" type="button" id={`${prefix}reseed`} aria-label="New random seed">
+      &#8635; reseed
+    </button>
+    <input
+      type="range"
+      class="param-slider frame-viewer__scrub"
+      id={`${prefix}scrub`}
+      min="0"
+      max={Math.max(0, frames - 1)}
+      step="1"
+      value="0"
+      aria-label="Frame"
+    />
+    <span class="frame-viewer__counter" id={`${prefix}counter`}>frame 1 / {frames}</span>
+  </div>
+
+  <div class="frame-viewer__overlays">
+    <span class="frame-viewer__overlays-label">Overlays</span>
+    <label class="frame-viewer__toggle">
+      <input type="checkbox" id={`${prefix}ov-truth`} checked />
+      <span class="frame-viewer__key frame-viewer__key--truth"></span>
+      ground truth
+    </label>
+    <label class="frame-viewer__toggle">
+      <input type="checkbox" id={`${prefix}ov-trails`} checked />
+      <span class="frame-viewer__key frame-viewer__key--trail"></span>
+      trails
+    </label>
+    <label class="frame-viewer__toggle">
+      <input type="checkbox" id={`${prefix}ov-detections`} />
+      <span class="frame-viewer__key frame-viewer__key--det"></span>
+      detections
+    </label>
+    <label class="frame-viewer__toggle">
+      <input type="checkbox" id={`${prefix}ov-colormap`} />
+      colormap
+    </label>
+  </div>
+</div>
+
+<style>
+  .frame-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .frame-viewer__stage {
+    position: relative;
+    background: var(--graph-canvas);
+    border: 1px solid var(--graph-canvas-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .frame-viewer__canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    /* nearest-neighbour: a camera pixel is a fact, not something to smooth */
+    image-rendering: pixelated;
+  }
+
+  .frame-viewer__busy {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-glass);
+    backdrop-filter: blur(6px);
+  }
+
+  .frame-viewer__busy-bar {
+    flex: 1;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--bg-muted);
+    overflow: hidden;
+  }
+
+  .frame-viewer__busy-bar > span {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.12s linear;
+  }
+
+  .frame-viewer__busy-text {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .frame-viewer__transport {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .frame-viewer__scrub {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .frame-viewer__counter {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .frame-viewer__overlays {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .frame-viewer__overlays-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .frame-viewer__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--text-soft);
+    cursor: pointer;
+  }
+
+  .frame-viewer__key {
+    width: 0.85rem;
+    height: 0;
+    border-top-width: 2px;
+    border-top-style: dashed;
+    border-top-color: var(--emerald);
+  }
+
+  .frame-viewer__key--trail {
+    border-top-style: solid;
+    border-top-color: var(--amber);
+  }
+
+  .frame-viewer__key--det {
+    border-top-style: solid;
+    border-top-color: var(--cyan);
+  }
+</style>

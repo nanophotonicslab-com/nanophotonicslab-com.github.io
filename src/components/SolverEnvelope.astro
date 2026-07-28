@@ -1,0 +1,90 @@
+---
+/**
+ * Renders a solver spec's `envelope[]` — the "Fails when" column, evaluated
+ * live against the current inputs.
+ *
+ * Each row is a coloured dot, a short bold label and one line that names the
+ * fix. The client runtime sets `data-level` to ok / warn / fail and fills the
+ * message; a failed check never blocks the computation, it only warns.
+ */
+import type { Solver } from '../lib/solver-spec';
+
+interface Props {
+  spec: Solver;
+  prefix?: string;
+}
+const { spec, prefix = 'env-' } = Astro.props;
+---
+
+<div class="envelope" id={`${prefix}root`}>
+  <span class="envelope__title">Validity &mdash; checked against your current inputs</span>
+  {spec.envelope.map(c => (
+    <div class="envelope__row" id={`${prefix}${c.id}`} data-level="ok">
+      <span class="envelope__dot" aria-hidden="true"></span>
+      <span class="envelope__label">{c.label}</span>
+      <span class="envelope__msg" id={`${prefix}${c.id}-msg`}></span>
+    </div>
+  ))}
+</div>
+
+<style>
+  /* Envelope rows are new shared chrome, defined once here and used by every
+     solver that declares an envelope. */
+  .envelope {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .envelope__title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.15rem;
+  }
+
+  .envelope__row {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: baseline;
+    gap: 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .envelope__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--success);
+    transform: translateY(-0.1rem);
+  }
+
+  .envelope__label {
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .envelope__msg {
+    color: var(--text-muted);
+    min-width: 0;
+  }
+
+  .envelope__row[data-level='warn'] .envelope__dot { background: var(--warning); }
+  .envelope__row[data-level='fail'] .envelope__dot { background: var(--danger); }
+  .envelope__row[data-level='warn'] .envelope__msg { color: var(--warning); }
+  .envelope__row[data-level='fail'] .envelope__msg { color: var(--danger); }
+
+  @media (max-width: 640px) {
+    .envelope__row {
+      grid-template-columns: auto 1fr;
+    }
+
+    .envelope__msg {
+      grid-column: 2;
+    }
+  }
+</style>
