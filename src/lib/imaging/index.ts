@@ -8,8 +8,8 @@
 export { Rng, rng } from './rng';
 export { gaussianPSF, FWHM_PER_SIGMA, type PsfModel } from './psf';
 export {
-  seedEmitters, step, stepSigmaNm, minimumImage,
-  type Emitter, type MotionKind,
+  seedEmitters, step, stepSigmaNm, minimumImage, reflect,
+  type Emitter, type MotionKind, type MotionParams,
 } from './dynamics';
 export {
   renderFrame, radialProfile, measureFwhmPx, measureSigmaPx, measureFwhmCut,
@@ -18,10 +18,11 @@ export {
 export { detect, stretchLimits, type DetectorOptions } from './detector';
 export { localize, linkTracks, type Detection, type Track, type LocalizeOptions } from './localize';
 export {
-  msdCurve, fitMsd, maxLag, thompsonSigma,
-  type Trajectory, type MsdCurve, type MsdFit,
+  msdCurve, fitMsd, fitAlpha, maxLag, thompsonSigma,
+  type Trajectory, type MsdCurve, type MsdFit, type AlphaFit,
 } from './msd';
 export {
   simulateTruth, renderPhotons, renderDetected, analyzeSequence, truthTrajectories,
+  motionParams,
   type SimParams, type Truth, type Analysis,
 } from './sequence';

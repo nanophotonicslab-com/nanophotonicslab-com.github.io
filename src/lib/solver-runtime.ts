@@ -9,7 +9,7 @@
  */
 import {
   coerce, decodeState, defaultValues, encodeState, evaluateEnvelope, fmt, fromSliderPos,
-  isChoice, toSliderPos, type EnvelopeContext, type Param, type Solver,
+  isChoice, isVisible, toSliderPos, type EnvelopeContext, type Param, type Solver,
 } from './solver-spec';
 
 export type Values = Record<string, number | string>;
@@ -63,6 +63,20 @@ export function bindSolver(spec: Solver, opts: BindOptions): SolverBinding {
     return out;
   }
 
+  /**
+   * Show or hide the controls whose `showIf` depends on the current values —
+   * for parameters belonging to one branch of a model choice. Hidden controls
+   * keep their value and still reach `compute`, so what the form shows never
+   * changes the physics.
+   */
+  function applyVisibility(current: Values): void {
+    for (const p of spec.params) {
+      if (!p.showIf) continue;
+      const row = document.querySelector<HTMLElement>(`[data-param-row="${prefix}${p.key}"]`);
+      if (row) row.hidden = !isVisible(p, current);
+    }
+  }
+
   let timer: number | undefined;
   function emit(): void {
     if (debounceMs <= 0) { opts.onChange(values()); return; }
@@ -92,7 +106,9 @@ export function bindSolver(spec: Solver, opts: BindOptions): SolverBinding {
   }
 
   function syncUrl(): void {
-    const qs = encodeState(spec, values());
+    const current = values();
+    applyVisibility(current);
+    const qs = encodeState(spec, current);
     const url = new URL(window.location.href);
     url.search = qs;
     history.replaceState(null, '', url.toString());

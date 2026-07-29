@@ -10,11 +10,15 @@
  *     refractive_index_medium, output_region, upscale)` — verified signature.
  *  - `PointParticle(position=..., intensity=...)`, `^` to replicate,
  *    `dt.Sequence(..., sequence_length=...)`.
- *  - The sequential-property API differs across releases: deeptrack 2.0.1 (PyPI)
- *    has only the deprecated `dt.Sequential(feature, position=...)`, while the
- *    development branch replaces it with `feature.to_sequential(...)`. The brief
- *    assumed the latter, which raises AttributeError on the released package, so
- *    the script picks whichever exists.
+ *  - The sequential-property API differs across releases, and the two forms do
+ *    not overlap: deeptrack 2.0.1 (PyPI) has only `deeptrack.sequences.Sequential`,
+ *    while the development branch adds `feature.to_sequential(...)`, stops
+ *    exporting `Sequential` and leaves it defective. The brief assumed
+ *    `to_sequential`, which raises AttributeError on the released package, so the
+ *    script resolves whichever the installed build actually has.
+ *  - The update rule's `previous_values` EXCLUDES the immediately preceding value
+ *    (it is `previous()[:step - 1]`) and is empty on the first call, which the
+ *    confined model has to allow for when it reads a particle's starting point.
  *  - `dt.Poisson(snr=...)` exists but is NOT a photon-count model: it rescales
  *    the image so the peak above background matches a target SNR, then samples.
  *    This module works in physical photons, so the script applies shot noise and
@@ -43,6 +47,105 @@ export function mediumIndexFor(NA: number): number {
   if (NA > 1.35) return 1.518; // oil
   if (NA > 1.0) return 1.33; // water
   return 1.0; // dry
+}
+
+/**
+ * The motion model, written as a DeepTrack2 sequential update rule.
+ *
+ * DeepTrack2 has no diffusion models of its own; it has
+ * `Feature.to_sequential(position=rule)` (and the deprecated `dt.Sequential`),
+ * where `rule` receives `previous_value` and returns the next position. Every
+ * model in this module is one such rule, so the exported script stays inside
+ * DeepTrack2's own machinery with nothing but numpy beside it.
+ */
+function motionBlock(p: Values, fieldPx: number, pixelNm: number, dtS: number): string {
+  const motion = String(p.motion ?? 'brownian');
+
+  if (motion === 'directed') {
+    const v = Number(p.driftV ?? 0);
+    const angle = Number(p.driftAngle ?? 0);
+    return `# Directed motion: a constant velocity on top of the diffusive step.
+DRIFT_V = ${py(v)}      # um/s
+DRIFT_DEG = ${py(angle)}
+drift_px = DRIFT_V * 1000 * DT / PIXEL   # per frame, in pixels
+drift = drift_px * np.array([
+    np.cos(np.deg2rad(DRIFT_DEG)), np.sin(np.deg2rad(DRIFT_DEG)),
+])
+
+def update_position(previous_value):
+    step = rng.normal(0, sigma_step_px, 2) + drift
+    return (previous_value + step) % FIELD`;
+  }
+
+  if (motion === 'confined') {
+    const L = Number(p.corralNm ?? 0) / pixelNm;
+    return `# Confined diffusion: each particle is trapped in a square corral with
+# reflecting walls, centred where it started. The MSD flattens at L^2/3.
+#
+# The corral centre is the particle's own starting point, which the rule reads
+# from the property's history — DeepTrack2 hands the update rule everything it
+# has stored, so no per-particle bookkeeping is needed on our side.
+#
+# Note DeepTrack2's convention: previous_values is previous()[:step - 1], i.e.
+# it EXCLUDES the immediately preceding value and is empty on the first update.
+# On that first call previous_value is itself the starting point.
+CORRAL = ${py(Number(L.toFixed(6)))}   # px
+
+def reflect(v, lo, hi):
+    """Fold a coordinate back into [lo, hi], repeating for large steps."""
+    span = hi - lo
+    if span <= 0:
+        return lo
+    t = (v - lo) % (2 * span)
+    return lo + (t if t <= span else 2 * span - t)
+
+def update_position(previous_value, previous_values):
+    start = previous_values[0] if len(previous_values) else previous_value
+    centre = np.asarray(start, dtype=float)
+    proposed = previous_value + rng.normal(0, sigma_step_px, 2)
+    half = CORRAL / 2
+    return np.array([
+        reflect(proposed[i], centre[i] - half, centre[i] + half) for i in range(2)
+    ])`;
+  }
+
+  if (motion === 'network') {
+    // mirror the kernel's snapping so a whole number of compartments spans the field
+    const requested = Math.max(1, Math.min(Number(p.meshNm ?? 0), fieldPx * pixelNm));
+    const cells = Math.max(1, Math.round((fieldPx * pixelNm) / requested));
+    const meshPx = fieldPx / cells;
+    const hop = Number(p.hopProb ?? 0);
+    return `# Meshwork ("fence") model: the particle diffuses freely inside a
+# compartment of an underlying network and crosses into the next one only with
+# probability HOP; otherwise it bounces off the boundary. Free at short lag
+# times, subdiffusive at long ones.
+MESH = ${py(Number(meshPx.toFixed(6)))}   # px, snapped so a whole number spans the field
+HOP = ${py(hop)}
+
+def reflect(v, lo, hi):
+    span = hi - lo
+    if span <= 0:
+        return lo
+    t = (v - lo) % (2 * span)
+    return lo + (t if t <= span else 2 * span - t)
+
+def update_position(previous_value):
+    proposed = previous_value + rng.normal(0, sigma_step_px, 2)
+    out = np.empty(2)
+    for i in range(2):
+        cell = np.floor(previous_value[i] / MESH)
+        if np.floor(proposed[i] / MESH) == cell or rng.random() < HOP:
+            out[i] = proposed[i]
+        else:
+            out[i] = reflect(proposed[i], cell * MESH, (cell + 1) * MESH)
+    return out % FIELD`;
+  }
+
+  return `# Free Brownian motion — the model DeepTrack2's own tutorials demonstrate
+# (DTAT331 section 4, DTGS106 section 6), wrapped periodically into the field.
+
+def update_position(previous_value):
+    return (previous_value + rng.normal(0, sigma_step_px, 2)) % FIELD`;
 }
 
 export function toPythonScript(p: Values, opt: ExportOptions): string {
@@ -90,24 +193,42 @@ SEED     = ${py(seed)}
 
 rng = np.random.default_rng(SEED)
 
-# per-axis Brownian step, in pixels
+# per-axis diffusive step, in pixels
 sigma_step_px = np.sqrt(2 * D * DT) * 1000 / PIXEL
 
-def update_position(previous_value):
-    """One Brownian step, wrapped periodically into the field of view."""
-    return (previous_value + rng.normal(0, sigma_step_px, 2)) % FIELD
+# ── motion model ─────────────────────────────────────────────────────────────
+${motionBlock(p, field, pixel, dtMs / 1000)}
 
 particle = dt.PointParticle(
     position=lambda: rng.uniform(0, FIELD, 2),
     intensity=1.0,               # arbitrary units; renormalised to photons below
 )
 
-# The sequential-property API moved between releases: 2.0.1 ships the deprecated
-# dt.Sequential(), the development branch ships Feature.to_sequential().
-if hasattr(particle, "to_sequential"):
-    walker = particle.to_sequential(position=update_position)
-else:
-    walker = dt.Sequential(particle, position=update_position)
+def make_sequential(feature, **rules):
+    """Attach per-frame update rules, across DeepTrack2 API versions.
+
+    The sequential-property API moved between releases and the two forms do not
+    overlap, so neither alone is portable:
+      - deeptrack 2.0.1 (PyPI) has the free function deeptrack.sequences.Sequential
+        and no Feature.to_sequential;
+      - the development branch adds Feature.to_sequential, stops exporting
+        Sequential (dt.Sequential raises AttributeError) and leaves the old
+        function defective.
+    Prefer the method, fall back to the free function by explicit import.
+    """
+    if hasattr(feature, "to_sequential"):
+        return feature.to_sequential(**rules)
+    try:
+        from deeptrack.sequences import Sequential
+    except ImportError as exc:  # pragma: no cover - depends on the installed version
+        raise RuntimeError(
+            "This deeptrack build exposes neither Feature.to_sequential nor "
+            "deeptrack.sequences.Sequential; cannot attach a motion model."
+        ) from exc
+    return Sequential(feature, **rules)
+
+
+walker = make_sequential(particle, position=update_position)
 
 optics = dt.Fluorescence(
     NA=NA,

@@ -8,18 +8,32 @@
  * would be about 2 GB — and it keeps every frame independently reproducible.
  */
 import { Rng } from './rng';
-import { seedEmitters, step, stepSigmaNm, minimumImage, type Emitter, type MotionKind } from './dynamics';
+import {
+  seedEmitters, step, stepSigmaNm, minimumImage,
+  type Emitter, type MotionKind, type MotionParams,
+} from './dynamics';
 import { gaussianPSF } from './psf';
 import { renderFrame } from './render';
 import { detect } from './detector';
 import { localize, linkTracks, type Detection } from './localize';
-import { msdCurve, fitMsd, maxLag, type Trajectory, type MsdCurve, type MsdFit } from './msd';
+import {
+  msdCurve, fitMsd, fitAlpha, maxLag,
+  type Trajectory, type MsdCurve, type MsdFit, type AlphaFit,
+} from './msd';
 
 export interface SimParams {
   N: number;
   /** Diffusion coefficient, um^2/s. */
   D: number;
   motion: MotionKind;
+  /** Directed motion: speed in um/s and heading in degrees. */
+  driftV?: number;
+  driftAngle?: number;
+  /** Confined motion: corral side in nm. */
+  corralNm?: number;
+  /** Network motion: mesh spacing in nm and per-crossing hop probability. */
+  meshNm?: number;
+  hopProb?: number;
   /** Photons emitted per particle per frame. */
   photons: number;
   modality: 'fluorescence';
@@ -61,16 +75,62 @@ function frameSeed(seed: number, frame: number): number {
   return Math.imul(h, 0xc2b2ae35) >>> 0;
 }
 
+/**
+ * Resolve the spec's motion parameters into kernel units (nm per frame).
+ *
+ * The meshwork spacing is snapped so that a whole number of compartments spans
+ * the field. The mesh is anchored at the field origin and positions wrap at the
+ * field edge, so without snapping the compartment pattern would have a seam
+ * across the wrap; the adjustment is at most half a cell and keeps the grid
+ * exact. `effectiveMeshNm` reports what was actually used.
+ */
+export function motionParams(p: SimParams): MotionParams & { effectiveMeshNm?: number } {
+  const fieldNm = p.field * p.pixel;
+  const dtS = p.dt / 1000;
+  const base = { kind: p.motion, sigmaNm: stepSigmaNm(p.D, dtS) };
+  if (p.motion === 'directed') {
+    return {
+      ...base,
+      // um/s -> nm per frame
+      driftNm: (p.driftV ?? 0) * 1000 * dtS,
+      driftAngle: ((p.driftAngle ?? 0) * Math.PI) / 180,
+    };
+  }
+  if (p.motion === 'confined') {
+    return { ...base, corralNm: Math.min(p.corralNm ?? fieldNm, fieldNm) };
+  }
+  if (p.motion === 'network') {
+    const requested = Math.max(1, Math.min(p.meshNm ?? fieldNm, fieldNm));
+    const cells = Math.max(1, Math.round(fieldNm / requested));
+    const meshNm = fieldNm / cells;
+    return { ...base, meshNm, hopProb: p.hopProb ?? 0, effectiveMeshNm: meshNm };
+  }
+  return base;
+}
+
 /** Walk the ground-truth trajectory. This is the exact answer, by construction. */
 export function simulateTruth(p: SimParams): Truth {
   const fieldNm = p.field * p.pixel;
   const r = new Rng(p.seed);
   const emitters: Emitter[] = seedEmitters(p.N, fieldNm, p.photons, r);
-  const sigma = stepSigmaNm(p.D, p.dt / 1000);
+  const mp = motionParams(p);
+
+  if (mp.kind === 'confined') {
+    // Pull each corral fully inside the field, so a particle seeded near an
+    // edge does not spend the movie half outside the frame.
+    const half = (mp.corralNm ?? 0) / 2;
+    for (const e of emitters) {
+      e.cx = Math.min(Math.max(e.x, half), fieldNm - half);
+      e.cy = Math.min(Math.max(e.y, half), fieldNm - half);
+      e.x = Math.min(Math.max(e.x, e.cx - half), e.cx + half);
+      e.y = Math.min(Math.max(e.y, e.cy - half), e.cy + half);
+    }
+  }
+
   const x = new Float64Array(p.frames * p.N);
   const y = new Float64Array(p.frames * p.N);
   for (let t = 0; t < p.frames; t++) {
-    if (t > 0) step(emitters, p.motion, sigma, fieldNm, r);
+    if (t > 0) step(emitters, mp, fieldNm, r);
     for (let i = 0; i < p.N; i++) {
       x[t * p.N + i] = emitters[i].x;
       y[t * p.N + i] = emitters[i].y;
@@ -115,9 +175,12 @@ export interface Analysis {
   /** MSD of the localized tracks (the honest number). */
   msd: MsdCurve;
   fit: MsdFit;
+  /** Anomalous exponent of the localized MSD — how the models differ. */
+  alpha: AlphaFit;
   /** MSD of the ground truth, as a dashed reference. */
   msdTruth: MsdCurve;
   fitTruth: MsdFit;
+  alphaTruth: AlphaFit;
   /** Mean detections per frame — a crowding diagnostic. */
   meanDetections: number;
 }
@@ -162,9 +225,13 @@ export function analyzeSequence(
     perFrame.push(localize(img, { field: p.field, sigmaPx }));
     if (onProgress && (t & 7) === 0) onProgress(t / p.frames);
   }
-  // link within a generous radius: three per-frame steps, at least one FWHM
-  const stepPx = stepSigmaNm(p.D, p.dt / 1000) / p.pixel;
-  const maxDist = Math.max(3 * stepPx, 2.3548200450309493 * sigmaPx);
+  // Link within a generous radius: three per-frame diffusive steps plus the
+  // drift, since directed motion displaces every particle the same way and
+  // would otherwise fall outside a purely diffusive search radius.
+  const mp = motionParams(p);
+  const stepPx = mp.sigmaNm / p.pixel;
+  const driftPx = (mp.driftNm ?? 0) / p.pixel;
+  const maxDist = Math.max(3 * stepPx + driftPx, 2.3548200450309493 * sigmaPx);
   const tracks = linkTracks(perFrame, maxDist);
 
   const trajs: Trajectory[] = tracks
@@ -186,8 +253,10 @@ export function analyzeSequence(
     tracks,
     msd,
     fit: fitMsd(msd, nFit),
+    alpha: fitAlpha(msd),
     msdTruth,
     fitTruth: fitMsd(msdTruth, nFit),
+    alphaTruth: fitAlpha(msdTruth),
     meanDetections: total / Math.max(1, p.frames),
   };
 }

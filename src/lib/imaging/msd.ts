@@ -101,6 +101,42 @@ export function fitMsd(curve: MsdCurve, nLags = 5): MsdFit {
   };
 }
 
+export interface AlphaFit {
+  /** Anomalous exponent from MSD ~ tau^alpha. */
+  alpha: number;
+  /** Generalized transport coefficient (the log-log intercept, exponentiated). */
+  gamma: number;
+  nPoints: number;
+}
+
+/**
+ * Anomalous exponent from a straight-line fit of log(MSD) against log(tau).
+ *
+ * This is what separates the motion models from one another: alpha = 1 is free
+ * Brownian motion, alpha < 1 is subdiffusive (a corral flattens the curve, a
+ * meshwork bends it once hops become the bottleneck), and alpha > 1 is
+ * superdiffusive, approaching 2 when directed transport dominates the noise.
+ *
+ * Fitted over all available lags rather than the first few, because the
+ * interesting deviations from alpha = 1 only appear at longer lag times.
+ */
+export function fitAlpha(curve: MsdCurve): AlphaFit {
+  let sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
+  for (let i = 0; i < curve.tau.length; i++) {
+    const m = curve.msd[i];
+    if (!Number.isFinite(m) || m <= 0 || curve.tau[i] <= 0) continue;
+    const lx = Math.log(curve.tau[i]);
+    const ly = Math.log(m);
+    sx += lx; sy += ly; sxx += lx * lx; sxy += lx * ly; n++;
+  }
+  if (n < 2) return { alpha: NaN, gamma: NaN, nPoints: n };
+  const denom = n * sxx - sx * sx;
+  if (Math.abs(denom) < 1e-12) return { alpha: NaN, gamma: NaN, nPoints: n };
+  const alpha = (n * sxy - sx * sy) / denom;
+  const intercept = (sy - alpha * sx) / n;
+  return { alpha, gamma: Math.exp(intercept), nPoints: n };
+}
+
 /**
  * Thompson, Larson & Webb (Biophys. J. 82, 2775 (2002)) localization
  * precision, the standard single-molecule estimate:

@@ -20,7 +20,12 @@ export function toSimParams(p: Values): SimParams {
   return {
     N: Number(p.N),
     D: Number(p.D),
-    motion: 'brownian',
+    motion: (p.motion ?? 'brownian') as SimParams['motion'],
+    driftV: Number(p.driftV ?? 0),
+    driftAngle: Number(p.driftAngle ?? 0),
+    corralNm: Number(p.corralNm ?? 0),
+    meshNm: Number(p.meshNm ?? 0),
+    hopProb: Number(p.hopProb ?? 0),
     photons: Number(p.photons),
     modality: 'fluorescence',
     NA: Number(p.NA),
@@ -98,10 +103,14 @@ export function computeQuick(p: Values): QuickResult {
       snr: d.snr,
       sigmaLoc: d.sigmaLocNm,
       dFit: NaN,
+      alpha: NaN,
       // extra context the envelope predicates read
       nyquistNm: d.nyquistNm,
       density: d.density,
       sigmaLocNm: d.sigmaLocNm,
+      driftPx: d.driftPx,
+      blurPx: d.blurPx,
+      confinePx: d.confinePx,
     },
     psfCut: { x: cx, y: cy },
     precision: { x: px, y: py },
@@ -117,6 +126,9 @@ export interface FullResult {
   fitLine: { tau: Float64Array; msd: Float64Array };
   dFit: number;
   sigmaLocFitNm: number;
+  /** Anomalous exponent of the localized tracks, and of the ground truth. */
+  alpha: number;
+  alphaTruth: number;
 }
 
 /** Simulate the whole movie, localize it, link it and fit the MSD. */
@@ -142,5 +154,7 @@ export function computeFull(p: Values, onProgress?: (f: number) => void): FullRe
     fitLine: { tau: tauLine, msd: msdLine },
     dFit: fit.D,
     sigmaLocFitNm: fit.sigmaLocNm,
+    alpha: analysis.alpha.alpha,
+    alphaTruth: analysis.alphaTruth.alpha,
   };
 }

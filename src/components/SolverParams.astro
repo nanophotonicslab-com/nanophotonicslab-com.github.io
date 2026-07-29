@@ -12,7 +12,7 @@
  */
 import {
   groupParams, isChoice, hasSlider, isLogSlider, toSliderPos, paramLabel,
-  LOG_SLIDER_STEPS, type Solver, type Param,
+  choiceValue, choiceLabel, LOG_SLIDER_STEPS, type Solver, type Param,
 } from '../lib/solver-spec';
 
 interface Props {
@@ -51,7 +51,11 @@ function sliderAttrs(p: Param): { min: number; max: number; step: number; value:
     <details class="param-group solver-group" open={!group.collapsed}>
       <summary class="param-group__title solver-group__title">{group.label}</summary>
       {[...params, ...advanced].map(p => (
-        <div class="param" data-advanced={p.advanced ? 'true' : undefined}>
+        <div
+          class="param"
+          data-param-row={`${prefix}${p.key}`}
+          data-advanced={p.advanced ? 'true' : undefined}
+        >
           <div class="param-header">
             {p.help ? (
               <div class="field-label-with-info">
@@ -84,7 +88,10 @@ function sliderAttrs(p: Param): { min: number; max: number; step: number; value:
           {isChoice(p) && (
             <select class="param-select" id={`${prefix}${p.key}`} data-param={p.key}>
               {p.choices!.map(c => (
-                <option value={String(c)} selected={c === p.default}>{String(c)}</option>
+                <option
+                  value={String(choiceValue(c))}
+                  selected={choiceValue(c) === p.default}
+                >{choiceLabel(c)}</option>
               ))}
             </select>
           )}

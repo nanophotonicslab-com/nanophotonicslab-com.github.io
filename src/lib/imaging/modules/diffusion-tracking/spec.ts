@@ -15,8 +15,18 @@ import { fmt, type Solver } from '../../../solver-spec';
  * on every keystroke.
  */
 export interface Derived {
-  /** Per-axis per-frame step, in pixels. */
+  /** Per-axis per-frame diffusive step, in pixels. */
   stepPx: number;
+  /** Drift per frame, in pixels (zero unless the motion is directed). */
+  driftPx: number;
+  /**
+   * Per-frame displacement scale including drift, in pixels. This is what
+   * smears a particle within one exposure, so it is what the motion-blur check
+   * compares against the PSF width.
+   */
+  blurPx: number;
+  /** Confinement length of the active model in pixels, or NaN if unconfined. */
+  confinePx: number;
   /** PSF standard deviation, nm and pixels. */
   sigmaPsfNm: number;
   sigmaPsfPx: number;
@@ -44,6 +54,16 @@ export function derive(p: Record<string, number | string>): Derived {
   const sigmaPsfPx = psf.sigmaNm / pixel;
   const fwhmPx = psf.fwhmNm / pixel;
   const stepPx = stepSigmaNm(D, dt / 1000) / pixel;
+  const motion = String(p.motion ?? 'brownian');
+  // um/s over one frame -> nm -> px
+  const driftPx = motion === 'directed'
+    ? (Number(p.driftV ?? 0) * 1000 * (dt / 1000)) / pixel
+    : 0;
+  const blurPx = Math.hypot(stepPx, driftPx);
+  const confineNm = motion === 'confined'
+    ? Number(p.corralNm ?? NaN)
+    : motion === 'network' ? Number(p.meshNm ?? NaN) : NaN;
+  const confinePx = confineNm / pixel;
   // peak of a photon-conserving 2D Gaussian: N / (2 pi sigma^2), per pixel
   const peak = photons / (2 * Math.PI * sigmaPsfPx * sigmaPsfPx);
   const snr = peak / Math.sqrt(peak + background + readNoise * readNoise);
@@ -53,7 +73,8 @@ export function derive(p: Record<string, number | string>): Derived {
   const density = (N * Math.PI * (fwhmPx / 2) ** 2) / (field * field);
 
   return {
-    stepPx, sigmaPsfNm: psf.sigmaNm, sigmaPsfPx, fwhmPx, peak, snr, sigmaLocNm,
+    stepPx, driftPx, blurPx, confinePx,
+    sigmaPsfNm: psf.sigmaNm, sigmaPsfPx, fwhmPx, peak, snr, sigmaLocNm,
     nyquistNm: lambda / (4 * NA), density,
   };
 }
@@ -66,26 +87,37 @@ export const diffusionTracking: Solver = {
     title: 'Diffusion and Tracking',
     blurb: 'Brownian particles imaged through a fluorescence microscope — with ground truth.',
     status: 'Experimental',
-    version: '0.1.0',
-    updated: '2026-07-28',
+    version: '0.2.0',
+    updated: '2026-07-29',
   },
 
   docs: {
-    model: 'Brownian walk via per-frame Gaussian steps; emitters rendered with a Gaussian PSF '
-      + '(sigma = 0.21 lambda / NA), each contributing a photon-conserving spot; Poisson shot '
-      + 'noise plus Gaussian read noise. A deliberately naive localizer (threshold, local maxima, '
-      + 'weighted centroid) recovers the tracks, and the mean-square displacement of those tracks '
-      + 'gives back the diffusion coefficient.',
+    model: 'Per-frame Gaussian steps under a choice of motion model — free Brownian, directed '
+      + '(drift + diffusion), confined in a reflecting corral, or hopping between the '
+      + 'compartments of an underlying meshwork. Emitters are rendered with a Gaussian PSF '
+      + '(sigma = 0.21 lambda / NA), each contributing a photon-conserving spot, then Poisson '
+      + 'shot noise and Gaussian read noise. A deliberately naive localizer (threshold, local '
+      + 'maxima, weighted centroid) recovers the tracks, and their mean-square displacement '
+      + 'gives back both the diffusion coefficient and the anomalous exponent α.',
     assumptions: [
-      'Overdamped free 2D diffusion, isotropic D',
+      'Overdamped 2D motion, isotropic D',
       'No interparticle interaction or hydrodynamics',
       'Thin sample; all emitters in the focal plane',
-      'Periodic boundaries: a particle leaving one edge re-enters at the opposite one',
+      'Periodic boundaries: a particle leaving one edge re-enters at the opposite one '
+        + '(a confined particle never reaches them)',
+      'Corral and meshwork walls are hard and reflect specularly; the meshwork is a regular '
+        + 'square grid with a single hop probability, not a disordered network',
     ],
     validity: 'Dilute fields; per-frame step below the PSF width; photon budget above ~100 per frame.',
     limitations: [
       'No axial motion or defocus (a later module)',
       'No photobleaching or blinking (a later module)',
+      'The motion models are the ones expressible through DeepTrack2’s own sequential-property '
+        + 'mechanism. DeepTrack2 ships no diffusion models itself — it provides '
+        + 'Feature.to_sequential(position=rule) and demonstrates free Brownian motion — so each '
+        + 'model here is a per-frame update rule and is exported as one.',
+      'Continuous-time trapping and fractional Brownian motion are not included: both need the '
+        + 'whole trajectory history rather than one step at a time',
       'Gaussian PSF approximation, not pupil-based — no aberrations. Its FWHM is 3.9% narrower '
         + 'than an ideal Airy pattern at every NA, and 7–12% narrower than DeepTrack2’s numerically '
         + 'sampled pupil PSF; see the validation note below.',
@@ -131,8 +163,51 @@ export const diffusionTracking: Solver = {
     },
     {
       key: 'motion', group: 'particle', label: 'motion',
-      choices: ['brownian'], default: 'brownian',
-      help: 'Free Brownian motion. Drift and flow arrive in a later module.',
+      default: 'brownian',
+      choices: [
+        { value: 'brownian', label: 'Brownian (free)' },
+        { value: 'directed', label: 'Directed (drift + diffusion)' },
+        { value: 'confined', label: 'Confined (corral)' },
+        { value: 'network', label: 'Meshwork (hopping between compartments)' },
+      ],
+      help: 'How each particle moves. Free Brownian motion is the reference; directed adds a '
+        + 'constant velocity; confined traps the particle in a corral; meshwork lets it diffuse '
+        + 'freely inside a compartment and only rarely cross into the next one. Watch the '
+        + 'anomalous exponent α change as you switch.',
+    },
+    {
+      key: 'driftV', symbol: 'v', unit: 'µm/s', group: 'particle', label: 'speed',
+      default: 2, min: 0, max: 200, step: 0.1,
+      showIf: v => v.motion === 'directed',
+      help: 'Constant velocity added on top of diffusion — flow, or active transport along a filament.',
+    },
+    {
+      key: 'driftAngle', symbol: 'θ', unit: '°', group: 'particle', label: 'direction',
+      default: 30, min: 0, max: 360, step: 1,
+      showIf: v => v.motion === 'directed',
+      help: 'Heading of the drift, measured anticlockwise from the +x axis.',
+    },
+    {
+      key: 'corralNm', symbol: 'L', unit: 'nm', group: 'particle', label: 'corral size',
+      default: 400, min: 20, max: 20000, scale: 'log',
+      showIf: v => v.motion === 'confined',
+      help: 'Side of the square corral each particle is trapped in. The MSD stops growing and '
+        + 'flattens at L²/3, which is how confinement is recognised in real data.',
+    },
+    {
+      key: 'meshNm', symbol: 'L', unit: 'nm', group: 'particle', label: 'mesh size',
+      default: 800, min: 50, max: 20000, scale: 'log',
+      showIf: v => v.motion === 'network',
+      help: 'Spacing of the underlying network — the compartment size set by a membrane skeleton '
+        + 'or a crowded matrix. Rounded slightly so a whole number of compartments spans the field.',
+    },
+    {
+      key: 'hopProb', symbol: 'p', group: 'particle', label: 'hop probability',
+      default: 0.05, min: 0, max: 1, scale: 'log',
+      showIf: v => v.motion === 'network',
+      help: 'Chance that a particle meeting a mesh boundary crosses it instead of bouncing back. '
+        + 'p = 1 is free diffusion, p = 0 seals every compartment; in between the particle looks '
+        + 'free at short lag times and slower at long ones.',
     },
     {
       key: 'photons', symbol: 'I', unit: 'photons/frame', group: 'particle', label: 'intensity',
@@ -226,7 +301,15 @@ export const diffusionTracking: Solver = {
     {
       key: 'dFit', label: 'D recovered', unit: 'µm²/s',
       help: 'Diffusion coefficient recovered from the simulated movie: the slope of the localized '
-        + 'tracks’ mean-square displacement, divided by four. Compare it with the D you set.',
+        + 'tracks’ mean-square displacement over its first five lags, divided by four. Compare it '
+        + 'with the D you set — confinement and a meshwork both push it below.',
+    },
+    {
+      key: 'alpha', label: 'α exponent',
+      help: 'Anomalous exponent from a log–log fit of MSD against lag time, MSD ∝ τ^α. It is what '
+        + 'separates the motion models: α = 1 free Brownian, α < 1 subdiffusive (a corral or a '
+        + 'meshwork holding the particle back), α → 2 directed transport.',
+      digits: 2,
     },
   ],
 
@@ -264,13 +347,59 @@ export const diffusionTracking: Solver = {
       id: 'blur', label: 'Motion blur',
       evaluate: ({ o }) => {
         const half = 0.5 * o.fwhmPx;
-        return o.stepPx < half
-          ? { level: 'ok', message: `step ${fmt(o.stepPx, 2)} px < ½ FWHM = ${fmt(half, 2)} px` }
+        // includes the drift, since directed motion smears a particle within
+        // the exposure just as diffusion does
+        const moved = o.blurPx;
+        const what = o.driftPx > 0 ? 'step + drift' : 'step';
+        return moved < half
+          ? { level: 'ok', message: `${what} ${fmt(moved, 2)} px < ½ FWHM = ${fmt(half, 2)} px` }
           : {
             level: 'warn',
-            message: `step ${fmt(o.stepPx, 2)} px approaches the PSF width (½ FWHM = ${fmt(half, 2)} px) — `
-              + 'particles smear and linking becomes unreliable; lower D or Δt',
+            message: `${what} ${fmt(moved, 2)} px approaches the PSF width (½ FWHM = ${fmt(half, 2)} px) — `
+              + 'particles smear and linking becomes unreliable; lower D, the speed, or Δt',
           };
+      },
+    },
+    {
+      id: 'confinement', label: 'Confinement scale',
+      evaluate: ({ p, o }) => {
+        const motion = String(p.motion);
+        if (motion !== 'confined' && motion !== 'network') {
+          return {
+            level: 'ok',
+            message: motion === 'directed'
+              ? 'directed motion — no confinement length to resolve'
+              : 'free diffusion — no confinement length to resolve',
+          };
+        }
+        const what = motion === 'confined' ? 'corral' : 'mesh';
+        const L = o.confinePx * Number(p.pixel); // back to nm
+        const sigmaLoc = o.sigmaLocNm;
+        // To see confinement at all the compartment must be bigger than the
+        // localization blur, and the particle must have room to diffuse inside
+        // it before hitting a wall.
+        if (!(L > 0)) return { level: 'ok', message: '' };
+        if (L < 2 * sigmaLoc) {
+          return {
+            level: 'fail',
+            message: `${what} ${fmt(L, 3)} nm is below twice the localization precision `
+              + `(${fmt(2 * sigmaLoc, 3)} nm) — the confinement cannot be measured; enlarge it `
+              + 'or raise the photon budget',
+          };
+        }
+        const stepNm = o.stepPx * Number(p.pixel);
+        if (L < 2 * stepNm) {
+          return {
+            level: 'warn',
+            message: `${what} ${fmt(L, 3)} nm is only ${fmt(L / stepNm, 2)}× the per-frame step — `
+              + 'the particle crosses it every frame and looks like a static blob; enlarge it or lower Δt',
+          };
+        }
+        return {
+          level: 'ok',
+          message: `${what} ${fmt(L, 3)} nm spans ${fmt(L / stepNm, 2)} steps and `
+            + `${fmt(L / sigmaLoc, 2)}× the localization precision`,
+        };
       },
     },
     {
@@ -340,6 +469,23 @@ export const diffusionTracking: Solver = {
       set: { pixel: 160, dt: 5 },
       note: 'Deliberately trips the Nyquist check, and only that one: Δt is lowered so the '
         + 'coarse pixels do not also trip motion blur.',
+    },
+    {
+      label: 'Directed transport',
+      set: { motion: 'directed', driftV: 2, driftAngle: 30, D: 0.1, dt: 20, N: 15 },
+      note: 'Drift plus diffusion: the MSD picks up a v²τ² term and α climbs towards 2.',
+    },
+    {
+      label: 'Confined in corrals',
+      set: { motion: 'confined', corralNm: 400, D: 0.5, dt: 20, frames: 200, N: 25 },
+      note: 'Each particle trapped in a 400 nm corral: the MSD flattens at L²/3 and α falls well '
+        + 'below 1.',
+    },
+    {
+      label: 'Meshwork hopping',
+      set: { motion: 'network', meshNm: 800, hopProb: 0.02, D: 0.5, dt: 20, frames: 200, N: 25 },
+      note: 'Interaction with an underlying network: free inside a compartment, rarely crossing — '
+        + 'free at short lags, subdiffusive at long ones.',
     },
   ],
 };

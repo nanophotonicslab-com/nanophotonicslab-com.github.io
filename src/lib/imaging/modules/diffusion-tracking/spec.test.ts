@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { diffusionTracking, derive } from './spec';
 import { computeQuick } from './compute';
-import { defaultValues, evaluateEnvelope, type EnvelopeLevel } from '../../../solver-spec';
+import {
+  choiceValues, defaultValues, evaluateEnvelope, isVisible, type EnvelopeLevel,
+} from '../../../solver-spec';
 import { gaussianPSF, stepSigmaNm, thompsonSigma } from '../../index';
 
 /**
@@ -140,6 +142,49 @@ describe('photon budget check', () => {
   });
 });
 
+describe('confinement scale check', () => {
+  it('says there is nothing to resolve for the unconfined models', () => {
+    expect(envelope({ motion: 'brownian' }).confinement.level).toBe('ok');
+    expect(envelope({ motion: 'brownian' }).confinement.message).toMatch(/free diffusion/);
+    expect(envelope({ motion: 'directed' }).confinement.message).toMatch(/directed/);
+  });
+
+  it('fails when the corral is smaller than twice the localization precision', () => {
+    // sigma_loc is ~2.6 nm at the defaults, so a 4 nm corral cannot be measured
+    const r = envelope({ motion: 'confined', corralNm: 4 });
+    expect(r.confinement.level).toBe('fail');
+    expect(r.confinement.message).toMatch(/cannot be measured/);
+  });
+
+  it('warns when the particle crosses its corral every frame', () => {
+    // the per-frame step is ~142 nm at the defaults
+    const r = envelope({ motion: 'confined', corralNm: 200 });
+    expect(r.confinement.level).toBe('warn');
+    expect(r.confinement.message).toMatch(/static blob/);
+  });
+
+  it('passes for a corral comfortably larger than the step', () => {
+    expect(envelope({ motion: 'confined', corralNm: 2000 }).confinement.level).toBe('ok');
+  });
+
+  it('applies the same test to the meshwork spacing', () => {
+    expect(envelope({ motion: 'network', meshNm: 4 }).confinement.level).toBe('fail');
+    expect(envelope({ motion: 'network', meshNm: 200 }).confinement.level).toBe('warn');
+    expect(envelope({ motion: 'network', meshNm: 2000 }).confinement.level).toBe('ok');
+  });
+});
+
+describe('motion blur check with drift', () => {
+  it('counts the drift as well as the diffusive step', () => {
+    // slow diffusion so the drift is what trips it
+    const still = envelope({ motion: 'directed', D: 0.001, driftV: 0, dt: 20 });
+    const fast = envelope({ motion: 'directed', D: 0.001, driftV: 50, dt: 20 });
+    expect(still.blur.level).toBe('ok');
+    expect(fast.blur.level).toBe('warn');
+    expect(fast.blur.message).toMatch(/step \+ drift/);
+  });
+});
+
 describe('shipped presets', () => {
   const byLabel = (l: string) => diffusionTracking.scenarios.find(s => s.label === l)!;
 
@@ -167,7 +212,7 @@ describe('shipped presets', () => {
           expect(value).toBeGreaterThanOrEqual(p!.min);
           expect(value).toBeLessThanOrEqual(p!.max);
         }
-        if (p!.choices) expect(p!.choices).toContain(value);
+        if (p!.choices) expect(choiceValues(p!)).toContain(value);
       }
     }
   });
@@ -187,12 +232,43 @@ describe('spec integrity', () => {
     for (const o of diffusionTracking.observables) expect(o.help, `${o.key} has no help`).toBeTruthy();
   });
 
-  it('produces a value for every declared observable except the fitted one', () => {
+  it('produces a value for every declared observable except the fitted ones', () => {
+    // D and alpha both come from the MSD of the analysed movie, so the cheap
+    // per-keystroke pass leaves them NaN and the readouts show an em dash
+    const fromMovie = new Set(['dFit', 'alpha']);
     const q = computeQuick(defaults);
     for (const o of diffusionTracking.observables) {
-      if (o.key === 'dFit') continue; // only available after the movie is analysed
+      if (fromMovie.has(o.key)) continue;
       expect(Number.isFinite(q.observables[o.key]), `${o.key} is not finite`).toBe(true);
     }
-    expect(q.observables.dFit).toBeNaN();
+    for (const key of fromMovie) expect(q.observables[key]).toBeNaN();
+  });
+
+  it('shows each model’s own parameters and hides the others', () => {
+    const shownFor = (motion: string) => diffusionTracking.params
+      .filter(p => isVisible(p, { ...defaults, motion }))
+      .map(p => p.key);
+
+    expect(shownFor('brownian')).not.toContain('driftV');
+    expect(shownFor('brownian')).not.toContain('corralNm');
+    expect(shownFor('brownian')).not.toContain('meshNm');
+
+    expect(shownFor('directed')).toContain('driftV');
+    expect(shownFor('directed')).toContain('driftAngle');
+    expect(shownFor('directed')).not.toContain('corralNm');
+
+    expect(shownFor('confined')).toContain('corralNm');
+    expect(shownFor('confined')).not.toContain('meshNm');
+
+    expect(shownFor('network')).toContain('meshNm');
+    expect(shownFor('network')).toContain('hopProb');
+    expect(shownFor('network')).not.toContain('corralNm');
+
+    // parameters common to every model are always visible
+    for (const motion of ['brownian', 'directed', 'confined', 'network']) {
+      for (const key of ['N', 'D', 'photons', 'NA', 'lambda', 'pixel', 'frames', 'dt', 'seed']) {
+        expect(shownFor(motion), `${key} hidden for ${motion}`).toContain(key);
+      }
+    }
   });
 });

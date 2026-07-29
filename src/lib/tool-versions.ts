@@ -21,7 +21,7 @@ export const TOOL_VERSIONS: Record<string, ToolVersion> = {
   'tweezers':                { version: '0.1.0', updated: '2026-07-18' },
   'purcell':                 { version: '0.1.0', updated: '2026-07-18' },
   'pulse':                   { version: '0.1.0', updated: '2026-07-18' },
-  'imaging':                 { version: '0.1.0', updated: '2026-07-28' },
+  'imaging':                 { version: '0.2.0', updated: '2026-07-29' },
 };
 
 export function formatCitation(toolName: string, toolSlug: string): string {

@@ -58,7 +58,7 @@ export const diffusionTrackingModule: ModuleImpl = {
     return {
       truth: f.truth,
       analysis: f.analysis,
-      observables: { ...q.observables, dFit: f.dFit },
+      observables: { ...q.observables, dFit: f.dFit, alpha: f.alpha },
       plots: {
         msd: {
           series: [
@@ -66,7 +66,7 @@ export const diffusionTrackingModule: ModuleImpl = {
             { x: f.msd.tau, y: f.msd.truth, color: 'truth', dash: [4, 3], label: 'ground truth' },
             { x: f.fitLine.tau, y: f.fitLine.msd, color: 'fit', dash: [2, 2], label: 'fit' },
           ],
-          note: `D_fit = ${fmt(f.dFit, 3)} µm²/s (set ${fmt(Number(values.D), 3)})`,
+          note: `D_fit = ${fmt(f.dFit, 3)} µm²/s (set ${fmt(Number(values.D), 3)}) · α = ${fmt(f.alpha, 2)}`,
           csv: () => 'tau_s,msd_localized_nm2,msd_truth_nm2\n' + Array.from(f.msd.tau)
             .map((t, i) => `${t},${f.msd.localized[i]},${f.msd.truth[i]}`).join('\n'),
         },

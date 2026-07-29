@@ -21,6 +21,17 @@ export interface ParamGroup {
   collapsed?: boolean;
 }
 
+/** A select option: a bare value, or a value with a human-readable label. */
+export type Choice = string | number | { value: string | number; label: string };
+
+export function choiceValue(c: Choice): string | number {
+  return typeof c === 'object' ? c.value : c;
+}
+
+export function choiceLabel(c: Choice): string {
+  return typeof c === 'object' ? c.label : String(c);
+}
+
 export interface Param {
   key: string;
   label: string;
@@ -41,13 +52,35 @@ export interface Param {
   /** One-click values, rendered as small buttons under the field. */
   presets?: number[];
   /** Presence of `choices` makes this a select rather than a number field. */
-  choices?: (string | number)[];
+  choices?: Choice[];
   /** Hidden behind the advanced toggle. */
   advanced?: boolean;
+  /**
+   * Show this control only when the current parameter set satisfies the
+   * predicate — for parameters that belong to one branch of a model choice.
+   * A hidden parameter keeps its value and still reaches `compute`, so the
+   * physics never depends on what the form happens to be showing.
+   */
+  showIf?: (values: Record<string, number | string>) => boolean;
 }
 
 export function isChoice(p: Param): boolean {
   return Array.isArray(p.choices) && p.choices.length > 0;
+}
+
+/** Declared option values of a choice parameter. */
+export function choiceValues(p: Param): (string | number)[] {
+  return (p.choices ?? []).map(choiceValue);
+}
+
+/** Whether a parameter's control should currently be visible. */
+export function isVisible(p: Param, values: Record<string, number | string>): boolean {
+  if (!p.showIf) return true;
+  try {
+    return p.showIf(values);
+  } catch {
+    return true;
+  }
 }
 
 /** True when the parameter should get a slider alongside its number field. */
@@ -182,8 +215,9 @@ export function groupParams(spec: Solver, groupId: string): Param[] {
 /** Clamp and round a value to a parameter's declared domain. */
 export function coerce(p: Param, raw: number | string): number | string {
   if (isChoice(p)) {
-    const asNum = typeof p.choices![0] === 'number' ? Number(raw) : String(raw);
-    return p.choices!.includes(asNum as never) ? asNum : p.default;
+    const values = choiceValues(p);
+    const wanted = typeof values[0] === 'number' ? Number(raw) : String(raw);
+    return values.includes(wanted) ? wanted : p.default;
   }
   let v = typeof raw === 'number' ? raw : Number(raw);
   if (!Number.isFinite(v)) v = Number(p.default);
