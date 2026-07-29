@@ -717,6 +717,12 @@
   color: var(--text-soft);
   line-height: 1.5;
 }
+/* An entry written without a [n] index would otherwise land its whole citation
+   in the 2.2rem index column and wrap to a sliver. Fall back to a plain block
+   so a missing index is a cosmetic omission, not a broken layout. */
+.references li:not(:has(.ref-index)) {
+  display: block;
+}
 .references ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-xs); }
 .theory-note {
   font-size: 0.8125rem;
