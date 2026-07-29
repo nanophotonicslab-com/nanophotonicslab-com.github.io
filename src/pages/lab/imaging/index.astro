@@ -250,6 +250,13 @@ function linkify(text: string): string {
 
   .module-panel[hidden] { display: none; }
 
+  /* The shared controls panel is pinned with position: sticky, which suits the
+     short parameter lists elsewhere in the Lab. Here the panel is taller than
+     the viewport — four collapsible groups plus the preset strip — so pinning it
+     leaves its lower half permanently below the fold while the results column
+     scrolls away beside it. Both columns scroll with the page instead. */
+  .controls { position: static; }
+
   /* Padding to match .output-card, without its three-column results grid. */
   .results-card { padding: var(--space-md); }
 
