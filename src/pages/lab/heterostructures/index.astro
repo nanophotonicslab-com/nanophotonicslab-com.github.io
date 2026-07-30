@@ -196,7 +196,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
                 PNG
               </button>
-              <button id="dl-csv" class="dl-btn" title="Download current curve as CSV">
+              <button id="dl-csv" class="dl-btn" title="Download all plotted branches as CSV">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                 CSV
               </button>
@@ -378,7 +378,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
                 PNG
               </button>
-              <button id="tmm-dl-csv" class="dl-btn" title="Download current curve as CSV">
+              <button id="tmm-dl-csv" class="dl-btn" title="Download this view's curves as CSV">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                 CSV
               </button>
@@ -657,7 +657,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
                 PNG
               </button>
-              <button id="pr-dl-csv" class="dl-btn" title="Download data as CSV">
+              <button id="pr-dl-csv" class="dl-btn" title="Download this view's data as CSV">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                 CSV
               </button>
@@ -2515,7 +2515,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     showAllLayers: false,
   };
 
-  let currentBranch: BranchPoint[] = [];
   let solvedBranches: BranchCurve[] = [];
   let currentBranches: BranchCurve[] = [];
   let branchesDirty = true;
@@ -4150,7 +4149,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     currentBranches = visibleBranchesFrom(solvedBranches);
     const visibleLayerEntries = layerLegendEntries(currentBranches);
     syncSurfaceLimitKeys(visibleLayerEntries);
-    currentBranch = currentBranches.find(curve => curve.layerIndex === selectedLayerIndices()[0])?.points ?? currentBranches[0]?.points ?? [];
 
     const rect = chartWrap.getBoundingClientRect();
     const width = Math.max(320, rect.width || 760);
@@ -4491,23 +4489,58 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     drawChart();
   }
 
+  /** Quote a CSV field only when it needs it (same rule as the other lab exports). */
+  function csvField(value: string): string {
+    return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  }
+
+  /**
+   * Every dispersion branch currently on the chart, one row per point.
+   *
+   * Written long/tidy with a `branch` column rather than one column block per
+   * curve: branches are solved independently and drop points wherever no root
+   * exists, so they generally have different lengths and different q sampling —
+   * side-by-side columns would need interpolation and would misalign. A
+   * thin film in particular contributes two curves that share a layer (the
+   * symmetric and antisymmetric modes), and exporting only the one the legend
+   * happens to list first silently dropped half the plotted data.
+   */
   function currentCsv(): string {
     const [a, b] = activePair();
+    const curves = currentBranches.filter(curve => curve.points.length);
     const lines = [
       '# Surface Plasmons Heterostructures Lab',
-      `# interface=${a.name}/${b.name}, wp_ref_eV=${wpReferenceEv()}, kp_ref_nm^-1=${kpReferenceNm()}`,
-      'q,k_nm^-1,k_cm^-1,u,energy_eV,epsilon_a_real,epsilon_b_real',
+      `# selected interface=${a.name}/${b.name}, wp_ref_eV=${wpReferenceEv()}, kp_ref_nm^-1=${kpReferenceNm()}`,
+      `# branches plotted=${curves.length} (all are included below; the "branch" column matches the chart legend)`,
     ];
-    for (const point of currentBranch) {
-      lines.push([
-        point.q,
-        point.kNm,
-        point.kNm * 1e7,
-        point.u,
-        point.energyEv,
-        point.epsA,
-        point.epsB,
-      ].map(value => Number(value).toPrecision(9)).join(','));
+    curves.forEach((curve, index) => {
+      const [pa, pb] = interfacePair(curve.interfaceIndex);
+      lines.push(
+        `#   branch ${index + 1}: ${curve.label} — layer ${curve.layerIndex + 1}, `
+        + `interface ${pa.name}/${pb.name}, ${curve.points.length} points`,
+      );
+    });
+    lines.push(
+      '# the light line and surface-asymptote overlays are analytic reference lines, '
+      + 'reconstructible from wp_ref_eV and kp_ref_nm^-1 above',
+    );
+    lines.push('branch,layer,q,k_nm^-1,k_cm^-1,u,energy_eV,epsilon_a_real,epsilon_b_real');
+    for (const curve of curves) {
+      for (const point of curve.points) {
+        lines.push([
+          csvField(curve.label),
+          String(curve.layerIndex + 1),
+          ...[
+            point.q,
+            point.kNm,
+            point.kNm * 1e7,
+            point.u,
+            point.energyEv,
+            point.epsA,
+            point.epsB,
+          ].map(value => Number(value).toPrecision(9)),
+        ].join(','));
+      }
     }
     return lines.join('\n') + '\n';
   }
@@ -6900,14 +6933,28 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     const A = lo ? [33, 49, 138] : [243, 246, 251], B = lo ? [243, 246, 251] : [184, 49, 42];
     return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f];
   };
-  function drawFarfieldRosette() {
-    const c = ctx2dP(prCanvas); if (!c) return;
-    const { ctx, w, h } = c;
+  type RosetteStokes = { S0: Float64Array; S1: Float64Array; S2: Float64Array; S3: Float64Array };
+  type RosetteGrid = {
+    NPH: number; NTH: number; NG: number;
+    thUp: number[]; thDn: number[]; phL: number[];
+    hemis: { tag: string; th: number[]; g: RosetteStokes }[];
+    s0max: number;
+  };
+
+  /**
+   * Stokes parameters over both hemispheres for the rosette view.
+   *
+   * Shared by the chart and the CSV export so the file always holds the numbers
+   * that were drawn — the export used to fall through to the θ-scan radiation
+   * pattern, which is a different quantity altogether.
+   * Returns null when no dipole channel is enabled.
+   */
+  function computeRosette(): RosetteGrid | null {
     const { nstack, dstack } = buildStack();
     const k0v = k0Of();
     const parts: { pu: Cx[]; mu: Cx[]; wgt: number }[] = [];
     for (const k of PR_CH_ORDER) if (pr.ch[k]) for (const d of PR_CH_DIPOLES[k]) parts.push({ ...d, wgt: 1 / PR_CH_DIPOLES[k].length });
-    if (!parts.length) { drawPwMessage('Enable at least one channel in the legend above.'); return; }
+    if (!parts.length) return null;
     // hemisphere grids: θd = angle from the pole (1..89°), φ ∈ [0, 360)
     const NPH = 96, NTH = 32, NG = NPH * NTH;
     const thUp: number[] = [], thDn: number[] = [], phL: number[] = [];
@@ -6918,9 +6965,8 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     }
     // incoherent Stokes sum over the enabled channels, both hemispheres.
     // s-pol ↔ φ̂, p-pol ↔ θ̂ → stokes(fθ = Ep, fφ = Es).
-    type SG = { S0: Float64Array; S1: Float64Array; S2: Float64Array; S3: Float64Array };
-    const mk = (): SG => ({ S0: new Float64Array(NG), S1: new Float64Array(NG), S2: new Float64Array(NG), S3: new Float64Array(NG) });
-    const hemis: { tag: string; th: number[]; g: SG }[] = [
+    const mk = (): RosetteStokes => ({ S0: new Float64Array(NG), S1: new Float64Array(NG), S2: new Float64Array(NG), S3: new Float64Array(NG) });
+    const hemis: RosetteGrid['hemis'] = [
       { tag: 'up', th: thUp, g: mk() },
       { tag: 'down', th: thDn, g: mk() },
     ];
@@ -6936,6 +6982,15 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     }
     let s0max = 1e-30;
     for (const hemi of hemis) for (let g = 0; g < NG; g++) if (hemi.g.S0[g] > s0max) s0max = hemi.g.S0[g];
+    return { NPH, NTH, NG, thUp, thDn, phL, hemis, s0max };
+  }
+
+  function drawFarfieldRosette() {
+    const c = ctx2dP(prCanvas); if (!c) return;
+    const { ctx, w, h } = c;
+    const grid = computeRosette();
+    if (!grid) { drawPwMessage('Enable at least one channel in the legend above.'); return; }
+    const { NPH, NTH, hemis, s0max } = grid;
     const sample = (arr: Float64Array, thDeg: number, phiRad: number) => {
       let ph = phiRad % (2 * Math.PI); if (ph < 0) ph += 2 * Math.PI;
       const ip = Math.min(NPH - 1, Math.max(0, Math.round(ph / (2 * Math.PI) * (NPH - 1))));
@@ -7587,6 +7642,26 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   });
 
   // ---- export / share ----------------------------------------------------
+  /**
+   * Provenance lines shared by every PyRAMIDS export. Without them the files
+   * are anonymous: two views, or the same view at two wavelengths, produce
+   * columns that look alike and carry no record of the stack they came from.
+   */
+  function prCsvHead(what: string): string[] {
+    const chOn = PR_CH_ORDER.filter(k => pr.ch[k]).map(k => CH[k].label).join(' + ') || 'none';
+    const layers = pr.layers.length
+      ? pr.layers.map(l => `${l.thicknessNm}nm n=${l.n}+${l.kappa}i`).join('; ')
+      : 'none (bare interface)';
+    return [
+      `# PyRAMIDS heterostructures lab — ${what}`,
+      `# lambda_nm=${pr.lamNm}, substrate n=${pr.subN}+${pr.subK}i, superstrate n=${pr.cladN}+${pr.cladK}i`,
+      `# layers=[${layers}]`,
+      pr.exc === 'dip'
+        ? `# excitation=dipole, z_emitter_nm=${pfmt(pr.zNm, 6)}, channels=${chOn}`
+        : `# excitation=plane wave, polarization=${pr.pol}, angle_deg=${pr.angleDeg}`,
+    ];
+  }
+
   function prCsv(): string {
     const { nstack, dstack } = buildStack();
     const k0v = k0Of();
@@ -7595,11 +7670,39 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       const isZ = spec.mode === 'z';
       const isEv = pr.ffXUnit === 'ev';
       const head = [isZ ? 'z_nm' : isEv ? 'energy_eV' : 'lambda_nm', ...spec.series.flatMap(s => [`${s.key}_up`, `${s.key}_down`])];
-      const lines = [head.join(',')];
+      const lines = [
+        ...prCsvHead(isZ ? 'radiated flux vs emitter position' : 'radiated flux spectrum'),
+        '# _up = flux into the superstrate, _down = into the substrate, per unit free-space dipole',
+        head.join(','),
+      ];
       spec.x.forEach((xv, i) => {
         const x0 = isZ ? xv : isEv ? EV_NM / xv : xv;
         lines.push([x0, ...spec.series.flatMap(s => [s.up[i], s.down[i]])].map(v => pfmt(v, 6)).join(','));
       });
+      return lines.join('\n') + '\n';
+    }
+    if (pr.view === 'farfield' && pr.ffMode === 'rosette') {
+      // Export what the rosette actually shows — Stokes parameters over both
+      // hemispheres — rather than the theta-scan pattern below.
+      const grid = computeRosette();
+      if (!grid) return '# no dipole channel enabled\n';
+      const lines = [
+        ...prCsvHead('far-field Stokes polarimetry (rosette)'),
+        '# theta_deg measured from the pole of each hemisphere (1..89), phi_deg anticlockwise from +x',
+        '# S0 total, S1 = p-minus-s, S2 = +/-45deg, S3 = circular; incoherent sum over the enabled channels',
+        `# S0_max=${pfmt(grid.s0max, 6)} (the chart normalizes S1..S3 by S0_max)`,
+        'hemisphere,theta_deg,phi_deg,S0,S1,S2,S3',
+      ];
+      for (const hemi of grid.hemis) {
+        for (let g = 0; g < grid.NG; g++) {
+          const thDeg = hemi.th[g] * 180 / Math.PI;
+          lines.push([
+            hemi.tag,
+            ...[thDeg, grid.phL[g] * 180 / Math.PI,
+              hemi.g.S0[g], hemi.g.S1[g], hemi.g.S2[g], hemi.g.S3[g]].map(v => pfmt(v, 6)),
+          ].join(','));
+        }
+      }
       return lines.join('\n') + '\n';
     }
     if (pr.view === 'farfield') {
@@ -7614,13 +7717,22 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
         ['P_mperp', zeroV, [cx(0), cx(0), cx(1)]],
       ];
       const data = cols.map(([, pu, mu]) => radiationPattern(k0v, pr.zNm, pu, mu, th, phi0, nstack, dstack));
-      const lines = ['theta_deg,' + cols.map(c => c[0]).join(',')];
+      const lines = [
+        ...prCsvHead('far-field radiation pattern'),
+        '# power per solid angle at phi=0, normalized to the same dipole in free space;'
+        + ' theta from +z, so theta>90 is into the substrate',
+        'theta_deg,' + cols.map(c => c[0]).join(','),
+      ];
       th.forEach((t, i) => lines.push([t * 180 / Math.PI, ...data.map(d => d[i])].map(v => pfmt(v, 6)).join(',')));
       return lines.join('\n') + '\n';
     }
     if (pr.view === 'pwspec' || pr.view === 'pwang') {
       const isSpec = pr.view === 'pwspec';
-      const lines = [(isSpec ? 'lambda_nm' : 'theta_deg') + ',R_s,T_s,A_s,R_p,T_p,A_p'];
+      const lines = [
+        ...prCsvHead(isSpec ? 'plane-wave R/T/A spectrum' : 'plane-wave R/T/A angle scan'),
+        '# both polarizations are tabulated regardless of the displayed one',
+        (isSpec ? 'lambda_nm' : 'theta_deg') + ',R_s,T_s,A_s,R_p,T_p,A_p',
+      ];
       const N = 240;
       for (let i = 0; i < N; i++) {
         let k0i = k0v, kp = 0, x = 0;
@@ -7642,7 +7754,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       const N = 280;
       const zGrid = Array.from({ length: N }, (_, i) => zmin + (zmax - zmin) * i / (N - 1));
       const f = planeWaveFieldsAtZ(k0v, pwKparAt(k0v), nstack, dstack, zGrid);
-      const lines = ['z_nm,absE_s,absE_p,absDensity_s,absDensity_p'];
+      const lines = [
+        ...prCsvHead('plane-wave local fields vs position'),
+        '# |E| for unit incident amplitude; absDensity is the absorbed-power density (arb. units)',
+        'z_nm,absE_s,absE_p,absDensity_s,absDensity_p',
+      ];
       zGrid.forEach((z, i) => lines.push([z, f.Es[i], f.Ep[i], f.As[i], f.Ap[i]].map(v => pfmt(v, 6)).join(',')));
       return lines.join('\n') + '\n';
     }
@@ -7650,7 +7766,13 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       const m = getKmap();
       const xName = pr.kmap.xUnit === 'inm' ? 'kpar_inv_nm' : 'theta_deg';
       const yName = pr.kmap.yUnit === 'nm' ? 'lambda_nm' : 'energy_eV';
-      const lines = [`${xName},${yName},re_rs,im_rs,re_rp,im_rp`];
+      const lines = [
+        ...prCsvHead('plane-wave reflection-coefficient map'),
+        '# complex r for both polarizations at every grid node; the chart shows one of '
+        + 'Re/Im/|r| for the selected polarization, optionally as log10',
+        `# grid = ${m.NK} x-points x ${m.NL} y-rows`,
+        `${xName},${yName},re_rs,im_rs,re_rp,im_rp`,
+      ];
       for (let j = 0; j < m.NL; j++) {
         const yv = pr.kmap.yUnit === 'nm' ? m.lamRows[j] : EV_NM / m.lamRows[j];
         for (let i = 0; i < m.NK; i++) {
@@ -7663,7 +7785,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     if (pr.view === 'pwkpar') {
       const qmax = Math.max(1.5, ...nstack.map(n => Math.abs(n.re))) + 0.4;
       const N = 500;
-      const lines = ['kpar_over_k0,abs_rs,abs_rp'];
+      const lines = [
+        ...prCsvHead('plane-wave |r| vs in-plane wavevector'),
+        '# |r| for both polarizations; poles beyond the light line are the guided modes',
+        'kpar_over_k0,abs_rs,abs_rp',
+      ];
       for (let i = 0; i < N; i++) {
         const q = qmax * (i + 0.5) / N;
         const a = fresnelAmplitudes(k0v, q * k0v, nstack, dstack);
@@ -7671,8 +7797,33 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       }
       return lines.join('\n') + '\n';
     }
+    if (pr.view === 'kpar') {
+      // This view used to fall through to the LDOS-vs-z table below, so the
+      // download bore no relation to the k-parallel map on screen.
+      const { kparList, zList, trace } = getKparTrace();
+      const lines = [
+        ...prCsvHead('k-parallel LDOS integrand map'),
+        '# the chart shows log10 of the selected channel; all four are tabulated here so the '
+        + 'displayed "mean" = 0.5*((2*E_par + E_perp)/3 + (2*M_par + M_perp)/3) is reproducible',
+        `# grid = ${kparList.length} k-parallel x ${zList.length} z points`,
+        'kpar_over_k0,z_nm,integrand_E_par,integrand_E_perp,integrand_M_par,integrand_M_perp',
+      ];
+      for (let zi = 0; zi < zList.length; zi++) {
+        for (let ki = 0; ki < kparList.length; ki++) {
+          lines.push([
+            kparList[ki], zList[zi],
+            trace[0][zi][ki], trace[1][zi][ki], trace[2][zi][ki], trace[3][zi][ki],
+          ].map(v => pfmt(v, 6)).join(','));
+        }
+      }
+      return lines.join('\n') + '\n';
+    }
     const { zGrid, r, iso } = getLdos();
-    const lines = ['z_nm,LDOS_E_par,LDOS_E_perp,LDOS_M_par,LDOS_M_perp,LDOS_iso'];
+    const lines = [
+      ...prCsvHead('LDOS vs emitter position'),
+      '# LDOS normalized to the vacuum value; iso = (2*E_par + E_perp)/3',
+      'z_nm,LDOS_E_par,LDOS_E_perp,LDOS_M_par,LDOS_M_perp,LDOS_iso',
+    ];
     for (let i = 0; i < zGrid.length; i++)
       lines.push([zGrid[i], r.E_par[i], r.E_perp[i], r.M_par[i], r.M_perp[i], iso[i]].map(v => pfmt(v, 6)).join(','));
     return lines.join('\n') + '\n';
