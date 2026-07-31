@@ -154,6 +154,12 @@ export interface Scenario {
   set: Record<string, number | string>;
   /** Why this preset exists — several deliberately trip a check. */
   note?: string;
+  /**
+   * This preset exists to trip an envelope check. Set it rather than describing
+   * the set by position ("the last three"): presets get appended, and prose that
+   * counts them silently goes stale the moment one is.
+   */
+  breaksEnvelope?: boolean;
 }
 
 // ─── the solver ──────────────────────────────────────────────────────────────

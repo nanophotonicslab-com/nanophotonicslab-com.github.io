@@ -144,4 +144,14 @@ function sliderAttrs(p: Param): { min: number; max: number; step: number; value:
   .solver-group[open] > .solver-group__title {
     margin-bottom: 0.5rem;
   }
+
+  /* `hidden` is a UA rule of the same specificity as any class selector, so the
+     author `display` on .param silently outranks it and the attribute does
+     nothing. applyVisibility() in solver-runtime sets exactly this attribute to
+     gate showIf parameters, so without this every branch-specific control stayed
+     on screen: a Brownian run listed drift speed, drift direction, corral size,
+     mesh size and hop probability, none of which it uses. */
+  .param[hidden] {
+    display: none;
+  }
 </style>

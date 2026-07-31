@@ -304,6 +304,7 @@
 .field { display: flex; flex-direction: column; gap: 0.2rem; }
 .field label { font-size: 0.8125rem; font-weight: 500; color: var(--text-soft); }
 .field-info {
+  position: relative;
   width: 1rem;
   height: 1rem;
   display: inline-flex;
@@ -328,6 +329,16 @@
   border-color: var(--primary-light);
   color: var(--primary);
   outline: none;
+}
+/* The circle is drawn at 16px because anything larger crowds the label it
+   annotates, which leaves it under the 24px minimum target size — on a phone it
+   is a genuinely hard thing to hit. This pseudo-element enlarges the hit area to
+   24px without painting anything or taking up any space, so no widget's layout
+   or pixels change. */
+.field-info::after {
+  content: '';
+  position: absolute;
+  inset: -0.25rem;
 }
 .field-input {
   width: 100%;

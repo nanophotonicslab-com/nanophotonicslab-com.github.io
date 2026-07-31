@@ -102,6 +102,14 @@ const { prefix = 'fv-', frames } = Astro.props;
     backdrop-filter: blur(6px);
   }
 
+  /* The markup ships this element `hidden`, but the UA's [hidden] rule carries
+     the same specificity as the class above and loses on order, so the overlay
+     was displayed permanently — "analysing sequence…" sat across the bottom of
+     every frame for the whole session, whether or not anything was running. */
+  .frame-viewer__busy[hidden] {
+    display: none;
+  }
+
   .frame-viewer__busy-bar {
     flex: 1;
     height: 3px;

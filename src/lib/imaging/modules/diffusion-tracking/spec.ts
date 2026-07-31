@@ -456,17 +456,20 @@ export const diffusionTracking: Solver = {
     {
       label: 'Crowded field',
       set: { N: 200, field: 128 },
+      breaksEnvelope: true,
       note: 'Deliberately trips the linking-density check. N alone is not enough at a '
         + '256 px field — 200 particles fill only 0.019 of it — so the field is halved too.',
     },
     {
       label: 'Fast diffusion',
       set: { D: 10 },
+      breaksEnvelope: true,
       note: 'Deliberately trips the motion-blur check: the step grows to ~9.7 px per frame.',
     },
     {
       label: 'Nyquist-limited pixels',
       set: { pixel: 160, dt: 5 },
+      breaksEnvelope: true,
       note: 'Deliberately trips the Nyquist check, and only that one: Δt is lowered so the '
         + 'coarse pixels do not also trip motion blur.',
     },

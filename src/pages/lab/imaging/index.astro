@@ -18,11 +18,22 @@ import SolverReadouts from '../../../components/SolverReadouts.astro';
 import SolverEnvelope from '../../../components/SolverEnvelope.astro';
 import SolverSchematic from '../../../components/SolverSchematic.astro';
 import FrameViewer from '../../../components/FrameViewer.astro';
-import FeedbackButton from '../../../components/FeedbackButton.astro';
 import { imagingLab } from '../../../lib/imaging/registry';
+import type { Solver } from '../../../lib/solver-spec';
 import '../../../styles/lab.css';
 
 const { modules, planned } = imagingLab;
+
+/**
+ * "Crowded field, Fast diffusion and Nyquist-limited pixels" — the presets that
+ * deliberately trip a check, named from the spec rather than counted by
+ * position, so appending a preset cannot make the sentence a lie.
+ */
+function breakingPresets(spec: Solver): string {
+  const names = spec.scenarios.filter(s => s.breaksEnvelope).map(s => s.label);
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
 
 /** Every reference across the modules, de-duplicated, for the shared block. */
 const references = [...new Set(modules.flatMap(m => m.spec.docs.references))];
@@ -124,7 +135,10 @@ function linkify(text: string): string {
                   ))}
                 </div>
                 <p class="preset-hint">
-                  The last three deliberately break a validity check &mdash; that is the point.
+                  {breakingPresets(m.spec) && (
+                    <>{breakingPresets(m.spec)} deliberately break a validity check &mdash; that is
+                    the point. </>
+                  )}
                   Hover a preset to see which one and why.
                 </p>
               </div>
@@ -240,8 +254,6 @@ function linkify(text: string): string {
       </div>
     </div>
   </section>
-
-  <FeedbackButton />
 </Layout>
 
 <style>
@@ -301,6 +313,14 @@ function linkify(text: string): string {
     border-top: none;
     padding-top: 0;
   }
+
+  /* .widget-layout is a fixed 300px sidebar + 1fr at every width — lab.css
+     declares no breakpoint, so each multi-column widget collapses it itself
+     (cylinder and bpm both at 900px). Without this the page is 488px wide on a
+     375px phone and scrolls sideways. */
+  @media (max-width: 900px) {
+    .widget-layout { grid-template-columns: 1fr; }
+  }
 </style>
 
 <script>
@@ -308,7 +328,9 @@ function linkify(text: string): string {
   import { fmt } from '../../../lib/solver-spec';
   import { implFor } from '../../../lib/imaging/modules';
   import type { FullResult, PlotData, QuickResult, SeriesColor, Values } from '../../../lib/imaging/modules/types';
-  import { renderDetected, stretchLimits, simulateTruth, type Truth } from '../../../lib/imaging';
+  import {
+    renderDetected, stretchLimits, simulateTruth, type SimParams, type Truth,
+  } from '../../../lib/imaging';
   import { chartTheme, onThemeChange } from '../../../lib/chart-theme';
   import { downloadBlob } from '../../../lib/download';
 
@@ -525,11 +547,16 @@ function linkify(text: string): string {
     let quick: QuickResult | null = null;
     let full: FullResult | null = null;
     let truth: Truth | null = null;
+    /** Derived once per parameter change — drawFrame runs per frame. */
+    let sim: SimParams | null = null;
     let frameIndex = 0;
     let playing = false;
-    let playTimer: number | undefined;
+    let playRaf: number | undefined;
     let fullTimer: number | undefined;
     let scratch: { photons?: Float32Array; out?: Float32Array } = {};
+    /** Both reused across frames; rebuilt only when the field size changes. */
+    let scratchField = 0;
+    let frameImage: ImageData | null = null;
 
     const canvas = $(v('canvas')) as HTMLCanvasElement;
     const scrub = $(v('scrub')) as HTMLInputElement;
@@ -538,18 +565,23 @@ function linkify(text: string): string {
       ($(v(`ov-${name}`)) as HTMLInputElement | null)?.checked ?? false;
 
     function drawFrame(): void {
-      if (!truth || !canvas) return;
-      const sim = impl.sim(values);
+      if (!truth || !canvas || !sim) return;
       const field = sim.field;
       const t0 = performance.now();
       const img = renderDetected(sim, truth, frameIndex, scratch);
       const [lo, hi] = stretchLimits(img, 0.1, 99.9);
 
-      canvas.width = field;
-      canvas.height = field;
+      // Assigning width or height resets the entire context and reallocates the
+      // backing store. At 60 frames a second that is the single most expensive
+      // thing on this path, and the size only changes when `field` does.
+      if (canvas.width !== field || canvas.height !== field) {
+        canvas.width = field;
+        canvas.height = field;
+        frameImage = null;
+      }
       const ctx = canvas.getContext('2d')!;
-      const buf = ctx.createImageData(field, field);
-      const data = buf.data;
+      if (!frameImage || frameImage.width !== field) frameImage = ctx.createImageData(field, field);
+      const data = frameImage.data;
       const lut = overlayOn('colormap') ? LUT_COLOR : LUT_GREY;
       const scale = 255 / (hi - lo);
       for (let i = 0, o = 0; i < field * field; i++, o += 4) {
@@ -558,11 +590,15 @@ function linkify(text: string): string {
         const q = (s | 0) * 3;
         data[o] = lut[q]; data[o + 1] = lut[q + 1]; data[o + 2] = lut[q + 2]; data[o + 3] = 255;
       }
-      ctx.putImageData(buf, 0, 0);
+      ctx.putImageData(frameImage, 0, 0);
 
+      // Overlay colours come from the same tokens as the legend swatches in
+      // FrameViewer, through globalAlpha rather than a baked rgba(), so they
+      // stay in step with the palette and with the theme.
       const px = sim.pixel;
       if (overlayOn('trails')) {
-        ctx.strokeStyle = 'rgba(217, 119, 6, 0.9)';
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = cvar('--amber', 'orange');
         ctx.lineWidth = 0.4;
         const back = Math.max(0, frameIndex - 10);
         for (let n = 0; n < truth.N; n++) {
@@ -581,9 +617,11 @@ function linkify(text: string): string {
           }
           ctx.stroke();
         }
+        ctx.globalAlpha = 1;
       }
       if (overlayOn('truth')) {
-        ctx.strokeStyle = 'rgba(16, 185, 129, 0.95)';
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = cvar('--emerald', 'green');
         ctx.lineWidth = 0.5;
         ctx.setLineDash([1.5, 1.5]);
         const fwhm = quick?.observables.fwhmPx;
@@ -594,10 +632,12 @@ function linkify(text: string): string {
           ctx.stroke();
         }
         ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
       }
       if (overlayOn('detections') && full) {
         const dets = full.analysis.perFrame[frameIndex] ?? [];
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.95)';
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = cvar('--cyan', 'cyan');
         ctx.lineWidth = 0.5;
         for (const d of dets) {
           ctx.beginPath();
@@ -605,6 +645,7 @@ function linkify(text: string): string {
           ctx.moveTo(d.xPx, d.yPx - 2); ctx.lineTo(d.xPx, d.yPx + 2);
           ctx.stroke();
         }
+        ctx.globalAlpha = 1;
       }
 
       const dt = performance.now() - t0;
@@ -660,17 +701,32 @@ function linkify(text: string): string {
     }
 
     /**
-     * The movie-wide analysis costs up to a couple of seconds, so it is
-     * debounced, and a progress bar appears if it runs past half a second.
+     * The movie-wide analysis costs seconds (measured: ~5 s at a 256 px field,
+     * ~17 s at 512), and `impl.full` is synchronous, so it holds the main thread
+     * for all of it.
+     *
+     * That is why the bar is shown *before* the work is dispatched rather than
+     * from a timer that decides the run is slow. A timer scheduled alongside the
+     * work can never fire — the thread it would run on is the thread being
+     * blocked — so the old 500 ms "is this slow?" timeout, and every
+     * `onProgress` repaint, only landed after the analysis had already finished.
+     * The bar was therefore never once visible while the page was frozen.
+     *
+     * Showing it up front costs a flash of progress bar on a fast run, which is
+     * the right trade against a page that silently stops responding. The real
+     * fix is to stop blocking at all — chunk the pass or move it to a worker —
+     * at which point `onProgress` starts working and this can go back to being
+     * conditional.
      */
     function scheduleFull(): void {
       if (fullTimer !== undefined) clearTimeout(fullTimer);
       full = null;
       fullTimer = window.setTimeout(() => {
         fullTimer = undefined;
-        const slow = window.setTimeout(() => showBusy(true, 0), 500);
-        // a timeout, not requestAnimationFrame: rAF does not fire in a hidden
-        // tab, which would leave the analysis permanently pending
+        showBusy(true, 0);
+        // Two frames' grace for the browser to actually paint the bar before the
+        // thread locks up. A timeout, not requestAnimationFrame: rAF does not
+        // fire in a hidden tab, which would leave the analysis pending forever.
         window.setTimeout(() => {
           try {
             full = impl.full(values, f => showBusy(true, f));
@@ -680,22 +736,32 @@ function linkify(text: string): string {
           } catch (err) {
             console.error(`${slug} analysis failed`, err);
           } finally {
-            clearTimeout(slow);
             showBusy(false);
           }
-        }, 0);
+        }, 32);
       }, 350);
     }
 
     function onChange(next: Values): void {
       values = next;
-      const sim = impl.sim(values);
+      // A parameter edit builds a different movie, so playback stops and rewinds.
+      // Leaving it running makes the controls unusable: one frame costs tens of
+      // milliseconds of main thread, so a play loop ticking every 60 ms starves
+      // the very slider being dragged — and the transport would go on pointing
+      // into a sequence that no longer exists.
+      setPlaying(false);
+      frameIndex = 0;
+      sim = impl.sim(values);
       truth = simulateTruth(sim);
-      scratch = {
-        photons: new Float32Array(sim.field * sim.field),
-        out: new Float32Array(sim.field * sim.field),
-      };
-      if (frameIndex >= sim.frames) frameIndex = sim.frames - 1;
+      // Only the field size decides these buffers, and it rarely changes; a
+      // fresh pair per keystroke was 2 MB of garbage per slider tick at 512 px.
+      if (scratchField !== sim.field) {
+        scratchField = sim.field;
+        scratch = {
+          photons: new Float32Array(sim.field * sim.field),
+          out: new Float32Array(sim.field * sim.field),
+        };
+      }
       scrub.max = String(Math.max(0, sim.frames - 1));
       scrub.value = String(frameIndex);
       runQuick();
@@ -713,20 +779,47 @@ function linkify(text: string): string {
     });
 
     // ── transport ──────────────────────────────────────────────────────────
-    scrub?.addEventListener('input', () => { frameIndex = Number(scrub.value); drawFrame(); });
+    // Scrubbing takes over the transport: without this the play loop keeps
+    // advancing and overwrites the frame just dragged to.
+    scrub?.addEventListener('input', () => {
+      if (playing) setPlaying(false);
+      frameIndex = Number(scrub.value);
+      drawFrame();
+    });
 
+    /** Nominal playback period; one frame costs 40-160 ms to draw. */
+    const FRAME_MS = 60;
+
+    /**
+     * Driven by requestAnimationFrame, not setInterval. A frame costs more than
+     * the 60 ms period at anything above a 256 px field, and setInterval answers
+     * that by queueing the callbacks it could not run — playback falls behind
+     * and never recovers, while the queue keeps the thread saturated. Advancing
+     * by elapsed time instead drops frames, so the movie stays in real time and
+     * degrades to a lower frame rate rather than to treacle.
+     */
     function setPlaying(on: boolean): void {
       playing = on;
       const btn = $(v('play'));
       if (btn) btn.innerHTML = on ? '&#10073;&#10073; pause' : '&#9654; play';
-      if (playTimer !== undefined) { clearInterval(playTimer); playTimer = undefined; }
-      if (on) {
-        playTimer = window.setInterval(() => {
-          frameIndex = (frameIndex + 1) % Number(values.frames);
+      if (playRaf !== undefined) { cancelAnimationFrame(playRaf); playRaf = undefined; }
+      if (!on) return;
+      let last = performance.now();
+      const tick = (now: number) => {
+        if (!playing) return;
+        const elapsed = now - last;
+        if (elapsed >= FRAME_MS) {
+          // sim.frames, not values.frames: the truth arrays are sized from the
+          // former, and a mid-edit disagreement would index past their end
+          const total = sim?.frames ?? 1;
+          frameIndex = (frameIndex + Math.max(1, Math.floor(elapsed / FRAME_MS))) % total;
+          last = now;
           scrub.value = String(frameIndex);
           drawFrame();
-        }, 60);
-      }
+        }
+        playRaf = requestAnimationFrame(tick);
+      };
+      playRaf = requestAnimationFrame(tick);
     }
 
     $(v('play'))?.addEventListener('click', () => setPlaying(!playing));
@@ -743,7 +836,14 @@ function linkify(text: string): string {
       btn.addEventListener('click', () => {
         const kind = btn.dataset.dl;
         if (kind === 'share') {
-          navigator.clipboard.writeText(binding.permalink()).then(() => flash(btn, 'Copied!'));
+          // navigator.clipboard is undefined outside a secure context — opening
+          // the preview over a LAN IP to check the page on a phone is enough to
+          // lose it — and writeText can reject under a permissions policy. Both
+          // left the button silently inert. The address bar already carries the
+          // same state, so there is something useful to say.
+          const writing = navigator.clipboard?.writeText(binding.permalink());
+          if (writing) writing.then(() => flash(btn, 'Copied!'), () => flash(btn, 'Copy from the address bar'));
+          else flash(btn, 'Copy from the address bar');
         } else if (kind === 'truth') {
           if (!truth) return;
           downloadBlob(new Blob([impl.exports.groundTruth(truth, values)], { type: 'text/csv' }),
@@ -759,23 +859,43 @@ function linkify(text: string): string {
           downloadBlob(new Blob([src], { type: 'text/x-python' }),
             `${stem}_${slug.replace(/-/g, '_')}.py`);
         } else if (kind === 'frames') {
-          if (!truth) return;
-          flash(btn, 'Building…');
-          const sim = impl.sim(values);
-          const local = {
-            photons: new Float32Array(sim.field * sim.field),
-            out: new Float32Array(sim.field * sim.field),
-          };
-          const out: Uint16Array[] = [];
-          for (let t = 0; t < sim.frames; t++) {
-            const img = renderDetected(sim, truth, t, local);
-            const u16 = new Uint16Array(img.length);
-            for (let i = 0; i < img.length; i++) {
-              u16[i] = Math.max(0, Math.min(65535, Math.round(img[i])));
-            }
-            out.push(u16);
+          if (!truth || !sim) return;
+          // The loop below renders every frame and holds the thread for seconds
+          // (~5 s at a 256 px field, ~20 s and 50 MB at 512), so the label has to
+          // be given a chance to paint first — set inline it appeared only once
+          // the work it was announcing had already finished. Same reason, and
+          // same 32 ms, as scheduleFull.
+          const s = sim, tr = truth;
+          // The spec allows 2000 frames at a 512 px field; that is a ~1 GB array
+          // of frames plus a second contiguous ~1 GB ArrayBuffer for the file,
+          // built on the main thread. sequence.ts renders frames on demand
+          // precisely so the movie is never held whole — the exporter is the one
+          // place that undoes it, so it declines rather than killing the tab.
+          const bytes = s.frames * (126 + s.field * s.field * 2);
+          if (bytes > 256 * 1024 * 1024) {
+            const size = bytes > 1073741824
+              ? `${(bytes / 1073741824).toFixed(1)} GB`
+              : `${Math.round(bytes / 1048576)} MB`;
+            flash(btn, `${size} — too large`);
+            return;
           }
-          downloadBlob(buildTiff(out, sim.field, sim.field), `${stem}-frames-16bit.tif`);
+          flash(btn, 'Building…');
+          window.setTimeout(() => {
+            const local = {
+              photons: new Float32Array(s.field * s.field),
+              out: new Float32Array(s.field * s.field),
+            };
+            const out: Uint16Array[] = [];
+            for (let t = 0; t < s.frames; t++) {
+              const img = renderDetected(s, tr, t, local);
+              const u16 = new Uint16Array(img.length);
+              for (let i = 0; i < img.length; i++) {
+                u16[i] = Math.max(0, Math.min(65535, Math.round(img[i])));
+              }
+              out.push(u16);
+            }
+            downloadBlob(buildTiff(out, s.field, s.field), `${stem}-frames-16bit.tif`);
+          }, 32);
         }
       });
     });
@@ -795,7 +915,20 @@ function linkify(text: string): string {
   document.querySelectorAll<HTMLElement>('[data-png]').forEach(btn => {
     btn.addEventListener('click', () => {
       const cv = $(btn.dataset.png!) as HTMLCanvasElement | null;
-      cv?.toBlob(b => { if (b) downloadBlob(b, `${btn.dataset.png}.png`); });
+      if (!cv) return;
+      // On the page the plot sits on a card, so drawXY only clears the canvas and
+      // lets the card show through — which leaves a PNG that is 98% transparent
+      // and drawn in whatever the current theme's ink is. Dropped into a paper or
+      // a slide, dark-theme axis labels land invisible on white. Exports get an
+      // opaque background of the page they were taken from.
+      const off = document.createElement('canvas');
+      off.width = cv.width;
+      off.height = cv.height;
+      const octx = off.getContext('2d')!;
+      octx.fillStyle = chartTheme().bg;
+      octx.fillRect(0, 0, off.width, off.height);
+      octx.drawImage(cv, 0, 0);
+      off.toBlob(b => { if (b) downloadBlob(b, `${btn.dataset.png}.png`); });
     });
   });
 
@@ -841,7 +974,12 @@ function linkify(text: string): string {
     let resizeTimer: number | undefined;
     const redraw = () => {
       for (const btn of buttons) {
-        if (btn.classList.contains('active')) mounted.get(btn.dataset.module!)?.drawPlots();
+        if (!btn.classList.contains('active')) continue;
+        const ctl = mounted.get(btn.dataset.module!);
+        ctl?.drawPlots();
+        // the movie too: its overlays are drawn from theme tokens, so on a theme
+        // switch it was the one panel left in the old palette
+        ctl?.drawFrame();
       }
     };
     onThemeChange(() => { redraw(); });
