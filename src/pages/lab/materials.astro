@@ -276,7 +276,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
           </div>
 
           <h3>Display</h3>
-          <div class="fields">
+          <div class="fields" id="display-fields">
             <div class="field" id="qty-field">
               <label>Quantity</label>
               <div class="seg" id="qty-tabs" role="radiogroup" aria-label="Quantity">
@@ -303,7 +303,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
           </div>
 
           <h3>Range</h3>
-          <div class="fields">
+          <div class="fields" id="range-fields">
             <div class="field">
               <label for="range-unit">Unit</label>
               <select class="field-input" id="range-unit"></select>
@@ -350,15 +350,21 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
                   <span class="chart-title" id="mat-title">Dielectric function ε(ω)</span>
                   <button type="button" class="header-toggle" id="gr-decompose" hidden aria-pressed="false" title="Show intraband and interband contributions separately">intra / inter</button>
                 </span>
-                <span class="mat-legend mat-legend--style" id="mat-legend-style"></span>
+                <div class="mat-legend mat-legend--names" id="mat-legend-names"></div>
               </div>
-              <div class="mat-legend mat-legend--names" id="mat-legend-names"></div>
+              <span class="mat-legend mat-legend--style" id="mat-legend-style"></span>
             </div>
             <div class="chart-wrap">
               <canvas id="mat-canvas" aria-label="Optical constants plot"></canvas>
             </div>
 
-            <div class="output-card card" id="readout"></div>
+            <!-- Plain .card, not .output-card: the latter is a three-column
+                 results grid, and the rows below are full-width grids of their
+                 own. Nested, each row was confined to one 217px column and the
+                 five value cells inside it collapsed to 18px, which wrapped
+                 every number one character per line. The imaging lab hit the
+                 same trap and records it too. -->
+            <div class="card readout-card" id="readout"></div>
 
             <div class="gr-map-card card" id="gr-map-card" hidden>
               <div class="gr-map-head">
@@ -425,7 +431,12 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
 <style>
   .widget-layout { --sidebar-w: minmax(0, 320px); }
-  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: repeat(2, 1fr); } }
+  /* Four modules, so four slots rather than the shared default of three, which
+     wrapped TMDC onto a second row on its own. Set through the documented knob,
+     not by re-declaring the grid, so lab.css's own collapse to a single column
+     below 720px still applies. */
+  .module-bar { --module-cols: 4; }
+  @media (max-width: 760px) { .module-bar { --module-cols: 2; } }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
   .controls-title { margin: 0 0 0.25rem !important; padding-top: 0 !important; border-top: none !important; font-size: 0.95rem !important; }
   .seg.controls-head__toggle { flex: 0 0 auto; width: 104px; }   /* fixed width, hugs right margin */
@@ -447,7 +458,18 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   /* right column: result card + Notes card stacked as independent cards (like the Mie lab) */
   .mat-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
   .mat-results { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; overflow: visible; }
-  .chart-header__top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  /* Title first, then the material legend directly beneath it. The Re/Im
+     line-style key is a sibling of this block, so the shared .chart-header flex
+     row pushes it to the top right — which is where a key that applies to every
+     curve belongs, while the names belong with the title they describe. */
+  .chart-header__top {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
   .chart-title-wrap { display: inline-flex; align-items: center; gap: 0.5rem; }
   .header-toggle {
     padding: 0.18rem 0.55rem; border: 1px solid var(--bg-muted); border-radius: var(--radius-full);
@@ -498,6 +520,53 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .icon-btn[hidden] { display: none; }
 
   /* Database search + file upload */
+  /* The shared .fields grid is two columns, which suits the short numeric fields
+     of photon/electron/laser. A material here is not a short field: selecting
+     "Search database…" unfolds a search box, a 30-entry result list and a
+     provenance line, and "Upload file…" and VO₂ unfold panels of their own. In
+     two columns at a 320px sidebar each of those got 123px, which truncated the
+     select to "Search databa", the placeholder to "Search refractiv", and wrapped
+     every result entry over five lines. Materials get one full-width column. */
+  #ctrl-materials .fields { grid-template-columns: 1fr; }
+
+  /* Label on its own line, then the select and its remove button side by side.
+     The shared .field is a flex column, which left the × stranded on a line of
+     its own below the select. */
+  #ctrl-materials .field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "label label" "input remove";
+    gap: 0.2rem 0.4rem;
+    align-items: center;
+  }
+  #ctrl-materials .field > label { grid-area: label; }
+  #ctrl-materials .field > .field-input { grid-area: input; min-width: 0; }
+  #ctrl-materials .field > .icon-btn { grid-area: remove; }
+  /* The rule above carries an id, so it outranks `.field[hidden]` above and would
+     display slots 2-4 that applyMatCount() has hidden. Any author `display` beats
+     the UA [hidden] rule; restate the guard at matching specificity. */
+  #ctrl-materials .field[hidden] { display: none; }
+
+  /* The Display segmented controls carry multi-word labels — "ε (Re, Im)",
+     "Wavelength", and in graphene mode a four-way unit switch. Side by side in
+     the shared two-column .fields grid they got 97px and 149px, so every label
+     broke onto two lines and the pills stood 38px tall. The two together need
+     ~247px of the 254px available, which is too tight to keep on one row, so
+     each control takes a row of its own and its buttons share the width evenly.
+     No `display` here: `.field[hidden]` must keep hiding the graphene-only
+     units control. */
+  #display-fields { grid-template-columns: 1fr; }
+  #display-fields .seg-btn { flex: 1; white-space: nowrap; }
+
+  /* Unit, min and max are one setting read left to right, so they belong on one
+     row; the shared two-column grid split them and dropped "λ max" onto a line of
+     its own. The unit select needs less room than the two numbers. In graphene
+     mode the same three-column track picks up Q unit / Q min / Q max as a second
+     row, which reads the same way. */
+  #range-fields { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1fr); }
+  /* The Q cut row is a number plus a slider — it needs the full width. */
+  #range-fields > #gr-q-field { grid-column: 1 / -1; }
+
   .mat-extra { display: flex; flex-direction: column; gap: 0.3rem; }
   .mat-extra[hidden] { display: none; }
   /* VO₂ metallic-fraction control + fm-vs-T mini plot */
@@ -513,6 +582,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   :global(.rii-result__page) { color: var(--text-muted); }
   :global(.rii-empty) { padding: 0.4rem 0.5rem; font-size: 0.76rem; color: var(--text-muted); }
   .rii-status.err, .ctrl-note.err { color: var(--danger); }  .chart-wrap canvas { cursor: crosshair; }
+  /* Padding to match .output-card, without its three-column results grid: the
+     rows stack, each spanning the full width it needs. */
+  .readout-card {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    /* .card clips to hidden; the skin-depth ⓘ tooltip is absolutely positioned
+       and has to escape the card to be readable. */
+    overflow: visible;
+  }
   :global(.readout-row) { display: grid; gap: 0.5rem; align-items: stretch; }
   :global(.readout-shared) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   :global(.readout-mat) { grid-template-columns: minmax(84px, 0.8fr) repeat(5, minmax(0, 1fr)); }
@@ -545,7 +625,22 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     pointer-events: none; opacity: 0; transform: translateY(-3px); transition: opacity 0.15s, transform 0.15s; z-index: 100;
   }
   :global(.stat-info:hover .stat-tooltip), :global(.stat-info:focus-visible .stat-tooltip) { opacity: 1; transform: translateY(0); }
-  :global(.stat-label) { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+  /* These labels are physics symbols and units, not words, so the shared
+     uppercase treatment is wrong here: it renders n and k as N and K, and it
+     does not merely change case for Greek — ε becomes Ε, δ becomes Δ and µ
+     becomes Μ, which are different symbols. eV becomes EV, which is not a unit.
+     The markup already carries the correct glyphs; only the transform mangled
+     them. Same page-local treatment as plasmonic-nanoparticles and rcwa.
+     The 0.05em tracking exists to open up all-caps and is too loose for mixed
+     case, so it is tightened to match. */
+  :global(.stat-label) {
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0.01em;
+  }
   :global(.stat-value) { font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.2; overflow-wrap: anywhere; }
 
   .mat-export-bar { display: flex; align-items: center; gap: 0.5rem; }
@@ -572,9 +667,6 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .mat-import-dialog__status.err { color: var(--rose); }
   .mat-import-dialog__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
   @media (max-width: 480px) { .mat-import-dialog__grid { grid-template-columns: 1fr; } }
-
-  /* behaviour this widget needs on top of the shared component in lab.css */
-  .output-card { overflow: visible; }
 </style>
 
 <script>
