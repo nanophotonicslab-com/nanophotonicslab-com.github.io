@@ -927,6 +927,35 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     color: var(--text-soft);
   }
 
+  /* Symbol subscripts — n_s, n_c, κ_s, κ_c, ε_∞ and the layer indices.
+     The browser default for <sub> is `vertical-align: sub` at `font-size:
+     smaller`, which drops the glyph below the baseline while keeping it in the
+     line box: here that put 18.4px of leading inside a 22.1px line, so rows
+     carrying a subscript sat taller than rows without one and the labels lost
+     their alignment. Pulling it out of the line box with `line-height: 0` and
+     offsetting it geometrically keeps the subscript tied to the glyph it
+     modifies, at a size that still reads at 13px. */
+  sub {
+    font-size: 0.72em;
+    line-height: 0;
+    vertical-align: baseline;
+    position: relative;
+    bottom: -0.28em;
+  }
+
+  /* The same treatment for the labels the script injects. Astro scopes the rule
+     above to elements that exist in the template; innerHTML content carries no
+     scope attribute, so those subscripts need an explicit :global to match. */
+  :global(.pr-stack-half sub),
+  :global(.tmm-stack__end sub),
+  :global(.output-card sub) {
+    font-size: 0.72em;
+    line-height: 0;
+    vertical-align: baseline;
+    position: relative;
+    bottom: -0.28em;
+  }
+
   .axis-section-label {
     display: block;
     color: var(--text);
@@ -2167,7 +2196,12 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   .pr-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; padding: 0; border: none; border-radius: var(--radius-full); background: none; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
   .pr-info-btn[hidden] { display: none; }
   .pr-info-btn:hover, .pr-info-btn[aria-expanded="true"] { background: var(--bg-muted); color: var(--primary); }
-  .pr-info-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 300px; max-width: 88vw; padding: 0.7rem 0.8rem 0.8rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+  .pr-info-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 300px; max-width: 88vw; padding: 0.7rem 0.8rem 0.8rem; background: var(--bg); border: 1px solid var(--bg-muted); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); max-height: min(72vh, 560px); overflow-y: auto; }
+  /* .card clips to hidden, and a clipping ancestor cuts an absolutely positioned
+     descendant no matter its z-index, so the lower edge of this popup was sliced
+     off by the panel frame. Stop clipping only while it is open, so the panel
+     keeps its rounded corners and its canvas clipped the rest of the time. */
+  .chart-panel:has(.pr-info-pop:not([hidden])) { overflow: visible; }
   .pr-info-pop[hidden] { display: none; }
   .pr-info-pop__head { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
   .pr-info-pop__close { border: none; background: none; color: var(--text-soft); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.15rem; }
@@ -2188,6 +2222,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     font-weight: 800;
     text-align: center;
     color: var(--text-soft);
+    /* `place-items: center` sets `justify-items: center`, which sizes the text
+       to min-content and so breaks "n_s = 1.41" at every opportunity: the label
+       stacked as n / s / = 1.41 over three lines in a half that is 326px wide.
+       The reading is one quantity, so it stays on one line. */
+    white-space: nowrap;
   }
   :global(.pr-stack-half--right) { border-left: 2px solid var(--text-soft); }
 
@@ -2327,6 +2366,18 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   :global(.output-card .stat-info:focus-visible .stat-tooltip) {
     opacity: 1;
     transform: translateY(0);
+  }
+  /* These tooltips are absolutely positioned and anchored to the right edge of
+     their ⓘ, so each one extends 220px to the left of it. On a left-hand tile
+     that reaches past the card, and on the bottom row it reaches below it —
+     and .card clips to hidden, which sheared the opening characters off every
+     line of the leftmost tooltip and the last line off the bottom ones. A
+     clipping ancestor cuts an absolutely positioned descendant whatever its
+     z-index, so the panel has to stop clipping; it does so only while a tooltip
+     is actually up, keeping its rounded corners the rest of the time. */
+  :global(.output-card:has(.stat-info:hover)),
+  :global(.output-card:has(.stat-info:focus-visible)) {
+    overflow: visible;
   }
 </style>
 
@@ -5063,9 +5114,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       return `<div class="tmm-stack__layer" style="flex:${pct} 1 0;background:${layer.color}" title="${safe}">${label}</div>`;
     }).join('');
     tStackPreview.innerHTML =
-      `<div class="tmm-stack__end" title="Substrate (incidence)">n<sub>s</sub><br>${tfmt(tmm.nSub, 3)}</div>` +
+      `<div class="tmm-stack__end" title="Substrate (incidence)"><span>n<sub>s</sub><br>${tfmt(tmm.nSub, 3)}</span></div>` +
       inner +
-      `<div class="tmm-stack__end" title="Cladding (exit)">n<sub>c</sub><br>${tfmt(tmm.nClad, 3)}</div>`;
+      `<div class="tmm-stack__end" title="Cladding (exit)"><span>n<sub>c</sub><br>${tfmt(tmm.nClad, 3)}</span></div>`;
 
     $t('tmm-layer-count').textContent = `${tmm.layers.length}`;
     ($t('tmm-remove-layer') as HTMLButtonElement).disabled = tmm.layers.length <= TMM_MIN_LAYERS;
@@ -6193,7 +6244,11 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       // bare stack = a single interface: two half-spaces meeting at a line
       const half = (n: number, k: number, sub: string, title: string, right: boolean) => {
         const dark = k > 0.15;
-        const label = `n<sub>${sub}</sub> = ${pfmt(n, 3)}${k > 0 ? ` + ${pfmt(k, 3)}i` : ''}`;
+        // One element, not a bare inline run: .pr-stack-half is a grid container,
+        // and a grid blockifies its children — the two text runs and the <sub>
+        // each became their own grid item, so the reading stacked as n / s /
+        // = 1.41 down three rows. Wrapped, it is a single item on one line.
+        const label = `<span>n<sub>${sub}</sub> = ${pfmt(n, 3)}${k > 0 ? ` + ${pfmt(k, 3)}i` : ''}</span>`;
         return `<div class="pr-stack-half${right ? ' pr-stack-half--right' : ''}" style="background:${prEndFill(n, k)};${dark ? 'color:rgba(255,255,255,0.92);text-shadow:none;' : ''}" title="${title}">${label}</div>`;
       };
       prStackPrev.innerHTML =
@@ -6201,9 +6256,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
         half(pr.cladN, pr.cladK, 'c', 'Superstrate (above)', true);
     } else {
       prStackPrev.innerHTML =
-        `<div class="tmm-stack__end" title="Substrate (below)">n<sub>s</sub><br>${pfmt(pr.subN, 3)}</div>` +
+        `<div class="tmm-stack__end" title="Substrate (below)"><span>n<sub>s</sub><br>${pfmt(pr.subN, 3)}</span></div>` +
         inner +
-        `<div class="tmm-stack__end" title="Superstrate (above)">n<sub>c</sub><br>${pfmt(pr.cladN, 3)}</div>`;
+        `<div class="tmm-stack__end" title="Superstrate (above)"><span>n<sub>c</sub><br>${pfmt(pr.cladN, 3)}</span></div>`;
     }
     $p('pr-layer-count').textContent = String(pr.layers.length);
     ($p('pr-remove-layer') as HTMLButtonElement).disabled = pr.layers.length <= PR_MIN_LAYERS;
