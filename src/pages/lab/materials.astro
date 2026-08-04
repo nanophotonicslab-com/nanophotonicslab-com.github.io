@@ -378,6 +378,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
               <span class="mat-export-label">Export</span>
               <button id="mat-dl-png" class="share-btn" title="Download plot as PNG">PNG</button>
               <button id="mat-dl-csv" class="share-btn" title="Download data as CSV">CSV</button>
+              <button id="mat-dl-share" class="share-btn" title="Copy a link that reproduces this state">Share</button>
             </div>
           </div>
 
@@ -748,6 +749,9 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     prefix: string;
     custom: { label: string; ref: string; data: number[][] } | null;
     catalog: RIIMaterial[] | null;
+    /** dataPath of the chosen refractiveindex.info entry — the only part of a
+        database pick that is stable enough to put in a permalink. */
+    riiPath: string | null;
     vo2fm: number;
     resolve: () => { label: string; ref: string; data: number[][] } | null;
     sync: () => void;   // re-apply this slot's sub-group visibility from its current select value
@@ -797,7 +801,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const fileStatus = $(`${prefix}-file-status`);
     const vo2Group = $(`${prefix}-vo2`), vo2Slider = $(`${prefix}-vo2-fm`) as HTMLInputElement;
     const vo2Val = $(`${prefix}-vo2-fm-val`), vo2Tplot = $(`${prefix}-vo2-tplot`) as HTMLCanvasElement, vo2Tnote = $(`${prefix}-vo2-tnote`);
-    const slot: Slot = { select, prefix, custom: null, catalog: null, vo2fm: 0, resolve: () => null, sync: () => {} };
+    const slot: Slot = { select, prefix, custom: null, catalog: null, riiPath: null, vo2fm: 0, resolve: () => null, sync: () => {} };
 
     slot.resolve = () => {
       const v = select.value;
@@ -848,6 +852,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       try {
         const data = await fetchMaterialNK(m.dataPath);
         slot.custom = { label: m.bookName || m.book, ref: `refractiveindex.info · ${m.pageName}`, data };
+        slot.riiPath = m.dataPath;
         riiStatus.textContent = `${m.bookName || m.book} · ${m.pageName} (${data.length} pts)`;
         refreshMatRef(); render();
       } catch { riiStatus.textContent = 'Failed to load data'; riiStatus.classList.add('err'); }
@@ -1849,6 +1854,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     d.select.value = s.select.value;
     d.custom = s.custom;
     d.catalog = s.catalog ?? d.catalog;
+    d.riiPath = s.riiPath;
     d.vo2fm = s.vo2fm;
     ($(`${dp}-vo2-fm`) as HTMLInputElement).value = String(s.vo2fm);
     $(`${dp}-vo2-fm-val`).textContent = s.vo2fm.toFixed(2);
@@ -2014,6 +2020,157 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     a.click();
   });
 
+  // ── Share permalink ───────────────────────────────────────────────────────
+  // The state worth sharing is spread across three places — which module is
+  // open, what each material slot resolves to, and the display/range window —
+  // so the link carries all three. Restoring drives the same controls a user
+  // would touch (clicking the segmented buttons, dispatching change on the
+  // selects) rather than assigning to the state variables directly, so the
+  // active classes and derived fields cannot drift out of step with the values
+  // they claim to show.
+  const valOf = (id: string) => ($(id) as HTMLInputElement).value;
+
+  function serializeState(): string {
+    const p = new URLSearchParams();
+    p.set('mod', mod);
+    p.set('ax', axis);
+    p.set('u', unitSel.value);
+    p.set('lo', String(+rangeLoNm.toPrecision(8)));
+    p.set('hi', String(+rangeHiNm.toPrecision(8)));
+    if (mod !== 'graphene') p.set('qty', quantity);
+    if (mod === 'materials') {
+      p.set('n', String(matCount));
+      activeSlots().forEach((s, i) => {
+        const k = i + 1, v = s.select.value;
+        p.set(`m${k}`, v);
+        if (v === 'vo2') p.set(`v${k}`, s.vo2fm.toFixed(2));
+        if (v === 'rii' && s.riiPath) p.set(`d${k}`, s.riiPath);
+      });
+    } else if (mod === 'drude') {
+      p.set('de', valOf('drude-epsb')); p.set('dw', valOf('drude-wp')); p.set('dg', valOf('drude-gamma'));
+    } else if (mod === 'graphene') {
+      p.set('gnl', grNL ? '1' : '0');
+      p.set('gef', valOf('gr-ef')); p.set('ggam', valOf('gr-gamma')); p.set('gt', valOf('gr-temp'));
+      if (grNL) p.set('gp', grProcess);
+      else {
+        p.set('gm', grModel); p.set('gu', grUnit);
+        if (grDecompose) p.set('gdec', '1');
+        if (grModel === 'nonlocal') {
+          p.set('gqu', grQUnit); p.set('gqmin', valOf('gr-qmin'));
+          p.set('gqmax', valOf('gr-qmax')); p.set('gq', valOf('gr-q'));
+        }
+      }
+    } else if (mod === 'tmdc') {
+      p.set('tm', tmdcMat); p.set('tt', valOf('tmdc-temp'));
+    }
+    return p.toString();
+  }
+
+  /** Re-apply a refractiveindex.info entry from its dataPath alone. */
+  async function applyRiiByPath(slot: Slot, path: string) {
+    const status = $(`${slot.prefix}-rii-status`);
+    try {
+      if (!slot.catalog) slot.catalog = await loadCatalog();
+      const m = slot.catalog.find(e => e.dataPath === path);
+      if (!m) { status.textContent = 'Shared entry is not in the database'; status.classList.add('err'); return; }
+      const data = await fetchMaterialNK(m.dataPath);
+      slot.custom = { label: m.bookName || m.book, ref: `refractiveindex.info · ${m.pageName}`, data };
+      slot.riiPath = m.dataPath;
+      ($(`${slot.prefix}-rii-input`) as HTMLInputElement).value = m.bookName || m.book;
+      status.textContent = `${m.bookName || m.book} · ${m.pageName} (${data.length} pts)`;
+      status.classList.remove('err');
+    } catch {
+      status.textContent = 'Failed to load the shared entry';
+      status.classList.add('err');
+    }
+  }
+
+  async function restoreState(hash: string) {
+    const p = new URLSearchParams(hash);
+    const seg = (group: string, attr: string, val: string | null) => {
+      if (!val) return;
+      const b = $(group).querySelector<HTMLButtonElement>(`.seg-btn[data-${attr}="${CSS.escape(val)}"]`);
+      if (b && !b.classList.contains('active')) b.click();
+    };
+    const setInput = (id: string, val: string | null, evt = 'change') => {
+      if (val === null) return;
+      const el = $(id) as HTMLInputElement;
+      el.value = val;
+      el.dispatchEvent(new Event(evt, { bubbles: true }));
+    };
+
+    const m = p.get('mod') as Mod | null;
+    if (m && m in moduleBtns) selectModule(m);
+
+    if (m === 'drude') {
+      setInput('drude-epsb', p.get('de')); setInput('drude-wp', p.get('dw')); setInput('drude-gamma', p.get('dg'));
+    } else if (m === 'graphene') {
+      seg('lin-nl-tabs', 'linnl', p.get('gnl') === '1' ? 'nl' : 'lin');
+      if (p.get('gnl') === '1') setInput('gr-process', p.get('gp'));
+      else {
+        seg('gr-model-tabs', 'grmodel', p.get('gm'));
+        seg('gr-unit-tabs', 'grunit', p.get('gu'));
+        if (p.get('gdec') === '1' && !grDecompose) $('gr-decompose').click();
+        seg('gr-qunit-tabs', 'grqunit', p.get('gqu'));
+        setInput('gr-qmin', p.get('gqmin')); setInput('gr-qmax', p.get('gqmax'));
+        setInput('gr-q', p.get('gq'), 'input');
+      }
+      setInput('gr-ef', p.get('gef'), 'input');
+      setInput('gr-gamma', p.get('ggam'));
+      setInput('gr-temp', p.get('gt'), 'input');
+    } else if (m === 'tmdc') {
+      setInput('tmdc-mat', p.get('tm')); setInput('tmdc-temp', p.get('tt'), 'input');
+    } else {
+      const n = Math.min(SLOTS.length, Math.max(1, parseInt(p.get('n') ?? '1', 10) || 1));
+      while (matCount < n) $('mat-add').click();
+      for (let i = 0; i < n; i++) {
+        const k = i + 1, sel = p.get(`m${k}`);
+        // an uploaded file cannot travel in a URL — that slot keeps its default
+        if (!sel || sel === 'file') continue;
+        const slot = SLOTS[i];
+        slot.select.value = sel;
+        slot.select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (sel === 'vo2') {
+          const fm = parseFloat(p.get(`v${k}`) ?? '');
+          if (Number.isFinite(fm)) setInput(`${slot.prefix}-vo2-fm`, String(fm), 'input');
+        }
+        if (sel === 'rii') {
+          const path = p.get(`d${k}`);
+          if (path) await applyRiiByPath(slot, path);
+        }
+      }
+    }
+
+    // Display and range go last: selecting a module can reseed the window
+    // (graphene widens to the IR, TMDC clamps to its validity range), which
+    // would otherwise overwrite the shared one.
+    seg('qty-tabs', 'qty', p.get('qty'));
+    seg('axis-tabs', 'axis', p.get('ax'));
+    const u = p.get('u');
+    if (u) { unitSel.value = u; unitSel.dispatchEvent(new Event('change')); }
+    const lo = parseFloat(p.get('lo') ?? ''), hi = parseFloat(p.get('hi') ?? '');
+    if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) {
+      rangeLoNm = lo; rangeHiNm = hi; refreshRangeInputs();
+    }
+    refreshMatRef(); updateNotes(); render();
+  }
+
+  $('mat-dl-share').addEventListener('click', () => {
+    const btn = $('mat-dl-share');
+    const url = `${location.origin}${location.pathname}#${serializeState()}`;
+    const flash = (msg: string) => {
+      const orig = btn.textContent;
+      btn.textContent = msg;
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    };
+    // Put it in the address bar either way, so the link is recoverable even
+    // where the clipboard API is unavailable (any non-secure origin).
+    history.replaceState(null, '', url);
+    const writing = navigator.clipboard?.writeText(url);
+    if (writing) writing.then(() => flash('Copied!'), () => flash('Copy from the address bar'));
+    else flash('Copy from the address bar');
+  });
+
   // ── init ──
   refreshMatRef();
   refreshUnitSelect();
@@ -2022,7 +2179,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   onThemeChange(() => { paint(); paintMap(); });
   window.addEventListener('resize', () => { paint(); paintMap(); });
   // deep-link: #graphene / #drude / #tmdc open that module directly (e.g. from the NL plasmonics lab)
-  const hashMod = location.hash.replace('#', '') as Mod;
-  if (['drude', 'graphene'].includes(hashMod)) selectModule(hashMod);   // tmdc disabled (coming soon)
+  const hashRaw = location.hash.replace('#', '');
+  if (['drude', 'graphene'].includes(hashRaw)) selectModule(hashRaw as Mod);   // tmdc disabled (coming soon)
+  else if (hashRaw.includes('=')) restoreState(hashRaw);                       // full permalink
   else render();
 </script>
