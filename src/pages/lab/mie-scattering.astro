@@ -4710,6 +4710,13 @@ initPermalinks({
     if (p.has('edec')) electronDecompTabs.select(p.get('edec')!, true);
     if (p.has('pol')) polTabs.select(p.get('pol')!, true);
     if (p.has('view')) viewTabs.select(p.get('view')!);
+    // The n_host chips are highlighted from DOM input/change events, which a
+    // programmatic setValue does not raise — it updates the field and recomputes,
+    // but nothing re-runs syncPresets. Restoring a link with nh=1.00 therefore
+    // left the markup default (Water) lit while the calculation ran in air, so
+    // the label contradicted the curve. The preset and reset paths already call
+    // this; the restore path was the one that did not.
+    syncPresets();
     updateExcitationUI();
   }
 
