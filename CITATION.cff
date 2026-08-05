@@ -6,6 +6,10 @@ authors:
   - family-names: "Martinez Saavedra"
     given-names: "Jose Ramon"
     email: joseramasa@gmail.com
+    affiliation: "Quside Technologies SL, Castelldefels, Barcelona, Spain"
+  - family-names: "Rodriguez Echarri"
+    given-names: "Alvaro"
+    affiliation: "Center for Nanophotonics, NWO Institute AMOLF, Amsterdam, The Netherlands"
 repository-code: "https://github.com/nanophotonicslab-com/nanophotonicslab-com.github.io"
 url: "https://nanophotonicslab.com"
 license: MIT

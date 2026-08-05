@@ -2,7 +2,10 @@
   "title": "NanophotonicsLab — browser-based nanophotonics tools and optics library",
   "description": "Interactive browser-based tools for nanophotonics (Mie scattering, plasmonics, EELS/CL, dipole decay and Purcell factors, optical tweezers, photothermal heating, ultrafast pulse dispersion) and the typed, tested, zero-dependency TypeScript library behind them (@nanophotonicslab/optics).",
   "creators": [
-    { "name": "Martinez Saavedra, Jose Ramon" }
+    { "name": "Martinez Saavedra, Jose Ramon",
+      "affiliation": "Quside Technologies SL, Castelldefels, Barcelona, Spain" },
+    { "name": "Rodriguez Echarri, Alvaro",
+      "affiliation": "Center for Nanophotonics, NWO Institute AMOLF, Amsterdam, The Netherlands" }
   ],
   "license": "MIT",
   "upload_type": "software",

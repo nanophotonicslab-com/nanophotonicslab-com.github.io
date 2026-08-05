@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 /**
- * Web Worker: loads Pyodide, installs nanobem, runs BEM solves.
+ * Web Worker: loads Pyodide, installs nplab-bem, runs BEM solves.
  *
  * Communication via postMessage with typed message protocol.
  * Python computation runs here, never blocking the main thread.
@@ -45,10 +45,10 @@ import micropip
 await micropip.install('trimesh', deps=False)
     `);
 
-    post({ type: 'init-progress', stage: 'Installing nanobem...', pct: 0.8 });
+    post({ type: 'init-progress', stage: 'Installing nplab-bem...', pct: 0.8 });
 
-    // Install nanobem from the wheel in public/wasm/
-    const wheelUrl = new URL('/wasm/nanobem-0.1.0-py3-none-any.whl', self.location.origin).href;
+    // Install nplab-bem from the wheel in public/wasm/
+    const wheelUrl = new URL('/wasm/nplab_bem-0.1.0-py3-none-any.whl', self.location.origin).href;
     await pyodide.runPythonAsync(`
 import micropip
 await micropip.install('${wheelUrl}', deps=False)
@@ -56,8 +56,8 @@ await micropip.install('${wheelUrl}', deps=False)
 
     // Verify import works
     await pyodide.runPythonAsync(`
-import nanobem as nb
-print(f"nanobem loaded: {nb.sphere_mesh(radius=10, subdivisions=1).n_faces} faces")
+import nplab_bem as nb
+print(f"nplab-bem loaded: {nb.sphere_mesh(radius=10, subdivisions=1).n_faces} faces")
     `);
 
     post({ type: 'init-progress', stage: 'Ready', pct: 1.0 });
@@ -86,7 +86,7 @@ async function solveSpectrum(params: SolveParams) {
     const wavelengthsJson = JSON.stringify(params.wavelengths);
 
     const script = `
-import nanobem as nb
+import nplab_bem as nb
 import numpy as np
 
 ${meshLine}
@@ -154,7 +154,7 @@ async function surfaceFields(wavelength: number, params: SolveParams) {
       : `mesh = nb.rod_mesh(radius=${params.radius}, aspect_ratio=${params.aspectRatio}, subdivisions=${params.subdivisions})`;
 
     const script = `
-import nanobem as nb
+import nplab_bem as nb
 import numpy as np
 
 ${meshLine}
@@ -186,7 +186,7 @@ async function generateMesh(params: SolveParams) {
       : `mesh = nb.rod_mesh(radius=${params.radius}, aspect_ratio=${params.aspectRatio}, subdivisions=${params.subdivisions})`;
 
     await pyodide.runPythonAsync(`
-import nanobem as nb
+import nplab_bem as nb
 ${meshLine}
 verts = mesh.vertices.ravel().tolist()
 faces = mesh.faces.ravel().tolist()
