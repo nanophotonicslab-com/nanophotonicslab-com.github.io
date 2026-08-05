@@ -2382,6 +2382,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
 </style>
 
 <script>
+  import {
+    epsilonLossless, layerKappa, xRatioForPair, solveScalarRoots, coth,
+  } from '../../../lib/surface-plasmon';
   import { chartTheme, onThemeChange } from '../../../lib/chart-theme';
 
   const HC_EV_NM = 1239.8419843320026;
@@ -2800,11 +2803,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     return `omega / omega_p (${wpAxisLabel()})`;
   }
 
-  function epsilonLossless(layer: Layer, energyEv: number): number {
-    if (layer.wpEv <= 0) return layer.epsInf;
-    if (energyEv <= 0) return Number.NaN;
-    return layer.epsInf - (layer.wpEv * layer.wpEv) / (energyEv * energyEv);
-  }
 
   function interfaceAsymptoteEv(): number {
     const [a, b] = activePair();
@@ -2983,87 +2981,8 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
       && sameNormalizedThickness(state.layers[2], state.layers[4], wp);
   }
 
-  function layerKappa(q: number, u: number, layer: Layer, wp: number): number | null {
-    const energyEv = u * wp;
-    const epsilon = epsilonLossless(layer, energyEv);
-    const value = q * q - epsilon * u * u;
-    if (!Number.isFinite(value) || value <= 0) return null;
-    return Math.sqrt(value);
-  }
 
-  function xRatioForPair(q: number, u: number, metal: Layer, dielectric: Layer, wp: number): number | null {
-    const energyEv = u * wp;
-    const epsMetal = epsilonLossless(metal, energyEv);
-    const epsDielectric = epsilonLossless(dielectric, energyEv);
-    const kappaMetal = layerKappa(q, u, metal, wp);
-    const kappaDielectric = layerKappa(q, u, dielectric, wp);
-    if (
-      kappaMetal === null
-      || kappaDielectric === null
-      || !Number.isFinite(epsMetal)
-      || !Number.isFinite(epsDielectric)
-      || Math.abs(epsMetal) < 1e-10
-      || Math.abs(epsDielectric) < 1e-10
-    ) {
-      return null;
-    }
-    const reflection = -((kappaMetal / epsMetal) / (kappaDielectric / epsDielectric));
-    const denominator = 1 + reflection;
-    if (!Number.isFinite(reflection) || Math.abs(denominator) < 1e-10) return null;
-    return (1 - reflection) / denominator;
-  }
 
-  function solveScalarRoots(
-    residual: (u: number) => number | null,
-    uMin: number,
-    uMax: number,
-    samples = 260,
-  ): number[] {
-    if (!Number.isFinite(uMin) || !Number.isFinite(uMax) || uMax <= uMin) return [];
-    const roots: number[] = [];
-    let previousU = uMin;
-    let previousValue = residual(previousU);
-
-    for (let i = 1; i <= samples; i++) {
-      const u = uMin + (uMax - uMin) * i / samples;
-      const value = residual(u);
-      if (value === null || !Number.isFinite(value)) {
-        previousU = u;
-        previousValue = null;
-        continue;
-      }
-      if (Math.abs(value) < 1e-7) {
-        roots.push(u);
-      } else if (previousValue !== null && Number.isFinite(previousValue) && previousValue * value < 0) {
-        let lo = previousU;
-        let hi = u;
-        let flo = previousValue;
-        for (let j = 0; j < 44; j++) {
-          const mid = 0.5 * (lo + hi);
-          const fmid = residual(mid);
-          if (fmid === null || !Number.isFinite(fmid)) break;
-          if (Math.abs(fmid) < 1e-9) {
-            lo = mid;
-            hi = mid;
-            break;
-          }
-          if (flo * fmid <= 0) {
-            hi = mid;
-          } else {
-            lo = mid;
-            flo = fmid;
-          }
-        }
-        roots.push(0.5 * (lo + hi));
-      }
-      previousU = u;
-      previousValue = value;
-    }
-
-    return roots
-      .sort((a, b) => a - b)
-      .filter((root, index, sorted) => index === 0 || Math.abs(root - sorted[index - 1]) > 1e-4);
-  }
 
   function median(values: number[]): number {
     if (!values.length) return 0;
@@ -3124,11 +3043,6 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     return filmBranchPoint(q, u, representativeMetalLayer(), representativeDielectricLayer(), wp);
   }
 
-  function coth(value: number): number {
-    const tanh = Math.tanh(value);
-    if (Math.abs(tanh) < 1e-12) return value < 0 ? -1e12 : 1e12;
-    return 1 / tanh;
-  }
 
   function singleInterfaceU(q: number): number {
     if (q <= 0) return 0;

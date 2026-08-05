@@ -489,6 +489,15 @@ export function nearestIndex(values: ArrayLike<number>, target: number): number 
 export function validityNotes(options: PlasmonSpectrumOptions): string[] {
   const notes: string[] = [];
   const availableModes = availableModeCount(options.shape);
+  const requestedModes = options.modeCount ?? 1;
+  if (requestedModes > availableModes) {
+    notes.push(
+      `Requested ${requestedModes} modes, but this geometry has only ${availableModes} fitted `
+      + `analytical mode${availableModes === 1 ? '' : 's'} in the local paper data, so the `
+      + `spectrum below sums ${availableModes}. Higher-order resonances of this shape are `
+      + `outside the model until further modes are fitted.`,
+    );
+  }
   if (availableModes > 1) {
     notes.push(`This configuration uses all ${availableModes} fitted analytical modes available in the local paper data.`);
   } else if (options.shape === 'bipyramid') {
