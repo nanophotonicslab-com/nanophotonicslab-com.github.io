@@ -492,7 +492,7 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
             <div class="tmm-slider-row">
               <div class="pr-z-track">
                 <input type="range" class="slope-slider" id="pr-z-slider" aria-labelledby="pr-z-label" min="0" max="1000" step="1" value="150">
-                <span class="pr-z-mark" id="pr-z-zero" title="First interface (z = 0)" aria-hidden="true"></span>
+                <span class="pr-z-bands" id="pr-z-bands" aria-hidden="true"></span>
               </div>
               <input type="number" class="param-number param-number--sm" id="pr-z" step="1" value="150">
             </div>
@@ -691,6 +691,16 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
                 group so edits apply to all members at once. The semi-infinite substrate (below, z&lt;0)
                 and superstrate (above) may be absorbing (e.g. a metal mirror); the emitting medium
                 itself must be transparent.
+              </li>
+              <li>
+                <strong>Near an absorber.</strong> The emitter is held 1&nbsp;nm clear of any
+                absorbing interface, and the sweep leaves that band blank rather than plotting
+                through it. Approaching an absorber the LDOS diverges as 1/<em>d</em><sup>3</sup>
+                &mdash; almost all of it non-radiative quenching into the metal, not useful emission
+                &mdash; so the numbers there grow without bound and the momentum integral behind
+                them stops converging. A local, macroscopic description is in any case the wrong
+                model at that range: below roughly a nanometre nonlocal and quantum corrections
+                dominate, and this model overestimates the quenching.
               </li>
               <li>
                 <strong>Method.</strong> Electric, magnetic and magnetoelectric LDOS from a stable
@@ -2238,15 +2248,27 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     min-width: 0;
   }
   .pr-z-track .slope-slider { width: 100%; }
-  .pr-z-mark {
+  /* Absorbing regions, drawn to scale along the track. pointer-events stay off
+     so the bands never intercept a drag — they mark where the thumb refuses to
+     rest, they do not block the gesture that crosses them. */
+  .pr-z-bands {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  /* :global because syncPrZSlider builds these with createElement — Astro scopes
+     styles to elements in the template, and injected nodes carry no scope
+     attribute, so a plain selector matches nothing and the bands render as
+     zero-sized inline spans. */
+  :global(.pr-z-band) {
     position: absolute;
     top: 50%;
-    width: 7px;
-    height: 7px;
-    transform: translate(-50%, -50%);
-    border-radius: var(--radius-full);
+    height: 8px;
+    min-width: 3px;
+    transform: translateY(-50%);
+    border-radius: 2px;
     background: var(--danger);
-    pointer-events: none;
+    opacity: 0.6;
   }
   .pr-z-mark[hidden] { display: none; }
 
@@ -6290,58 +6312,113 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     if (zmax <= zmin) { zmin = -margin; zmax = total + margin; }
     return { zmin, zmax };
   }
-  // The emitter must sit in a transparent medium (LDOS is undefined inside an
-  // absorbing layer). Restrict its range to the contiguous transparent span
-  // containing the emitter — absorbing regions (metal mirror etc.) act as walls.
-  function prTransparentSpan(): { lo: number; hi: number } {
+  /**
+   * How close the emitter may be brought to an absorbing medium.
+   *
+   * Two reasons, and they agree on the same number. Physically, the LDOS
+   * diverges as 1/d³ into an absorber — measured here: 33 at 10 nm, 251 at 5,
+   * 3877 at 2, 3.1×10⁴ at 1 — and below about a nanometre the local macroscopic
+   * description is no longer the right model at all, since nonlocal and quantum
+   * corrections dominate the quenching. Numerically, that divergence is what
+   * the k∥ integral has to resolve: its decay length is ~1/2d, so as d → 0 the
+   * tail needs unboundedly large k∥ and the adaptive quadrature stops
+   * converging. At 0.5 nm it does not return at all, which locks the page.
+   *
+   * So the emitter is kept a nanometre clear of any absorbing interface, and
+   * sweep points inside that band are left unevaluated rather than hung on.
+   */
+  const PR_ABS_STANDOFF_NM = 1;
+
+  /**
+   * The z intervals the emitter may not occupy: every absorbing medium, widened
+   * by the standoff at each edge, merged where they touch. Semi-infinite
+   * absorbing half-spaces are clipped to the plot range. These are what the
+   * slider paints red — the emitter may sit on either side of one, but not in
+   * it, so a metal film is a barrier rather than a boundary of the world.
+   */
+  function prForbiddenBands(): { z0: number; z1: number }[] {
     const { dstack, total } = buildStack();
-    // The plot z-range margins scale with λ, but they are cosmetic — only
-    // absorbing walls may constrain the emitter. Extend the half-space ends to
-    // always include the current position, so sliding λ never drags the dipole.
-    const rng0 = prZRange();
-    const zmin = Math.min(rng0.zmin, pr.zNm), zmax = Math.max(rng0.zmax, pr.zNm);
-    // The physics lib requires the source medium to be strictly lossless, so
-    // ANY absorbing medium (κ > 0) is a wall the emitter cannot enter.
-    const eps = 1e-7;
-    type Reg = { z0: number; z1: number; abs: boolean };
-    const regs: Reg[] = [{ z0: zmin, z1: 0, abs: pr.subK > eps }];
+    const { zmin, zmax } = prZRange();
+    const eps = 1e-7, S = PR_ABS_STANDOFF_NM;
+    const raw: { z0: number; z1: number }[] = [];
+    if (pr.subK > eps) raw.push({ z0: zmin - S, z1: S });
     let acc = 0;
-    for (let i = 0; i < dstack.length; i++) { regs.push({ z0: acc, z1: acc + dstack[i], abs: pr.layers[i].kappa > eps }); acc += dstack[i]; }
-    regs.push({ z0: total, z1: zmax, abs: pr.cladK > eps });
-    if (regs.every(r => r.abs)) return { lo: zmin, hi: zmax };   // degenerate — don't restrict
-    const z = clampP(pr.zNm, zmin, zmax);
-    let idx = regs.findIndex(r => z >= r.z0 && z <= r.z1);
-    if (idx < 0) idx = regs.length - 1;
-    if (regs[idx].abs) {   // snap out of an absorbing region to the nearest transparent one
-      let best = -1, bestDist = Infinity;
-      regs.forEach((r, i) => { if (!r.abs) { const d = Math.abs((r.z0 + r.z1) / 2 - z); if (d < bestDist) { bestDist = d; best = i; } } });
-      idx = best;
+    for (let i = 0; i < dstack.length; i++) {
+      if (pr.layers[i].kappa > eps) raw.push({ z0: acc - S, z1: acc + dstack[i] + S });
+      acc += dstack[i];
     }
-    let lo = idx, hi = idx;
-    while (lo > 0 && !regs[lo - 1].abs) lo--;
-    while (hi < regs.length - 1 && !regs[hi + 1].abs) hi++;
-    // A point exactly ON an interface belongs to the UPPER domain (lib tie-break),
-    // so when an absorbing region sits above the span, keep 1 nm below the wall.
-    const hiZ = regs[hi].z1 - (hi < regs.length - 1 ? 1 : 0);
-    return { lo: regs[lo].z0, hi: Math.max(regs[lo].z0, hiZ) };
+    if (pr.cladK > eps) raw.push({ z0: total - S, z1: zmax + S });
+    raw.sort((a, b) => a.z0 - b.z0);
+    const merged: { z0: number; z1: number }[] = [];
+    for (const b of raw) {
+      const last = merged[merged.length - 1];
+      if (last && b.z0 <= last.z1) last.z1 = Math.max(last.z1, b.z1);
+      else merged.push({ ...b });
+    }
+    return merged;
   }
+
+  /**
+   * Keep z out of the absorbing bands. `from` is where it was, so a drag that
+   * runs into a band continues to the far side instead of sticking to the near
+   * edge — the barrier is crossable, just not occupiable.
+   */
+  function prClampOutOfBands(z: number, from: number): number {
+    const { zmin, zmax } = prZRange();
+    let v = clampP(z, zmin, zmax);
+    for (const b of prForbiddenBands()) {
+      if (v <= b.z0 || v >= b.z1) continue;
+      const goingUp = z >= from;
+      const above = b.z1, below = b.z0;
+      const aboveOk = above <= zmax, belowOk = below >= zmin;
+      v = goingUp ? (aboveOk ? above : below) : (belowOk ? below : above);
+      break;
+    }
+    return clampP(v, zmin, zmax);
+  }
+
+  /** z of every interface that borders an absorbing medium on either side. */
+  function prAbsorbingWalls(): number[] {
+    const { dstack } = buildStack();
+    const eps = 1e-7;
+    const kappa = [pr.subK, ...pr.layers.map(l => l.kappa), pr.cladK];
+    const walls: number[] = [];
+    let z = 0;
+    for (let i = 0; i <= dstack.length; i++) {
+      if (kappa[i] > eps || kappa[i + 1] > eps) walls.push(z);   // interface i | i+1
+      z += dstack[i] ?? 0;
+    }
+    return walls;
+  }
+
   function syncPrZSlider() {
-    const { lo, hi } = prTransparentSpan();
+    // The whole stack is reachable — absorbing layers are barriers within the
+    // range, not its ends, so the emitter can be placed on either side of a
+    // metal film (a mirror geometry needs exactly that).
+    const { zmin, zmax } = prZRange();
     const s = $p('pr-z-slider') as HTMLInputElement;
-    s.min = String(Math.round(lo)); s.max = String(Math.round(hi));
-    pr.zNm = clampP(pr.zNm, lo, hi);
+    s.min = String(Math.round(zmin)); s.max = String(Math.round(zmax));
+    pr.zNm = prClampOutOfBands(pr.zNm, pr.zNm);
     s.value = String(Math.round(pr.zNm));
     ($p('pr-z') as HTMLInputElement).value = String(Math.round(pr.zNm));
-    // red dot on the track marking the first interface (z = 0); a range thumb
-    // (~16 px) insets the usable track, so interpolate between its half-widths
-    const mark = $p('pr-z-zero');
+    // Red segments over the track, each as wide as its absorbing layer. A range
+    // thumb (~16 px) insets the usable track, so interpolate between its
+    // half-widths at both ends of the band.
+    const host = $p('pr-z-bands');
     const min = Number(s.min), max = Number(s.max);
-    if (max > min && 0 >= min && 0 <= max) {
-      const pct = (0 - min) / (max - min);
-      mark.hidden = false;
-      mark.style.left = `calc(${(pct * 100).toFixed(3)}% + ${(8 - 16 * pct).toFixed(2)}px)`;
-    } else {
-      mark.hidden = true;
+    host.textContent = '';
+    if (!(max > min)) return;
+    const pos = (z: number) => (z - min) / (max - min);
+    for (const b of prForbiddenBands()) {
+      const a0 = Math.max(min, b.z0), a1 = Math.min(max, b.z1);
+      if (a1 <= a0) continue;
+      const p0 = pos(a0), p1 = pos(a1);
+      const el = document.createElement('span');
+      el.className = 'pr-z-band';
+      el.style.left = `calc(${(p0 * 100).toFixed(3)}% + ${(8 - 16 * p0).toFixed(2)}px)`;
+      el.style.width = `calc(${((p1 - p0) * 100).toFixed(3)}% - ${(16 * (p1 - p0)).toFixed(2)}px)`;
+      el.title = 'Absorbing — the emitter cannot be placed inside, but may sit on either side';
+      host.appendChild(el);
     }
   }
 
@@ -6405,7 +6482,23 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
     const { zmin, zmax } = prZRange();
     const NZ = 200;
     const zGrid = Array.from({ length: NZ }, (_, i) => zmin + (zmax - zmin) * i / (NZ - 1));
-    const r = ldos(k0Of(), zGrid, nstack, dstack);
+    // A uniform grid lands wherever it lands, including arbitrarily close to an
+    // absorbing interface, and one such point is enough to stall the whole
+    // sweep — the quadrature there never converges. Those points are left
+    // unevaluated as NaN; the chart already breaks its line on a non-finite
+    // value, so the divergent band reads as a gap rather than as a fabricated
+    // number or a frozen page.
+    const walls = prAbsorbingWalls();
+    const tooClose = (z: number) => walls.some(w => Math.abs(z - w) < PR_ABS_STANDOFF_NM);
+    const keep: number[] = [], zSafe: number[] = [];
+    zGrid.forEach((z, i) => { if (!tooClose(z)) { keep.push(i); zSafe.push(z); } });
+    const got = ldos(k0Of(), zSafe, nstack, dstack);
+    const blank = () => new Array(NZ).fill(NaN) as number[];
+    const r = { E_par: blank(), E_perp: blank(), M_par: blank(), M_perp: blank(), C: blank() };
+    keep.forEach((gi, si) => {
+      r.E_par[gi] = got.E_par[si]; r.E_perp[gi] = got.E_perp[si];
+      r.M_par[gi] = got.M_par[si]; r.M_perp[gi] = got.M_perp[si]; r.C[gi] = got.C[si];
+    });
     const iso = zGrid.map((_, i) => (2 * r.E_par[i] + r.E_perp[i]) / 3);
     ldosCache = { key, zGrid, r, iso };
     return ldosCache;
@@ -7459,8 +7552,9 @@ import ParamsDrawer from '../../../components/ParamsDrawer.astro';
   // emitter z (slider + number) — reuses cached LDOS/integrand, so dragging is cheap
   const zNum = $p('pr-z') as HTMLInputElement, zSl = $p('pr-z-slider') as HTMLInputElement;
   const setZ = (v: number) => {
-    const { lo, hi } = prTransparentSpan();
-    pr.zNm = clampP(v, lo, hi);
+    // pass the previous position so a drag into an absorber comes out the far
+    // side rather than sticking against the near edge
+    pr.zNm = prClampOutOfBands(v, pr.zNm);
     zNum.value = String(Math.round(pr.zNm)); zSl.value = String(Math.round(pr.zNm));
     // rosette / flux spectrum recompute full grids — debounce with the loading bar
     if (pr.view === 'farfield' && pr.ffMode !== 'pattern') schedulePr(); else renderPrNow();
