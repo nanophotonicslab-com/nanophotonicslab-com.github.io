@@ -543,8 +543,12 @@ initPermalinks({
 
 <!-- ===== Script ===== -->
 <script>
-  import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
   import { MATERIALS, interpolateNK } from '../../lib/materials';
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes, sampleRows, formatCompact,
+    type ImportAxisMode, type ImportValueMode, type ParsedOpticalFile, type RawOpticalRow,
+  } from '../../lib/optical-file';
+  import { setupRIISearch } from '../../lib/material-picker';
   import { mieAt } from '../../lib/mie';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
@@ -563,142 +567,71 @@ initPermalinks({
   };
 
   const LAM_MIN = 300, LAM_MAX = 1200, NPTS = 240;
-  const HC_EV_NM = 1239.841984;
 
   let spectrum: { lambda: Float64Array; csca: Float64Array; cabs: Float64Array; cext: Float64Array } | null = null;
+  /**
+   * Optical constants the user brought in — either uploaded or fetched from
+   * refractiveindex.info. Held in the canonical [[λ_µm, n, k], …] form, the same
+   * shape MATERIALS[x].data has, so the rest of the page cannot tell them apart.
+   */
   let uploadedMaterial: number[][] | null = null;
   let uploadedMaterialLabel = '';
+  /**
+   * Which option that table belongs to. 'file' and 'rii' resolve through the one
+   * buffer, so without this, switching from one to the other would silently keep
+   * computing with the previous source's data under the new source's name.
+   */
+  let uploadedKind: 'file' | 'rii' | null = null;
+  /**
+   * Set when a shared link arrived with mat=file: the sender had a local file
+   * and a URL has nowhere to put its table. Kept as state rather than written
+   * straight into the caption, because currentMaterialRef() runs again on every
+   * render — after restoreState — and would overwrite the explanation.
+   */
+  let sharedFileMissing = false;
+  /** Same, for a mat=rii link whose dp no longer resolves in the catalog. */
+  let sharedRiiMissing = false;
   let lastDTSurface = NaN;
   let profileHoverR: number | null = null;
 
-  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
-    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-    let delim = /\t/;
-    if (lines[0].split(delim).length < 3) delim = /,/;
-    if (lines[0].split(delim).length < 3) delim = /\s+/;
-    let startIdx = 0;
-    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
-    const data: number[][] = [];
-    for (let i = startIdx; i < lines.length; i++) {
-      const parts = lines[i].split(delim).map(Number);
-      if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) continue;
-      data.push([parts[0], parts[1], parts.length >= 3 && !isNaN(parts[2]) ? Math.abs(parts[2]) : 0]);
-    }
-    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
-    data.sort((a, b) => a[0] - b[0]);
-    const maxLam = data[data.length - 1][0];
-    let unit = 'um';
-    if (maxLam > 50) {
-      unit = 'nm';
-      for (const row of data) row[0] /= 1000;
-    }
-    return { data, unit };
-  }
-
-  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
-  type ImportValueMode = 'nk' | 'epsilon';
-  type RawOpticalRow = [number, number, number];
-  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
-  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
-
-  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
-    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-    let delim = /\t/;
-    if (lines[0].split(delim).length < 3) delim = /,/;
-    if (lines[0].split(delim).length < 3) delim = /\s+/;
-    let startIdx = 0;
-    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
-
-    const rows: RawOpticalRow[] = [];
-    let skipped = 0;
-    for (let i = startIdx; i < lines.length; i++) {
-      const parts = lines[i].split(delim).map(Number);
-      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
-        skipped++;
-        continue;
-      }
-      rows.push([parts[0], parts[1], parts[2]]);
-    }
-    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
-    return { rows, skipped };
-  }
-
-  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
-    const epsAbs = Math.hypot(epsRe, epsIm);
-    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
-    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
-    return [n, Math.abs(k)];
-  }
-
-  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
-    const data: number[][] = [];
-    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
-    for (const [x, a, b] of rows) {
-      let lambdaUm: number;
-      if (axisMode === 'energy-ev') {
-        if (x <= 0) continue;
-        lambdaUm = HC_EV_NM / x / 1000;
-      } else if (axisMode === 'wavelength-nm') {
-        if (x <= 0) continue;
-        lambdaUm = x / 1000;
-      } else {
-        if (x <= 0) continue;
-        lambdaUm = x;
-      }
-      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
-      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
-      data.push([lambdaUm, n, k]);
-      nMin = Math.min(nMin, n); nMax = Math.max(nMax, n);
-      kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
-    }
-    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
-    data.sort((a, b) => a[0] - b[0]);
-    return {
-      data,
-      lambdaMinNm: data[0][0] * 1000,
-      lambdaMaxNm: data[data.length - 1][0] * 1000,
-      nMin, nMax, kMin, kMax,
-    };
-  }
-
-  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
-    const xs = rows.map(r => r[0]).filter(Number.isFinite);
-    const ys = rows.flatMap(r => [r[1], r[2]]).filter(Number.isFinite);
-    const xMax = Math.max(...xs);
-    const yMaxAbs = Math.max(...ys.map(Math.abs));
-    const hasNegativeReal = rows.some(r => r[1] < 0);
-    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
-    let axis: ImportAxisMode = 'wavelength-um';
-    if (xMax > 50) axis = 'wavelength-nm';
-    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
-    return { axis, values };
-  }
-
-  function formatCompact(v: number): string {
-    if (!Number.isFinite(v)) return '';
-    const av = Math.abs(v);
-    if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(3);
-    return v.toPrecision(5);
-  }
-
-  function sampleRows<T>(rows: T[], maxRows: number): T[] {
-    if (rows.length <= maxRows) return rows.slice();
-    const sampled: T[] = [];
-    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
-    return sampled;
-  }
-
   function currentMaterialData(): number[][] | null {
     if (state.material === 'custom') return null;
-    if (state.material === 'file' || state.material === 'rii') return uploadedMaterial;
+    // Only hand back the buffer if it belongs to the option now selected: both
+    // sources share it, and computing a database table under "uploaded file"
+    // (or the reverse) would misattribute the curve.
+    if (state.material === 'file' || state.material === 'rii') {
+      return uploadedKind === state.material ? uploadedMaterial : null;
+    }
     return MATERIALS[state.material]?.data ?? null;
   }
 
+  /**
+   * The provenance caption. This page recomputes it on every render, so it — not
+   * the shared picker — owns the #material-ref text; the picker writes its page
+   * name into a detached span (riiRefSink) that is read from here.
+   *
+   * A 'file' or 'rii' selection with no table resolves to no material at all
+   * (currentMaterialData returns null and nothing is plotted), so the caption
+   * has to say which of the several reasons applies.
+   */
   function currentMaterialRef(): string {
     if (state.material === 'custom') return 'Custom lossless dielectric';
-    if (state.material === 'file' || state.material === 'rii') return uploadedMaterialLabel;
+    if (state.material === 'file') {
+      if (uploadedKind === 'file' && uploadedMaterial) return uploadedMaterialLabel;
+      // Someone opening a shared link needs to know the sender had a file and
+      // that the link could not carry it, not merely that none is loaded.
+      return sharedFileMissing
+        ? 'uploaded material cannot be shared in a link — re-upload the file'
+        : 'no file loaded — nothing is plotted';
+    }
+    if (state.material === 'rii') {
+      if (uploadedKind === 'rii' && uploadedMaterial) {
+        return riiRefSink.textContent?.trim() || uploadedMaterialLabel;
+      }
+      return sharedRiiMissing
+        ? 'shared database entry unavailable — search for it again'
+        : 'no database entry chosen — nothing is plotted';
+    }
     return MATERIALS[state.material]?.ref ?? '';
   }
 
@@ -756,10 +689,32 @@ initPermalinks({
 
   // ===== Update outputs =====
 
+  /**
+   * No material selected yet — a 'file' or 'rii' option with no table behind it.
+   * The readouts must be emptied rather than left alone: computeSpectrum already
+   * zeroes the curve, so leaving the last material's numbers on screen would
+   * contradict the caption, which says nothing is plotted.
+   */
+  function blankOutputs() {
+    for (const id of ['out-cabs', 'out-csca', 'out-cext', 'out-albedo', 'out-pabs', 'out-psca', 'out-dt']) {
+      (document.getElementById(id) as HTMLElement).textContent = '—';
+    }
+    (document.getElementById('out-i') as HTMLElement).textContent = 'I = —';
+    (document.getElementById('profile-dialog-dt') as HTMLElement).textContent = '-';
+    (document.getElementById('budget-abs') as HTMLElement).style.flexBasis = '0%';
+    (document.getElementById('budget-sca') as HTMLElement).style.flexBasis = '0%';
+    (document.getElementById('swatch-sca') as HTMLElement).style.background = 'transparent';
+    (document.getElementById('swatch-trans') as HTMLElement).style.background = 'transparent';
+    materialRef.textContent = currentMaterialRef();
+    lastDTSurface = NaN;
+    drawProfile(NaN);
+    drawChart();
+  }
+
   function updateOutputs() {
     if (!spectrum) return;
     const nk = getNK(state.lambda);
-    if (!nk) return;
+    if (!nk) { blankOutputs(); return; }
     const [n, k] = nk;
     const v = mieAt(n, k, state.nHost, state.radius, state.lambda);
 
@@ -794,7 +749,7 @@ initPermalinks({
     (document.getElementById('out-dt') as HTMLElement).textContent = isFinite(dT) ? fmt(dT, 3) : '—';
 
     (document.getElementById('profile-dialog-dt') as HTMLElement).textContent = isFinite(dT) ? fmt(dT, 4) : '-';
-    (document.getElementById('material-ref') as HTMLElement).textContent = currentMaterialRef();
+    materialRef.textContent = currentMaterialRef();
 
     updateColors();
     drawProfile(dT);
@@ -1199,53 +1154,6 @@ initPermalinks({
     });
   }
 
-  function setupRIISearch(
-    searchGroup: HTMLElement, searchInput: HTMLInputElement,
-    resultsList: HTMLElement, statusEl: HTMLElement,
-    onLoaded: (data: number[][], label: string) => void,
-  ) {
-    let catalog: RIIMaterial[] | null = null;
-    let debounce: ReturnType<typeof setTimeout>;
-
-    function showResults(q: string) {
-      if (!catalog) return;
-      const hits = searchCatalog(catalog, q);
-      resultsList.innerHTML = hits.map((m, i) =>
-        `<div class="rii-result" data-idx="${i}"><span class="rii-result-book">${m.bookName}</span><br><span class="rii-result-page">${m.pageName}</span></div>`
-      ).join('');
-      (resultsList as any)._hits = hits;
-    }
-
-    async function ensureCatalog() {
-      if (catalog) { showResults(searchInput.value); return; }
-      statusEl.textContent = 'Loading catalog...';
-      try {
-        catalog = await loadCatalog();
-        statusEl.textContent = `${catalog.length} materials available`;
-        showResults(searchInput.value);
-      } catch { statusEl.textContent = 'Failed to load catalog'; }
-    }
-
-    searchInput.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(() => showResults(searchInput.value), 150); });
-    searchInput.addEventListener('focus', () => { if (catalog) showResults(searchInput.value); });
-
-    resultsList.addEventListener('click', async (e) => {
-      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement;
-      if (!el) return;
-      const hits = (resultsList as any)._hits as RIIMaterial[];
-      const mat = hits[parseInt(el.dataset.idx!)];
-      statusEl.textContent = 'Loading...';
-      resultsList.innerHTML = '';
-      try {
-        const d = await fetchMaterialNK(mat.dataPath);
-        statusEl.textContent = `${d.length} points loaded`;
-        searchInput.value = mat.bookName;
-        onLoaded(d, mat.pageName);
-      } catch { statusEl.textContent = 'Failed to load material'; }
-    });
-    return { ensureCatalog };
-  }
-
   syncPair('r-num', 'r-slider', 'radius', true);
   syncPair('nh-num', 'nh-slider', 'nHost', true);
   syncPair('lam-num', 'lam-slider', 'lambda', false);
@@ -1271,6 +1179,14 @@ initPermalinks({
   const fileNameEl = $('file-name');
   const riiSearchGroup = $('rii-search-group');
   const riiStatus = $('rii-status');
+  const materialRef = $('material-ref');
+  /**
+   * The shared picker writes the chosen entry's page name into els.ref every
+   * time it applies one. This page rebuilds its caption on every render from
+   * currentMaterialRef(), so it hands the picker a detached span rather than
+   * #material-ref, and reads the provenance text back out of it.
+   */
+  const riiRefSink = document.createElement('span');
 
   const materialImportDialog = $('material-import-dialog') as HTMLDialogElement;
   const materialImportFile = $('material-import-file');
@@ -1376,23 +1292,33 @@ initPermalinks({
     const valueMode = materialImportValues.value as ImportValueMode;
     const converted = convertOpticalRows(pendingMaterialImport.parsed.rows, axisMode, valueMode);
     drawMaterialImportPreview(pendingMaterialImport.parsed.rows, axisMode, valueMode);
+    // An even sample rather than the first 8: the head of a sorted file says
+    // nothing about its far end, and this table is the only look the user gets
+    // at what is about to be computed with.
     materialImportRows.innerHTML = sampleRows(pendingMaterialImport.parsed.rows, 8)
       .map(row => `<tr><td>${formatCompact(row[0])}</td><td>${formatCompact(row[1])}</td><td>${formatCompact(row[2])}</td></tr>`)
       .join('');
+    // Rows the parser could not read are dropped silently otherwise; the count
+    // is free information about the file being accepted.
+    const { skipped } = pendingMaterialImport.parsed;
+    const skippedNote = skipped > 0 ? ` | ${skipped} unreadable row${skipped === 1 ? '' : 's'} skipped` : '';
     materialImportStatus.classList.toggle('error', 'error' in converted);
     materialImportAccept.disabled = 'error' in converted;
     if ('error' in converted) {
-      materialImportStatus.textContent = converted.error;
+      materialImportStatus.textContent = converted.error + skippedNote;
       return;
     }
     materialImportStatus.textContent =
-      `${converted.data.length} points | ${formatCompact(converted.lambdaMinNm)}-${formatCompact(converted.lambdaMaxNm)} nm | n ${formatCompact(converted.nMin)}-${formatCompact(converted.nMax)} | k ${formatCompact(converted.kMin)}-${formatCompact(converted.kMax)}`;
+      `${converted.data.length} points | ${formatCompact(converted.lambdaMinNm)}-${formatCompact(converted.lambdaMaxNm)} nm | n ${formatCompact(converted.nMin)}-${formatCompact(converted.nMax)} | k ${formatCompact(converted.kMin)}-${formatCompact(converted.kMax)}${skippedNote}`;
   }
 
   function closeMaterialImportDialog(runCancel = false) {
     if (runCancel) pendingMaterialImport?.onCancel?.();
     pendingMaterialImport = null;
     materialImportDialog.close();
+    // Both on accept and on cancel: without this, re-picking the same file
+    // fires no change event and the upload appears to do nothing.
+    fileUpload.value = '';
   }
 
   function openMaterialImportDialog(fileName: string, parsed: ParsedOpticalFile, onAccept: (data: number[][], label: string) => void) {
@@ -1435,7 +1361,7 @@ initPermalinks({
     epsGroup.classList.toggle('hidden', v !== 'custom');
     fileUploadGroup.style.display = v === 'file' ? '' : 'none';
     riiSearchGroup.style.display = v === 'rii' ? '' : 'none';
-    $('material-ref').textContent = currentMaterialRef();
+    materialRef.textContent = currentMaterialRef();
   }
 
   function recomputeMaterial() {
@@ -1444,23 +1370,49 @@ initPermalinks({
   }
 
   const riiHandle = setupRIISearch(
-    riiSearchGroup,
-    $<HTMLInputElement>('rii-search'),
-    $('rii-results'),
-    riiStatus,
-    (data, label) => {
+    {
+      group: riiSearchGroup,
+      input: $<HTMLInputElement>('rii-search'),
+      results: $('rii-results'),
+      status: riiStatus,
+      // detached on purpose — see riiRefSink and currentMaterialRef()
+      ref: riiRefSink,
+    },
+    (data) => {
       uploadedMaterial = data;
-      uploadedMaterialLabel = label;
-      $('material-ref').textContent = label;
+      uploadedKind = 'rii';
+      uploadedMaterialLabel = riiRefSink.textContent?.trim() ?? '';
+      sharedRiiMissing = false;
+      materialRef.textContent = currentMaterialRef();
       recomputeMaterial();
     },
   );
 
   materialSelect.addEventListener('change', () => {
-    state.material = materialSelect.value;
+    const v = materialSelect.value;
+    state.material = v;
+    // the shared-link notices are about the link, not about this fresh choice
+    if (v !== 'file') sharedFileMissing = false;
+    if (v !== 'rii') sharedRiiMissing = false;
+    // Drop a table that belonged to the other user-supplied source: both
+    // resolve through uploadedMaterial, so keeping it would compute the old
+    // numbers under the new source's name.
+    if ((v === 'file' || v === 'rii') && uploadedKind && uploadedKind !== v) {
+      uploadedMaterial = null;
+      uploadedMaterialLabel = '';
+      uploadedKind = null;
+      fileNameEl.className = 'file-name';
+      fileNameEl.textContent = '';
+      riiHandle.clear();
+    }
     refreshMaterialControls();
-    if (state.material === 'rii') { riiHandle.ensureCatalog(); return; }
-    if (state.material === 'file' && !uploadedMaterial) return;
+    // The catalog is fetched lazily, on first arrival at this option.
+    if (v === 'rii') void riiHandle.ensureCatalog();
+    // Always recompute, including when this option has no table yet.
+    // computeSpectrum zeroes the curve when getNK returns null and updateOutputs
+    // blanks the readouts, which is the whole point: returning early here would
+    // leave the previous material's numbers on screen under a caption saying
+    // nothing is plotted.
     recomputeMaterial();
   });
 
@@ -1482,14 +1434,21 @@ initPermalinks({
         fileNameEl.className = 'file-error';
         fileNameEl.textContent = parsed.error;
         uploadedMaterial = null;
+        uploadedMaterialLabel = '';
+        uploadedKind = null;
+        // so that re-picking the same file after fixing it fires a change event
+        fileUpload.value = '';
+        materialRef.textContent = currentMaterialRef();
         return;
       }
       openMaterialImportDialog(file.name, parsed, (data, label) => {
         uploadedMaterial = data;
         uploadedMaterialLabel = label;
+        uploadedKind = 'file';
+        sharedFileMissing = false;
         fileNameEl.className = 'file-name';
         fileNameEl.textContent = label;
-        $('material-ref').textContent = label;
+        materialRef.textContent = currentMaterialRef();
         recomputeMaterial();
       });
     });
@@ -1520,7 +1479,17 @@ initPermalinks({
   const shareBtn = document.getElementById('share-btn')!;
   function serializeState(): string {
     const p = new URLSearchParams();
-    if (!['file', 'rii'].includes(state.material)) p.set('mat', state.material);
+    // Unconditionally: dropping 'mat' for file/rii used to drop it for every
+    // choice made through those options, and the recipient silently got the
+    // default gold under whatever caption the link implied.
+    p.set('mat', state.material);
+    // A database entry is reproducible from its dataPath, so the link carries
+    // it and restoreState re-fetches exactly the same table. An uploaded file
+    // has no such handle — restoreState says so instead of pretending.
+    if (state.material === 'rii') {
+      const dataPath = riiHandle.currentPath();
+      if (dataPath) p.set('dp', dataPath);
+    }
     p.set('r', String(state.radius));
     p.set('nh', String(state.nHost));
     p.set('lam', String(state.lambda));
@@ -1540,6 +1509,9 @@ initPermalinks({
     });
   });
 
+  /** Set when restoreState is already re-selecting a shared database entry. */
+  let riiRestorePending = false;
+
   function restoreState() {
     const hash = location.hash.slice(1);
     if (!hash) return;
@@ -1547,9 +1519,28 @@ initPermalinks({
     const setInput = (id: string, v: string) => { const el = document.getElementById(id) as HTMLInputElement | null; if (el) el.value = v; };
     if (p.has('mat')) {
       const mat = p.get('mat')!;
-      if (!['file', 'rii'].includes(mat)) {
+      // Only ids this page actually offers: assigning an unknown one leaves the
+      // select with no selection at all, and the line after restoreState would
+      // then read '' back into state.material.
+      if (Array.from(materialSelect.options).some(o => o.value === mat)) {
         state.material = mat;
         materialSelect.value = mat;
+        if (mat === 'rii' && p.has('dp')) {
+          // async: re-fetch the shared entry, then recompute with it. Until it
+          // lands nothing is plotted, which is honest — better than showing
+          // another material's curve under this one's name.
+          riiRestorePending = true;
+          void riiHandle.selectByPath(p.get('dp')!).then(ok => {
+            if (ok) return;
+            sharedRiiMissing = true;
+            materialRef.textContent = currentMaterialRef();
+          });
+        } else if (mat === 'file') {
+          // An uploaded table cannot travel in a URL. Say so rather than
+          // resolving to nothing under the name "uploaded file"; the caption
+          // reads this flag, because it is rebuilt after restoreState returns.
+          sharedFileMissing = true;
+        }
       }
     }
     if (p.has('eps')) { state.eps = parseFloat(p.get('eps')!); setInput('eps-num', String(state.eps)); }
@@ -1569,6 +1560,10 @@ initPermalinks({
   // Christy 1972") is true of both metals, so nothing gives it away.
   state.material = materialSelect.value;
   refreshMaterialControls();
+  // Landing on the database option through a link (?material=rii, or #mat=rii
+  // with no dp) never runs the change handler, which is what normally loads the
+  // catalog — without this the search box would come up permanently empty.
+  if (state.material === 'rii' && !riiRestorePending) void riiHandle.ensureCatalog();
 
   // Initial
   computeSpectrum();
@@ -1718,5 +1713,3 @@ initPermalinks({
 
   onThemeChange(() => updateOutputs());
 </script>
-</content>
-</invoke>
