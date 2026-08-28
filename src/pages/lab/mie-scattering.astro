@@ -883,8 +883,12 @@ initPermalinks({
 </style>
 
 <script>
-  import { MATERIALS, interpolateNK, nkToEpsilon } from '../../lib/materials';
-  import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
+  import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK } from '../../lib/materials';
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes, sampleRows, formatCompact,
+    type ImportAxisMode, type ImportValueMode, type RawOpticalRow, type ParsedOpticalFile,
+  } from '../../lib/optical-file';
+  import { setupRIISearch, type RIISearchHandle } from '../../lib/material-picker';
   import { computeElectronSphereSpectrum, type ElectronSpectrum } from '../../lib/electron-sphere';
   import {
     computeMie, computeMieMultiShell, computeSphereCoeffs, computeShellCoeffsAtLambda,
@@ -898,84 +902,11 @@ initPermalinks({
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   // === File-based optical constants ===
-
-  /**
-   * Parse a CSV/TSV file with columns: wavelength, n, k
-   * Auto-detects: delimiter (comma/tab/space), wavelength unit (μm if max < 50, else nm).
-   * Returns data in the same format as MATERIALS[x].data: [[λ_μm, n, k], ...]
-   */
-  function parseNKFile(text: string): { data: number[][]; unit: string } | { error: string } {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
-    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-
-    // Detect delimiter: try tab, comma, then whitespace
-    let delim = /\t/;
-    if (lines[0].split(delim).length < 3) delim = /,/;
-    if (lines[0].split(delim).length < 3) delim = /\s+/;
-
-    // Skip header row if first field is not a number
-    let startIdx = 0;
-    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
-
-    const data: number[][] = [];
-    for (let i = startIdx; i < lines.length; i++) {
-      const parts = lines[i].split(delim).map(Number);
-      if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) continue;
-      const lam = parts[0];
-      const n = parts[1];
-      const k = parts.length >= 3 && !isNaN(parts[2]) ? Math.abs(parts[2]) : 0;
-      data.push([lam, n, k]);
-    }
-    if (data.length < 2) return { error: 'Could not parse at least 2 data rows' };
-
-    // Sort by wavelength
-    data.sort((a, b) => a[0] - b[0]);
-
-    // Auto-detect unit: if max wavelength < 50, assume μm; else nm → convert to μm
-    const maxLam = data[data.length - 1][0];
-    let unit = 'μm';
-    if (maxLam > 50) {
-      unit = 'nm';
-      for (const row of data) row[0] /= 1000;
-    }
-    return { data, unit };
-  }
-
-  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
-  type ImportValueMode = 'nk' | 'epsilon';
-  type RawOpticalRow = [number, number, number];
-  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
-  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
-
-  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
-    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-    let delim = /\t/;
-    if (lines[0].split(delim).length < 3) delim = /,/;
-    if (lines[0].split(delim).length < 3) delim = /\s+/;
-    let startIdx = 0;
-    if (isNaN(parseFloat(lines[0].split(delim)[0]))) startIdx = 1;
-
-    const rows: RawOpticalRow[] = [];
-    let skipped = 0;
-    for (let i = startIdx; i < lines.length; i++) {
-      const parts = lines[i].split(delim).map(Number);
-      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
-        skipped++;
-        continue;
-      }
-      rows.push([parts[0], parts[1], parts[2]]);
-    }
-    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
-    return { rows, skipped };
-  }
-
-  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
-    const epsAbs = Math.hypot(epsRe, epsIm);
-    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
-    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
-    return [n, Math.abs(k)];
-  }
+  // Reading an uploaded table is shared with the other Lab tools: parseOpticalFile,
+  // convertOpticalRows, inferImportModes, sampleRows and formatCompact now come from
+  // src/lib/optical-file.ts, and epsilonToNK from src/lib/materials.ts. The copies that
+  // used to live here were line-for-line the same, down to the hc constant
+  // (HC_EV_NM === PHOTON_HC_EV_NM === 1239.841984) and the Math.abs on k.
 
   interface DrudeHandle {
     group: HTMLElement;
@@ -1019,64 +950,6 @@ initPermalinks({
     return '';
   }
 
-  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
-    const data: number[][] = [];
-    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
-    for (const [x, a, b] of rows) {
-      let lambdaUm: number;
-      if (axisMode === 'energy-ev') {
-        if (x <= 0) continue;
-        lambdaUm = HC_EV_NM / x / 1000;
-      } else if (axisMode === 'wavelength-nm') {
-        if (x <= 0) continue;
-        lambdaUm = x / 1000;
-      } else {
-        if (x <= 0) continue;
-        lambdaUm = x;
-      }
-      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
-      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
-      data.push([lambdaUm, n, k]);
-      nMin = Math.min(nMin, n); nMax = Math.max(nMax, n);
-      kMin = Math.min(kMin, k); kMax = Math.max(kMax, k);
-    }
-    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
-    data.sort((a, b) => a[0] - b[0]);
-    return {
-      data,
-      lambdaMinNm: data[0][0] * 1000,
-      lambdaMaxNm: data[data.length - 1][0] * 1000,
-      nMin, nMax, kMin, kMax,
-    };
-  }
-
-  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
-    const xs = rows.map(r => r[0]).filter(Number.isFinite);
-    const ys = rows.flatMap(r => [r[1], r[2]]).filter(Number.isFinite);
-    const xMax = Math.max(...xs);
-    const yMaxAbs = Math.max(...ys.map(Math.abs));
-    const hasNegativeReal = rows.some(r => r[1] < 0);
-    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
-    let axis: ImportAxisMode = 'wavelength-um';
-    if (xMax > 50) axis = 'wavelength-nm';
-    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
-    return { axis, values };
-  }
-
-  function formatCompact(v: number): string {
-    if (!Number.isFinite(v)) return '';
-    const av = Math.abs(v);
-    if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(3);
-    return v.toPrecision(5);
-  }
-
-  function sampleRows<T>(rows: T[], maxRows: number): T[] {
-    if (rows.length <= maxRows) return rows.slice();
-    const sampled: T[] = [];
-    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
-    return sampled;
-  }
-
   function previewSeries(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): { xArr: Float64Array; series: PlotSeries[]; xLabel: string; yLabel: string; yRange: [number, number] } | null {
     const parsed = rows
       .map(([x, a, b]) => Number.isFinite(x) && Number.isFinite(a) && Number.isFinite(b) ? { x, a, b } : null)
@@ -1100,9 +973,81 @@ initPermalinks({
     return { xArr, series, xLabel, yLabel, yRange: seriesRange(series) };
   }
 
-  // Uploaded material data storage (main + core)
-  let uploadedMaterial: number[][] | null = null;
-  let uploadedCoreMaterial: number[][] | null = null;
+  /**
+   * Per-slot bookkeeping for the two user-supplied sources.
+   *
+   * Every material slot on this page (main, core, and each extra shell) keeps ONE
+   * table for both 'file' and 'rii', so without a discriminator switching the
+   * <select> from one to the other would keep computing with the previous
+   * source's numbers under the new source's name. `kind` records which source
+   * filled the buffer; the <select> handler drops it when the two disagree.
+   *
+   * `fileMissing` / `dbUnavailable` are what a shared link left behind: an
+   * uploaded table has nowhere to live in a URL, and a database entry can vanish
+   * from the catalog. They are state rather than a direct caption write because
+   * the <select> change handler recomputes the caption after restoreState() runs
+   * and would otherwise wipe the explanation.
+   */
+  type UploadKind = 'file' | 'rii' | null;
+  interface MaterialSource {
+    data: number[][] | null;
+    kind: UploadKind;
+    /** refractiveindex.info page name of the loaded entry, for the caption. */
+    riiLabel: string;
+    fileMissing: boolean;
+    dbUnavailable: boolean;
+  }
+  const newMaterialSource = (): MaterialSource =>
+    ({ data: null, kind: null, riiLabel: '', fileMissing: false, dbUnavailable: false });
+
+  const mainSource = newMaterialSource();
+  const coreSource = newMaterialSource();
+
+  /**
+   * The caption under a material <select>.
+   *
+   * A 'file' or 'rii' slot with an empty buffer is computed as vacuum by
+   * getDielectric / buildLayers / materialEntries. That is fine as long as the
+   * caption says so — what is not fine is a curve that silently claims to be a
+   * material nobody supplied.
+   */
+  function materialRefText(mat: string, drude: DrudeHandle, src: MaterialSource): string {
+    if (mat === 'drude') return drudeRef(drude);
+    if (mat === 'custom') return '';
+    // Every "nothing is loaded" caption must open with the words that say so:
+    // updateConfigCheck's structure drawing labels a layer with the FIRST TWO
+    // WORDS of this string (`ref.split(':')[0].split(' ').slice(0, 2)`), so a
+    // notice starting "Uploaded file …" or "Shared database …" was rendered as
+    // "File (Uploaded file)" / "Database (Shared database)" — the drawing, and
+    // the PNG exported from it, then claimed a material over a vacuum layer.
+    if (mat === 'file') {
+      if (src.kind === 'file' && src.data) return '';   // the file-name line already names it
+      return src.fileMissing
+        ? 'No file loaded — an uploaded table cannot travel in a link; re-upload it to reproduce this curve'
+        : 'No file loaded — computed as vacuum (n = 1, k = 0)';
+    }
+    if (mat === 'rii') {
+      if (src.kind === 'rii' && src.data) return src.riiLabel;
+      return src.dbUnavailable
+        ? 'No database entry — the shared one is not in the catalogue; pick another from the search box'
+        : 'No database entry chosen — computed as vacuum (n = 1, k = 0)';
+    }
+    return MATERIALS[mat]?.ref ?? '';
+  }
+
+  /**
+   * Forget whatever the slot was holding. Called by the <select> handler when the
+   * source changes, and by the reset / preset paths.
+   */
+  function clearMaterialSource(src: MaterialSource, rii: RIISearchHandle | null, fileNameEl: HTMLElement | null): void {
+    src.data = null;
+    src.kind = null;
+    src.riiLabel = '';
+    src.fileMissing = false;
+    src.dbUnavailable = false;
+    rii?.clear();
+    if (fileNameEl) { fileNameEl.className = 'file-name'; fileNameEl.textContent = ''; }
+  }
 
   // === Mie Engine: see src/lib/mie.ts (computeMie & friends imported above) ===
 
@@ -1680,11 +1625,11 @@ initPermalinks({
   const drudeHandle = drudeHandleFromIds('drude-group', 'drude-epsb', 'drude-wp', 'drude-gamma');
   const coreDrudeHandle = drudeHandleFromIds('core-drude-group', 'core-drude-epsb', 'core-drude-wp', 'core-drude-gamma');
   bindDrudeInputs(drudeHandle, () => {
-    if (materialSelect.value === 'drude') materialRefEl.textContent = drudeRef(drudeHandle);
+    if (materialSelect.value === 'drude') syncMainMaterialRef();
     resetAndUpdate();
   });
   bindDrudeInputs(coreDrudeHandle, () => {
-    if (coreMaterialSelect.value === 'drude') coreMaterialRefEl.textContent = drudeRef(coreDrudeHandle);
+    if (coreMaterialSelect.value === 'drude') syncCoreMaterialRef();
     resetAndUpdate();
   });
 
@@ -2300,56 +2245,12 @@ initPermalinks({
     updateNotes();
   }
 
-  // === RII search helper (reusable for any material selector) ===
-
-  function setupRIISearch(
-    searchGroup: HTMLElement, searchInput: HTMLInputElement,
-    resultsList: HTMLElement, statusEl: HTMLElement, refEl: HTMLElement,
-    onLoaded: (data: number[][]) => void,
-  ) {
-    let catalog: RIIMaterial[] | null = null;
-    let debounce: ReturnType<typeof setTimeout>;
-
-    function showResults(q: string) {
-      if (!catalog) return;
-      const hits = searchCatalog(catalog, q);
-      resultsList.innerHTML = hits.map((m, i) =>
-        `<div class="rii-result" data-idx="${i}"><span class="rii-result-book">${m.bookName}</span><br><span class="rii-result-page">${m.pageName}</span></div>`
-      ).join('');
-      (resultsList as any)._hits = hits;
-    }
-
-    async function ensureCatalog() {
-      if (catalog) { showResults(searchInput.value); return; }
-      statusEl.textContent = 'Loading catalog\u2026';
-      try {
-        catalog = await loadCatalog();
-        statusEl.textContent = `${catalog.length} materials available`;
-        showResults(searchInput.value);
-      } catch { statusEl.textContent = 'Failed to load catalog'; }
-    }
-
-    searchInput.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(() => showResults(searchInput.value), 150); });
-    searchInput.addEventListener('focus', () => { if (catalog) showResults(searchInput.value); });
-
-    resultsList.addEventListener('click', async (e) => {
-      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement;
-      if (!el) return;
-      const hits = (resultsList as any)._hits as RIIMaterial[];
-      const mat = hits[parseInt(el.dataset.idx!)];
-      statusEl.textContent = 'Loading\u2026';
-      resultsList.innerHTML = '';
-      try {
-        const d = await fetchMaterialNK(mat.dataPath);
-        refEl.textContent = mat.pageName;
-        statusEl.textContent = `${d.length} points loaded`;
-        searchInput.value = mat.bookName;
-        onLoaded(d);
-      } catch { statusEl.textContent = 'Failed to load material'; }
-    });
-
-    return { ensureCatalog };
-  }
+  // === RII search: src/lib/material-picker.ts drives all six material slots ===
+  // The page-local copy this replaced interpolated catalog strings straight into
+  // innerHTML; the shared picker HTML-escapes them. It also returns selectByPath /
+  // currentPath / clear, which is what lets a shared link carry the chosen entry.
+  // The picker owns its results element (it stashes its hit list there); page
+  // code must never write to it. clear() deliberately leaves the caption alone.
 
   // Shell / particle material selector
   const fileUploadGroup = document.getElementById('file-upload-group')!;
@@ -2358,13 +2259,27 @@ initPermalinks({
   const riiSearchGroup = document.getElementById('rii-search-group')!;
 
   const riiHandle = setupRIISearch(
-    riiSearchGroup,
-    document.getElementById('rii-search') as HTMLInputElement,
-    document.getElementById('rii-results')!,
-    document.getElementById('rii-status')!,
-    materialRefEl,
-    (d) => { uploadedMaterial = d; resetAndUpdate(); },
+    {
+      group: riiSearchGroup,
+      input: document.getElementById('rii-search') as HTMLInputElement,
+      results: document.getElementById('rii-results')!,
+      status: document.getElementById('rii-status')!,
+      ref: materialRefEl,
+    },
+    (d, m) => {
+      mainSource.data = d;
+      mainSource.kind = 'rii';
+      mainSource.riiLabel = m.pageName;
+      mainSource.dbUnavailable = false;
+      syncMainMaterialRef();
+      resetAndUpdate();
+    },
   );
+
+  /** Re-derive the main slot's caption from state (never write it by hand). */
+  function syncMainMaterialRef(): void {
+    materialRefEl.textContent = materialRefText(materialSelect.value, drudeHandle, mainSource);
+  }
 
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
@@ -2372,9 +2287,22 @@ initPermalinks({
     drudeGroup.style.display = v === 'drude' ? '' : 'none';
     fileUploadGroup.style.display = v === 'file' ? '' : 'none';
     riiSearchGroup.style.display = v === 'rii' ? '' : 'none';
-    materialRefEl.textContent = v === 'drude' ? drudeRef(drudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
-    if (v === 'rii') { riiHandle.ensureCatalog(); return; }
-    if (v === 'file' && !uploadedMaterial) return; // wait for file
+    // Leaving 'file'/'rii' clears the shared-link notices: they describe the link,
+    // not a choice the user has just made.
+    if (v !== 'file') mainSource.fileMissing = false;
+    if (v !== 'rii') mainSource.dbUnavailable = false;
+    // One buffer serves both user-supplied sources, so switching between them must
+    // drop the other's table rather than compute with it under the new name.
+    if ((v === 'file' || v === 'rii') && mainSource.kind && mainSource.kind !== v) {
+      clearMaterialSource(mainSource, riiHandle, fileNameEl);
+    }
+    syncMainMaterialRef();
+    // The catalog is fetched lazily, on first arrival at this option.
+    if (v === 'rii') void riiHandle.ensureCatalog();
+    // Always recompute, including when the option has no table yet: getDielectric
+    // resolves an empty 'file'/'rii' slot to vacuum and the caption now says so,
+    // so returning early here would leave the previous material's curve and
+    // readouts on screen under a caption that describes vacuum.
     resetAndUpdate();
   });
 
@@ -2408,11 +2336,15 @@ initPermalinks({
       ctx.clearRect(0, 0, rect.width, rect.height);
     }
 
+    // The skipped count is free information about the file actually being read:
+    // silently dropping rows is how a truncated table gets computed with.
+    const skipped = pendingMaterialImport.parsed.skipped;
+    const skippedNote = skipped > 0 ? ` · ${skipped} unreadable row${skipped === 1 ? '' : 's'} skipped` : '';
     if ('error' in converted) {
-      materialImportStatus.textContent = converted.error;
+      materialImportStatus.textContent = converted.error + skippedNote;
       return;
     }
-    materialImportStatus.textContent = `${converted.data.length} rows`;
+    materialImportStatus.textContent = `${converted.data.length} rows${skippedNote}`;
   }
 
   function openMaterialImportDialog(target: MaterialImportTarget, text: string) {
@@ -2429,7 +2361,9 @@ initPermalinks({
     materialImportAxis.value = inferred.axis;
     materialImportValues.value = inferred.values;
     materialImportFile.textContent = `${target.fileName} (${parsed.rows.length} numeric rows)`;
-    materialImportRows.innerHTML = parsed.rows.slice(0, 8).map(r =>
+    // An evenly spaced sample, not the first eight rows: a header-heavy or
+    // sorted-by-something-else file shows nothing useful from its top alone.
+    materialImportRows.innerHTML = sampleRows(parsed.rows, 8).map(r =>
       `<tr><td>${formatCompact(r[0])}</td><td>${formatCompact(r[1])}</td><td>${formatCompact(r[2])}</td></tr>`
     ).join('');
     if (typeof materialImportDialog.showModal === 'function') materialImportDialog.showModal();
@@ -2468,6 +2402,10 @@ initPermalinks({
     const axisLabel = axisMode === 'energy-ev' ? 'energy eV' : axisMode === 'wavelength-nm' ? 'wavelength nm' : 'wavelength um';
     const valueLabel = valueMode === 'epsilon' ? 'epsilon' : 'n,k';
     const label = `${pendingMaterialImport.fileName} (${converted.data.length} points, ${axisLabel}, ${valueLabel})`;
+    // Clear the <input type=file> on accept as well as on cancel: without this,
+    // re-picking the same filename raises no change event and the second import
+    // silently never happens.
+    pendingMaterialImport.inputEl.value = '';
     pendingMaterialImport.onAccept(converted.data, label);
     pendingMaterialImport = null;
     materialImportDialog.close();
@@ -2482,10 +2420,13 @@ initPermalinks({
         statusEl: fileNameEl,
         inputEl: fileUpload,
         onAccept: (data, label) => {
-          uploadedMaterial = data;
+          mainSource.data = data;
+          mainSource.kind = 'file';
+          mainSource.riiLabel = '';
+          mainSource.fileMissing = false;
           fileNameEl.className = 'file-name';
           fileNameEl.textContent = label;
-          materialRefEl.textContent = '';
+          syncMainMaterialRef();
           resetAndUpdate();
         },
       }, text);
@@ -2499,13 +2440,27 @@ initPermalinks({
   const coreRiiSearchGroup = document.getElementById('core-rii-search-group')!;
 
   const coreRiiHandle = setupRIISearch(
-    coreRiiSearchGroup,
-    document.getElementById('core-rii-search') as HTMLInputElement,
-    document.getElementById('core-rii-results')!,
-    document.getElementById('core-rii-status')!,
-    coreMaterialRefEl,
-    (d) => { uploadedCoreMaterial = d; resetAndUpdate(); },
+    {
+      group: coreRiiSearchGroup,
+      input: document.getElementById('core-rii-search') as HTMLInputElement,
+      results: document.getElementById('core-rii-results')!,
+      status: document.getElementById('core-rii-status')!,
+      ref: coreMaterialRefEl,
+    },
+    (d, m) => {
+      coreSource.data = d;
+      coreSource.kind = 'rii';
+      coreSource.riiLabel = m.pageName;
+      coreSource.dbUnavailable = false;
+      syncCoreMaterialRef();
+      resetAndUpdate();
+    },
   );
+
+  /** Re-derive the core slot's caption from state (never write it by hand). */
+  function syncCoreMaterialRef(): void {
+    coreMaterialRefEl.textContent = materialRefText(coreMaterialSelect.value, coreDrudeHandle, coreSource);
+  }
 
   coreMaterialSelect.addEventListener('change', () => {
     const v = coreMaterialSelect.value;
@@ -2513,9 +2468,13 @@ initPermalinks({
     coreDrudeGroup.style.display = v === 'drude' ? '' : 'none';
     coreFileUploadGroup.style.display = v === 'file' ? '' : 'none';
     coreRiiSearchGroup.style.display = v === 'rii' ? '' : 'none';
-    coreMaterialRefEl.textContent = v === 'drude' ? drudeRef(coreDrudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
-    if (v === 'rii') { coreRiiHandle.ensureCatalog(); return; }
-    if (v === 'file' && !uploadedCoreMaterial) return;
+    if (v !== 'file') coreSource.fileMissing = false;
+    if (v !== 'rii') coreSource.dbUnavailable = false;
+    if ((v === 'file' || v === 'rii') && coreSource.kind && coreSource.kind !== v) {
+      clearMaterialSource(coreSource, coreRiiHandle, coreFileNameEl);
+    }
+    syncCoreMaterialRef();
+    if (v === 'rii') void coreRiiHandle.ensureCatalog();
     resetAndUpdate();
   });
 
@@ -2528,10 +2487,13 @@ initPermalinks({
         statusEl: coreFileNameEl,
         inputEl: coreFileUpload,
         onAccept: (data, label) => {
-          uploadedCoreMaterial = data;
+          coreSource.data = data;
+          coreSource.kind = 'file';
+          coreSource.riiLabel = '';
+          coreSource.fileMissing = false;
           coreFileNameEl.className = 'file-name';
           coreFileNameEl.textContent = label;
-          coreMaterialRefEl.textContent = '';
+          syncCoreMaterialRef();
           resetAndUpdate();
         },
       }, text);
@@ -2558,14 +2520,14 @@ initPermalinks({
     drudeGroup.style.display = 'none';
     fileUploadGroup.style.display = 'none';
     riiSearchGroup.style.display = 'none';
-    uploadedMaterial = null;
-    materialRefEl.textContent = MATERIALS.au.ref;
+    clearMaterialSource(mainSource, riiHandle, fileNameEl);
+    syncMainMaterialRef();
     setDrude(drudeHandle);
     epsParam.setValue(10);
     rParam.setValue(ELECTRON_DEFAULT_RADIUS_NM);
     nhParam.setValue(1.33);
     coreMaterialSelect.value = 'au';
-    coreMaterialRefEl.textContent = '';
+    syncCoreMaterialRef();
     coreDrudeGroup.style.display = 'none';
     setDrude(coreDrudeHandle);
     coreEpsParam.setValue(10);
@@ -2604,14 +2566,14 @@ initPermalinks({
     drudeGroup.style.display = 'none';
     fileUploadGroup.style.display = 'none';
     riiSearchGroup.style.display = 'none';
-    uploadedMaterial = null;
-    materialRefEl.textContent = MATERIALS.au.ref;
+    clearMaterialSource(mainSource, riiHandle, fileNameEl);
+    syncMainMaterialRef();
     setDrude(drudeHandle);
     epsParam.setValue(10);
     rParam.setValue(50);
     nhParam.setValue(1.33);
     coreMaterialSelect.value = 'au';
-    coreMaterialRefEl.textContent = '';
+    syncCoreMaterialRef();
     coreDrudeGroup.style.display = 'none';
     setDrude(coreDrudeHandle);
     coreEpsParam.setValue(10);
@@ -2705,8 +2667,8 @@ initPermalinks({
       drudeGroup.style.display = 'none';
       fileUploadGroup.style.display = 'none';
       riiSearchGroup.style.display = 'none';
-      uploadedMaterial = null;
-      materialRefEl.textContent = MATERIALS.au.ref;
+      clearMaterialSource(mainSource, riiHandle, fileNameEl);
+      syncMainMaterialRef();
       setDrude(drudeHandle);
       relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
       rParam.setValue(50);
@@ -2741,7 +2703,7 @@ initPermalinks({
     const mat = materialSelect.value;
     if (mat === 'custom') return [Math.sqrt(epsParam.value), 0];
     if (mat === 'drude') return drudeNK(lambdaNm, drudeHandle);
-    if ((mat === 'file' || mat === 'rii') && uploadedMaterial) return interpolateNK(uploadedMaterial, lambdaNm);
+    if ((mat === 'file' || mat === 'rii') && mainSource.kind === mat && mainSource.data) return interpolateNK(mainSource.data, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
@@ -2750,7 +2712,7 @@ initPermalinks({
     const mat = coreMaterialSelect.value;
     if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
     if (mat === 'drude') return drudeNK(lambdaNm, coreDrudeHandle);
-    if ((mat === 'file' || mat === 'rii') && uploadedCoreMaterial) return interpolateNK(uploadedCoreMaterial, lambdaNm);
+    if ((mat === 'file' || mat === 'rii') && coreSource.kind === mat && coreSource.data) return interpolateNK(coreSource.data, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
     return interpolateNK(MATERIALS[mat].data, lambdaNm);
   }
@@ -2764,9 +2726,37 @@ initPermalinks({
     drudeHandle: DrudeHandle;
     rParam: ParamHandle;
     refEl: HTMLElement;
-    uploadedData: number[][] | null;
+    /** Same file/database bookkeeping the main and core slots keep. */
+    source: MaterialSource;
+    /** This shell's own database picker — needed to restore a shared s{N}dp entry. */
+    riiHandle: RIISearchHandle;
   }
   const extraShells: ShellHandle[] = [];
+
+  /**
+   * ε(λ) for one extra shell. Was written out twice — here and in materialEntries —
+   * with the same file/rii fallback; one copy keeps the Material view and the Mie
+   * kernel from disagreeing about what a slot holds.
+   */
+  function shellDielectric(sh: ShellHandle): (lambdaNm: number) => [number, number] {
+    const mat = sh.material.value;
+    const eps = sh.epsParam.value;
+    if (mat === 'custom') return (_: number): [number, number] => [Math.sqrt(eps), 0];
+    if (mat === 'drude') return (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle);
+    if (mat === 'file' || mat === 'rii') {
+      // Only the table the current source actually put there: a leftover from the
+      // other user-supplied source would be plotted under this one's name.
+      const table = sh.source.kind === mat ? sh.source.data : null;
+      if (!table) return (_: number): [number, number] => [1, 0];
+      return (lnm: number): [number, number] => interpolateNK(table, lnm);
+    }
+    return (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
+  }
+
+  /** Re-derive one shell's caption from state (never write it by hand). */
+  function syncShellMaterialRef(sh: ShellHandle): void {
+    sh.refEl.textContent = materialRefText(sh.material.value, sh.drudeHandle, sh.source);
+  }
 
   function buildLayers(): ShellLayer[] {
     const layers: ShellLayer[] = [];
@@ -2777,19 +2767,7 @@ initPermalinks({
     layers.push({ getDielectric: getDielectric, radiusNm: outerR });
     // Extra dynamic shells
     for (const sh of extraShells) {
-      const mat = sh.material.value;
-      const eps = sh.epsParam.value;
-      const fileData = sh.uploadedData;
-      const getDiel = mat === 'custom'
-        ? (_: number): [number, number] => [Math.sqrt(eps), 0]
-        : mat === 'drude'
-          ? (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle)
-        : (mat === 'file' || mat === 'rii') && fileData
-          ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
-          : (mat === 'file' || mat === 'rii')
-            ? (_: number): [number, number] => [1, 0]
-            : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
-      layers.push({ getDielectric: getDiel, radiusNm: sh.rParam.value });
+      layers.push({ getDielectric: shellDielectric(sh), radiusNm: sh.rParam.value });
     }
     return layers;
   }
@@ -2930,12 +2908,21 @@ initPermalinks({
     const shRiiGrp = sec.querySelector('.sh-rii-group') as HTMLElement;
 
     const shRiiHandle = setupRIISearch(
-      shRiiGrp,
-      sec.querySelector('.sh-rii-search') as HTMLInputElement,
-      sec.querySelector('.sh-rii-results')!,
-      sec.querySelector('.sh-rii-status')!,
-      refEl,
-      (d) => { handle.uploadedData = d; resetAndUpdate(); },
+      {
+        group: shRiiGrp,
+        input: sec.querySelector('.sh-rii-search') as HTMLInputElement,
+        results: sec.querySelector('.sh-rii-results') as HTMLElement,
+        status: sec.querySelector('.sh-rii-status') as HTMLElement,
+        ref: refEl,
+      },
+      (d, m) => {
+        handle.source.data = d;
+        handle.source.kind = 'rii';
+        handle.source.riiLabel = m.pageName;
+        handle.source.dbUnavailable = false;
+        syncShellMaterialRef(handle);
+        resetAndUpdate();
+      },
     );
 
     matSel.addEventListener('change', () => {
@@ -2944,18 +2931,25 @@ initPermalinks({
       shellDrudeHandle.group.style.display = v === 'drude' ? '' : 'none';
       shFileGrp.style.display = v === 'file' ? '' : 'none';
       shRiiGrp.style.display = v === 'rii' ? '' : 'none';
-      refEl.textContent = v === 'drude' ? drudeRef(shellDrudeHandle) : (v === 'custom' || v === 'file' || v === 'rii') ? '' : MATERIALS[v].ref;
-      if (v === 'rii') { shRiiHandle.ensureCatalog(); return; }
-      if (v === 'file' && !handle.uploadedData) return;
+      if (v !== 'file') handle.source.fileMissing = false;
+      if (v !== 'rii') handle.source.dbUnavailable = false;
+      if ((v === 'file' || v === 'rii') && handle.source.kind && handle.source.kind !== v) {
+        clearMaterialSource(handle.source, shRiiHandle, shFileName);
+      }
+      syncShellMaterialRef(handle);
+      if (v === 'rii') void shRiiHandle.ensureCatalog();
       resetAndUpdate();
     });
 
     bindDrudeInputs(shellDrudeHandle, () => {
-      if (matSel.value === 'drude') refEl.textContent = drudeRef(shellDrudeHandle);
+      if (matSel.value === 'drude') syncShellMaterialRef(handle);
       resetAndUpdate();
     });
 
-    handle = { el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, drudeHandle: shellDrudeHandle, rParam: rP, refEl, uploadedData: null };
+    handle = {
+      el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, drudeHandle: shellDrudeHandle,
+      rParam: rP, refEl, source: newMaterialSource(), riiHandle: shRiiHandle,
+    };
 
     shFileInput.addEventListener('change', () => {
       const file = shFileInput.files?.[0];
@@ -2966,10 +2960,13 @@ initPermalinks({
           statusEl: shFileName,
           inputEl: shFileInput,
           onAccept: (data, label) => {
-            handle.uploadedData = data;
+            handle.source.data = data;
+            handle.source.kind = 'file';
+            handle.source.riiLabel = '';
+            handle.source.fileMissing = false;
             shFileName.className = 'file-name';
             shFileName.textContent = label;
-            refEl.textContent = '';
+            syncShellMaterialRef(handle);
             resetAndUpdate();
           },
         }, text);
@@ -3289,20 +3286,7 @@ initPermalinks({
       { label: 'Shell 1', getDielectric },
     ];
     for (let i = 0; i < extraShells.length; i++) {
-      const sh = extraShells[i];
-      const mat = sh.material.value;
-      const eps = sh.epsParam.value;
-      const fileData = sh.uploadedData;
-      const getDiel = mat === 'custom'
-        ? (_: number): [number, number] => [Math.sqrt(eps), 0]
-        : mat === 'drude'
-          ? (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle)
-        : (mat === 'file' || mat === 'rii') && fileData
-          ? (lnm: number): [number, number] => interpolateNK(fileData, lnm)
-          : (mat === 'file' || mat === 'rii')
-            ? (_: number): [number, number] => [1, 0]
-            : (lnm: number): [number, number] => interpolateNK(MATERIALS[mat].data, lnm);
-      entries.push({ label: `Shell ${i + 2}`, getDielectric: getDiel });
+      entries.push({ label: `Shell ${i + 2}`, getDielectric: shellDielectric(extraShells[i]) });
     }
     return entries;
   }
@@ -4570,6 +4554,13 @@ initPermalinks({
     p.set('exc', excitation);
     p.set('geo', geometry);
     p.set('mat', materialSelect.value);
+    // 'dp' is additive: the refractiveindex.info dataPath is the only part of a
+    // database pick that can travel in a URL. An uploaded table cannot travel at
+    // all, which is what sharedFileMissing explains on the way back in.
+    if (materialSelect.value === 'rii') {
+      const dp = riiHandle.currentPath();
+      if (dp) p.set('dp', dp);
+    }
     if (materialSelect.value === 'custom') p.set('eps', epsParam.value.toString());
     p.set('r', rParam.value.toString());
     p.set('nh', nhParam.value.toString());
@@ -4611,6 +4602,12 @@ initPermalinks({
     }
     if (geometry === 'coreshell') {
       p.set('cmat', coreMaterialSelect.value);
+      // 'cdp' mirrors 'dp' for the core slot — a distinct key, so a core database
+      // entry and a shell database entry cannot overwrite each other.
+      if (coreMaterialSelect.value === 'rii') {
+        const cdp = coreRiiHandle.currentPath();
+        if (cdp) p.set('cdp', cdp);
+      }
       if (coreMaterialSelect.value === 'custom') p.set('ceps', coreEpsParam.value.toString());
       if (coreMaterialSelect.value === 'drude') {
         const d = readDrude(coreDrudeHandle);
@@ -4622,6 +4619,10 @@ initPermalinks({
       for (let i = 0; i < extraShells.length; i++) {
         const sh = extraShells[i];
         p.set(`s${i + 2}mat`, sh.material.value);
+        if (sh.material.value === 'rii') {
+          const sdp = sh.riiHandle.currentPath();
+          if (sdp) p.set(`s${i + 2}dp`, sdp);
+        }
         if (sh.material.value === 'custom') p.set(`s${i + 2}eps`, sh.epsParam.value.toString());
         if (sh.material.value === 'drude') {
           const d = readDrude(sh.drudeHandle);
@@ -4635,6 +4636,53 @@ initPermalinks({
     return p.toString();
   }
 
+  /**
+   * A material id this page can actually compute with. An unknown id used to be
+   * assigned to the <select> anyway, which silently blanked it (no matching
+   * <option>) and then threw on MATERIALS[''].ref.
+   */
+  function isKnownMaterial(mat: string): boolean {
+    return mat === 'custom' || mat === 'drude' || mat === 'file' || mat === 'rii' || !!MATERIALS[mat];
+  }
+
+  /**
+   * Restore one slot's user-supplied source from a shared link.
+   *
+   * 'rii' + a dataPath is re-fetched, which is what makes a shared database pick
+   * reproduce the same numbers. ensureCatalog() runs unconditionally: the picker's
+   * own input/focus listeners bail out while its catalog is null, so a restore
+   * that skips it leaves the search box permanently dead. It is started BEFORE
+   * selectByPath so that — loadCatalog memoises one promise and fires its
+   * continuations in registration order — the chosen entry's own apply() has the
+   * last word on the results list instead of being buried under a freshly
+   * rendered hit list.
+   *
+   * 'file' can only be reported, never restored: an uploaded table has nowhere to
+   * live in a URL. The notice is state, not a caption write, so it survives the
+   * caption recomputations that follow restoreState().
+   */
+  function restoreMaterialSource(
+    mat: string | null, dataPath: string | null,
+    src: MaterialSource, rii: RIISearchHandle, syncRef: () => void,
+  ): void {
+    if (mat === 'rii') {
+      void rii.ensureCatalog();
+      if (dataPath) {
+        void rii.selectByPath(dataPath).then(ok => {
+          if (ok) return;   // onLoaded already set the data and the caption
+          // The entry is gone from the catalog. The slot stays empty (vacuum),
+          // and the caption says so rather than naming a material that is not
+          // being used; nothing needs recomputing because nothing was loaded.
+          src.dbUnavailable = true;
+          syncRef();
+        });
+      }
+    } else if (mat === 'file') {
+      src.fileMissing = true;
+      syncRef();
+    }
+  }
+
   function restoreState() {
     const hash = location.hash.slice(1);
     if (!hash) return;
@@ -4645,7 +4693,11 @@ initPermalinks({
     const g = p.get('geo');
     if (g === 'coreshell') geoTabs.select('coreshell');
     const mat = p.get('mat');
-    if (mat && !['file', 'rii'].includes(mat)) { materialSelect.value = mat; materialSelect.dispatchEvent(new Event('change')); }
+    // 'file' and 'rii' used to be excluded here, so a shared link naming either
+    // fell through to the markup default (gold) with no select change and no
+    // message — the link plotted a different material than it claimed.
+    if (mat && isKnownMaterial(mat)) { materialSelect.value = mat; materialSelect.dispatchEvent(new Event('change')); }
+    restoreMaterialSource(mat, p.get('dp'), mainSource, riiHandle, syncMainMaterialRef);
     if (mat === 'custom' && p.has('eps')) epsParam.setValue(parseFloat(p.get('eps')!));
     if (mat === 'drude') {
       setDrude(
@@ -4654,7 +4706,7 @@ initPermalinks({
         p.has('dwp') ? parseFloat(p.get('dwp')!) : readDrude(drudeHandle).wp,
         p.has('dgamma') ? parseFloat(p.get('dgamma')!) : readDrude(drudeHandle).gamma,
       );
-      materialRefEl.textContent = drudeRef(drudeHandle);
+      syncMainMaterialRef();
     }
     if (p.has('r')) rParam.setValue(parseFloat(p.get('r')!));
     if (p.has('nh')) nhParam.setValue(parseFloat(p.get('nh')!));
@@ -4688,7 +4740,8 @@ initPermalinks({
     }
     if (g === 'coreshell') {
       const cm = p.get('cmat');
-      if (cm && !['file', 'rii'].includes(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }
+      if (cm && isKnownMaterial(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }
+      restoreMaterialSource(cm, p.get('cdp'), coreSource, coreRiiHandle, syncCoreMaterialRef);
       if (cm === 'custom' && p.has('ceps')) coreEpsParam.setValue(parseFloat(p.get('ceps')!));
       if (cm === 'drude') {
         setDrude(
@@ -4697,9 +4750,38 @@ initPermalinks({
           p.has('cdwp') ? parseFloat(p.get('cdwp')!) : readDrude(coreDrudeHandle).wp,
           p.has('cdgamma') ? parseFloat(p.get('cdgamma')!) : readDrude(coreDrudeHandle).gamma,
         );
-        coreMaterialRefEl.textContent = drudeRef(coreDrudeHandle);
+        syncCoreMaterialRef();
       }
       if (p.has('cr')) coreRParam.setValue(parseFloat(p.get('cr')!));
+
+      // ── SEPARATE PRE-EXISTING BUG ────────────────────────────────────────
+      // serializeState has always written s2…s5 for the extra shells, but
+      // restoreState read none of those keys and never called
+      // createShellSection — so every extra shell in a shared link was
+      // dropped and a four-shell design came back as a bare core-shell,
+      // quietly plotting a different structure than the link described. This
+      // affects built-in materials too; it has nothing to do with the shared
+      // material modules. Rebuilt here, after 'r' and 'cr' are in place so the
+      // radius normaliser sees the right inner layers.
+      for (let n = 2; n <= MAX_SHELLS; n++) {
+        if (!p.has(`s${n}mat`) && !p.has(`s${n}r`)) continue;
+        const rRaw = parseFloat(p.get(`s${n}r`) ?? '');
+        const fallbackR = (extraShells.length > 0 ? extraShells[extraShells.length - 1].rParam.value : rParam.value) + 20;
+        const sh = createShellSection(Number.isFinite(rRaw) ? rRaw : fallbackR);
+        const sm = p.get(`s${n}mat`);
+        if (sm && isKnownMaterial(sm)) { sh.material.value = sm; sh.material.dispatchEvent(new Event('change')); }
+        restoreMaterialSource(sm, p.get(`s${n}dp`), sh.source, sh.riiHandle, () => syncShellMaterialRef(sh));
+        if (sm === 'custom' && p.has(`s${n}eps`)) sh.epsParam.setValue(parseFloat(p.get(`s${n}eps`)!));
+        if (sm === 'drude') {
+          setDrude(
+            sh.drudeHandle,
+            p.has(`s${n}depsb`) ? parseFloat(p.get(`s${n}depsb`)!) : readDrude(sh.drudeHandle).epsB,
+            p.has(`s${n}dwp`) ? parseFloat(p.get(`s${n}dwp`)!) : readDrude(sh.drudeHandle).wp,
+            p.has(`s${n}dgamma`) ? parseFloat(p.get(`s${n}dgamma`)!) : readDrude(sh.drudeHandle).gamma,
+          );
+          syncShellMaterialRef(sh);
+        }
+      }
     }
     // Restore tab selections (silent to avoid intermediate renders)
     if (p.has('qty')) qtyTabs.select(p.get('qty')!, true);
@@ -4731,6 +4813,13 @@ initPermalinks({
   });
 
   if (location.hash.slice(1)) restoreState();
+  // Derive both captions once at start-up. Nothing did before, so the markup
+  // default (gold) sat under a blank caption until the <select> was first
+  // touched, and — because the ?material= permalink script runs before this
+  // script registers its change handler — a '?material=file' or '?material=rii'
+  // link showed an empty caption while the curve was quietly vacuum.
+  syncMainMaterialRef();
+  syncCoreMaterialRef();
   updateDecompAvailability();
   updateElectronDecompAvailability();
   updateExcitationUI();
