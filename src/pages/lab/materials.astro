@@ -579,9 +579,14 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .vo2-tbox { border: 1px solid var(--bg-muted); border-radius: var(--radius-sm); background: var(--bg); }
   .vo2-tbox canvas { width: 100%; height: 108px; display: block; }
   :global(.rii-result:last-child) { border-bottom: none; }
-  :global(.rii-result__book) { font-weight: 700; color: var(--text); }
-  :global(.rii-result__page) { color: var(--text-muted); }
-  :global(.rii-empty) { padding: 0.4rem 0.5rem; font-size: 0.76rem; color: var(--text-muted); }
+  /* The BEM double-underscore .rii-result__book / .rii-result__page rules that
+     used to sit here were for markup only the page-local picker emitted. The
+     shared picker emits .rii-result-book / .rii-result-page, which lab.css
+     already styles globally — Astro's scoping never reached script-injected
+     nodes anyway, so these were dead the moment the picker changed. A
+     :global(.rii-empty) rule went with them: the shared picker renders '' for no
+     matches and lab.css's `.rii-results:empty { display: none }` collapses the
+     box, so no element ever carries that class. */
   .rii-status.err, .ctrl-note.err { color: var(--danger); }  .chart-wrap canvas { cursor: crosshair; }
   /* Padding to match .output-card, without its three-column results grid: the
      rows stack, each spanning the full width it needs. */
@@ -675,44 +680,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK, drudeEpsilon, PHOTON_HC_EV_NM as HC } from '../../lib/materials';
   import { epsVO2, fmFromTemperature, temperatureFromFm, VO2_TM, VO2_DT } from '../../lib/vo2';
   import { downloadBlob } from '../../lib/download';
-  import { loadCatalog, searchCatalog, fetchMaterialNK, type RIIMaterial } from '../../data/refractiveindex';
   import { TMDC, TMDC_LABEL, tmdcEpsilon } from '../../data/tmdc';
   import { grapheneMuT, mikhailovS3THG, KB_EV } from '../../lib/graphene-conductivity';
-
-  // ── optical-file parser (tabulated x, n, k or x, ε′, ε″ — axis/value auto-detected) ──
-  type FileRow = [number, number, number];
-  function parseOpticalFile(text: string): { rows: FileRow[] } | { error: string } {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('%'));
-    if (lines.length < 2) return { error: 'File needs at least 2 data rows' };
-    let delim: RegExp = /\t/;
-    if (lines[0].split(delim).length < 3) delim = /,/;
-    if (lines[0].split(delim).length < 3) delim = /\s+/;
-    const start = isNaN(parseFloat(lines[0].split(delim)[0])) ? 1 : 0;
-    const rows: FileRow[] = [];
-    for (let i = start; i < lines.length; i++) {
-      const p = lines[i].split(delim).map(Number);
-      if (p.length >= 3 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2])) rows.push([p[0], p[1], p[2]]);
-    }
-    return rows.length >= 2 ? { rows } : { error: 'Could not parse ≥2 rows of 3 numeric columns' };
-  }
-  function inferModes(rows: FileRow[]): { axis: 'nm' | 'um' | 'eV'; values: 'nk' | 'eps' } {
-    const xMax = Math.max(...rows.map(r => r[0]));
-    const yMaxAbs = Math.max(...rows.flatMap(r => [Math.abs(r[1]), Math.abs(r[2])]));
-    const values = rows.some(r => r[1] < 0) || yMaxAbs > 25 ? 'eps' : 'nk';
-    const axis = xMax > 50 ? 'nm' : (values === 'eps' || xMax > 8 ? 'eV' : 'um');
-    return { axis, values };
-  }
-  function rowsToData(rows: FileRow[], m: { axis: 'nm' | 'um' | 'eV'; values: 'nk' | 'eps' }): number[][] {
-    const data: number[][] = [];
-    for (const [x, a, b] of rows) {
-      if (x <= 0) continue;
-      const lamUm = m.axis === 'nm' ? x / 1000 : m.axis === 'eV' ? HC / x / 1000 : x;
-      const [n, k] = m.values === 'eps' ? epsilonToNK(a, b) : [a, Math.abs(b)];
-      if (Number.isFinite(lamUm) && Number.isFinite(n) && Number.isFinite(k) && n >= 0) data.push([lamUm, n, k]);
-    }
-    data.sort((p, q) => p[0] - q[0]);
-    return data;
-  }
+  // Reading a user-supplied table and searching refractiveindex.info are the
+  // same job on five Lab pages; both now come from the shared modules instead of
+  // a page-local copy. See the note above curModes() for why this page's dialog
+  // keeps its own option strings.
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes, sampleRows, formatCompact,
+    type ParsedOpticalFile, type ImportAxisMode, type ImportValueMode,
+  } from '../../lib/optical-file';
+  import { setupRIISearch, type RIISearchHandle } from '../../lib/material-picker';
 
   const COLORS = ['#6366F1', '#F59E0B', '#10B981', '#EC4899'];   // one colour per material (up to 4); solid = real part, dashed = imaginary
 
@@ -738,6 +716,12 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const canvas = $('mat-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
+  // Slot 1's select is #mat-select, not #mat1-select: the first material predates
+  // the comparison feature and its id was never renamed. Every *other* id in the
+  // slot does carry the mat1- prefix (#mat1-rii, #mat1-file-input, …), which is
+  // why setupSlot takes the select as a separate argument instead of deriving it
+  // from the prefix — `$('mat1-select')` is null, and the `as HTMLSelectElement`
+  // cast would hide that until the first `.value` read threw.
   const matSelect = $('mat-select') as HTMLSelectElement;
   const mat2Select = $('mat2-select') as HTMLSelectElement;
   const mat3Select = $('mat3-select') as HTMLSelectElement;
@@ -748,10 +732,26 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     select: HTMLSelectElement;
     prefix: string;
     custom: { label: string; ref: string; data: number[][] } | null;
-    catalog: RIIMaterial[] | null;
+    /** Which source `custom` came from. 'file' and 'rii' resolve through the one
+        buffer, so without this, switching between them would keep computing with
+        the previous source's table under the new source's name. */
+    customKind: 'file' | 'rii' | null;
     /** dataPath of the chosen refractiveindex.info entry — the only part of a
         database pick that is stable enough to put in a permalink. */
     riiPath: string | null;
+    /** This slot's own search box, wired by the shared picker. */
+    rii: RIISearchHandle;
+    /** Detached span the picker writes the chosen entry's page name into. There
+        is exactly one #mat-ref for all four slots, so handing that element to
+        four pickers would let each pick wipe the other three slots' provenance;
+        the page owns the caption instead and refreshMatRef() composes it. */
+    riiRefSink: HTMLElement;
+    /** Set when a shared link arrived with m{k}=file: the sender had a local file
+        and a URL has nowhere to put its table. State, not a caption write, because
+        refreshMatRef() runs again after restoreState and would overwrite it. */
+    sharedFileMissing: boolean;
+    /** Same, for m{k}=rii&d{k}=… whose entry no longer resolves in the catalog. */
+    sharedRiiMissing: boolean;
     vo2fm: number;
     resolve: () => { label: string; ref: string; data: number[][] } | null;
     sync: () => void;   // re-apply this slot's sub-group visibility from its current select value
@@ -801,13 +801,23 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const fileStatus = $(`${prefix}-file-status`);
     const vo2Group = $(`${prefix}-vo2`), vo2Slider = $(`${prefix}-vo2-fm`) as HTMLInputElement;
     const vo2Val = $(`${prefix}-vo2-fm-val`), vo2Tplot = $(`${prefix}-vo2-tplot`) as HTMLCanvasElement, vo2Tnote = $(`${prefix}-vo2-tnote`);
-    const slot: Slot = { select, prefix, custom: null, catalog: null, riiPath: null, vo2fm: 0, resolve: () => null, sync: () => {} };
+    // The markup's own hint, restored when this slot's uploaded table is dropped.
+    const fileHint = fileStatus.textContent ?? '';
+    const slot: Slot = {
+      select, prefix, custom: null, customKind: null, riiPath: null,
+      // assigned immediately below; the picker's onLoaded closes over `slot`
+      rii: undefined as unknown as RIISearchHandle,
+      riiRefSink: document.createElement('span'),
+      sharedFileMissing: false, sharedRiiMissing: false,
+      vo2fm: 0, resolve: () => null, sync: () => {},
+    };
 
     slot.resolve = () => {
       const v = select.value;
       if (MATERIALS[v]) return { label: MATERIALS[v].label, ref: MATERIALS[v].ref, data: MATERIALS[v].data };
       if (v === 'vo2') return { label: 'Vanadium dioxide (VO₂)', ref: `mixed-phase Bruggeman EMA · ${vo2TempLabel(slot.vo2fm)} · calibrated Drude–Lorentz model`, data: vo2DataTable(slot.vo2fm) };
-      if ((v === 'file' || v === 'rii') && slot.custom) return slot.custom;
+      // Only hand the buffer back to the option it belongs to — see customKind.
+      if ((v === 'file' || v === 'rii') && slot.custom && slot.customKind === v) return slot.custom;
       return null;
     };
 
@@ -822,53 +832,82 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       if (select.value === 'vo2') requestAnimationFrame(updateVo2);
     };
     select.addEventListener('change', () => {
+      const v = select.value;
+      // the shared-link notices are about the link, not about this fresh choice
+      if (v !== 'file') slot.sharedFileMissing = false;
+      if (v !== 'rii') slot.sharedRiiMissing = false;
+      // Deliberately NOT dropping the table here. resolve() already refuses to
+      // hand the buffer to the option it does not belong to (see customKind), so
+      // merely looking at the other source cannot mis-plot anything — and
+      // discarding it would mean a file → database → file round trip loses the
+      // upload, which the page did not used to do. The buffer is released only
+      // when the other source actually replaces it, below.
       slot.sync();
-      if (select.value === 'rii') runSearch();
+      // The catalog is fetched lazily, on first arrival at this option. The
+      // picker's own listeners never load it, so without this the search box
+      // would come up permanently empty — including after a restore, which
+      // reaches this handler by dispatching 'change'.
+      if (v === 'rii') void slot.rii.ensureCatalog();
       refreshMatRef(); updateNotes(); render();
     });
 
-    // database search
-    let timer: number | undefined;
-    async function runSearch() {
-      if (!slot.catalog) {
-        riiStatus.textContent = 'Loading database…'; riiStatus.classList.remove('err');
-        try { slot.catalog = await loadCatalog(); }
-        catch { riiStatus.textContent = 'Failed to load database'; riiStatus.classList.add('err'); return; }
-      }
-      const hits = searchCatalog(slot.catalog, riiInput.value.trim());
-      (riiResults as any)._hits = hits;
-      riiResults.innerHTML = hits.length
-        ? hits.map((m, i) => `<div class="rii-result" data-i="${i}"><span class="rii-result__book">${m.bookName || m.book}</span> <span class="rii-result__page">${m.pageName}</span></div>`).join('')
-        : '<div class="rii-empty">No matches</div>';
-      riiStatus.textContent = `${slot.catalog.length} materials in database`;
-    }
-    riiInput.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(runSearch, 200); });
-    riiResults.addEventListener('click', async (e) => {
-      const el = (e.target as HTMLElement).closest('.rii-result') as HTMLElement | null;
-      if (!el) return;
-      const m = ((riiResults as any)._hits as RIIMaterial[])[+el.dataset.i!];
-      if (!m) return;
-      riiStatus.textContent = 'Loading data…'; riiStatus.classList.remove('err');
-      try {
-        const data = await fetchMaterialNK(m.dataPath);
-        slot.custom = { label: m.bookName || m.book, ref: `refractiveindex.info · ${m.pageName}`, data };
+    // database search — the shared picker owns the input, the result list and the
+    // status line. Its `ref` goes to this slot's detached sink, never to #mat-ref.
+    slot.rii = setupRIISearch(
+      { group: riiGroup, input: riiInput, results: riiResults, status: riiStatus, ref: slot.riiRefSink },
+      (data, m) => {
+        // taking the single buffer over from an upload: that panel's status must
+        // stop claiming a file is loaded, since it no longer is
+        if (slot.customKind === 'file') {
+          fileStatus.classList.remove('err');
+          fileStatus.textContent = fileHint;
+          fileInput.value = '';
+        }
+        slot.custom = {
+          label: m.bookName || m.book,
+          ref: `refractiveindex.info · ${slot.riiRefSink.textContent?.trim() || m.pageName}`,
+          data,
+        };
+        slot.customKind = 'rii';
         slot.riiPath = m.dataPath;
-        riiStatus.textContent = `${m.bookName || m.book} · ${m.pageName} (${data.length} pts)`;
+        slot.sharedRiiMissing = false;
         refreshMatRef(); render();
-      } catch { riiStatus.textContent = 'Failed to load data'; riiStatus.classList.add('err'); }
-    });
+      },
+    );
+    // The picker's own input/focus listeners only *render* hits; ensureCatalog is
+    // the only thing that fetches, and the select's change handler above is the
+    // only caller. copySlotState assigns `select.value` directly — removing
+    // Material 1 shifts Material 2 up into it — so a slot can arrive at 'rii'
+    // without that handler ever running, and its box would then render nothing
+    // for anything typed into it. (The old page-local search loaded the catalog
+    // lazily from the input event, which covered this.) Idempotent once the
+    // catalog is in: ensureCatalog then only re-renders the hits, which the
+    // picker's own focus listener already does, and leaves the status line alone.
+    riiInput.addEventListener('focus', () => { void slot.rii.ensureCatalog(); });
 
     // file upload
     fileInput.addEventListener('change', () => {
       const f = fileInput.files?.[0]; if (!f) return;
       f.text().then(text => {
         const parsed = parseOpticalFile(text);
-        if ('error' in parsed) { fileStatus.textContent = parsed.error; fileStatus.classList.add('err'); fileInput.value = ''; return; }
+        if ('error' in parsed) {
+          fileStatus.textContent = parsed.error; fileStatus.classList.add('err');
+          if (slot.customKind === 'file') { slot.custom = null; slot.customKind = null; }
+          fileInput.value = '';
+          refreshMatRef(); render();
+          return;
+        }
         // confirm the column interpretation before applying (like the Mie-scattering lab)
         openImportDialog({
-          rows: parsed.rows, fileName: f.name, statusEl: fileStatus, inputEl: fileInput,
+          parsed, fileName: f.name, statusEl: fileStatus, inputEl: fileInput,
           onAccept: (data, modeLabel) => {
+            // taking the buffer over from a database entry: blank that panel's
+            // "N points loaded" but leave the query, so going back is one click
+            if (slot.customKind === 'rii') { riiStatus.textContent = ''; slot.riiRefSink.textContent = ''; }
             slot.custom = { label: f.name.replace(/\.[^.]+$/, ''), ref: `uploaded · ${modeLabel}`, data };
+            slot.customKind = 'file';
+            slot.riiPath = null;   // this slot's table is no longer a database entry
+            slot.sharedFileMissing = false;
             fileStatus.classList.remove('err'); fileStatus.textContent = `${f.name}: ${data.length} rows · ${modeLabel}`;
             refreshMatRef(); render();
           },
@@ -886,7 +925,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   const activeSlots = (): Slot[] => SLOTS.slice(0, matCount);
 
   // ── confirm-file-import dialog (map column interpretation before applying) ──
-  type ImportTarget = { rows: FileRow[]; fileName: string; statusEl: HTMLElement; inputEl: HTMLInputElement; onAccept: (data: number[][], modeLabel: string) => void };
+  type ImportTarget = { parsed: ParsedOpticalFile; fileName: string; statusEl: HTMLElement; inputEl: HTMLInputElement; onAccept: (data: number[][], modeLabel: string) => void };
   let pendingImport: ImportTarget | null = null;
   const importDlg = $('mat-import-dialog') as HTMLDialogElement;
   const importAxis = $('mat-import-axis') as HTMLSelectElement;
@@ -897,9 +936,24 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   const importFileEl = $('mat-import-file');
   const importAccept = $('mat-import-accept') as HTMLButtonElement;
   const cvarM = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
-  const fmtCell = (x: number) => { const a = Math.abs(x); return (a !== 0 && (a < 1e-3 || a >= 1e5)) ? x.toExponential(2) : String(+x.toFixed(4)); };
-  const curModes = () => ({ axis: importAxis.value as 'nm' | 'um' | 'eV', values: importValues.value as 'nk' | 'eps' });
-  const modeLabel = (m: { axis: string; values: string }) => `${m.values === 'eps' ? 'ε' : 'n,k'} vs ${m.axis}`;
+  /**
+   * The dialog's two selects keep their own option strings, and translate at the
+   * DOM boundary. They look like drift against the shared module's
+   * 'wavelength-nm' | 'wavelength-um' | 'energy-ev' and 'nk' | 'epsilon', but
+   * 'nm' | 'um' | 'eV' is also the vocabulary of the *Unit* select
+   * (#range-unit), whose value serializeState writes as `u=` and restoreState
+   * reads back. Renaming these literals would have to leave that select alone,
+   * and a search-and-replace over the file cannot tell the two apart — so the
+   * markup stays and six lines of lookup do the work instead. Every link already
+   * shared carries u=nm | u=um | u=eV and still plots the window it named.
+   */
+  const AXIS_IN = { nm: 'wavelength-nm', um: 'wavelength-um', eV: 'energy-ev' } as const;
+  const VALS_IN = { nk: 'nk', eps: 'epsilon' } as const;
+  const AXIS_OUT = { 'wavelength-nm': 'nm', 'wavelength-um': 'um', 'energy-ev': 'eV' } as const;
+  const VALS_OUT = { nk: 'nk', epsilon: 'eps' } as const;
+  const curModes = (): [ImportAxisMode, ImportValueMode] =>
+    [AXIS_IN[importAxis.value as keyof typeof AXIS_IN], VALS_IN[importValues.value as keyof typeof VALS_IN]];
+  const modeLabel = (a: ImportAxisMode, v: ImportValueMode) => `${v === 'epsilon' ? 'ε' : 'n,k'} vs ${AXIS_OUT[a]}`;
   function drawImportPreview(data: number[][]) {
     const cv = importPreview, r = cv.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) return;
@@ -918,38 +972,60 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText('n (—)   k (- -)  vs λ (µm)', m.l + 4, m.t + 2);
     g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(ymax.toFixed(2), m.l - 3, py(ymax));
   }
+  /** Rows the parser dropped are free information about the file being accepted. */
+  const skippedNote = (skipped: number) => skipped > 0 ? ` · ${skipped} unreadable row${skipped === 1 ? '' : 's'} skipped` : '';
   function renderImportPreview() {
     if (!pendingImport) return;
-    const data = rowsToData(pendingImport.rows, curModes());
-    importAccept.disabled = data.length < 2;
-    importStatus.classList.toggle('err', data.length < 2);
-    importStatus.textContent = data.length < 2 ? 'No valid optical rows for this interpretation.' : `${data.length} rows · ${modeLabel(curModes())}`;
-    drawImportPreview(data);
+    const [axisMode, valueMode] = curModes();
+    const converted = convertOpticalRows(pendingImport.parsed.rows, axisMode, valueMode);
+    const note = skippedNote(pendingImport.parsed.skipped);
+    if ('error' in converted) {
+      importAccept.disabled = true;
+      importStatus.classList.add('err');
+      importStatus.textContent = converted.error + note;
+      drawImportPreview([]);
+      return;
+    }
+    importAccept.disabled = false;
+    importStatus.classList.remove('err');
+    importStatus.textContent =
+      `${converted.data.length} rows · ${modeLabel(axisMode, valueMode)} · ${formatCompact(converted.lambdaMinNm)}–${formatCompact(converted.lambdaMaxNm)} nm${note}`;
+    drawImportPreview(converted.data);
   }
   function openImportDialog(t: ImportTarget) {
     pendingImport = t;
-    const inf = inferModes(t.rows); importAxis.value = inf.axis; importValues.value = inf.values;
-    importFileEl.textContent = `${t.fileName} — ${t.rows.length} numeric rows`;
-    importRowsEl.innerHTML = t.rows.slice(0, 8).map(rw => `<tr><td>${fmtCell(rw[0])}</td><td>${fmtCell(rw[1])}</td><td>${fmtCell(rw[2])}</td></tr>`).join('');
+    const inf = inferImportModes(t.parsed.rows);
+    importAxis.value = AXIS_OUT[inf.axis]; importValues.value = VALS_OUT[inf.values];
+    importFileEl.textContent = `${t.fileName} — ${t.parsed.rows.length} numeric rows`;
+    // An even sample rather than the first 8: the head of a sorted file says
+    // nothing about its far end, and this table is the only look the user gets
+    // at what is about to be computed with.
+    importRowsEl.innerHTML = sampleRows(t.parsed.rows, 8)
+      .map(rw => `<tr><td>${formatCompact(rw[0])}</td><td>${formatCompact(rw[1])}</td><td>${formatCompact(rw[2])}</td></tr>`).join('');
     if (typeof importDlg.showModal === 'function') { if (!importDlg.open) importDlg.showModal(); } else importDlg.setAttribute('open', '');
+    // The canvas has no box until the dialog is laid out; drawing before that
+    // measures 0×0 and the preview comes up blank.
     requestAnimationFrame(renderImportPreview);
   }
-  function closeImport(applied: boolean) {
-    if (!applied && pendingImport) pendingImport.inputEl.value = '';   // reset the file picker on cancel
+  function closeImport() {
+    // Both on accept and on cancel: without this, re-picking the same file fires
+    // no change event and the upload appears to do nothing.
+    if (pendingImport) pendingImport.inputEl.value = '';
     pendingImport = null; importDlg.close();
   }
   importAxis.addEventListener('change', renderImportPreview);
   importValues.addEventListener('change', renderImportPreview);
-  $('mat-import-cancel').addEventListener('click', () => closeImport(false));
-  $('mat-import-close').addEventListener('click', () => closeImport(false));
-  importDlg.addEventListener('cancel', e => { e.preventDefault(); closeImport(false); });
-  importDlg.addEventListener('click', e => { if (e.target === importDlg) closeImport(false); });
+  $('mat-import-cancel').addEventListener('click', () => closeImport());
+  $('mat-import-close').addEventListener('click', () => closeImport());
+  importDlg.addEventListener('cancel', e => { e.preventDefault(); closeImport(); });
+  importDlg.addEventListener('click', e => { if (e.target === importDlg) closeImport(); });
   importAccept.addEventListener('click', () => {
     if (!pendingImport) return;
-    const m = curModes(), data = rowsToData(pendingImport.rows, m);
-    if (data.length < 2) { importStatus.textContent = 'No valid optical rows for this interpretation.'; importStatus.classList.add('err'); return; }
-    pendingImport.onAccept(data, modeLabel(m));
-    closeImport(true);
+    const [axisMode, valueMode] = curModes();
+    const converted = convertOpticalRows(pendingImport.parsed.rows, axisMode, valueMode);
+    if ('error' in converted) { importStatus.textContent = converted.error; importStatus.classList.add('err'); return; }
+    pendingImport.onAccept(converted.data, modeLabel(axisMode, valueMode));
+    closeImport();
   });
 
   const num = (id: string, def: number): number => {
@@ -1823,11 +1899,41 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   });
 
   // ── inputs ──
+  /**
+   * One slot's line in the shared provenance caption, or null when the slot has
+   * nothing to say. A 'file' or 'rii' slot with no table resolves to no material
+   * at all — sources() drops it, so nothing is plotted for it and no readout row
+   * is built. The caption is the only place that can say *why*, so it does.
+   */
+  function slotRefText(s: Slot, i: number): string | null {
+    const v = s.select.value;
+    if (v === 'vo2') return null;   // VO₂ description lives in the Notes box instead
+    const r = s.resolve();
+    if (r) return `${r.label} — ${r.ref}`;
+    const who = matCount > 1 ? `Material ${i + 1}: ` : '';
+    if (v === 'file') {
+      // Someone opening a shared link needs to know the sender had a file and
+      // that the link could not carry it, not merely that none is loaded.
+      return who + (s.sharedFileMissing
+        ? 'uploaded material cannot be shared in a link — re-upload the file'
+        : 'no file loaded — nothing is plotted');
+    }
+    if (v === 'rii') {
+      return who + (s.sharedRiiMissing
+        ? 'shared database entry unavailable — search for it again'
+        : 'no database entry chosen — nothing is plotted');
+    }
+    return null;
+  }
+  /**
+   * The page owns #mat-ref. There is one of it for four slots, so the shared
+   * picker is given a detached span per slot (Slot.riiRefSink) and this function
+   * composes the caption from all of them; letting the picker write here would
+   * mean every database pick erased the other three slots' provenance.
+   */
   function refreshMatRef() {
     if (mod !== 'materials') { $('mat-ref').textContent = ''; return; }
-    const slots = activeSlots();
-    const refs = slots.filter(s => s.select.value !== 'vo2')   // VO₂ description lives in the Notes box instead
-      .map(s => s.resolve()).filter(Boolean).map(r => `${r!.label} — ${r!.ref}`);
+    const refs = activeSlots().map(slotRefText).filter((t): t is string => t !== null);
     $('mat-ref').textContent = refs.join('  ·  ');
   }
 
@@ -1849,12 +1955,24 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     render();
   }
   // Copy slot `si` (state + visible sub-controls) into slot `di`.
+  //
+  // Removing a slot shifts every slot below it up, but each picker's private
+  // `selected` stays bound to the fixed DOM nodes it was wired to, so after a
+  // shift `d.rii.currentPath()` still names the entry slot `di` used to hold.
+  // That is why serializeState reads `s.riiPath` — which this function does move
+  // — and not currentPath(). The picker's own state is only ever authoritative
+  // for the box the user is typing in; `clear()` is deliberately not called here
+  // because it would wipe the search text this function has just copied across.
+  // (No catalog is copied: loadCatalog memoises one promise for the whole page.)
   function copySlotState(di: number, si: number) {
     const d = SLOTS[di], s = SLOTS[si], dp = d.prefix, sp = s.prefix;
     d.select.value = s.select.value;
     d.custom = s.custom;
-    d.catalog = s.catalog ?? d.catalog;
+    d.customKind = s.customKind;
     d.riiPath = s.riiPath;
+    d.sharedFileMissing = s.sharedFileMissing;
+    d.sharedRiiMissing = s.sharedRiiMissing;
+    d.riiRefSink.textContent = s.riiRefSink.textContent;
     d.vo2fm = s.vo2fm;
     ($(`${dp}-vo2-fm`) as HTMLInputElement).value = String(s.vo2fm);
     $(`${dp}-vo2-fm-val`).textContent = s.vo2fm.toFixed(2);
@@ -2066,23 +2184,16 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     return p.toString();
   }
 
-  /** Re-apply a refractiveindex.info entry from its dataPath alone. */
+  /**
+   * Re-apply a refractiveindex.info entry from its dataPath alone — the shared
+   * picker's selectByPath loads the catalog, finds the entry, fetches its table
+   * and calls this slot's onLoaded, which sets custom/customKind/riiPath. It
+   * resolves false when the entry is no longer in the catalog, so the caller can
+   * say so instead of silently showing something else.
+   */
   async function applyRiiByPath(slot: Slot, path: string) {
-    const status = $(`${slot.prefix}-rii-status`);
-    try {
-      if (!slot.catalog) slot.catalog = await loadCatalog();
-      const m = slot.catalog.find(e => e.dataPath === path);
-      if (!m) { status.textContent = 'Shared entry is not in the database'; status.classList.add('err'); return; }
-      const data = await fetchMaterialNK(m.dataPath);
-      slot.custom = { label: m.bookName || m.book, ref: `refractiveindex.info · ${m.pageName}`, data };
-      slot.riiPath = m.dataPath;
-      ($(`${slot.prefix}-rii-input`) as HTMLInputElement).value = m.bookName || m.book;
-      status.textContent = `${m.bookName || m.book} · ${m.pageName} (${data.length} pts)`;
-      status.classList.remove('err');
-    } catch {
-      status.textContent = 'Failed to load the shared entry';
-      status.classList.add('err');
-    }
+    const ok = await slot.rii.selectByPath(path);
+    slot.sharedRiiMissing = !ok;
   }
 
   async function restoreState(hash: string) {
@@ -2125,17 +2236,32 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       while (matCount < n) $('mat-add').click();
       for (let i = 0; i < n; i++) {
         const k = i + 1, sel = p.get(`m${k}`);
-        // an uploaded file cannot travel in a URL — that slot keeps its default
-        if (!sel || sel === 'file') continue;
+        if (!sel) continue;
         const slot = SLOTS[i];
         slot.select.value = sel;
+        // Dispatching change (rather than assigning state) is what shows this
+        // slot's sub-controls and, for 'rii', loads the catalog so the search box
+        // is not permanently dead on a shared link.
         slot.select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (sel === 'file') {
+          // An uploaded table cannot travel in a URL. Previously this slot was
+          // skipped entirely, which left it on its default material — the link
+          // then plotted gold and labelled it gold, with nothing to say the
+          // sender had uploaded a file. Flag it instead; refreshMatRef() reads
+          // the flag, and it has to be a flag because the caption is rebuilt
+          // after restoreState returns. Set after the change event, which clears
+          // stale notices for a freshly chosen option.
+          slot.sharedFileMissing = true;
+          continue;
+        }
         if (sel === 'vo2') {
           const fm = parseFloat(p.get(`v${k}`) ?? '');
           if (Number.isFinite(fm)) setInput(`${slot.prefix}-vo2-fm`, String(fm), 'input');
         }
         if (sel === 'rii') {
           const path = p.get(`d${k}`);
+          // awaited in slot order: the table has to be in place before the
+          // caption, the readout and the range clamp are recomputed below.
           if (path) await applyRiiByPath(slot, path);
         }
       }
