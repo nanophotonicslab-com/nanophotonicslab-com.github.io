@@ -674,7 +674,6 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   .material-import-close:hover { color: var(--primary); border-color: var(--primary-light); }
   .material-import-primary { border-color: var(--primary); background: rgba(99, 102, 241, 0.08); color: var(--primary); }
   .material-import-dialog__actions .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  :global(.rii-result small) { display: block; color: var(--text-muted); font-size: 0.65rem; }
   .shape-strip {
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
@@ -985,9 +984,12 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 </style>
 
 <script>
-  import { MATERIALS } from '../../lib/materials';
-  import { loadCatalog, fetchMaterialNK, searchCatalog } from '../../data/refractiveindex';
-  import type { RIIMaterial } from '../../data/refractiveindex';
+  import { MATERIALS, PHOTON_HC_EV_NM } from '../../lib/materials';
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes, sampleRows, formatCompact,
+    type ImportAxisMode, type ImportValueMode, type RawOpticalRow, type ParsedOpticalFile,
+  } from '../../lib/optical-file';
+  import { setupRIISearch } from '../../lib/material-picker';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
   import { spectrumToHex } from '../../lib/colorimetry';
   import { NL_GEOMETRIES, getNlGeometry, nlSpectrum, nlResonance, nlResonanceEnergyGraphene, grapheneSigma2d, grapheneSigma2dRPA, grapheneSigmaOrder, grapheneR_THG, grapheneR_Kerr, metalSigma2d, geometrySpectrumMulti, type NlOrder, type NlGeometryId, type NlMaterial } from '../../lib/nl-graphene';
@@ -1080,7 +1082,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     ldos: '#06B6D4',
     fe: '#8B5CF6',
   };
-  const HC_EV_NM = 1239.841984;
+  // Same constant the shared optical-file/material modules use, so an imported
+  // energy axis and this page's own eV ⇄ nm conversions cannot drift apart.
+  const HC_EV_NM = PHOTON_HC_EV_NM;
   const IMPORT_PREVIEW_ROWS = 320;
   const LDOS_PROBE_DISTANCE_NM = 5;
   const COLOR_LAMBDA_MIN_NM = 380;
@@ -1119,10 +1123,26 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   };
 
   let result: PlasmonSpectrum | null = null;
+  /**
+   * The two user-supplied sources keep separate buffers on purpose. Because
+   * 'file' only ever reads `uploadedMaterial` and 'rii' only ever reads
+   * `selectedDatabaseMaterial`, switching between them cannot compute with the
+   * other source's table under the new source's name — so this page needs no
+   * `uploadedKind` discriminator (cylinder.astro needs one only because both of
+   * its sources share a single buffer).
+   */
   let uploadedMaterial: number[][] | null = null;
   let selectedDatabaseMaterial: number[][] | null = null;
   let selectedDatabaseLabel = '';
-  let catalogPromise: Promise<RIIMaterial[]> | null = null;
+  /**
+   * Set when a shared link arrived with mat=file: the sender had a local file
+   * and a URL has nowhere to put its table. Kept as state rather than written
+   * straight into the caption because updateControls() runs after restoreState()
+   * and would otherwise overwrite the explanation with the generic empty text.
+   */
+  let sharedFileMissing = false;
+  /** Same idea for mat=rii&dp=…: the entry could not be re-fetched. */
+  let sharedDbUnavailable = false;
   let lastShapeGalleryShape = '';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -1143,11 +1163,6 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     if (document.activeElement !== input) input.value = value;
   }
 
-  type ImportAxisMode = 'wavelength-nm' | 'wavelength-um' | 'energy-ev';
-  type ImportValueMode = 'nk' | 'epsilon';
-  type RawOpticalRow = [number, number, number];
-  interface ParsedOpticalFile { rows: RawOpticalRow[]; skipped: number; }
-  interface ConvertedOpticalFile { data: number[][]; lambdaMinNm: number; lambdaMaxNm: number; nMin: number; nMax: number; kMin: number; kMax: number; }
   interface MaterialImportTarget {
     fileName: string;
     statusEl: HTMLElement;
@@ -1156,98 +1171,6 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     onCancel?: () => void;
   }
   let pendingMaterialImport: (MaterialImportTarget & { parsed: ParsedOpticalFile }) | null = null;
-
-  function parseOpticalFile(text: string): ParsedOpticalFile | { error: string } {
-    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#') && !line.startsWith('%'));
-    if (lines.length < 2) return { error: 'File must have at least 2 data rows' };
-    let delimiter = /\t/;
-    if (lines[0].split(delimiter).length < 3) delimiter = /,/;
-    if (lines[0].split(delimiter).length < 3) delimiter = /\s+/;
-    const first = lines[0].split(delimiter)[0];
-    const start = Number.isNaN(Number.parseFloat(first)) ? 1 : 0;
-    const rows: RawOpticalRow[] = [];
-    let skipped = 0;
-    for (let i = start; i < lines.length; i++) {
-      const parts = lines[i].split(delimiter).map(Number);
-      if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
-        skipped++;
-        continue;
-      }
-      rows.push([parts[0], parts[1], parts[2]]);
-    }
-    if (rows.length < 2) return { error: 'Could not parse at least 2 data rows with 3 numeric columns' };
-    return { rows, skipped };
-  }
-
-  function epsilonToNK(epsRe: number, epsIm: number): [number, number] {
-    const epsAbs = Math.hypot(epsRe, epsIm);
-    const n = Math.sqrt(Math.max(0, (epsAbs + epsRe) / 2));
-    const k = Math.sqrt(Math.max(0, (epsAbs - epsRe) / 2));
-    return [n, Math.abs(k)];
-  }
-
-  function convertOpticalRows(rows: RawOpticalRow[], axisMode: ImportAxisMode, valueMode: ImportValueMode): ConvertedOpticalFile | { error: string } {
-    const data: number[][] = [];
-    let nMin = Infinity, nMax = -Infinity, kMin = Infinity, kMax = -Infinity;
-    for (const [x, a, b] of rows) {
-      let lambdaUm: number;
-      if (axisMode === 'energy-ev') {
-        if (x <= 0) continue;
-        lambdaUm = HC_EV_NM / x / 1000;
-      } else if (axisMode === 'wavelength-nm') {
-        if (x <= 0) continue;
-        lambdaUm = x / 1000;
-      } else {
-        if (x <= 0) continue;
-        lambdaUm = x;
-      }
-      const [n, k] = valueMode === 'epsilon' ? epsilonToNK(a, b) : [a, Math.abs(b)];
-      if (!Number.isFinite(lambdaUm) || !Number.isFinite(n) || !Number.isFinite(k) || n < 0) continue;
-      data.push([lambdaUm, n, k]);
-      nMin = Math.min(nMin, n);
-      nMax = Math.max(nMax, n);
-      kMin = Math.min(kMin, k);
-      kMax = Math.max(kMax, k);
-    }
-    if (data.length < 2) return { error: 'The selected settings do not produce at least 2 valid optical rows' };
-    data.sort((a, b) => a[0] - b[0]);
-    return {
-      data,
-      lambdaMinNm: data[0][0] * 1000,
-      lambdaMaxNm: data[data.length - 1][0] * 1000,
-      nMin,
-      nMax,
-      kMin,
-      kMax,
-    };
-  }
-
-  function inferImportModes(rows: RawOpticalRow[]): { axis: ImportAxisMode; values: ImportValueMode } {
-    const xs = rows.map(row => row[0]).filter(Number.isFinite);
-    const ys = rows.flatMap(row => [row[1], row[2]]).filter(Number.isFinite);
-    const xMax = Math.max(...xs);
-    const yMaxAbs = Math.max(...ys.map(Math.abs));
-    const hasNegativeReal = rows.some(row => row[1] < 0);
-    const values: ImportValueMode = hasNegativeReal || yMaxAbs > 25 ? 'epsilon' : 'nk';
-    let axis: ImportAxisMode = 'wavelength-um';
-    if (xMax > 50) axis = 'wavelength-nm';
-    else if (values === 'epsilon' || xMax > 8) axis = 'energy-ev';
-    return { axis, values };
-  }
-
-  function formatCompact(value: number): string {
-    if (!Number.isFinite(value)) return '';
-    const abs = Math.abs(value);
-    if (abs >= 1000 || (abs > 0 && abs < 0.01)) return value.toExponential(3);
-    return value.toPrecision(5);
-  }
-
-  function sampleRows<T>(rows: T[], maxRows: number): T[] {
-    if (rows.length <= maxRows) return rows.slice();
-    const sampled: T[] = [];
-    for (let i = 0; i < maxRows; i++) sampled.push(rows[Math.round(i * (rows.length - 1) / (maxRows - 1))]);
-    return sampled;
-  }
 
   function previewRange(series: Array<{ y: Float64Array }>): [number, number] {
     let min = Infinity, max = -Infinity;
@@ -1295,15 +1218,25 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     };
   }
 
+  /**
+   * Synchronous by contract: it is called inside a 96-point resonance sweep and
+   * the up-to-80-step radius sweep, so fetching must never happen here. The
+   * database table is loaded once, up front, by the picker.
+   */
   function currentEpsilon(lambdaNm: number): Complex {
     if (state.materialId === 'drude') {
       return drudeEpsilon(lambdaNm, state.drudeEpsB, state.drudeWpEv, state.drudeGammaEv);
     }
-    if (state.materialId === 'file' && uploadedMaterial) {
-      return epsilonFromNKData(uploadedMaterial, lambdaNm);
+    // A user-supplied source with no table yet resolves to vacuum, not to gold.
+    // Substituting a real metal here used to render a plausible Au spectrum
+    // under the caption of whatever the user had selected — the exact failure a
+    // shared ?mat=rii link without dp= produced. The caption says so; see
+    // materialReferenceText()/materialChartSubtitle().
+    if (state.materialId === 'file') {
+      return uploadedMaterial ? epsilonFromNKData(uploadedMaterial, lambdaNm) : { re: 1, im: 0 };
     }
-    if (state.materialId === 'rii' && selectedDatabaseMaterial) {
-      return epsilonFromNKData(selectedDatabaseMaterial, lambdaNm);
+    if (state.materialId === 'rii') {
+      return selectedDatabaseMaterial ? epsilonFromNKData(selectedDatabaseMaterial, lambdaNm) : { re: 1, im: 0 };
     }
     if (!MATERIALS[state.materialId]) {
       return epsilonFromMaterial('au', lambdaNm);
@@ -1410,6 +1343,12 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     $('drude-panel').style.display = state.materialId === 'drude' ? 'flex' : 'none';
     $('file-upload-group').style.display = state.materialId === 'file' ? 'flex' : 'none';
     $('rii-search-group').style.display = state.materialId === 'rii' ? 'flex' : 'none';
+    // The shared-link notices are about the link, not about a later choice.
+    // Cleared here rather than in the <select> handler because presets, the
+    // shape gallery and the Fig. 5a button also assign state.materialId, and
+    // every one of them funnels through updateControls().
+    if (state.materialId !== 'file') sharedFileMissing = false;
+    if (state.materialId !== 'rii') sharedDbUnavailable = false;
     $('material-ref').textContent = materialReferenceText();
     updateShapeGallery();
     updateGeometrySchematic();
@@ -1431,8 +1370,20 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   function materialReferenceText(): string {
     if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
-    if (state.materialId === 'file') return uploadedMaterial ? '' : 'Upload optical constants file';
-    if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search refractiveindex.info database';
+    // 'file' and 'rii' with an empty buffer compute with vacuum, so the caption
+    // says that instead of naming a material the page is not using.
+    if (state.materialId === 'file') {
+      if (uploadedMaterial) return '';
+      return sharedFileMissing
+        ? 'Uploaded material cannot travel in a link — re-upload the file'
+        : 'No file loaded — the curve below is not a material';
+    }
+    if (state.materialId === 'rii') {
+      if (selectedDatabaseMaterial) return selectedDatabaseLabel;
+      return sharedDbUnavailable
+        ? 'Shared database entry unavailable — pick one from the search box'
+        : 'No database entry chosen — the curve below is not a material';
+    }
     return MATERIALS[state.materialId]?.ref ?? '';
   }
 
@@ -1837,8 +1788,18 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   function materialChartSubtitle(): string {
     if (state.materialId === 'drude') return 'Tunable Drude dielectric function';
-    if (state.materialId === 'file') return uploadedMaterial ? 'Computed from uploaded optical constants' : 'Upload optical constants to replace the fallback preview';
-    if (state.materialId === 'rii') return selectedDatabaseLabel || 'Search database to replace the fallback preview';
+    if (state.materialId === 'file') {
+      if (uploadedMaterial) return 'Computed from uploaded optical constants';
+      return sharedFileMissing
+        ? 'The shared link could not carry the uploaded file — showing vacuum until you re-upload it'
+        : 'No file loaded — showing vacuum (ε = 1), not a material';
+    }
+    if (state.materialId === 'rii') {
+      if (selectedDatabaseMaterial) return selectedDatabaseLabel;
+      return sharedDbUnavailable
+        ? 'The shared database entry could not be loaded — showing vacuum until you pick one'
+        : 'No database entry chosen — showing vacuum (ε = 1), not a material';
+    }
     return 'Computed from tabulated n,k interpolation';
   }
 
@@ -1940,6 +1901,11 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     let yMax = 0;
     for (const s of series) {
       for (let i = 0; i < s.data.length; i++) {
+        // Skip non-finite samples rather than letting them poison the range:
+        // one NaN would make yMin/yMax NaN and the axis vanish entirely. The
+        // vacuum fallback (no material yet) is singular against a host index of
+        // exactly 1, where eps/eps_h - 1 = 0 and the polarisability inverts it.
+        if (!Number.isFinite(s.data[i])) continue;
         yMax = Math.max(yMax, s.data[i]);
         yMin = Math.min(yMin, s.data[i]);
       }
@@ -2900,7 +2866,13 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
       materialImportStatus.textContent = converted.error;
       return;
     }
-    materialImportStatus.textContent = `${converted.data.length} rows`;
+    // The skipped count is free information about the file being computed with:
+    // a header block or a stray text column that quietly vanished is worth
+    // seeing before the data is accepted.
+    const skipped = pendingMaterialImport.parsed.skipped;
+    materialImportStatus.textContent = `${converted.data.length} rows`
+      + ` · λ ${converted.lambdaMinNm.toFixed(0)}–${converted.lambdaMaxNm.toFixed(0)} nm`
+      + (skipped ? ` · ${skipped} non-numeric row${skipped === 1 ? '' : 's'} skipped` : '');
   }
 
   function openMaterialImportDialog(target: MaterialImportTarget, text: string) {
@@ -2917,7 +2889,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     materialImportAxis.value = inferred.axis;
     materialImportValues.value = inferred.values;
     materialImportFile.textContent = `${target.fileName} (${parsed.rows.length} numeric rows)`;
-    materialImportRows.innerHTML = parsed.rows.slice(0, 8).map(row =>
+    // Evenly spaced sample, not the first eight rows: a sorted file's head says
+    // nothing about its far end, which is exactly where a unit mix-up shows.
+    materialImportRows.innerHTML = sampleRows(parsed.rows, 8).map(row =>
       `<tr><td>${formatCompact(row[0])}</td><td>${formatCompact(row[1])}</td><td>${formatCompact(row[2])}</td></tr>`
     ).join('');
     if (typeof materialImportDialog.showModal === 'function') materialImportDialog.showModal();
@@ -2926,14 +2900,18 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   }
 
   function cancelMaterialImport() {
-    if (pendingMaterialImport) {
-      pendingMaterialImport.statusEl.className = 'file-name';
-      pendingMaterialImport.statusEl.textContent = 'Import cancelled';
-      pendingMaterialImport.inputEl.value = '';
-      pendingMaterialImport.onCancel?.();
-    }
+    // Cleared first so the dialog's own 'close' event, which also lands here
+    // (Esc), cannot run the cancel copy a second time.
+    const pending = pendingMaterialImport;
     pendingMaterialImport = null;
-    materialImportDialog.close();
+    if (pending) {
+      pending.statusEl.className = 'file-name';
+      pending.statusEl.textContent = 'Import cancelled';
+      // Without this, re-picking the very same file fires no change event.
+      pending.inputEl.value = '';
+      pending.onCancel?.();
+    }
+    if (materialImportDialog.open) materialImportDialog.close();
   }
 
   materialImportAxis.addEventListener('change', renderMaterialImportPreview);
@@ -2943,6 +2921,9 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   materialImportDialog.addEventListener('click', event => {
     if (event.target === materialImportDialog) cancelMaterialImport();
   });
+  // Esc dismisses a <dialog> without going through either button; route it to
+  // the same path so the file input is reset there too.
+  materialImportDialog.addEventListener('close', cancelMaterialImport);
   materialImportAccept.addEventListener('click', () => {
     if (!pendingMaterialImport) return;
     const axisMode = materialImportAxis.value as ImportAxisMode;
@@ -2955,9 +2936,13 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     }
     const axisLabel = axisMode === 'energy-ev' ? 'energy eV' : axisMode === 'wavelength-nm' ? 'wavelength nm' : 'wavelength um';
     const valueLabel = valueMode === 'epsilon' ? 'epsilon' : 'n,k';
-    const label = `${pendingMaterialImport.fileName} (${converted.data.length} points, ${axisLabel}, ${valueLabel})`;
-    pendingMaterialImport.onAccept(converted.data, label);
+    const accepted = pendingMaterialImport;
+    const label = `${accepted.fileName} (${converted.data.length} points, ${axisLabel}, ${valueLabel})`;
     pendingMaterialImport = null;
+    accepted.onAccept(converted.data, label);
+    // Same reason as in cancelMaterialImport: the input keeps the accepted
+    // file selected otherwise, and re-picking it is a no-op.
+    accepted.inputEl.value = '';
     materialImportDialog.close();
   });
 
@@ -2973,6 +2958,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
         inputEl: input,
         onAccept: (data, label) => {
           uploadedMaterial = data;
+          // A real upload settles the question the shared-link notice asked.
+          sharedFileMissing = false;
           fileName.className = 'file-name';
           fileName.textContent = label;
           render();
@@ -2981,63 +2968,31 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     });
   });
 
-  async function ensureCatalog(): Promise<RIIMaterial[]> {
-    if (!catalogPromise) catalogPromise = loadCatalog();
-    return catalogPromise;
-  }
-
-  function setupDatabaseSearch() {
-    const input = $<HTMLInputElement>('rii-search');
-    const results = $('rii-results');
-    const status = $('rii-status');
-
-    async function refresh() {
-      status.textContent = 'Loading catalog...';
-      try {
-        const catalog = await ensureCatalog();
-        const matches = searchCatalog(catalog, input.value, 18);
-        status.textContent = `${matches.length} matches`;
-        results.innerHTML = matches.map((item, index) => `
-          <div class="rii-result" data-index="${index}">
-            ${item.bookName || item.book} - ${item.pageName}
-            <small>${item.shelf}/${item.book}</small>
-          </div>
-        `).join('');
-        results.querySelectorAll<HTMLElement>('.rii-result').forEach((node, index) => {
-          node.addEventListener('click', async () => {
-            const item = matches[index];
-            status.textContent = 'Loading material...';
-            try {
-              selectedDatabaseMaterial = await fetchMaterialNK(item.dataPath);
-              selectedDatabaseLabel = `${item.bookName || item.book}: ${item.pageName}`;
-              status.textContent = `${selectedDatabaseLabel} (${selectedDatabaseMaterial.length} points)`;
-              $('material-ref').textContent = selectedDatabaseLabel;
-              render();
-            } catch (error) {
-              status.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
-              selectedDatabaseMaterial = null;
-              render();
-            }
-          });
-        });
-      } catch (error) {
-        status.textContent = `Catalog error: ${error instanceof Error ? error.message : String(error)}`;
-      }
-    }
-
-    input.addEventListener('input', () => { void refresh(); });
-    input.addEventListener('focus', () => { if (!results.innerHTML) void refresh(); });
-  }
-
-  setupDatabaseSearch();
+  // ── refractiveindex.info search ───────────────────────────────────────────
+  // The picker owns #rii-results (it writes innerHTML and keeps its own hit
+  // list on the element); this page only reacts to what it loads. It also
+  // writes the entry name into #material-ref, which updateControls() then
+  // rewrites from materialReferenceText() on the render below — the page keeps
+  // ownership of its caption.
+  const riiHandle = setupRIISearch(
+    {
+      group: $('rii-search-group'),
+      input: $<HTMLInputElement>('rii-search'),
+      results: $('rii-results'),
+      status: $('rii-status'),
+      ref: $('material-ref'),
+    },
+    (data, material) => {
+      selectedDatabaseMaterial = data;
+      selectedDatabaseLabel = `${material.bookName || material.book}: ${material.pageName}`;
+      sharedDbUnavailable = false;
+      render();
+    },
+  );
 
   $<HTMLSelectElement>('material-select').addEventListener('change', event => {
     state.materialId = (event.target as HTMLSelectElement).value;
-    if (state.materialId === 'rii') {
-      void ensureCatalog().then(() => {
-        if (!$('rii-results').innerHTML) $<HTMLInputElement>('rii-search').dispatchEvent(new Event('focus'));
-      }).catch(() => {});
-    }
+    if (state.materialId === 'rii') void riiHandle.ensureCatalog();
     render();
   });
   $<HTMLSelectElement>('shape-select').addEventListener('change', event => {
@@ -3548,8 +3503,8 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
 
   function materialLabelForExport(): string {
     if (state.materialId === 'drude') return `drude(eps_b=${state.drudeEpsB},wp_eV=${state.drudeWpEv},gamma_eV=${state.drudeGammaEv})`;
-    if (state.materialId === 'file') return uploadedMaterial ? 'uploaded_file' : 'file_unloaded';
-    if (state.materialId === 'rii') return selectedDatabaseLabel || 'database_unselected';
+    if (state.materialId === 'file') return uploadedMaterial ? 'uploaded_file' : 'no_file_loaded_vacuum';
+    if (state.materialId === 'rii') return selectedDatabaseMaterial ? selectedDatabaseLabel : 'no_database_entry_vacuum';
     return `${state.materialId} (${MATERIALS[state.materialId]?.ref ?? ''})`;
   }
 
@@ -3557,6 +3512,12 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
   function serializeState(): string {
     const p = new URLSearchParams();
     p.set('mat', state.materialId);
+    // A database entry is reproducible from its dataPath, so the link carries
+    // it and restoreState re-fetches exactly the same table. Without this the
+    // link said only mat=rii and the receiver silently got a different
+    // material. An uploaded file has no such handle — restoreState says so.
+    const riiPath = riiHandle.currentPath();
+    if (state.materialId === 'rii' && riiPath) p.set('dp', riiPath);
     if (state.materialId === 'drude') {
       p.set('epsb', String(state.drudeEpsB));
       p.set('wp', String(state.drudeWpEv));
@@ -3587,7 +3548,34 @@ const materialOptions = PLASMONIC_MATERIAL_IDS
     const hash = location.hash.slice(1);
     if (!hash) return;
     const p = new URLSearchParams(hash);
-    if (p.has('mat')) state.materialId = p.get('mat')!;
+    if (p.has('mat')) {
+      // Whitelisted like view/axis/sweep below. An id this page cannot compute
+      // with used to fall through to gold inside currentEpsilon while the
+      // caption and the CSV header still carried the unknown name — a link that
+      // plotted a different material than it claimed. Ignoring it leaves the
+      // select, the caption, the curve and the export all on the default.
+      const mat = p.get('mat')!;
+      if (mat === 'drude' || mat === 'file' || mat === 'rii' || MATERIALS[mat]) state.materialId = mat;
+    }
+    if (state.materialId === 'rii' && p.has('dp')) {
+      // Async on purpose: currentEpsilon must stay synchronous, so the table is
+      // fetched once here and the page re-renders when it lands. Until then the
+      // curve is vacuum with a caption saying so — never a stand-in metal.
+      void riiHandle.selectByPath(p.get('dp')!).then(ok => {
+        if (!ok) { sharedDbUnavailable = true; render(); }
+      });
+    } else if (state.materialId === 'rii') {
+      // No dp: an older link, or one shared before an entry was picked. The
+      // catalog is loaded only by the <select> handler and by selectByPath,
+      // neither of which runs on a restore — without this the search box the
+      // caption sends the user to would never return a single result, because
+      // the picker's own input/focus handlers bail out while the catalog is null.
+      void riiHandle.ensureCatalog();
+    } else if (state.materialId === 'file') {
+      // An uploaded table cannot travel in a URL. Say so instead of resolving
+      // to something that merely looks like a material.
+      sharedFileMissing = true;
+    }
     if (p.has('epsb')) state.drudeEpsB = Number.parseFloat(p.get('epsb')!);
     if (p.has('wp')) state.drudeWpEv = Number.parseFloat(p.get('wp')!);
     if (p.has('gamma')) state.drudeGammaEv = Number.parseFloat(p.get('gamma')!);
