@@ -6,7 +6,7 @@ export interface ToolVersion {
 export const TOOL_VERSIONS: Record<string, ToolVersion> = {
   'mie-scattering':          { version: '1.0.0', updated: '2026-06-10' },
   'plasmonic-nanoparticles':  { version: '1.0.0', updated: '2026-06-10' },
-  'cylinder':                { version: '1.0.0', updated: '2026-06-10' },
+  'cylinder':                { version: '1.1.0', updated: '2026-08-28' },
   'bem-solver':              { version: '0.1.0', updated: '2026-06-10' },
   'photothermal':            { version: '1.0.0', updated: '2026-06-10' },
   'bpm':                     { version: '1.0.0', updated: '2026-06-10' },

@@ -93,8 +93,19 @@ const cylPresets = [
               <option value="si">Silicon (Si)</option>
               <option value="al">Aluminum (Al)</option>
               <option value="tio2">TiO₂</option>
+              <option value="file">Upload file&hellip;</option>
+              <option value="rii">Search database&hellip;</option>
             </select>
             <span class="material-ref" id="material-ref"></span>
+            <div class="file-upload-row" id="file-upload-group" style="display:none">
+              <input type="file" id="file-upload" accept=".csv,.tsv,.txt,.dat" class="file-input">
+              <span class="file-name" id="file-name"></span>
+            </div>
+            <div class="rii-search" id="rii-search-group" style="display:none">
+              <input type="text" id="rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+              <div class="rii-results" id="rii-results"></div>
+              <span class="material-ref" id="rii-status"></span>
+            </div>
           </div>
 
           <div class="param drude-panel" id="drude-group" style="display:none">
@@ -416,6 +427,54 @@ const cylPresets = [
           </div>
         </div>
       </div>
+
+      <!-- Three numeric columns are genuinely ambiguous between (λ, n, k) and
+           (E, ε′, ε″), so an upload is confirmed rather than guessed at. The
+           dialog opens on the inferred reading and shows what it would produce. -->
+      <dialog class="material-import-dialog" id="material-import-dialog" aria-labelledby="material-import-title">
+        <div class="material-import-dialog__panel">
+          <div class="material-import-dialog__header">
+            <div>
+              <h3 id="material-import-title">Confirm Material Import</h3>
+              <p id="material-import-file">No file selected</p>
+            </div>
+            <button type="button" class="structure-dialog__close" id="material-import-close" aria-label="Cancel material import">&times;</button>
+          </div>
+          <div class="material-import-dialog__grid">
+            <label>
+              <span>First column</span>
+              <select id="material-import-axis" class="param-select">
+                <option value="energy-ev">Photon energy (eV)</option>
+                <option value="wavelength-nm">Wavelength (nm)</option>
+                <option value="wavelength-um">Wavelength (&micro;m)</option>
+              </select>
+            </label>
+            <label>
+              <span>Columns 2 and 3</span>
+              <select id="material-import-values" class="param-select">
+                <option value="epsilon">Re &epsilon;, Im &epsilon;</option>
+                <option value="nk">n, k</option>
+              </select>
+            </label>
+          </div>
+          <div class="material-import-dialog__preview">
+            <canvas id="material-import-preview" aria-label="Material preview"></canvas>
+          </div>
+          <div class="material-import-dialog__table-wrap">
+            <table class="material-import-dialog__table">
+              <thead>
+                <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+              </thead>
+              <tbody id="material-import-rows"></tbody>
+            </table>
+          </div>
+          <p class="material-import-dialog__status" id="material-import-status"></p>
+          <div class="material-import-dialog__actions">
+            <button type="button" class="chart-tool-btn" id="material-import-cancel">Cancel</button>
+            <button type="button" class="chart-tool-btn active" id="material-import-accept">Use material</button>
+          </div>
+        </div>
+      </dialog>
 
       <dialog class="structure-dialog" id="structure-dialog" aria-labelledby="structure-dialog-title">
         <div class="structure-dialog__panel">
@@ -957,6 +1016,11 @@ initPermalinks({
     nkToEpsilon,
     type DrudeParams,
   } from '../../lib/materials';
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes, sampleRows, formatCompact,
+    type ImportAxisMode, type ImportValueMode, type RawOpticalRow,
+  } from '../../lib/optical-file';
+  import { setupRIISearch } from '../../lib/material-picker';
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   type ExcitationMode = 'plane' | 'electron';
@@ -1143,9 +1207,36 @@ initPermalinks({
     return PHOTON_HC_EV_NM / Math.max(1e-9, wEv);
   }
 
+  /**
+   * Optical constants brought in by the user — either uploaded or fetched from
+   * refractiveindex.info. Held in the canonical [[λ_µm, n, k], …] form so the
+   * rest of the page cannot tell the difference from a built-in table.
+   */
+  let uploadedMaterial: number[][] | null = null;
+  /** dataPath of the database entry in use, which is what a permalink carries. */
+  let uploadedRiiPath: string | null = null;
+  /**
+   * Which option the table belongs to. Both 'file' and 'rii' resolve through the
+   * same buffer, so without this, switching from one to the other would silently
+   * keep computing with the previous source's data under the new source's name.
+   */
+  let uploadedKind: 'file' | 'rii' | null = null;
+  /**
+   * Set when a shared link arrived with mat=file: the sender had a local file,
+   * and a URL has nowhere to put its table. Kept as state rather than written
+   * straight into the caption because updateMaterialUI runs after restoreState
+   * and would otherwise overwrite the explanation with the generic empty text.
+   */
+  let sharedFileMissing = false;
+
   function materialNK(lambdaNm: number): [number, number] {
     if (state.materialId === 'custom') return epsilonToNK(state.eps1_re, state.eps1_im);
     if (state.materialId === 'drude') return drudeNK(lambdaNm, state.drude);
+    // An uploaded file and a database entry are just another tabulated material:
+    // both arrive as [[λ_µm, n, k], …], the same shape MATERIALS[x].data has.
+    if (state.materialId === 'file' || state.materialId === 'rii') {
+      return uploadedMaterial ? interpolateNK(uploadedMaterial, lambdaNm) : [1, 0];
+    }
     const material = MATERIALS[state.materialId];
     if (!material) return [1, 0];
     return interpolateNK(material.data, lambdaNm);
@@ -3290,6 +3381,151 @@ initPermalinks({
   const materialRef = $('material-ref');
   const epsGroup = $('eps-group');
   const drudeGroup = $('drude-group');
+  const fileUploadGroup = $('file-upload-group');
+  const riiSearchGroup = $('rii-search-group');
+
+  // ── user-supplied optical constants: database search and file upload ───────
+  const riiHandle = setupRIISearch(
+    {
+      group: riiSearchGroup,
+      input: $<HTMLInputElement>('rii-search'),
+      results: $('rii-results'),
+      status: $('rii-status'),
+      ref: materialRef,
+    },
+    (data, material) => {
+      uploadedMaterial = data;
+      uploadedRiiPath = material.dataPath;
+      uploadedKind = 'rii';
+      // scheduleRecompute, not recompute: it is a deliberate no-op in the
+      // eels-perp view, which owns its own expensive update path
+      scheduleRecompute();
+    },
+  );
+
+  // The confirm-import dialog: a three-column file is ambiguous between
+  // (λ, n, k) and (E, ε′, ε″), so the reading is shown and confirmed.
+  const importDialog = $<HTMLDialogElement>('material-import-dialog');
+  const importAxis = $<HTMLSelectElement>('material-import-axis');
+  const importValues = $<HTMLSelectElement>('material-import-values');
+  const importRowsBody = $('material-import-rows');
+  const importStatus = $('material-import-status');
+  const importAccept = $<HTMLButtonElement>('material-import-accept');
+  const importPreview = $<HTMLCanvasElement>('material-import-preview');
+  const importFileLabel = $('material-import-file');
+  const fileInput = $<HTMLInputElement>('file-upload');
+  const fileNameEl = $('file-name');
+  let pendingRows: RawOpticalRow[] | null = null;
+  let pendingName = '';
+
+  const curImportModes = (): [ImportAxisMode, ImportValueMode] =>
+    [importAxis.value as ImportAxisMode, importValues.value as ImportValueMode];
+
+  /** Small self-contained preview: n solid, k dashed, versus wavelength. */
+  function drawImportPreview(data: number[][]): void {
+    const r = importPreview.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return;
+    const dpr = window.devicePixelRatio || 1;
+    importPreview.width = Math.round(r.width * dpr);
+    importPreview.height = Math.round(r.height * dpr);
+    const g = importPreview.getContext('2d')!;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, r.width, r.height);
+    const ct = chartTheme();
+    const w = r.width, h = r.height, m = { l: 40, r: 8, t: 8, b: 20 };
+    g.strokeStyle = ct.grid; g.lineWidth = 1;
+    g.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    g.font = '10px Inter, system-ui, sans-serif';
+    if (data.length < 2) {
+      g.fillStyle = ct.textMuted; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('No valid data for this interpretation', w / 2, h / 2);
+      return;
+    }
+    const xs = data.map(d => d[0]), ns = data.map(d => d[1]), ks = data.map(d => d[2]);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    const ymax = Math.max(1e-6, ...ns, ...ks), ymin = Math.min(0, ...ns, ...ks);
+    const px = (x: number) => m.l + (x - xmin) / ((xmax - xmin) || 1) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / ((ymax - ymin) || 1) * (h - m.t - m.b);
+    const line = (vals: number[], dash: number[]) => {
+      g.strokeStyle = ct.primary; g.lineWidth = 1.6; g.setLineDash(dash);
+      g.beginPath();
+      data.forEach((d, i) => { const X = px(d[0]), Y = py(vals[i]); i ? g.lineTo(X, Y) : g.moveTo(X, Y); });
+      g.stroke(); g.setLineDash([]);
+    };
+    line(ns, []); line(ks, [4, 3]);
+    g.fillStyle = ct.textMuted;
+    g.textAlign = 'left'; g.textBaseline = 'top';
+    g.fillText('n (—)   k (- -)  vs λ (µm)', m.l + 4, m.t + 2);
+  }
+
+  function renderImportPreview(): void {
+    if (!pendingRows) return;
+    const converted = convertOpticalRows(pendingRows, ...curImportModes());
+    if ('error' in converted) {
+      importAccept.disabled = true;
+      importStatus.textContent = converted.error;
+      drawImportPreview([]);
+      return;
+    }
+    importAccept.disabled = false;
+    importStatus.textContent =
+      `${converted.data.length} rows · λ ${converted.lambdaMinNm.toFixed(0)}–${converted.lambdaMaxNm.toFixed(0)} nm`
+      + ` · n ${converted.nMin.toFixed(3)}–${converted.nMax.toFixed(3)}`
+      + ` · k ${converted.kMin.toFixed(3)}–${converted.kMax.toFixed(3)}`;
+    drawImportPreview(converted.data);
+  }
+
+  function openImportDialog(rows: RawOpticalRow[], fileName: string): void {
+    pendingRows = rows;
+    pendingName = fileName;
+    const guess = inferImportModes(rows);
+    importAxis.value = guess.axis;
+    importValues.value = guess.values;
+    importFileLabel.textContent = `${fileName} — ${rows.length} numeric rows`;
+    importRowsBody.innerHTML = sampleRows(rows, 8)
+      .map(r => `<tr><td>${formatCompact(r[0])}</td><td>${formatCompact(r[1])}</td><td>${formatCompact(r[2])}</td></tr>`)
+      .join('');
+    if (!importDialog.open) importDialog.showModal();
+    renderImportPreview();
+  }
+
+  function closeImportDialog(): void {
+    pendingRows = null;
+    if (importDialog.open) importDialog.close();
+    fileInput.value = '';
+  }
+
+  importAxis.addEventListener('change', renderImportPreview);
+  importValues.addEventListener('change', renderImportPreview);
+  $('material-import-cancel').addEventListener('click', closeImportDialog);
+  $('material-import-close').addEventListener('click', closeImportDialog);
+  importAccept.addEventListener('click', () => {
+    if (!pendingRows) return;
+    const converted = convertOpticalRows(pendingRows, ...curImportModes());
+    if ('error' in converted) return;
+    uploadedMaterial = converted.data;
+    uploadedRiiPath = null;
+    uploadedKind = 'file';
+    sharedFileMissing = false;
+    fileNameEl.textContent = pendingName;
+    materialRef.textContent = `uploaded · ${converted.data.length} points`;
+    closeImportDialog();
+    scheduleRecompute();
+  });
+
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files?.[0];
+    if (!f) return;
+    f.text().then(text => {
+      const parsed = parseOpticalFile(text);
+      if ('error' in parsed) {
+        fileNameEl.textContent = parsed.error;
+        fileInput.value = '';
+        return;
+      }
+      openImportDialog(parsed.rows, f.name);
+    });
+  });
   const drudeInputs = {
     epsB: $<HTMLInputElement>('drude-epsb'),
     wpEv: $<HTMLInputElement>('drude-wp'),
@@ -3736,11 +3972,30 @@ initPermalinks({
 
   function updateMaterialUI() {
     state.materialId = materialSelect.value;
-    epsGroup.style.display = state.materialId === 'custom' ? '' : 'none';
-    drudeGroup.style.display = state.materialId === 'drude' ? '' : 'none';
-    if (state.materialId === 'custom') materialRef.textContent = 'Constant dielectric function';
-    else if (state.materialId === 'drude') materialRef.textContent = `Drude model, ωp=${state.drude.wpEv.toFixed(2)} eV`;
-    else materialRef.textContent = MATERIALS[state.materialId]?.ref ?? '';
+    const id = state.materialId;
+    epsGroup.style.display = id === 'custom' ? '' : 'none';
+    drudeGroup.style.display = id === 'drude' ? '' : 'none';
+    fileUploadGroup.style.display = id === 'file' ? '' : 'none';
+    riiSearchGroup.style.display = id === 'rii' ? '' : 'none';
+    if (id === 'custom') materialRef.textContent = 'Constant dielectric function';
+    else if (id === 'drude') materialRef.textContent = `Drude model, ωp=${state.drude.wpEv.toFixed(2)} eV`;
+    // file and rii own the caption themselves — the picker writes the file name
+    // or the database page name there, and rewriting it here would erase it.
+    // The exception is having no data yet: materialNK falls back to n=1, k=0,
+    // so without this the page would quietly plot vacuum under a material's
+    // name. Reachable from the ?material= query permalink, which carries the id
+    // but has nowhere to put the table.
+    else if (id === 'file' || id === 'rii') {
+      if (!uploadedMaterial) {
+        materialRef.textContent = id === 'file'
+          // Someone who opens a shared link needs to know the sender had a file
+          // and that the link could not carry it, not just that none is loaded.
+          ? (sharedFileMissing
+            ? 'uploaded material cannot be shared in a link — re-upload the file'
+            : 'no file loaded — the curve below is not a material')
+          : 'no database entry chosen — the curve below is not a material';
+      }
+    } else materialRef.textContent = MATERIALS[id]?.ref ?? '';
   }
 
   const MAT_COLORS: Record<string, string> = {
@@ -3751,6 +4006,8 @@ initPermalinks({
     tio2: '#C084FC',
     drude: '#60A5FA',
     custom: '#34D399',
+    file: '#F472B6',
+    rii: '#22D3EE',
   };
 
   function escapeHtml(value: string): string {
@@ -4147,7 +4404,21 @@ initPermalinks({
   $('field-modal-share').addEventListener('click', () => $('field-share-btn').click());
 
   materialSelect.addEventListener('change', () => {
+    const v = materialSelect.value;
+    // the shared-link notice is about the link, not about this fresh choice
+    if (v !== 'file') sharedFileMissing = false;
+    // drop a table that belonged to the other user-supplied source
+    if ((v === 'file' || v === 'rii') && uploadedKind && uploadedKind !== v) {
+      uploadedMaterial = null;
+      uploadedRiiPath = null;
+      uploadedKind = null;
+      fileNameEl.textContent = '';
+      riiHandle.clear();
+    }
     updateMaterialUI();
+    if (v === 'rii') { void riiHandle.ensureCatalog(); return; }
+    // nothing to plot until a file has been accepted through the dialog
+    if (v === 'file' && !uploadedMaterial) return;
     scheduleRecompute();
   });
   Object.values(drudeInputs).forEach(input => {
@@ -4294,6 +4565,13 @@ initPermalinks({
     // configuration tailored to it; otherwise restore the plane-wave defaults.
     const disp = state.excitation === 'electron' && state.view === 'disp-wq';
     const matId = disp ? 'custom' : 'ag';
+    // Reset leaves the built-in tables selected, so drop any user-supplied
+    // material with it — otherwise a stale upload would still be resolvable.
+    uploadedMaterial = null;
+    uploadedRiiPath = null;
+    uploadedKind = null;
+    riiHandle.clear();
+    fileNameEl.textContent = '';
     const wMin = disp ? 1 : 0.2;
     const wMax = disp ? 30 : 4;
     const mMax = disp ? 3 : 4;
@@ -4397,6 +4675,9 @@ initPermalinks({
     drawChart();
     drawPerpMap();
     drawFieldProfile();
+    // the import preview draws from the theme too, and is the one canvas that
+    // can be on screen without being in this list
+    if (pendingRows) renderImportPreview();
   });
 
   // ===== Export / Share =====
@@ -4552,6 +4833,10 @@ initPermalinks({
     p.set('a', String(state.a_nm));
     p.set('eh', String(state.eps_h));
     p.set('mat', state.materialId);
+    // A database entry is reproducible from its dataPath, so the link carries it
+    // and restore re-fetches exactly the same table. An uploaded file has no
+    // such handle — see restoreState, which says so rather than pretending.
+    if (state.materialId === 'rii' && uploadedRiiPath) p.set('dp', uploadedRiiPath);
     p.set('e1r', String(state.eps1_re));
     p.set('e1i', String(state.eps1_im));
     p.set('wmin', String(state.w_min));
@@ -4606,7 +4891,22 @@ initPermalinks({
     const p = new URLSearchParams(hash);
     if (p.has('a')) { state.a_nm = parseFloat(p.get('a')!); ($('r-num') as HTMLInputElement).value = String(state.a_nm); ($('r-slider') as HTMLInputElement).value = String(state.a_nm); }
     if (p.has('eh')) { state.eps_h = parseFloat(p.get('eh')!); ($('eh-num') as HTMLInputElement).value = String(state.eps_h); ($('eh-slider') as HTMLInputElement).value = String(state.eps_h); }
-    if (p.has('mat')) { state.materialId = p.get('mat')!; materialSelect.value = state.materialId; }
+    if (p.has('mat')) {
+      state.materialId = p.get('mat')!;
+      materialSelect.value = state.materialId;
+      if (state.materialId === 'rii' && p.has('dp')) {
+        // async: re-fetch the shared entry, then recompute with it. Until it
+        // lands the curve is not drawn, which is honest — better than plotting
+        // vacuum under the name of a material.
+        void riiHandle.selectByPath(p.get('dp')!).then(okLoad => {
+          if (!okLoad) materialRef.textContent = 'shared database entry unavailable';
+        });
+      } else if (state.materialId === 'file') {
+        // An uploaded table cannot travel in a URL. Say so instead of silently
+        // resolving to vacuum, and leave the picker open for a re-upload.
+        sharedFileMissing = true;
+      }
+    }
     if (p.has('e1r')) { state.eps1_re = parseFloat(p.get('e1r')!); ($('e1r-num') as HTMLInputElement).value = String(state.eps1_re); ($('e1r-slider') as HTMLInputElement).value = String(state.eps1_re); }
     if (p.has('e1i')) { state.eps1_im = parseFloat(p.get('e1i')!); ($('e1i-num') as HTMLInputElement).value = String(state.eps1_im); ($('e1i-slider') as HTMLInputElement).value = String(state.eps1_im); }
     if (p.has('wmin')) { state.w_min = parseFloat(p.get('wmin')!); ($('w-min') as HTMLInputElement).value = String(state.w_min); }
