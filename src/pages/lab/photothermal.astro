@@ -1562,6 +1562,12 @@ initPermalinks({
   }
 
   restoreState();
+  // initPermalinks applies ?material= straight to the select, before this script
+  // binds its change listener, so nothing else reconciles the two copies of the
+  // choice. Without this line the dropdown reads Silver while getNK still
+  // computes Gold from the stale state.material, and the caption ("Johnson &
+  // Christy 1972") is true of both metals, so nothing gives it away.
+  state.material = materialSelect.value;
   refreshMaterialControls();
 
   // Initial
