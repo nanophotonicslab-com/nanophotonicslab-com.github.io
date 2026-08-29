@@ -243,7 +243,7 @@ import '../../styles/lab.css';
 
 <script>
   import { LiteGraph, LGraph, LGraphCanvas } from 'litegraph.js';
-  import { MATERIALS, interpolateNK, nkToEpsilon, drudeEpsilon } from '../../lib/materials';
+  import { MATERIALS, PHOTON_HC_EV_NM, interpolateNK, nkToEpsilon, drudeEpsilon } from '../../lib/materials';
   import { csqrtUpper } from '../../lib/complex';
   import { computeMie } from '../../lib/mie';
   import { computePlasmonSpectrum, SHAPE_OPTIONS, type PlasmonShapeId } from '../../lib/plasmonic-nanoparticles';
@@ -257,7 +257,6 @@ import '../../styles/lab.css';
   import { loadCatalog, fetchMaterialNK, searchCatalog, type RIIMaterial } from '../../data/refractiveindex';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const HC = 1239.841984;
 
   // ── Validated series palettes (dataviz six-checks), per theme ──
   const SIGMA_COLORS = {
@@ -283,8 +282,16 @@ import '../../styles/lab.css';
       const nk = csqrtUpper(drudeEpsilon(lambdaNm, { epsB: mat.epsB!, wpEv: mat.wpEv!, gammaEv: mat.gammaEv! }));
       return [nk.re, nk.im];
     }
+    // The 'rii' branch deliberately still throws when the table has not landed:
+    // the node then produces no output at all, which is more honest than
+    // quietly substituting vacuum under a database entry's name.
     if (mat.kind === 'rii') return interpolateNK(riiNK.get(mat.dataPath!)!, lambdaNm);
-    return interpolateNK(MATERIALS[mat.id!].data, lambdaNm);
+    // A built-in id that no longer exists (an old graph naming a retired key)
+    // resolves to vacuum rather than throwing, so the failure is a visibly empty
+    // curve instead of a swallowed exception leaving the previous one on screen.
+    const entry = MATERIALS[mat.id!];
+    if (!entry) return [1, 0];
+    return interpolateNK(entry.data, lambdaNm);
   }
   // Fetch tabulated data for a graph that references an RII material (e.g. a
   // restored permalink); re-runs the graph when the data lands.
@@ -431,7 +438,13 @@ import '../../styles/lab.css';
   const RII_OPTION = 'database…';
   defineNode('workbench/material', 'Material', 'source', (n) => {
     n.addOutput('material', 'material');
-    n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05, riiDataPath: '', riiLabel: '' };
+    // lastConcrete is a property, not a bare field, so it survives save/restore:
+    // cancelling the database dialog on a restored graph used to fall back to
+    // hard-coded gold instead of whatever the node was set to before. Appended
+    // deliberately — configure() merges onto these defaults, and inserting a key
+    // that gains a widget at a low index would shift widgets_values in every
+    // graph already shared.
+    n.properties = { source: 'au', epsB: 1, wpEv: 9, gammaEv: 0.05, riiDataPath: '', riiLabel: '', lastConcrete: 'au' };
     n.addWidget('combo', 'source', n.properties.source, (v: string) => {
       if (v === RII_OPTION) openRiiDialog(n);
       scheduleRun();
@@ -451,7 +464,7 @@ import '../../styles/lab.css';
       else mat = { kind: 'rii', dataPath: p.riiDataPath };
     } else {
       n.title = 'Material';
-      n._lastConcrete = p.source;
+      p.lastConcrete = p.source;
       mat = p.source === 'drude'
         ? { kind: 'drude', epsB: p.epsB, wpEv: p.wpEv, gammaEv: p.gammaEv }
         : { kind: 'db', id: p.source };
@@ -540,9 +553,13 @@ import '../../styles/lab.css';
     if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
     const sig = JSON.stringify([mat, e, geo]);
     if (sig !== n._sig) {
-      n._sig = sig;
+      // _sig is the memo key: stamp it only once the computation has succeeded.
+      // Stamping first meant a throw (swallowed by defineNode) left the key
+      // updated but _out stale, so the previous material's spectrum stayed on
+      // screen under the new material's name and never recomputed.
       const spec = spectrumFromMie(computeMie((l) => nkOf(mat, l), geo.radiusNm, e.nHost, e.lmin, e.lmax, POINTS));
       n._out = { spectrum: spec, radiusNm: geo.radiusNm } as ProducerOutput;
+      n._sig = sig;
     }
     const c = sigmaColors();
     n._chart = {
@@ -572,7 +589,6 @@ import '../../styles/lab.css';
     if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
     const sig = JSON.stringify([mat, e, geo]);
     if (sig !== n._sig) {
-      n._sig = sig;
       const raw = computePlasmonSpectrum({
         shape: geo.shape as PlasmonShapeId,
         materialId: mat.kind === 'db' ? mat.id! : 'au',
@@ -584,6 +600,7 @@ import '../../styles/lab.css';
         spectrum: spectrumFromPlasmon(raw),
         radiusNm: Math.cbrt((3 * raw.volumeNm3) / (4 * Math.PI)),
       } as ProducerOutput;
+      n._sig = sig;   // only after the compute succeeds — see the Mie node
     }
     const c = sigmaColors();
     n._chart = {
@@ -616,15 +633,15 @@ import '../../styles/lab.css';
     if (!mat || !e || !geo) { n._chart = null; n.setOutputData(0, null); return; }
     const sig = JSON.stringify([mat, e, geo, n.properties]);
     if (sig !== n._sig) {
-      n._sig = sig;
       const gamma = 1 + n.properties.kev / 510.99895;
       const beta = Math.sqrt(Math.max(1e-6, 1 - 1 / (gamma * gamma)));
       const spec = spectrumFromElectron(computeElectronSphereSpectrum(
         (l) => nkOf(mat, l),
         { radiusNm: geo.radiusNm, beta, impactNm: n.properties.impactNm, lmax: 6, qCutNm: 0.71, nz: 32 },
-        HC / e.lmax, HC / e.lmin, 120,
+        PHOTON_HC_EV_NM / e.lmax, PHOTON_HC_EV_NM / e.lmin, 120,
       ));
       n._out = { spectrum: spec, radiusNm: geo.radiusNm } as ProducerOutput;
+      n._sig = sig;   // only after the compute succeeds — see the Mie node
     }
     const c = electronColors();
     n._chart = {
@@ -666,7 +683,6 @@ import '../../styles/lab.css';
     const L = 160;
     const sig = JSON.stringify([mat, e, from, to, steps, p.channel]);
     if (sig !== n._sig) {
-      n._sig = sig;
       const radii = new Float64Array(steps), lambda = new Float64Array(L);
       const values = new Float64Array(steps * L);
       const peakLam = new Float64Array(steps), peakVal = new Float64Array(steps);
@@ -692,6 +708,7 @@ import '../../styles/lab.css';
         spectrum: { x: radii, axis: 'radiusNm', series: { lambdaPeakNm: peakLam, peakValue: peakVal } } as Spectrum,
         radiusNm: (from + to) / 2,
       } as ProducerOutput;
+      n._sig = sig;   // only after the compute succeeds — see the Mie node
     }
     n._map = n._sweep;
     n._chart = null;
@@ -776,8 +793,8 @@ import '../../styles/lab.css';
     const rMax = Math.max(rMin + 1, p.rMaxNm);
     const sig = JSON.stringify([mat, e.nHost, p.channel, rMin, rMax, n._dataRev]);
     if (sig !== n._sig) {
-      n._sig = sig;
       n._fit = fitMieRadius((l: number) => nkOf(mat, l), e.nHost, n._data.x, n._data.y, p.channel as MieChannel, rMin, rMax);
+      n._sig = sig;   // only after the compute succeeds — see the Mie node
     }
     const fit = n._fit;
     const residual = Float64Array.from(n._data.y, (v: number, i: number) => v - fit.model[i]);
@@ -1201,7 +1218,9 @@ import '../../styles/lab.css';
   let riiCatalog: RIIMaterial[] | null = null;
   let riiTarget: any = null;
   const riiModal = $('rii-modal'), riiQuery = $('rii-query') as unknown as HTMLInputElement;
-  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  // Catalog strings come off the network and are interpolated into innerHTML
+  // below. The apostrophe matters too — matches src/lib/material-picker.ts.
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
   function openRiiDialog(node: any) {
     riiTarget = node;
@@ -1220,7 +1239,7 @@ import '../../styles/lab.css';
     riiModal.hidden = true;
     // Cancelled with nothing ever picked → fall back to the last concrete source.
     if (riiTarget && riiTarget.properties.source === RII_OPTION && !riiTarget.properties.riiDataPath) {
-      setProp(riiTarget, 'source', riiTarget._lastConcrete || 'au');
+      setProp(riiTarget, 'source', riiTarget.properties.lastConcrete || 'au');
       scheduleRun();
     }
     riiTarget = null;
@@ -1252,7 +1271,13 @@ import '../../styles/lab.css';
       })
       .catch((err) => { $('rii-status').textContent = `Fetch failed: ${err?.message || err}`; });
   }
-  riiQuery.addEventListener('input', () => renderRiiResults(riiQuery.value));
+  // Debounced: every keystroke otherwise filtered the whole catalog (~3600
+  // entries) and rebuilt 40 rows of innerHTML synchronously.
+  let riiQueryTimer: ReturnType<typeof setTimeout> | undefined;
+  riiQuery.addEventListener('input', () => {
+    clearTimeout(riiQueryTimer);
+    riiQueryTimer = setTimeout(() => renderRiiResults(riiQuery.value), 150);
+  });
   riiQuery.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeRiiDialog(); });
   $('rii-close').addEventListener('click', closeRiiDialog);
   riiModal.addEventListener('pointerdown', (ev) => { if (ev.target === riiModal) closeRiiDialog(); });
