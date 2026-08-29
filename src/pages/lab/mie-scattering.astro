@@ -198,7 +198,7 @@ const miePresets = [
               <div class="param" id="core-r-group">
                 <div class="param-header">
                   <label>Radius (nm)</label>
-                  <input type="number" class="param-number" id="core-r-num" value="60" step="1" min="1">
+                  <input type="number" class="param-number" id="core-r-num" value="60" step="0.01" min="1">
                 </div>
                 <input type="range" class="param-slider" id="core-r-slider" aria-label="Core radius (nm)" min="5" max="400" step="1" value="60">
                 <div class="param-limits">
@@ -213,7 +213,7 @@ const miePresets = [
           <div class="param">
             <div class="param-header">
               <label id="radius-label">Radius (nm)</label>
-              <input type="number" class="param-number" id="r-num" value="50" step="1" min="1">
+              <input type="number" class="param-number" id="r-num" value="50" step="0.01" min="1">
             </div>
             <input type="range" class="param-slider" id="r-slider" aria-labelledby="radius-label" min="10" max="500" step="1" value="50">
             <div class="param-limits">
@@ -1411,24 +1411,44 @@ initPermalinks({
   // === Param + Tab helpers ===
 
   interface ParamHandle { readonly value: number; setValue(v: number): void; }
-  function setupParam(numId: string, sliderId: string, minId: string, maxId: string, fmt: (v: number) => string, onChange: () => void): ParamHandle {
-    const num = document.getElementById(numId) as HTMLInputElement, slider = document.getElementById(sliderId) as HTMLInputElement;
-    const minIn = document.getElementById(minId) as HTMLInputElement, maxIn = document.getElementById(maxId) as HTMLInputElement;
-    function clamp(v: number) { return Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)); }
-    slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); onChange(); });
-    num.addEventListener('change', () => { const v = clamp(parseFloat(num.value) || 0); slider.value = v.toString(); num.value = fmt(v); onChange(); });
-    function fl() { const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value); if (isNaN(lo) || isNaN(hi) || lo >= hi) return; slider.min = lo.toString(); slider.max = hi.toString(); const v = clamp(parseFloat(slider.value)); slider.value = v.toString(); num.value = fmt(v); onChange(); }
-    minIn.addEventListener('change', fl); maxIn.addEventListener('change', fl);
-    return { get value() { return parseFloat(slider.value); }, setValue(v: number) { const c = clamp(v); slider.value = c.toString(); num.value = fmt(c); onChange(); } };
-  }
+  /**
+   * One value driven by a precise number box and a coarse slider.
+   *
+   * The value is held here rather than read back out of the slider. A range
+   * input silently quantises whatever is assigned to it, so routing the value
+   * through slider.value made the slider's own step the resolution limit of the
+   * whole control: typing a radius of 50.5 nm into the box came back as 50,
+   * because the slider steps in 1 nm. The slider now only positions its thumb.
+   *
+   * The number box is also read back after formatting, so the value that gets
+   * computed is exactly the one on screen — no hidden precision behind a
+   * rounded display.
+   */
   function setupParamEl(num: HTMLInputElement, slider: HTMLInputElement, minIn: HTMLInputElement, maxIn: HTMLInputElement, fmt: (v: number) => string, onChange: () => void): ParamHandle {
     function clamp(v: number) { return Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)); }
-    slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); onChange(); });
-    num.addEventListener('change', () => { const v = clamp(parseFloat(num.value) || 0); slider.value = v.toString(); num.value = fmt(v); onChange(); });
-    function fl() { const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value); if (isNaN(lo) || isNaN(hi) || lo >= hi) return; slider.min = lo.toString(); slider.max = hi.toString(); const v = clamp(parseFloat(slider.value)); slider.value = v.toString(); num.value = fmt(v); onChange(); }
+    function apply(v: number) {
+      num.value = fmt(v);
+      current = parseFloat(num.value);
+      slider.value = String(current);   // quantised by the slider's step; thumb only
+    }
+    let current = clamp(parseFloat(num.value) || 0);
+    slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); current = parseFloat(num.value); onChange(); });
+    num.addEventListener('change', () => { apply(clamp(parseFloat(num.value) || 0)); onChange(); });
+    function fl() { const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value); if (isNaN(lo) || isNaN(hi) || lo >= hi) return; slider.min = lo.toString(); slider.max = hi.toString(); apply(clamp(current)); onChange(); }
     minIn.addEventListener('change', fl); maxIn.addEventListener('change', fl);
-    return { get value() { return parseFloat(slider.value); }, setValue(v: number) { const c = clamp(v); slider.value = c.toString(); num.value = fmt(c); onChange(); } };
+    return { get value() { return current; }, setValue(v: number) { apply(clamp(v)); onChange(); } };
   }
+  function setupParam(numId: string, sliderId: string, minId: string, maxId: string, fmt: (v: number) => string, onChange: () => void): ParamHandle {
+    return setupParamEl(
+      document.getElementById(numId) as HTMLInputElement,
+      document.getElementById(sliderId) as HTMLInputElement,
+      document.getElementById(minId) as HTMLInputElement,
+      document.getElementById(maxId) as HTMLInputElement,
+      fmt, onChange,
+    );
+  }
+  /** Radii accept two decimals; trailing zeros are dropped so 50 stays "50". */
+  const fmtRadius = (v: number) => String(Math.round(v * 100) / 100);
   function setupTabs(cId: string, attr: string, init: string, onSel: (v: string) => void) {
     const tabs = document.getElementById(cId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
     let cur = init;
@@ -1634,10 +1654,10 @@ initPermalinks({
   });
 
   const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
-  const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', v => v.toFixed(0), () => radiusChanged(1));
+  const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', fmtRadius, () => radiusChanged(1));
   const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), resetAndUpdate);
   const coreEpsParam = setupParam('core-eps-num', 'core-eps-slider', 'core-eps-min', 'core-eps-max', v => v.toFixed(1), resetAndUpdate);
-  const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', v => v.toFixed(0), () => radiusChanged(0));
+  const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', fmtRadius, () => radiusChanged(0));
   const electronBParam = setupParam('electron-b-num', 'electron-b-slider', 'electron-b-min', 'electron-b-max', v => v.toFixed(0), resetAndUpdate);
   const electronBetaParam = setupParam('electron-beta-num', 'electron-beta-slider', 'electron-beta-min', 'electron-beta-max', v => v.toFixed(2), electronBetaChanged);
   const electronLmaxParam = setupParam('electron-lmax-num', 'electron-lmax-slider', 'electron-lmax-min', 'electron-lmax-max', v => v.toFixed(0), resetAndUpdate);
@@ -2876,7 +2896,7 @@ initPermalinks({
         <div class="param">
           <div class="param-header">
             <label>Outer radius (nm)</label>
-            <input type="number" class="param-number sh-r-num" value="${outerR}" step="1" min="1">
+            <input type="number" class="param-number sh-r-num" value="${outerR}" step="0.01" min="1">
           </div>
           <input type="range" class="param-slider sh-r-slider" aria-label="Shell ${idx + 2} outer radius (nm)" min="10" max="${maxOuterR}" step="1" value="${outerR}">
           <div class="param-limits">
@@ -2911,7 +2931,7 @@ initPermalinks({
       sec.querySelector('.sh-r-slider') as HTMLInputElement,
       sec.querySelector('.sh-r-min') as HTMLInputElement,
       sec.querySelector('.sh-r-max') as HTMLInputElement,
-      v => v.toFixed(0), () => radiusChanged(extraShells.indexOf(handle) + 2),
+      fmtRadius, () => radiusChanged(extraShells.indexOf(handle) + 2),
     );
 
     const shFileGrp = sec.querySelector('.sh-file-group') as HTMLElement;
