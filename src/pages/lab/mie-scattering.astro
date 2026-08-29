@@ -2118,6 +2118,18 @@ initPermalinks({
     resetAndUpdate();
   });
 
+  // Every example preset describes a single sphere: it sets one material and one
+  // radius and says nothing about a core. Applied while Core-Shell was open, the
+  // geometry stayed core-shell and "Si in air" became a silicon shell around
+  // whatever core happened to be there — a different structure than the button
+  // names. PresetStrip can only address elements by id, and the geometry is a
+  // tab group, so it cannot reset this itself. Capture phase, so this runs
+  // before PresetStrip's own click handler fills in the material and radius.
+  document.querySelector('.preset-strip')?.addEventListener('click', (ev) => {
+    if (!(ev.target as HTMLElement).closest('.preset-strip__btn')) return;
+    if (geometry === 'coreshell') geoTabs.select('sphere');
+  }, true);
+
   let _theoryNoteKey = '', _notesKey = '';
   function updateTheoryNote() {
     const key = excitation + '|' + geometry;               // content only depends on mode + geometry
@@ -4708,7 +4720,22 @@ initPermalinks({
       );
       syncMainMaterialRef();
     }
-    if (p.has('r')) rParam.setValue(parseFloat(p.get('r')!));
+    // Restore the radii with the ordering normaliser suspended, the way
+    // applyThermalPreset already does. Each setValue would otherwise normalise
+    // against the layers that have not been restored yet — still at their
+    // markup defaults of core 60 nm and shell 50 nm — and clamp a perfectly
+    // valid stack. A link saying cr=30&r=50 came back as 30/65, and cr=80&r=100
+    // as 60/100: the link carried the right numbers and the restore silently
+    // changed the particle. The normaliser still runs once afterwards, via
+    // resetAndUpdate, so a stack closer than RADIUS_GAP_NM is still opened out —
+    // but the UI enforces that gap, so no link it produces can contain one.
+    radiusOrderNormalizing = true;
+    try {
+      if (g === 'coreshell' && p.has('cr')) coreRParam.setValue(parseFloat(p.get('cr')!));
+      if (p.has('r')) rParam.setValue(parseFloat(p.get('r')!));
+    } finally {
+      radiusOrderNormalizing = false;
+    }
     if (p.has('nh')) nhParam.setValue(parseFloat(p.get('nh')!));
     if (p.has('lmin')) { lamMinInput.value = p.get('lmin')!; lamMinInput.dispatchEvent(new Event('change')); }
     if (p.has('lmax')) { lamMaxInput.value = p.get('lmax')!; lamMaxInput.dispatchEvent(new Event('change')); }
@@ -4752,7 +4779,7 @@ initPermalinks({
         );
         syncCoreMaterialRef();
       }
-      if (p.has('cr')) coreRParam.setValue(parseFloat(p.get('cr')!));
+      // 'cr' is restored earlier, before 'r' — see the note there.
 
       // ── SEPARATE PRE-EXISTING BUG ────────────────────────────────────────
       // serializeState has always written s2…s5 for the extra shells, but
