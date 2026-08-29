@@ -9,11 +9,12 @@ const categories: Category[] = [
   {
     label: 'Calculators',
     tools: [
-      { href: `${base}lab/units/`, label: 'Units', icon: 'ruler' },
-      { href: `${base}lab/materials/`, label: 'Materials', icon: 'material' },
-      { href: `${base}lab/electron/`, label: 'Electrons', icon: 'electron' },
       { href: `${base}lab/photon/`, label: 'Photons', icon: 'photon' },
-      { href: `${base}lab/laser/`, label: 'Laser', icon: 'laser' },
+      { href: `${base}lab/electron/`, label: 'Electrons', icon: 'electron' },
+      { href: `${base}lab/laser/`, label: 'Laser pulses', icon: 'laser' },
+      { href: `${base}lab/pulse/`, label: 'Ultrafast pulses', icon: 'pulse' },
+      { href: `${base}lab/materials/`, label: 'Materials', icon: 'material' },
+      { href: `${base}lab/units/`, label: 'Units', icon: 'ruler' },
     ],
   },
   {
@@ -21,9 +22,11 @@ const categories: Category[] = [
     tools: [
       { href: `${base}lab/mie-scattering/`, label: 'Spheres (Mie)', icon: 'bolt' },
       { href: `${base}lab/cylinder/`, label: 'Cylinders', icon: 'cylinder' },
-      { href: `${base}lab/plasmonic-nanoparticles/`, label: 'Plasmonic NPs', icon: 'plasmon' },
+      { href: `${base}lab/plasmonic-nanoparticles/`, label: 'Plasmonic Nanoparticles', icon: 'plasmon' },
       { href: `${base}lab/photothermal/`, label: 'Thermoplasmonics', icon: 'flame' },
       { href: `${base}lab/heterostructures/`, label: 'Heterostructures', icon: 'layers' },
+      { href: `${base}lab/tweezers/`, label: 'Optical Tweezers', icon: 'tweezers' },
+      { href: `${base}lab/purcell/`, label: 'Purcell Factor', icon: 'purcell' },
     ],
   },
   {
@@ -32,6 +35,7 @@ const categories: Category[] = [
       { href: `${base}lab/bem-solver/`, label: 'BEM', icon: 'cube' },
       { href: `${base}lab/rcwa/`, label: 'RCWA', icon: 'grating' },
       { href: `${base}lab/bpm/`, label: 'BPM', icon: 'wave' },
+      { href: `${base}lab/imaging/`, label: 'Imaging', icon: 'imaging' },
       { href: `${base}lab/assistant/`, label: 'Methods Assistant', icon: 'chat' },
     ],
   },
@@ -64,6 +68,14 @@ function isActive(href: string): boolean {
   <symbol id="tb-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h4"/></symbol>
   <symbol id="tb-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
   <symbol id="tb-material" viewBox="0 0 24 24"><path d="M3 17 L9 7 L13 14 L16 10 L21 17"/><line x1="2" y1="20" x2="22" y2="20"/></symbol>
+  <!-- a short wave packet under a Gaussian envelope -->
+  <symbol id="tb-pulse" viewBox="0 0 24 24"><path d="M2 12h2.5"/><path d="M19.5 12h2.5"/><path d="M4.5 12c1 0 1.3-5 2.6-5s1.6 10 2.9 10 1.6-13 2.9-13 1.6 10 2.9 10 1.6-2 2.7-2"/></symbol>
+  <!-- a bead held at the focus of two converging beams -->
+  <symbol id="tb-tweezers" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M4 3l5.5 6"/><path d="M20 3l-5.5 6"/><path d="M4 21l5.5-6"/><path d="M20 21l-5.5-6"/></symbol>
+  <!-- focus brackets closing on a point: forming an image -->
+  <symbol id="tb-imaging" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <!-- an emitter between two mirrors, its decay reshaped by the cavity -->
+  <symbol id="tb-purcell" viewBox="0 0 24 24"><path d="M5 4v16"/><path d="M19 4v16"/><circle cx="12" cy="12" r="1.5"/><path d="M9.2 9.6a4 4 0 0 1 5.6 0"/><path d="M9.2 14.4a4 4 0 0 0 5.6 0"/></symbol>
 </svg>
 
 <nav class="lab-bar" aria-label="Quick tools">
