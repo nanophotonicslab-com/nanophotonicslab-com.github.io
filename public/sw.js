@@ -1,5 +1,9 @@
 // Service Worker — NanophotonicsLab PWA
-const CACHE = 'nanolab-v3';
+// Bumped with the shared-material-module release: several lab pages widened the
+// values their `mat` permalink parameter accepts and changed how a shared link
+// restores. HTML is network-first, so the exposure is only offline and fallback
+// loads — but a stale page there would silently plot the wrong material.
+const CACHE = 'nanolab-v4';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const IS_LOCAL = LOCAL_HOSTS.has(self.location.hostname);
 
