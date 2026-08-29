@@ -121,6 +121,15 @@ const jsonLd = isHome
     </main>
     <Footer />
     <FeedbackButton />
+    <script>
+      // Every Lab tool reads its permalink once, on load. Following a second
+      // permalink for the same tool from an already-open page therefore changed
+      // the URL and nothing else, leaving the previous configuration on screen
+      // under the new link. Wired here rather than in each tool because all of
+      // them share this layout and the fix is the same for all.
+      import { reloadOnPermalinkChange } from '../lib/permalink-hash';
+      if (location.pathname.startsWith('/lab/')) reloadOnPermalinkChange();
+    </script>
     <script is:inline>
       if ('serviceWorker' in navigator) {
         const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
