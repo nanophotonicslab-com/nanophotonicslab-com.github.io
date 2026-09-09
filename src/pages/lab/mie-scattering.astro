@@ -575,7 +575,7 @@ const miePresets = [
               <div class="thermal-lambda-control">
                 <label for="thermal-lambda-slider">Illumination &lambda;</label>
                 <input type="range" class="param-slider" id="thermal-lambda-slider" min="300" max="1200" step="5" value="550">
-                <input type="number" class="param-number param-number--sm" id="thermal-lambda-num" value="550" step="5" min="100">
+                <input type="number" class="param-number param-number--sm" id="thermal-lambda-num" value="550" step="0.1" min="100">
                 <span class="thermal-lambda-unit">nm</span>
               </div>
             </div>
@@ -1833,6 +1833,16 @@ initPermalinks({
   // Thermal-view inputs (single illumination wavelength via slider)
   const thermalLambdaSlider = document.getElementById('thermal-lambda-slider') as HTMLInputElement;
   const thermalLambdaNum = document.getElementById('thermal-lambda-num') as HTMLInputElement;
+  /**
+   * The illumination wavelength actually used by the calculation, in nm.
+   *
+   * It cannot be read back out of the slider: a range input silently snaps to
+   * its own step (5 nm here), so anything typed into the box was rounded before
+   * the physics ever saw it. The slider now only positions the thumb; this is
+   * the value. Kept to one decimal, which is what the box accepts.
+   */
+  let thermalLambdaNm = 550;
+  const fmtLambda = (v: number) => String(Math.round(v * 10) / 10);
   const thermalI0Num = document.getElementById('thermal-i0-num') as HTMLInputElement;
   const thermalI0Slider = document.getElementById('thermal-i0-slider') as HTMLInputElement;
   const thermalT0Input = document.getElementById('thermal-t0') as HTMLInputElement;
@@ -1847,16 +1857,25 @@ initPermalinks({
     thermalRaf = requestAnimationFrame(render);
   };
   thermalRmax.addEventListener('input', renderIfThermal);
-  thermalLambdaSlider.addEventListener('input', () => { thermalLambdaNum.value = thermalLambdaSlider.value; renderIfThermal(); });
+  thermalLambdaSlider.addEventListener('input', () => {
+    thermalLambdaNm = parseFloat(thermalLambdaSlider.value);
+    thermalLambdaNum.value = fmtLambda(thermalLambdaNm);
+    renderIfThermal();
+  });
   thermalLambdaNum.addEventListener('input', () => {
     const v = parseFloat(thermalLambdaNum.value);
     if (Number.isFinite(v)) {
       const lo = parseFloat(thermalLambdaSlider.min), hi = parseFloat(thermalLambdaSlider.max);
-      thermalLambdaSlider.value = String(Math.max(lo, Math.min(hi, v)));
+      thermalLambdaNm = Math.round(Math.max(lo, Math.min(hi, v)) * 10) / 10;
+      // the thumb can only sit on a multiple of the slider's step; that rounding
+      // must not travel back into the box or into thermalLambdaNm
+      thermalLambdaSlider.value = String(thermalLambdaNm);
     }
     renderIfThermal();
   });
-  thermalLambdaNum.addEventListener('change', () => { thermalLambdaNum.value = thermalLambdaSlider.value; });
+  // On commit, normalise what is displayed to the value in use — not to the
+  // slider, which would round a typed 530.5 back down to the nearest 5 nm.
+  thermalLambdaNum.addEventListener('change', () => { thermalLambdaNum.value = fmtLambda(thermalLambdaNm); });
   thermalI0Slider.addEventListener('input', () => { thermalI0Num.value = thermalI0Slider.value; renderIfThermal(); });
   thermalI0Num.addEventListener('input', () => { const v = parseFloat(thermalI0Num.value); if (Number.isFinite(v)) thermalI0Slider.value = String(v); renderIfThermal(); });
   [thermalT0Input, thermalKappaMed].forEach(el => el.addEventListener('input', renderIfThermal));
@@ -1998,7 +2017,8 @@ initPermalinks({
       lamMinInput.value = String(p.lamMin); lamMaxInput.value = String(p.lamMax);
       thermalRangeMin.value = String(p.lamMin); thermalRangeMax.value = String(p.lamMax);
       thermalLambdaSlider.min = String(p.lamMin); thermalLambdaSlider.max = String(p.lamMax); thermalLambdaSlider.step = '1';
-      thermalLambdaSlider.value = String(p.lambda); thermalLambdaNum.value = String(p.lambda);
+      thermalLambdaNm = p.lambda;
+      thermalLambdaSlider.value = String(p.lambda); thermalLambdaNum.value = fmtLambda(p.lambda);
       // geometry + materials
       while (extraShells.length > 0) removeShellSection(extraShells[0]);
       if (p.geometry === 'sphere') {
@@ -3829,14 +3849,15 @@ initPermalinks({
       const hi = Math.max(data.lambda[0], data.lambda[data.lambda.length - 1]);
       thermalLambdaSlider.min = String(Math.round(lo));
       thermalLambdaSlider.max = String(Math.round(hi));
-      let cur = parseFloat(thermalLambdaSlider.value);
+      let cur = thermalLambdaNm;
       if (!Number.isFinite(cur) || cur < lo || cur > hi) {
         cur = Math.max(lo, Math.min(hi, Number.isFinite(cur) ? cur : (lo + hi) / 2));
-        thermalLambdaSlider.value = String(Math.round(cur));
-        thermalLambdaNum.value = thermalLambdaSlider.value;
+        thermalLambdaNm = Math.round(cur * 10) / 10;
+        thermalLambdaSlider.value = String(thermalLambdaNm);
+        thermalLambdaNum.value = fmtLambda(thermalLambdaNm);
       }
     }
-    const lambdaNm = parseFloat(thermalLambdaSlider.value) || 550;
+    const lambdaNm = Number.isFinite(thermalLambdaNm) ? thermalLambdaNm : 550;
     const I0 = Math.max(0, parseFloat(thermalI0Num.value) || 0) * 1e9;        // GW/m² → W/m²
     const T0c = Number.isFinite(parseFloat(thermalT0Input.value)) ? parseFloat(thermalT0Input.value) : 25;
     const kappaMed = Math.max(1e-6, parseFloat(thermalKappaMed.value) || 0.6); // W/m/K
