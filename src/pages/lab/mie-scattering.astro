@@ -4641,6 +4641,9 @@ initPermalinks({
     p.set('enz', electronNzParam.value.toString());
     p.set('pol', polTabs.value);
     p.set('al', angularLambdaInput.value);
+    // Illumination wavelength of the thermal view. Written unconditionally, like
+    // 'al', so the value survives even when the link is shared from another view.
+    p.set('tl', fmtLambda(thermalLambdaNm));
     if (logY) p.set('logY', '1');
     if (excitation === 'dipole') {
       p.set('dreg', dipoleRegion); p.set('dref', dipoleDistRef);
@@ -4781,6 +4784,17 @@ initPermalinks({
     if (p.has('lmin')) { lamMinInput.value = p.get('lmin')!; lamMinInput.dispatchEvent(new Event('change')); }
     if (p.has('lmax')) { lamMaxInput.value = p.get('lmax')!; lamMaxInput.dispatchEvent(new Event('change')); }
     if (p.has('al')) angularLambdaInput.value = p.get('al')!;
+    if (p.has('tl')) {
+      const v = parseFloat(p.get('tl')!);
+      // render() re-clamps this into the sweep range once the spectrum exists,
+      // so a link naming a wavelength outside lmin..lmax lands on the edge
+      // rather than plotting a marker off the chart.
+      if (Number.isFinite(v)) {
+        thermalLambdaNm = Math.round(v * 10) / 10;
+        thermalLambdaSlider.value = String(thermalLambdaNm);
+        thermalLambdaNum.value = fmtLambda(thermalLambdaNm);
+      }
+    }
     if (p.has('eb')) electronBParam.setValue(parseFloat(p.get('eb')!));
     if (p.has('ebeta')) electronBetaParam.setValue(parseFloat(p.get('ebeta')!));
     if (p.has('emin')) electronEminInput.value = p.get('emin')!;
