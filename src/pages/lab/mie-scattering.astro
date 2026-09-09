@@ -4641,9 +4641,14 @@ initPermalinks({
     p.set('enz', electronNzParam.value.toString());
     p.set('pol', polTabs.value);
     p.set('al', angularLambdaInput.value);
-    // Illumination wavelength of the thermal view. Written unconditionally, like
-    // 'al', so the value survives even when the link is shared from another view.
+    // Thermal view: everything the temperature actually depends on. Written
+    // unconditionally, like 'al', so the values survive even when the link is
+    // shared from another view. 'max r' is deliberately absent — it only sets
+    // the plotted range, not the physics.
     p.set('tl', fmtLambda(thermalLambdaNm));
+    if (thermalI0Num.value) p.set('ti0', thermalI0Num.value);
+    if (thermalT0Input.value) p.set('tt0', thermalT0Input.value);
+    if (thermalKappaMed.value) p.set('tk', thermalKappaMed.value);
     if (logY) p.set('logY', '1');
     if (excitation === 'dipole') {
       p.set('dreg', dipoleRegion); p.set('dref', dipoleDistRef);
@@ -4795,6 +4800,11 @@ initPermalinks({
         thermalLambdaNum.value = fmtLambda(thermalLambdaNm);
       }
     }
+    // render() reads these three number boxes directly, so restoring the boxes
+    // is enough; the I0 slider is synced only so its thumb agrees.
+    if (p.has('ti0')) { thermalI0Num.value = p.get('ti0')!; thermalI0Slider.value = p.get('ti0')!; }
+    if (p.has('tt0')) thermalT0Input.value = p.get('tt0')!;
+    if (p.has('tk')) thermalKappaMed.value = p.get('tk')!;
     if (p.has('eb')) electronBParam.setValue(parseFloat(p.get('eb')!));
     if (p.has('ebeta')) electronBetaParam.setValue(parseFloat(p.get('ebeta')!));
     if (p.has('emin')) electronEminInput.value = p.get('emin')!;
