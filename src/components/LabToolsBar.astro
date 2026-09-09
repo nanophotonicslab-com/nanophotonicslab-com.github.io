@@ -378,6 +378,17 @@ function isActive(href: string): boolean {
     transition: background 0.1s, color 0.1s;
   }
 
+  /* The row is a flex line with white-space: nowrap, so a label wide enough to
+     overflow the dropdown squeezes the only shrinkable box on the line — the
+     icon — down to zero width. "Plasmonic Nanoparticles" was long enough to do
+     it, and that entry rendered with no logo while every shorter one kept one.
+     The icon is a fixed 14px; never let it absorb the overflow. */
+  .lab-bar__dropdown-item > svg {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+  }
+
   .lab-bar__dropdown-item:hover {
     background: rgba(99, 102, 241, 0.08);
     color: var(--primary);
