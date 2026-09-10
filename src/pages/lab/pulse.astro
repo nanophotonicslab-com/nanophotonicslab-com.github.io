@@ -82,10 +82,13 @@ const materials = Object.entries(SELLMEIER).map(([id, m]) => ({ id, label: m.lab
             </div>
             <div class="param">
               <div class="param-header"><label>Pulse shape</label></div>
-              <div class="seg-row" role="radiogroup" aria-label="Pulse shape">
-                <button class="seg-btn active" data-shape="gaussian" role="radio" aria-checked="true">Gaussian</button>
-                <button class="seg-btn" data-shape="sech2" role="radio" aria-checked="false">sech&sup2;</button>
+              <!-- Same control as the Mie lab's Sphere / Core-Shell toggle. -->
+              <div class="plot-tabs" id="shape-tabs" role="radiogroup" aria-label="Pulse shape">
+                <button class="plot-tab active" type="button" data-shape="gaussian" role="radio" aria-checked="true">Gaussian</button>
+                <button class="plot-tab" type="button" data-shape="sech2" role="radio" aria-checked="false">sech&sup2;</button>
               </div>
+              <!-- Carries the pulse shape through initPermalinks, which only syncs form fields. -->
+              <input type="hidden" id="shape-input" value="gaussian">
             </div>
             <button id="reset-btn" class="chart-tool-btn reset-btn" title="Reset all parameters to defaults">Reset defaults</button>
             <p class="theory-note">
@@ -100,46 +103,67 @@ const materials = Object.entries(SELLMEIER).map(([id, m]) => ({ id, label: m.lab
 
         <div class="widget-column widget-column--results">
           <div class="chart-panel card">
-            <div class="stats">
-              <div class="stat">
-                <span class="stat-label">GDD</span>
-                <span class="stat-value" id="out-gdd">&mdash;</span>
-                <span class="stat-unit">fs&sup2;</span>
+            <!-- One chart at a time, switched like the Mie lab's views. -->
+            <div class="chart-toolbar">
+              <div class="plot-tabs plot-tabs--sm" id="view-tabs" role="radiogroup" aria-label="Chart">
+                <button class="plot-tab active" type="button" data-view="tau" role="radio" aria-checked="true">Pulse duration</button>
+                <button class="plot-tab" type="button" data-view="gvd" role="radio" aria-checked="false">Material GVD</button>
               </div>
-              <div class="stat">
-                <span class="stat-label">&tau;<sub>out</sub></span>
-                <span class="stat-value" id="out-tau">&mdash;</span>
-                <span class="stat-unit">fs (&times;<span id="out-factor">&mdash;</span>)</span>
-              </div>
-              <div class="stat">
-                <span class="stat-label">TL bandwidth</span>
-                <span class="stat-value" id="out-bw">&mdash;</span>
-                <span class="stat-unit">nm FWHM</span>
-              </div>
-              <div class="stat">
-                <span class="stat-label">Autocorr.</span>
-                <span class="stat-value" id="out-ac">&mdash;</span>
-                <span class="stat-unit">fs FWHM</span>
-              </div>
-            </div>
-            <p class="sub-readout" id="sub-readout"></p>
-
-            <div class="chart-block">
-              <div class="chart-header"><span class="chart-title">Material GVD vs wavelength</span></div>
-              <div class="chart-wrap"><canvas id="gvd-chart"></canvas><div class="chart-tip" id="gvd-tip"></div></div>
-              <div class="chart-legend" id="gvd-legend"></div>
+              <input type="hidden" id="view-input" value="tau">
             </div>
 
-            <div class="chart-block">
+            <div class="chart-block" id="block-tau">
               <div class="chart-header"><span class="chart-title">Output vs input FWHM through L at &lambda;&#8320;</span></div>
               <div class="chart-wrap"><canvas id="tau-chart"></canvas><div class="chart-tip" id="tau-tip"></div></div>
               <div class="chart-legend" id="tau-legend"></div>
             </div>
 
-            <div class="export-bar">
-              <span class="export-label">Export</span>
-              <button id="dl-png" class="export-btn" type="button" title="Download the GVD chart as PNG">PNG</button>
-              <button id="dl-csv" class="export-btn" type="button" title="Download both curves as CSV">CSV</button>
+            <div class="chart-block" id="block-gvd" hidden>
+              <div class="chart-header"><span class="chart-title">Material GVD vs wavelength</span></div>
+              <div class="chart-wrap"><canvas id="gvd-chart"></canvas><div class="chart-tip" id="gvd-tip"></div></div>
+              <div class="chart-legend" id="gvd-legend"></div>
+            </div>
+
+            <div class="pulse-results">
+              <div class="stats">
+                <div class="stat">
+                  <span class="stat-label">GDD</span>
+                  <span class="stat-value" id="out-gdd">&mdash;</span>
+                  <span class="stat-unit">fs&sup2;</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">&tau;<sub>out</sub></span>
+                  <span class="stat-value" id="out-tau">&mdash;</span>
+                  <span class="stat-unit">fs (&times;<span id="out-factor">&mdash;</span>)</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">TL bandwidth</span>
+                  <span class="stat-value" id="out-bw">&mdash;</span>
+                  <span class="stat-unit">nm FWHM</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Autocorr.</span>
+                  <span class="stat-value" id="out-ac">&mdash;</span>
+                  <span class="stat-unit">fs FWHM</span>
+                </div>
+              </div>
+              <p class="sub-readout" id="sub-readout"></p>
+            </div>
+
+            <div class="download-bar">
+              <span class="download-label">Export</span>
+              <button id="dl-png" class="dl-btn" type="button" title="Download the chart on screen as PNG" data-umami-event="pulse-export" data-umami-event-format="png">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                PNG
+              </button>
+              <button id="dl-csv" class="dl-btn" type="button" title="Download both curves as CSV" data-umami-event="pulse-export" data-umami-event-format="csv">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                CSV
+              </button>
+              <button id="dl-share" class="dl-btn" type="button" title="Copy shareable link to clipboard" data-umami-event="share" data-umami-event-page="pulse">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span id="dl-share-label">Share</span>
+              </button>
             </div>
           </div>
         </div>
@@ -154,11 +178,19 @@ initPermalinks({
   l: 'len-num',
   lam: 'lam-num',
   tau: 'tau-num',
+  shape: 'shape-input',
+  view: 'view-input',
 });
 </script>
 </Layout>
 
-<style>  .sub-readout { font-size: 0.78rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }.chart-wrap canvas { --chart-aspect: 16 / 7; }
+<style>
+  .sub-readout { font-size: 0.78rem; color: var(--text-muted); margin: 0; font-variant-numeric: tabular-nums; }
+  .chart-wrap canvas { --chart-aspect: 16 / 7; }
+  /* Class plus attribute, so no display rule on .chart-block can revive a hidden chart. */
+  .chart-block[hidden] { display: none; }
+  /* Results sit below the chart. */
+  .pulse-results { display: flex; flex-direction: column; gap: var(--space-xs); margin-top: var(--space-sm); }
   @media (max-width: 768px) {
     .widget-layout { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -180,24 +212,40 @@ initPermalinks({
     return Number.isFinite(v) ? v : fb;
   };
 
-  const COLORS = {
-    light: { gvd: '#6366F1', tau: '#6366F1', ref: '#F43F5E' },
-    dark:  { gvd: '#6366F1', tau: '#6366F1', ref: '#F43F5E' },
-  };
-  const isDark = () => document.documentElement.dataset.theme === 'dark'
-    || (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const colors = () => (isDark() ? COLORS.dark : COLORS.light);
+  type PulseView = 'tau' | 'gvd';
 
   const DEFAULTS: Record<string, number> = { 'len-num': 5, 'lam-num': 800, 'tau-num': 30 };
   const matSelect = $('material-select') as unknown as HTMLSelectElement;
+  const shapeInput = $('shape-input') as unknown as HTMLInputElement;
+  const viewInput = $('view-input') as unknown as HTMLInputElement;
   let shape: PulseShape = 'gaussian';
+  let view: PulseView = 'tau';
 
   const charts = new Map<string, LiteChart>();
+
+  /**
+   * The shareable URL for exactly what is on screen. Rewritten after every
+   * render, so the address bar and the Share button can never disagree with the
+   * page. initPermalinks alone missed changes that set a field without firing
+   * its event — dragging a slider, or Reset — and left the link stale.
+   */
+  function currentUrl(): string {
+    const u = new URL(window.location.href);
+    u.searchParams.set('material', matSelect.value);
+    u.searchParams.set('l', String(val('len-num', 5)));
+    u.searchParams.set('lam', String(val('lam-num', 800)));
+    u.searchParams.set('tau', String(val('tau-num', 30)));
+    u.searchParams.set('shape', shape);
+    u.searchParams.set('view', view);
+    return u.toString();
+  }
 
   function update() {
     const mat = SELLMEIER[matSelect.value];
     const L = val('len-num', 5), lam = val('lam-num', 800), tau0 = val('tau-num', 30);
-    const c = colors();
+    // The curve takes the site's primary colour, so it follows the theme
+    // (including dark mode) like every other Lab chart.
+    const primary = chartTheme().primary;
     $('material-ref').textContent = mat.ref;
 
     const gvd = gvdFs2PerMm(mat, lam);
@@ -223,11 +271,13 @@ initPermalinks({
       ys[i] = gvdFs2PerMm(mat, xs[i]);
     }
     const gvdSeries: LiteSeries[] = [
-      { y: ys, label: 'β₂ (fs²/mm)', color: c.gvd },
+      { y: ys, label: 'β₂ (fs²/mm)', color: primary },
       { y: zero, label: 'zero dispersion', color: chartTheme().textMuted, dash: [5, 4] },
     ];
     charts.set('gvd-chart', { x: xs, series: gvdSeries, xLabel: 'λ (nm) · β₂ (fs²/mm)', xUnit: 'nm', hoverI: -1 });
     $('gvd-legend').innerHTML = legendHtml(gvdSeries);
+    // Both curves are computed every time (the CSV exports both), but only the
+    // visible one has a size to draw into — drawLite skips a hidden canvas.
     drawLite($('gvd-chart') as unknown as HTMLCanvasElement, charts.get('gvd-chart')!);
 
     // Output vs input FWHM at this GDD
@@ -239,12 +289,14 @@ initPermalinks({
       id[i] = ti[i];
     }
     const tauSeries: LiteSeries[] = [
-      { y: to, label: 'τ_out (fs)', color: c.tau },
+      { y: to, label: 'τ_out (fs)', color: primary },
       { y: id, label: 'no dispersion', color: chartTheme().textMuted, dash: [5, 4] },
     ];
     charts.set('tau-chart', { x: ti, series: tauSeries, xLabel: 'τ_in (fs) · τ_out (fs)', xUnit: 'fs', hoverI: -1 });
     $('tau-legend').innerHTML = legendHtml(tauSeries);
     drawLite($('tau-chart') as unknown as HTMLCanvasElement, charts.get('tau-chart')!);
+
+    history.replaceState(null, '', currentUrl());
   }
 
   let raf = 0;
@@ -263,14 +315,46 @@ initPermalinks({
   pair('tau-num', 'tau-slider');
   matSelect.addEventListener('change', schedule);
 
-  document.querySelectorAll('.seg-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.seg-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
-      btn.classList.add('active');
-      btn.setAttribute('aria-checked', 'true');
-      shape = (btn as HTMLElement).dataset.shape as PulseShape;
-      schedule();
+  /** Mark one tab of a group as selected, for both sighted and screen-reader users. */
+  function selectTab(groupId: string, attr: string, value: string) {
+    document.querySelectorAll<HTMLElement>(`#${groupId} .plot-tab`).forEach((b) => {
+      const on = b.dataset[attr] === value;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-checked', String(on));
     });
+  }
+
+  function setShape(s: PulseShape) {
+    shape = s;
+    shapeInput.value = s;
+    selectTab('shape-tabs', 'shape', s);
+    schedule();
+  }
+
+  function setView(v: PulseView) {
+    view = v;
+    viewInput.value = v;
+    selectTab('view-tabs', 'view', v);
+    $('block-tau').hidden = v !== 'tau';
+    $('block-gvd').hidden = v !== 'gvd';
+    // the chart just revealed was skipped while hidden; draw it now
+    schedule();
+  }
+
+  document.querySelectorAll<HTMLElement>('#shape-tabs .plot-tab').forEach((b) => {
+    b.addEventListener('click', () => setShape(b.dataset.shape as PulseShape));
+  });
+  document.querySelectorAll<HTMLElement>('#view-tabs .plot-tab').forEach((b) => {
+    b.addEventListener('click', () => setView(b.dataset.view as PulseView));
+  });
+  // A shared link is restored by initPermalinks, which sets these hidden fields
+  // and fires 'input'. Anything that is not a known value is ignored, leaving
+  // the default rather than a half-applied state.
+  shapeInput.addEventListener('input', () => {
+    if (shapeInput.value === 'gaussian' || shapeInput.value === 'sech2') setShape(shapeInput.value);
+  });
+  viewInput.addEventListener('input', () => {
+    if (viewInput.value === 'tau' || viewInput.value === 'gvd') setView(viewInput.value);
   });
 
   $('reset-btn').addEventListener('click', () => {
@@ -280,14 +364,17 @@ initPermalinks({
       const slider = document.getElementById(id.replace('-num', '-slider')) as HTMLInputElement | null;
       if (slider) slider.value = String(v);
     }
-    schedule();
+    // the shape is a parameter too; it used to survive a reset
+    setShape('gaussian');
   });
 
   attachLiteHover($('gvd-chart') as unknown as HTMLCanvasElement, $('gvd-tip'), () => charts.get('gvd-chart'));
   attachLiteHover($('tau-chart') as unknown as HTMLCanvasElement, $('tau-tip'), () => charts.get('tau-chart'));
 
   $('dl-png').addEventListener('click', () => {
-    ($('gvd-chart') as unknown as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, 'pulse_gvd.png'); }, 'image/png');
+    const canvasId = view === 'gvd' ? 'gvd-chart' : 'tau-chart';
+    const fileName = view === 'gvd' ? 'pulse_gvd.png' : 'pulse_duration.png';
+    ($(canvasId) as unknown as HTMLCanvasElement).toBlob((b) => { if (b) downloadBlob(b, fileName); }, 'image/png');
   });
   $('dl-csv').addEventListener('click', () => {
     const g = charts.get('gvd-chart'), t = charts.get('tau-chart');
@@ -297,6 +384,15 @@ initPermalinks({
     lines.push('', 'tau_in_fs,tau_out_fs');
     for (let i = 0; i < t.x.length; i++) lines.push(`${t.x[i]},${t.series[0].y[i]}`);
     downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' }), 'pulse_curves.csv');
+  });
+
+  const shareLabel = $('dl-share-label');
+  $('dl-share').addEventListener('click', () => {
+    // Swap only the label: rewriting the button's text would delete its icon.
+    navigator.clipboard.writeText(currentUrl()).then(() => {
+      shareLabel.textContent = 'Copied!';
+      setTimeout(() => { shareLabel.textContent = 'Share'; }, 1500);
+    });
   });
 
   window.addEventListener('resize', schedule);

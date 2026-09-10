@@ -546,7 +546,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-.chart-tool-btn:focus-visible, .export-btn:focus-visible, .param-number:focus-visible, .param-select:focus-visible, .param-slider:focus-visible, .seg-btn:focus-visible {
+.chart-tool-btn:focus-visible, .export-btn:focus-visible, .param-number:focus-visible, .param-select:focus-visible, .param-slider:focus-visible, .seg-btn:focus-visible, .plot-tab:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -563,6 +563,37 @@
   margin-bottom: var(--space-sm);
   flex-wrap: wrap;
 }
+/* Tab track and tabs: the Mie lab's view switcher (Spectrum / Angular / ...)
+   and its option toggles (Sphere / Core-Shell), shared so any tool can use the
+   same control. Unlike .seg-row, the track is part of the component, so the
+   selected white pill always has a grey ground to read against.
+   mie-scattering and heterostructures still carry identical scoped copies of
+   these rules; those outrank this file on specificity, so neither page moves. */
+.plot-tabs {
+  display: flex;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+  padding: 3px;
+}
+.plot-tab {
+  flex: 1;
+  padding: 0.35rem 0.4rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-soft);
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-align: center;
+}
+.plot-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+.plot-tab:hover:not(.active) { color: var(--text); }
+.plot-tabs--sm { padding: 3px; }
+.plot-tabs--sm .plot-tab { padding: 0.45rem 0.85rem; font-size: 0.8125rem; font-weight: 600; }
 .chart-tooltip {
   position: absolute;
   pointer-events: none;
