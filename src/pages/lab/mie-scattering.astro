@@ -49,6 +49,33 @@ const miePresets = [
 
   <section class="section">
     <div class="container">
+      <!-- Same shared module bar as the Materials, Electron and Imaging labs. Only
+           the single sphere exists today; the other geometries are placeholders. -->
+      <div class="module-bar card" role="radiogroup" aria-label="Mie scattering module">
+        <span class="module-bar__label">Module</span>
+        <div class="module-bar__grid">
+          <button type="button" class="module-card active" id="module-sphere" role="radio" aria-checked="true">
+            <span class="module-card__name">Single sphere</span>
+            <span class="module-card__desc">Exact Mie &middot; spheres &amp; core-shells</span>
+          </button>
+          <button type="button" class="module-card" id="module-dimer" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">Dimers <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Two coupled spheres &middot; gap modes</span>
+          </button>
+          <button type="button" class="module-card" id="module-chain1d" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">1D chain <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Linear chains &middot; lattice resonances</span>
+          </button>
+          <button type="button" class="module-card" id="module-array2d" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">2D array <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Metasurfaces &middot; R/T, lattice resonances</span>
+          </button>
+          <button type="button" class="module-card" id="module-crystal3d" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">3D crystal <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Periodic sphere lattices in 3D</span>
+          </button>
+        </div>
+      </div>
       <div class="excitation-bar">
         <div class="param excitation-param excitation-above">
           <div class="param-header"><label>Excitation</label></div>
@@ -722,6 +749,10 @@ initPermalinks({
   .dipole-yrange-row { margin-top: 0.4rem; }
   .dipole-ref-sel { font-family: var(--font); font-size: inherit; font-weight: 700; color: var(--primary); background: transparent; border: none; border-bottom: 1px dotted var(--primary-light); padding: 0 0.1rem; margin: 0 0.05rem; cursor: pointer; }
   .dipole-ref-sel:focus { outline: none; border-bottom-style: solid; }
+  /* Five modules, one row on desktop; 3 + 2 on narrower screens. Below 720px the
+     shared lab.css rule stacks them in a single column. */
+  .module-bar { --module-cols: 5; }
+  @media (max-width: 1024px) { .module-bar { --module-cols: 3; } }
   .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
   .param-number:focus { border-color: var(--primary-light); }
   .radius-threshold-marker {
@@ -4600,10 +4631,40 @@ initPermalinks({
     downloadBlob(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }), filenameStem() + '.csv');
   });
 
+  // === Module switch ===
+  // The same shared .module-bar as the Materials and Electron labs. Only the single
+  // sphere exists today — everything else on this page belongs to it. The other
+  // modules are disabled cards in the markup; each will bring its own panel and
+  // flip `ready` here.
+  type MieModule = 'sphere' | 'dimer' | 'chain1d' | 'array2d' | 'crystal3d';
+  const MIE_MODULES: Record<MieModule, { id: string; ready: boolean }> = {
+    sphere:    { id: 'module-sphere',    ready: true },
+    dimer:     { id: 'module-dimer',     ready: false },
+    chain1d:   { id: 'module-chain1d',   ready: false },
+    array2d:   { id: 'module-array2d',   ready: false },
+    crystal3d: { id: 'module-crystal3d', ready: false },
+  };
+  let mieModule: MieModule = 'sphere';
+  function selectMieModule(m: MieModule) {
+    // a module that is not ready cannot be entered — not by a click, not by a link
+    if (!MIE_MODULES[m]?.ready) return;
+    mieModule = m;
+    for (const [key, { id }] of Object.entries(MIE_MODULES)) {
+      const card = document.getElementById(id)!;
+      const on = key === m;
+      card.classList.toggle('active', on);
+      card.setAttribute('aria-checked', String(on));
+    }
+  }
+  for (const [key, { id, ready }] of Object.entries(MIE_MODULES)) {
+    if (ready) document.getElementById(id)!.addEventListener('click', () => selectMieModule(key as MieModule));
+  }
+
   // === Share / URL State ===
 
   function serializeState(): string {
     const p = new URLSearchParams();
+    p.set('mod', mieModule);
     p.set('exc', excitation);
     p.set('geo', geometry);
     p.set('mat', materialSelect.value);
@@ -4748,6 +4809,10 @@ initPermalinks({
     const hash = location.hash.slice(1);
     if (!hash) return;
     const p = new URLSearchParams(hash);
+    // 'mod' is additive: a link without it is a single-sphere link, and one naming a
+    // module that is not ready yet stays on the single sphere rather than half-opening it
+    const md = p.get('mod');
+    if (md && Object.prototype.hasOwnProperty.call(MIE_MODULES, md)) selectMieModule(md as MieModule);
     const ex = p.get('exc');
     if (ex === 'electron') { excitation = 'electron'; excitationTabs.select('electron', true); }
     if (ex === 'dipole') { excitation = 'dipole'; excitationTabs.select('dipole', true); dipoleInitialized = true; }
