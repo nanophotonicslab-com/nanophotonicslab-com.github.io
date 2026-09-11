@@ -3111,6 +3111,7 @@ initPermalinks({ kev: 'kev' });
     eVFromWavelengthNm, wavelengthNmFromEV, type Beam, type DispMethod,
   } from '../../lib/pinem';
   import { downloadBlob as pnDownload } from '../../lib/download';
+  import { formatLength, formatLengthText } from '../../lib/format-length';
 
   const $p = (id: string) => document.getElementById(id) as HTMLElement;
   const PIp = Math.PI;
@@ -3281,7 +3282,7 @@ initPermalinks({ kev: 'kev' });
     for (let it = 0; it < NT; it++) for (let iz = 0; iz < NZ; iz++) data[it * NZ + iz] = fld.rho[iz * NT + it];
     heatmap(ctx, fr, NZ, NT, data, HOT);
     colorbar(ctx, fr, HOT, '0', '1');
-    $p('pn-readout').innerHTML = `<span>z: 0 → <b>${zMm.toFixed(zMm > 20 ? 0 : 2)} mm</b>${pn.fullTalbot ? ' (Talbot z_T)' : ''} · τ: ±${pn.tauRange} T</span><span>dispersion: <b>${pn.method}</b>${pn.cohNm > 0 ? ` · coherence ${pn.cohNm} nm` : ''}</span>`;
+    $p('pn-readout').innerHTML = `<span>z: 0 → <b>${formatLengthText(zMaxM)}</b>${pn.fullTalbot ? ' (Talbot z_T)' : ''} · τ: ±${pn.tauRange} T</span><span>dispersion: <b>${pn.method}</b>${pn.cohNm > 0 ? ` · coherence ${pn.cohNm} nm` : ''}</span>`;
   }
 
   function drawBilliard() {
@@ -3303,8 +3304,10 @@ initPermalinks({ kev: 'kev' });
   // attosecond-pulse metrics
   function metric(label: string, val: string): string { return `<div class="pn-metric"><span class="pn-metric__label">${label}</span><span class="pn-metric__val">${val}</span></div>`; }
   function updateMetrics(withFocus = true) {
-    const b = pnBeam(), zT = talbotDistanceM(b) * 1e3;
-    let html = metric('Talbot distance z_T', `${zT.toFixed(1)} <em>mm</em>`)
+    // one decimal, at least two significant figures, in nm / µm / mm / m as fits —
+    // always millimetres used to print a short z_T as 0.0 mm
+    const b = pnBeam(), zT = formatLength(talbotDistanceM(b));
+    let html = metric('Talbot distance z_T', `${zT.value} <em>${zT.unit}</em>`)
       + metric('Photon energy &#8463;&omega;', `${beamPhotonEV(b).toFixed(3)} <em>eV</em>`)
       + metric('Optical period T', `${(beamPeriodS(b) * 1e15).toFixed(3)} <em>fs</em>`)
       + metric('Electron v/c', `${pn.beta.toFixed(4)}`);
