@@ -225,6 +225,11 @@ const cylPresets = [
               <button class="view-tab" data-view="disp-bV" data-source="electron" role="radio" aria-checked="false" style="display:none">
                 b&ndash;V
               </button>
+              <!-- The material's optical constants belong to neither excitation, so
+                   data-source="both" keeps this tab under Plane wave and Electrons. -->
+              <button class="view-tab" data-view="material" data-source="both" role="radio" aria-checked="false">
+                Material
+              </button>
             </div>
             <button id="perp-compute-btn" class="chart-tool-btn chart-tool-btn--primary" type="button" title="Compute perpendicular EELS" style="display:none">Compute</button>
             <label id="perp-grid-control" class="toolbar-control toolbar-control--compact" style="display:none">
@@ -253,6 +258,13 @@ const cylPresets = [
                   <button class="view-tab active" data-decomp="total" role="radio" aria-checked="true">Total</button>
                   <button class="view-tab" data-decomp="em" role="radio" aria-checked="false">E / M</button>
                 </div>
+              </div>
+            </div>
+            <div class="toolbar-control" id="material-controls" style="display:none">
+              <span class="toolbar-label" id="material-prop-label">Display</span>
+              <div class="view-tabs view-tabs--toolbar" id="material-prop-tabs" role="radiogroup" aria-labelledby="material-prop-label">
+                <button class="view-tab active" data-material-prop="epsilon" role="radio" aria-checked="true" title="Dielectric function">&epsilon;</button>
+                <button class="view-tab" data-material-prop="nk" role="radio" aria-checked="false" title="Refractive index">n, k</button>
               </div>
             </div>
             <span id="angular-controls" class="angular-controls" style="display:none">
@@ -658,6 +670,13 @@ initPermalinks({
   .view-tab[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
   .view-tab:disabled:hover,
   .view-tab[aria-disabled="true"]:hover { color: var(--text-soft); }
+  /* Under Electrons the result track holds five tabs, wider than a phone's
+     card: tighten them there, and let the track scroll rather than push the
+     page sideways on a screen that still cannot fit them. */
+  @media (max-width: 480px) {
+    #view-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    #view-tabs .view-tab { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
+  }
   .spectrum-controls { display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
   .toolbar-control--compact { gap: 0.25rem; }
   .toolbar-select {
@@ -1024,8 +1043,9 @@ initPermalinks({
   import { chartTheme, onThemeChange } from '../../lib/chart-theme';
 
   type ExcitationMode = 'plane' | 'electron';
-  type ViewMode = 'cross-section' | 'angular' | 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp';
+  type ViewMode = 'cross-section' | 'angular' | 'disp-wq' | 'disp-bV' | 'eels-par' | 'eels-perp' | 'material';
   type AxisMode = 'energy' | 'lambda';
+  type MaterialProp = 'epsilon' | 'nk';
   type AngleAxisMode = 'energy' | 'lambda';
   type SpectrumQuantity = 'csca' | 'cext' | 'cabs' | 'qsca' | 'all';
   type SpectrumDecomp = 'total' | 'em';
@@ -1049,6 +1069,7 @@ initPermalinks({
     angleEnergyEv: 2.4,
     angleAxisMode: 'energy' as AngleAxisMode,
     axisMode: 'lambda' as AxisMode,
+    materialProp: 'epsilon' as MaterialProp,
     spectrumQuantity: 'csca' as SpectrumQuantity,
     spectrumDecomp: 'total' as SpectrumDecomp,
     angularPol: 'total' as AngularPolMode,
@@ -1138,7 +1159,12 @@ initPermalinks({
     m: number;
     rect: ChartRect;
   }
+  /** A legend entry keyed by its series label (the Material view's curves). */
+  interface SeriesLegendHit { label: string; rect: ChartRect; }
   let dispersionLegendHits: LegendHit[] = [];
+  function inRect(r: ChartRect, x: number, y: number): boolean {
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  }
   interface DispersionPointHit {
     m: number;
     w: number;
@@ -1216,6 +1242,12 @@ initPermalinks({
   /** dataPath of the database entry in use, which is what a permalink carries. */
   let uploadedRiiPath: string | null = null;
   /**
+   * Name of the file last accepted through the import dialog, for the Material
+   * CSV. Not read back from the caption, which a later failed parse overwrites
+   * with its error while the accepted table stays in use.
+   */
+  let uploadedFileName = '';
+  /**
    * Which option the table belongs to. Both 'file' and 'rii' resolve through the
    * same buffer, so without this, switching from one to the other would silently
    * keep computing with the previous source's data under the new source's name.
@@ -1228,7 +1260,14 @@ initPermalinks({
    * and would otherwise overwrite the explanation with the generic empty text.
    */
   let sharedFileMissing = false;
+  /**
+   * A shared link with mat=rii&dp=… re-fetches its database entry: 'pending'
+   * until it lands, 'failed' if it cannot, so the Material view does not tell
+   * the recipient to choose an entry the link already chose.
+   */
+  let sharedRiiLoad: 'pending' | 'failed' | null = null;
 
+  // materialHasData() below mirrors this function's vacuum fallbacks: keep them in step.
   function materialNK(lambdaNm: number): [number, number] {
     if (state.materialId === 'custom') return epsilonToNK(state.eps1_re, state.eps1_im);
     if (state.materialId === 'drude') return drudeNK(lambdaNm, state.drude);
@@ -1240,6 +1279,17 @@ initPermalinks({
     const material = MATERIALS[state.materialId];
     if (!material) return [1, 0];
     return interpolateNK(material.data, lambdaNm);
+  }
+
+  /**
+   * False when the selection resolves to vacuum through one of materialNK's
+   * fallbacks (a file or database entry not loaded, an unknown id). The
+   * Material view says so instead of plotting vacuum under a material's name.
+   */
+  function materialHasData(): boolean {
+    if (state.materialId === 'custom' || state.materialId === 'drude') return true;
+    if (state.materialId === 'file' || state.materialId === 'rii') return uploadedMaterial !== null;
+    return MATERIALS[state.materialId] !== undefined;
   }
 
   function materialEpsilonAtEnergy(wEv: number): C {
@@ -1514,6 +1564,17 @@ initPermalinks({
   }
 
   function recompute(forcePerp = false) {
+    if (state.view === 'material') {
+      // The Material view is the optical-constants lookup itself: it runs none
+      // of the plane-wave, EELS or dispersion solvers, under either excitation.
+      // Leaving the view goes through selectView, which recomputes that view.
+      document.getElementById('compute-status')!.textContent = materialHasData() ? `${PLANE_SPECTRUM_POINTS} pts` : '';
+      updateChartControls();
+      updateConfigCheck();
+      drawChart();
+      drawLegend();
+      return;
+    }
     if (state.excitation === 'electron' && state.view === 'eels-perp' && !forcePerp) {
       markPerpNeedsCompute();
       return;
@@ -1551,11 +1612,22 @@ initPermalinks({
     drawLegend();
   }
 
+  /** Points on the plane-wave ħω grid; the Material view samples the same grid. */
+  const PLANE_SPECTRUM_POINTS = 240;
+
+  /**
+   * The plane-wave spectrum's ħω bounds, shared with the Material view: the
+   * 0.05 eV floor keeps λ = hc/ħω finite, and the bounds stay 0.01 eV apart.
+   */
+  function planeEnergyRange(): [number, number] {
+    const wMin = Math.max(0.05, Math.min(state.w_min, state.w_max - 0.01));
+    return [wMin, Math.max(wMin + 0.01, state.w_max)];
+  }
+
   function recomputePlaneWave() {
     perpMap = null;
-    const Nw = 240;
-    const wMin = Math.max(0.05, Math.min(state.w_min, state.w_max - 0.01));
-    const wMax = Math.max(wMin + 0.01, state.w_max);
+    const Nw = PLANE_SPECTRUM_POINTS;
+    const [wMin, wMax] = planeEnergyRange();
     const widthNm = 2 * state.a_nm;
     planeSpectrum = [];
     for (let i = 0; i < Nw; i++) {
@@ -1899,12 +1971,14 @@ initPermalinks({
     if (state.view !== 'disp-wq' && state.view !== 'disp-bV') dispersionLegendHits = [];
     if (state.view !== 'disp-wq') dispersionPointHits = [];
     if (state.view !== 'disp-wq') groupVelocityPointHits = [];
+    // the 1D hover state; the cross-section and Material plots fill it back in
+    chartXforms = null;
+    currentXArr = [];
+    currentSeries = [];
+    currentLegendBox = null;
     if (state.view === 'cross-section') drawPlaneWaveSpectrum();
+    else if (state.view === 'material') drawMaterial();
     else {
-      chartXforms = null;
-      currentXArr = [];
-      currentSeries = [];
-      currentLegendBox = null;
       clearOverlay();
       if (state.view === 'angular') drawPlaneWaveAngular();
       else if (state.view === 'disp-wq') {
@@ -1947,6 +2021,8 @@ initPermalinks({
     y: number[];
     unit?: string;
     dash?: number[];
+    /** Switched off from the legend (Material view): not stroked, faded in the legend. */
+    hidden?: boolean;
   }
   interface ChartRect { x: number; y: number; w: number; h: number; }
 
@@ -1984,10 +2060,18 @@ initPermalinks({
     return v.toPrecision(2);
   }
 
+  /** The \u03BB / \u0127\u03C9 x axis shared by the cross-section and Material plots. */
+  function spectrumXLabel(): string {
+    return state.axisMode === 'lambda' ? 'Wavelength (nm)' : 'Photon energy \u210F\u03C9 (eV)';
+  }
+  function spectrumXTick(v: number): string {
+    return state.axisMode === 'lambda' ? v.toFixed(0) : v.toFixed(1);
+  }
+
   function planePlotData(): { xs: number[]; series: PlotSeries[]; xMin: number; xMax: number; xLabel: string; yLabel: string; logY: boolean } {
     const rows = state.axisMode === 'lambda' ? [...planeSpectrum].reverse() : planeSpectrum;
     const xs = rows.map(p => state.axisMode === 'lambda' ? lambdaNmFromEnergy(p.w) : p.w);
-    const xLabel = state.axisMode === 'lambda' ? 'Wavelength (nm)' : 'Photon energy \u210F\u03C9 (eV)';
+    const xLabel = spectrumXLabel();
     const series: PlotSeries[] = [];
     if (state.spectrumQuantity === 'all') {
       series.push(
@@ -2045,12 +2129,133 @@ initPermalinks({
     const ax = makeAxes(ctx, w, h, plot.xMin, plot.xMax, yMin, yMax,
                          plot.xLabel, plot.yLabel, plot.logY);
     chartXforms = ax;
-    drawAxesFrame(ax, 6, 5, v => state.axisMode === 'lambda' ? v.toFixed(0) : v.toFixed(1), plot.logY ? formatLogTick : formatLinearTick);
+    drawAxesFrame(ax, 6, 5, spectrumXTick, plot.logY ? formatLogTick : formatLinearTick);
     for (const s of plot.series) {
       strokeSeries(ax, plot.xs, s.y, s.color, 2.4, s.dash ?? []);
     }
     currentLegendBox = drawInsetLegend(ax, plot.series);
     clearOverlay();
+  }
+
+  // ===== Material view =====
+  // The optical constants of the selected material over the ħω range of the
+  // spectra: the same materialNK values every solver on the page reads. Drawn
+  // like the cross-section spectrum; as in the Mie lab, Re ε (or n) is solid,
+  // Im ε (or k) dashed, and a legend click hides a curve.
+
+  const MATERIAL_COLOR = PLOT_COLORS.cext;
+  /** Series switched off from the legend, keyed by label. */
+  const hiddenMaterialSeries = new Set<string>();
+  let materialLegendHits: SeriesLegendHit[] = [];
+
+  function materialNoDataMessage(): string {
+    if (state.materialId === 'file') {
+      return sharedFileMissing
+        ? 'An uploaded material cannot travel in a link: re-upload the file'
+        : 'No material data loaded: upload a file';
+    }
+    if (state.materialId === 'rii') {
+      if (sharedRiiLoad === 'pending') return 'Loading the shared database entry\u2026';
+      if (sharedRiiLoad === 'failed') return 'The shared database entry is unavailable: choose another entry';
+      return 'No material data loaded: choose a database entry';
+    }
+    return 'No optical data for this material';
+  }
+
+  interface MaterialRow { w: number; lambda: number; n: number; k: number; epsRe: number; epsIm: number; }
+
+  /** n, k and ε on the plane-wave ħω grid, in ascending energy. */
+  function materialRows(): MaterialRow[] {
+    const [wMin, wMax] = planeEnergyRange();
+    const rows: MaterialRow[] = [];
+    for (let i = 0; i < PLANE_SPECTRUM_POINTS; i++) {
+      const w = wMin + (wMax - wMin) * i / (PLANE_SPECTRUM_POINTS - 1);
+      const lambda = lambdaNmFromEnergy(w);
+      const [n, k] = materialNK(lambda);
+      const eps = nkToEpsilon(n, k);
+      rows.push({ w, lambda, n, k, epsRe: eps.re, epsIm: eps.im });
+    }
+    return rows;
+  }
+
+  function materialPlotData(): { xs: number[]; series: PlotSeries[] } {
+    const rows = materialRows();
+    if (state.axisMode === 'lambda') rows.reverse();
+    const xs = rows.map(r => state.axisMode === 'lambda' ? r.lambda : r.w);
+    const line = (label: string, y: number[], dash?: number[]): PlotSeries =>
+      ({ label, color: MATERIAL_COLOR, y, dash, hidden: hiddenMaterialSeries.has(label) });
+    const series = state.materialProp === 'nk'
+      ? [line('Cylinder n', rows.map(r => r.n)), line('Cylinder k', rows.map(r => r.k), [5, 4])]
+      : [line('Cylinder Re \u03B5', rows.map(r => r.epsRe)),
+         line('Cylinder Im \u03B5', rows.map(r => r.epsIm), [5, 4])];
+    return { xs, series };
+  }
+
+  /** Visible series only, padded; n and k keep zero in view, Re ε may go negative. */
+  function materialYRange(series: PlotSeries[], zeroFloor: boolean): [number, number] {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const s of series) {
+      if (s.hidden) continue;
+      for (const v of s.y) {
+        if (!Number.isFinite(v)) continue;
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+      }
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+    if (zeroFloor) min = Math.min(0, min);
+    if (max <= min) {
+      const span = Math.max(1, Math.abs(max) * 0.1);
+      min -= span;
+      max += span;
+    }
+    const pad = (max - min) * 0.08;
+    return [min - pad, max + pad];
+  }
+
+  function drawMaterial() {
+    const { ctx, w, h } = setupCanvas();
+    materialLegendHits = [];
+    const xLabel = spectrumXLabel();
+    const yLabel = state.materialProp === 'nk' ? 'Refractive index' : 'Dielectric function';
+    if (!materialHasData()) {
+      // drawChart has already cleared the hover state: there is nothing to read out
+      const [wMin, wMax] = planeEnergyRange();
+      const lambdaAxis = state.axisMode === 'lambda';
+      const ax = makeAxes(ctx, w, h,
+        lambdaAxis ? lambdaNmFromEnergy(wMax) : wMin,
+        lambdaAxis ? lambdaNmFromEnergy(wMin) : wMax,
+        0, 1, xLabel, yLabel);
+      drawAxesFrame(ax, 6, 5, spectrumXTick, () => '');
+      ctx.fillStyle = chartTheme().textMuted;
+      ctx.font = '12px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(materialNoDataMessage(), ax.m.left + ax.pw / 2, ax.m.top + ax.ph / 2, ax.pw - 24);
+      clearOverlay();
+      return;
+    }
+    const plot = materialPlotData();
+    const [yMin, yMax] = materialYRange(plot.series, state.materialProp === 'nk');
+    const ax = makeAxes(ctx, w, h, plot.xs[0], plot.xs[plot.xs.length - 1], yMin, yMax, xLabel, yLabel);
+    chartXforms = ax;
+    currentXArr = plot.xs;
+    currentSeries = plot.series;
+    // evenly spaced ticks can land a rounding error away from zero: print it as 0
+    const zeroTol = (yMax - yMin) * 1e-9;
+    drawAxesFrame(ax, 6, 5, spectrumXTick, v => Math.abs(v) < zeroTol ? '0' : formatLinearTick(v));
+    for (const s of plot.series) {
+      if (!s.hidden) strokeSeries(ax, plot.xs, s.y, s.color, 2.4, s.dash ?? []);
+    }
+    currentLegendBox = drawInsetLegend(ax, plot.series, materialLegendHits);
+    clearOverlay();
+  }
+
+  /** The Material legend entry under the pointer. The λ / ħω buttons share the box and never count. */
+  function materialLegendHitAt(e: MouseEvent): SeriesLegendHit | null {
+    if (state.view !== 'material' || (e.target as HTMLElement).closest('.axis-overlay')) return null;
+    return materialLegendHits.find(hit => inRect(hit.rect, e.offsetX, e.offsetY)) ?? null;
   }
 
   function hexToRgba(hex: string, alpha: number): string {
@@ -2060,7 +2265,7 @@ initPermalinks({
     return `rgba(${r},${g},${b},${alpha})`;
   }
 
-  function drawInsetLegend(ax: Axes, series: PlotSeries[]): ChartRect | null {
+  function drawInsetLegend(ax: Axes, series: PlotSeries[], itemHits?: SeriesLegendHit[]): ChartRect | null {
     if (series.length <= 1) return null;
     const { ctx, m, pw } = ax;
     const ct = chartTheme();
@@ -2085,6 +2290,7 @@ initPermalinks({
     ctx.stroke();
     for (let i = 0; i < series.length; i++) {
       const iy = ly + 4 + (i + 0.5) * itemH;
+      ctx.globalAlpha = series[i].hidden ? 0.35 : 1;
       ctx.strokeStyle = series[i].color;
       ctx.lineWidth = 2;
       ctx.setLineDash(series[i].dash ?? []);
@@ -2095,6 +2301,8 @@ initPermalinks({
       ctx.setLineDash([]);
       ctx.fillStyle = ct.text;
       ctx.fillText(series[i].label, lx + 8 + lineW + gap, iy);
+      ctx.globalAlpha = 1;
+      itemHits?.push({ label: series[i].label, rect: { x: lx, y: ly + 4 + i * itemH, w: legendW, h: itemH } });
     }
     ctx.restore();
     return { x: lx, y: ly, w: legendW, h: legendH };
@@ -3212,7 +3420,8 @@ initPermalinks({
   function drawLegend() {
     const el = document.getElementById('chart-legend')!;
     el.innerHTML = '';
-    if (state.view === 'cross-section') {
+    // both draw their legend inside the canvas
+    if (state.view === 'cross-section' || state.view === 'material') {
       el.style.display = 'none';
       return;
     }
@@ -3507,6 +3716,7 @@ initPermalinks({
     uploadedRiiPath = null;
     uploadedKind = 'file';
     sharedFileMissing = false;
+    uploadedFileName = pendingName;
     fileNameEl.textContent = pendingName;
     materialRef.textContent = `uploaded · ${converted.data.length} points`;
     closeImportDialog();
@@ -3535,6 +3745,7 @@ initPermalinks({
   const perpComputeBtn = $<HTMLButtonElement>('perp-compute-btn');
   const spectrumControls = $('spectrum-controls');
   const axisOverlay = $('axis-overlay');
+  const materialControls = $('material-controls');
   const angularControls = $('angular-controls');
   const angularSlider = $<HTMLInputElement>('angle-energy-slider');
   const angularPolWrap = $('angular-pol-wrap');
@@ -3670,10 +3881,12 @@ initPermalinks({
     const isParallel = isElectron && state.view === 'eels-par';
     const isPerp = isElectron && state.view === 'eels-perp';
     const isDispWQ = isElectron && state.view === 'disp-wq';
+    const isMaterial = state.view === 'material';
     spectrumControls.style.display = isSpectrum ? '' : 'none';
     logToggle.style.display = (isSpectrum || isParallel || isPerp) ? '' : 'none';
     perpComputeBtn.style.display = isPerp ? '' : 'none';
-    axisOverlay.style.display = isSpectrum ? '' : 'none';
+    axisOverlay.style.display = (isSpectrum || isMaterial) ? '' : 'none';
+    materialControls.style.display = isMaterial ? '' : 'none';
     angularControls.style.display = isAngular ? '' : 'none';
     angularSlider.style.display = 'none';
     angularPolWrap.style.display = isAngular ? '' : 'none';
@@ -3748,6 +3961,10 @@ initPermalinks({
     drawLegend();
   });
   bindTabs<AxisMode>('axis-tabs', 'axis', () => state.axisMode, value => { state.axisMode = value; }, () => {
+    drawChart();
+    drawLegend();
+  });
+  bindTabs<MaterialProp>('material-prop-tabs', 'materialProp', () => state.materialProp, value => { state.materialProp = value; }, () => {
     drawChart();
     drawLegend();
   });
@@ -3841,7 +4058,7 @@ initPermalinks({
 
   chartCanvasBox.addEventListener('mousemove', (e: MouseEvent) => {
     if (state.view === 'disp-wq' || state.view === 'disp-bV') {
-      const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
+      const hit = dispersionLegendHits.find(h => inRect(h.rect, e.offsetX, e.offsetY));
       const pointHit = state.view === 'disp-wq' ? nearestDispersionPointHit(e.offsetX, e.offsetY) : null;
       chartCanvasBox.style.cursor = hit || pointHit ? 'pointer' : 'crosshair';
       if (pointHit) {
@@ -3869,9 +4086,15 @@ initPermalinks({
       }
       return;
     }
-    const supportsHover = state.view === 'cross-section' || state.view === 'eels-par' || state.view === 'eels-perp';
+    if (materialLegendHitAt(e)) {
+      chartCanvasBox.style.cursor = 'pointer';
+      clearOverlay();
+      return;
+    }
+    const supportsHover = state.view === 'cross-section' || state.view === 'eels-par' || state.view === 'eels-perp' || state.view === 'material';
     if (!chartXforms || !supportsHover || !currentXArr.length || !currentSeries.length) return;
-    const { m, pw, ph, invTx, xTo, yTo } = chartXforms;
+    const { m, pw, ph, invTx, xTo, yTo, logY } = chartXforms;
+    const shown = currentSeries.filter(s => !s.hidden);
     const mx = e.offsetX;
     const my = e.offsetY;
     if (mx < m.left || mx > m.left + pw || my < m.top || my > m.top + ph) {
@@ -3893,9 +4116,9 @@ initPermalinks({
     ctx.lineTo(px, m.top + ph);
     ctx.stroke();
     ctx.setLineDash([]);
-    for (const s of currentSeries) {
+    for (const s of shown) {
       const yVal = s.y[idx];
-      if (!Number.isFinite(yVal) || (state.logY && yVal <= 0)) continue;
+      if (!Number.isFinite(yVal) || (logY && yVal <= 0)) continue;
       const py = yTo(yVal);
       ctx.fillStyle = s.color;
       ctx.beginPath();
@@ -3907,21 +4130,23 @@ initPermalinks({
       ctx.arc(px, py, 4, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const xText = state.view === 'cross-section'
+    const xText = state.view === 'cross-section' || state.view === 'material'
       ? (state.axisMode === 'lambda'
         ? `\u03BB = ${xVal.toFixed(1)} nm`
         : `E = ${xVal.toFixed(3)} eV`)
       : `E = ${xVal.toFixed(3)} eV`;
     let html = xText;
-    for (const s of currentSeries) {
+    for (const s of shown) {
       const unitText = s.unit ? ` ${s.unit}` : '';
       html += `<br><span style="color:${s.color}">\u25CF</span> ${s.label} = ${fmtVal(s.y[idx])}${unitText}`;
     }
     tooltip.innerHTML = html;
     tooltip.classList.add('visible');
-    const topPy = Math.min(...currentSeries.map(s => yTo(s.y[idx])).filter(Number.isFinite));
-    let tL = px + 12;
-    let tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) - 36;
+    const topPy = Math.min(...shown.map(s => yTo(s.y[idx])).filter(Number.isFinite));
+    // Material pins the readout top-left, as the Mie lab does; the others follow the cursor
+    const pinned = state.view === 'material';
+    let tL = pinned ? m.left + 10 : px + 12;
+    let tT = pinned ? m.top + 10 : (Number.isFinite(topPy) ? topPy : m.top + ph / 2) - 36;
     const wrapRect = chartCanvasBox.getBoundingClientRect();
     if (currentLegendBox) {
       const proposed = { x: tL, y: tT, w: tooltip.offsetWidth, h: tooltip.offsetHeight };
@@ -3931,8 +4156,8 @@ initPermalinks({
         && proposed.y + proposed.h > currentLegendBox.y;
       if (overlaps) tL = Math.max(4, currentLegendBox.x - tooltip.offsetWidth - 12);
     }
-    if (tL + tooltip.offsetWidth > wrapRect.width - 4) tL = px - tooltip.offsetWidth - 12;
-    if (tT < 4) tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) + 12;
+    if (!pinned && tL + tooltip.offsetWidth > wrapRect.width - 4) tL = px - tooltip.offsetWidth - 12;
+    if (!pinned && tT < 4) tT = (Number.isFinite(topPy) ? topPy : m.top + ph / 2) + 12;
     tL = Math.max(4, Math.min(tL, wrapRect.width - tooltip.offsetWidth - 4));
     tT = Math.max(4, Math.min(tT, wrapRect.height - tooltip.offsetHeight - 4));
     tooltip.style.left = `${tL}px`;
@@ -3945,6 +4170,15 @@ initPermalinks({
   });
 
   chartCanvasBox.addEventListener('click', (e: MouseEvent) => {
+    if (state.view === 'material') {
+      const hit = materialLegendHitAt(e);
+      if (!hit) return;
+      if (hiddenMaterialSeries.has(hit.label)) hiddenMaterialSeries.delete(hit.label);
+      else hiddenMaterialSeries.add(hit.label);
+      clearOverlay();
+      drawChart();
+      return;
+    }
     if (state.view !== 'disp-wq' && state.view !== 'disp-bV') return;
     if (state.view === 'disp-wq') {
       const pointHit = nearestDispersionPointHit(e.offsetX, e.offsetY);
@@ -3955,7 +4189,7 @@ initPermalinks({
         return;
       }
     }
-    const hit = dispersionLegendHits.find(h => e.offsetX >= h.rect.x && e.offsetX <= h.rect.x + h.rect.w && e.offsetY >= h.rect.y && e.offsetY <= h.rect.y + h.rect.h);
+    const hit = dispersionLegendHits.find(h => inRect(h.rect, e.offsetX, e.offsetY));
     if (!hit) return;
     if (state.m_active.has(hit.m)) state.m_active.delete(hit.m);
     else state.m_active.add(hit.m);
@@ -4405,8 +4639,9 @@ initPermalinks({
 
   materialSelect.addEventListener('change', () => {
     const v = materialSelect.value;
-    // the shared-link notice is about the link, not about this fresh choice
+    // the shared-link notices are about the link, not about this fresh choice
     if (v !== 'file') sharedFileMissing = false;
+    sharedRiiLoad = null;
     // drop a table that belonged to the other user-supplied source
     if ((v === 'file' || v === 'rii') && uploadedKind && uploadedKind !== v) {
       uploadedMaterial = null;
@@ -4416,9 +4651,12 @@ initPermalinks({
       riiHandle.clear();
     }
     updateMaterialUI();
-    if (v === 'rii') { void riiHandle.ensureCatalog(); return; }
-    // nothing to plot until a file has been accepted through the dialog
-    if (v === 'file' && !uploadedMaterial) return;
+    if (v === 'rii') void riiHandle.ensureCatalog();
+    // Nothing to plot until a file or database entry has been accepted. The
+    // Material view redraws anyway and says so, rather than keep showing the
+    // previous material's curve.
+    const awaitingData = v === 'rii' || (v === 'file' && !uploadedMaterial);
+    if (awaitingData && state.view !== 'material') return;
     scheduleRecompute();
   });
   Object.values(drudeInputs).forEach(input => {
@@ -4488,6 +4726,7 @@ initPermalinks({
     }
     updateChartControls();
     updateBNote();
+    updateTheoryNote();
     if (!skipCompute) {
       if (v === 'eels-perp') markPerpNeedsCompute();
       else recompute();
@@ -4496,24 +4735,32 @@ initPermalinks({
 
   function updateTheoryNote() {
     const note = $('theory-note');
-    if (state.excitation === 'plane') {
+    if (state.view === 'material') {
+      note.innerHTML = '<strong>Material.</strong> Optical constants of the cylinder material, &epsilon; = (n + ik)<sup>2</sup>, over the &hbar;&omega; range set in Parameters, from 0.05 eV when &hbar;&omega; min is lower: the same material function the plane-wave and EELS calculations use. The host &epsilon;<sub>h</sub> is not plotted.';
+    } else if (state.excitation === 'plane') {
       note.innerHTML = '<strong>Plane wave.</strong> Normal-incidence cylinder scattering uses the Bohren-Huffman infinite-cylinder series. Efficiencies are normalized by the geometrical width 2a and converted to cross-section per unit length.';
     } else {
       note.innerHTML = '<strong>Electrons.</strong> EELS uses the analytical infinite-cylinder response with absolute units: parallel spectra are in 1/(eV nm), perpendicular integrated spectra are in 1/eV, and the perpendicular map is in nm/eV.';
     }
   }
 
+  /** A result tab belongs to one excitation; data-source="both" (Material) shows under either. */
+  function tabShown(btn: HTMLElement): boolean {
+    return btn.dataset.source === state.excitation || btn.dataset.source === 'both';
+  }
+
   function updateExcitationUI(skipCompute = false) {
     document.querySelectorAll<HTMLElement>('.plane-only').forEach(el => { el.style.display = state.excitation === 'plane' ? '' : 'none'; });
     document.querySelectorAll<HTMLElement>('.electron-only').forEach(el => { el.style.display = state.excitation === 'electron' ? '' : 'none'; });
     document.querySelectorAll<HTMLButtonElement>('#view-tabs .view-tab').forEach(btn => {
-      const visible = btn.dataset.source === state.excitation;
-      btn.style.display = visible ? '' : 'none';
+      btn.style.display = tabShown(btn) ? '' : 'none';
     });
-    const desired = state.excitation === 'plane'
-      ? (state.view === 'cross-section' || state.view === 'angular' ? state.view : 'cross-section')
-      : (state.view === 'eels-par' || state.view === 'eels-perp' || state.view === 'disp-wq' || state.view === 'disp-bV' ? state.view : 'eels-par');
-    updateTheoryNote();
+    // Material is under both excitations, so an open Material view stays open
+    const desired: ViewMode = state.view === 'material'
+      ? 'material'
+      : state.excitation === 'plane'
+        ? (state.view === 'cross-section' || state.view === 'angular' ? state.view : 'cross-section')
+        : (state.view === 'eels-par' || state.view === 'eels-perp' || state.view === 'disp-wq' || state.view === 'disp-bV' ? state.view : 'eels-par');
     selectView(desired, skipCompute);
   }
 
@@ -4533,7 +4780,7 @@ initPermalinks({
 
   $('view-tabs').addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.view-tab') as HTMLElement | null;
-    if (!btn || btn.dataset.source !== state.excitation) return;
+    if (!btn || !tabShown(btn)) return;
     const v = btn.dataset.view as ViewMode;
     if (v === state.view) return;
     selectView(v);
@@ -4570,13 +4817,16 @@ initPermalinks({
     uploadedMaterial = null;
     uploadedRiiPath = null;
     uploadedKind = null;
+    sharedRiiLoad = null;
     riiHandle.clear();
     fileNameEl.textContent = '';
     const wMin = disp ? 1 : 0.2;
     const wMax = disp ? 30 : 4;
     const mMax = disp ? 3 : 4;
     const exc: ExcitationMode = disp ? 'electron' : 'plane';
-    const viewMode: ViewMode = disp ? 'disp-wq' : 'cross-section';
+    // Reset restores the parameters, not the tab: an open Material view stays
+    // open, as it does in the Mie lab, and shows the default material.
+    const viewMode: ViewMode = disp ? 'disp-wq' : state.view === 'material' ? 'material' : 'cross-section';
     const vFracReset = disp ? kineticKeVToBeta(30) : 0.3;
     state.a_nm = 15;
     state.eps_h = 1.0;
@@ -4588,6 +4838,8 @@ initPermalinks({
     state.angleEnergyEv = 2.4;
     state.angleAxisMode = 'energy';
     state.axisMode = 'lambda';
+    state.materialProp = 'epsilon';
+    hiddenMaterialSeries.clear();
     state.spectrumQuantity = 'csca';
     state.spectrumDecomp = 'total';
     state.angularPol = 'total';
@@ -4637,6 +4889,7 @@ initPermalinks({
     drudeInputs.wpEv.value = '5';
     drudeInputs.gammaEv.value = '0.05';
     syncTabs('axis-tabs', 'axis', state.axisMode);
+    syncTabs('material-prop-tabs', 'materialProp', state.materialProp);
     syncTabs('quantity-tabs', 'qty', state.spectrumQuantity);
     syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
     syncTabs('pol-tabs', 'pol', state.angularPol);
@@ -4805,6 +5058,24 @@ initPermalinks({
           body.push(`${br.m},${pt.w.toFixed(6)},${pt.q.toFixed(8)}`);
         }
       }
+    } else if (state.view === 'material') {
+      // before the EELS branch, which would otherwise take any view once a curve exists
+      if (materialHasData()) {
+        const [wMin, wMax] = planeEnergyRange();
+        // file and rii have no MATERIALS entry: name the file or the database entry itself
+        const source = state.materialId === 'file'
+          ? `uploaded file ${uploadedFileName}`.trim()
+          : state.materialId === 'rii'
+            ? `refractiveindex.info ${uploadedRiiPath ?? ''}`.trim()
+            : materialLabel();
+        body.push(`# material function: ${source}, omega=${wMin.toFixed(3)}-${wMax.toFixed(3)} eV`);
+        body.push('omega_eV,lambda_nm,n,k,epsilon_re,epsilon_im');
+        for (const r of materialRows()) {
+          body.push(`${r.w.toFixed(6)},${r.lambda.toFixed(6)},${r.n.toExponential(8)},${r.k.toExponential(8)},${r.epsRe.toExponential(8)},${r.epsIm.toExponential(8)}`);
+        }
+      } else {
+        body.push(`# ${materialNoDataMessage()}`);
+      }
     } else if (eelsCurve) {
       body.push(state.view === 'eels-par'
         ? 'energy_eV,eels_1_per_eV_nm'
@@ -4844,6 +5115,8 @@ initPermalinks({
     p.set('angle', String(state.angleEnergyEv));
     p.set('angleax', state.angleAxisMode);
     p.set('axis', state.axisMode);
+    // new key, written only off the default so existing links stay unchanged
+    if (state.materialProp !== 'epsilon') p.set('mprop', state.materialProp);
     p.set('qty', state.spectrumQuantity);
     p.set('decomp', state.spectrumDecomp);
     p.set('pol', state.angularPol);
@@ -4898,8 +5171,14 @@ initPermalinks({
         // async: re-fetch the shared entry, then recompute with it. Until it
         // lands the curve is not drawn, which is honest — better than plotting
         // vacuum under the name of a material.
+        sharedRiiLoad = 'pending';
         void riiHandle.selectByPath(p.get('dp')!).then(okLoad => {
           if (!okLoad) materialRef.textContent = 'shared database entry unavailable';
+          if (sharedRiiLoad !== 'pending') return;  // a fresh choice has superseded the link
+          sharedRiiLoad = okLoad ? null : 'failed';
+          // a loaded entry redraws through the picker's callback; a failure only
+          // changes the Material view's notice
+          if (!okLoad && state.view === 'material') drawChart();
         });
       } else if (state.materialId === 'file') {
         // An uploaded table cannot travel in a URL. Say so instead of silently
@@ -4914,6 +5193,7 @@ initPermalinks({
     if (p.has('angle')) { state.angleEnergyEv = parseFloat(p.get('angle')!); ($('angle-energy-num') as HTMLInputElement).value = String(state.angleEnergyEv); ($('angle-energy-slider') as HTMLInputElement).value = String(state.angleEnergyEv); }
     if (p.get('angleax') === 'energy' || p.get('angleax') === 'lambda') state.angleAxisMode = p.get('angleax') as AngleAxisMode;
     if (p.get('axis') === 'energy' || p.get('axis') === 'lambda') state.axisMode = p.get('axis') as AxisMode;
+    if (p.get('mprop') === 'epsilon' || p.get('mprop') === 'nk') state.materialProp = p.get('mprop') as MaterialProp;
     if (['csca', 'cext', 'cabs', 'qsca', 'all'].includes(p.get('qty') ?? '')) state.spectrumQuantity = p.get('qty') as SpectrumQuantity;
     if (p.get('decomp') === 'total' || p.get('decomp') === 'em') state.spectrumDecomp = p.get('decomp') as SpectrumDecomp;
     if (p.get('pol') === 'total' || p.get('pol') === 'perp' || p.get('pol') === 'par') state.angularPol = p.get('pol') as AngularPolMode;
@@ -4957,6 +5237,7 @@ initPermalinks({
     if (p.has('dwp')) { state.drude.wpEv = parseFloat(p.get('dwp')!); drudeInputs.wpEv.value = String(state.drude.wpEv); }
     if (p.has('dgamma')) { state.drude.gammaEv = parseFloat(p.get('dgamma')!); drudeInputs.gammaEv.value = String(state.drude.gammaEv); }
     syncTabs('axis-tabs', 'axis', state.axisMode);
+    syncTabs('material-prop-tabs', 'materialProp', state.materialProp);
     syncTabs('quantity-tabs', 'qty', state.spectrumQuantity);
     syncTabs('decomp-tabs', 'decomp', state.spectrumDecomp);
     syncTabs('pol-tabs', 'pol', state.angularPol);
