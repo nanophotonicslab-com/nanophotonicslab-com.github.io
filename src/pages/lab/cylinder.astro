@@ -508,13 +508,30 @@ const cylPresets = [
             <button type="button" class="structure-dialog__close" id="disp-dialog-close" aria-label="Close full-width view">&times;</button>
           </div>
           <div class="disp-dialog__controls">
-            <label class="disp-dialog__check" title="Overlay a custom v/c line on both plots">
-              <input type="checkbox" id="disp-custom-toggle">
-              Custom v/c line
-            </label>
-            <input type="range" id="disp-custom-slope" class="disp-dialog__slope-slider" min="0" max="2" step="0.01" value="0.5" disabled aria-label="Custom v/c slider">
-            <span class="disp-dialog__slope-label">v/c =</span>
-            <input type="number" id="disp-custom-slope-num" class="param-number param-number--sm" min="0" max="2" step="0.01" value="0.50" disabled aria-label="Custom v/c value">
+            <div class="disp-dialog__group">
+              <label class="disp-dialog__check" title="Overlay a custom v/c line on both plots">
+                <input type="checkbox" id="disp-custom-toggle">
+                Custom v/c line
+              </label>
+              <input type="range" id="disp-custom-slope" class="disp-dialog__slope-slider" min="0" max="2" step="0.01" value="0.5" disabled aria-label="Custom v/c slider">
+              <span class="disp-dialog__label">v/c =</span>
+              <input type="number" id="disp-custom-slope-num" class="param-number param-number--sm" min="0" max="2" step="0.01" value="0.50" disabled aria-label="Custom v/c value">
+            </div>
+            <div class="disp-dialog__group disp-dialog__range" role="group" aria-label="Plot range" title="Leave a box blank for the automatic limit">
+              <div class="param-range-row">
+                <span class="disp-dialog__label">q<sub>z</sub> (nm<sup>&minus;1</sup>)</span>
+                <input type="number" id="disp-range-q0" class="param-number param-number--sm" step="0.001" placeholder="0" aria-label="qz minimum (nm⁻¹)">
+                <span class="param-limit-dash" aria-hidden="true">&mdash;</span>
+                <input type="number" id="disp-range-q1" class="param-number param-number--sm" step="0.001" aria-label="qz maximum (nm⁻¹)">
+              </div>
+              <div class="param-range-row">
+                <span class="disp-dialog__label">&hbar;&omega; (eV)</span>
+                <input type="number" id="disp-range-w0" class="param-number param-number--sm" step="0.1" aria-label="ℏω minimum (eV)">
+                <span class="param-limit-dash" aria-hidden="true">&mdash;</span>
+                <input type="number" id="disp-range-w1" class="param-number param-number--sm" step="0.1" aria-label="ℏω maximum (eV)">
+              </div>
+              <button type="button" class="chart-tool-btn" id="disp-range-auto" title="Return both axes to the automatic range">Auto</button>
+            </div>
           </div>
           <div class="disp-dialog__grid">
             <div class="disp-dialog__cell">
@@ -759,13 +776,18 @@ initPermalinks({
   .disp-dialog__panel { padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); }
   .disp-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
   .disp-dialog__header h3 { margin: 0; font-size: 1rem; }
-  .disp-dialog__controls { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+  /* two groups: custom v/c on the left, plot range on the right; when the row
+     wraps, the range group starts its own line at the left */
+  .disp-dialog__controls { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm) var(--space-lg); flex-wrap: wrap; }
+  .disp-dialog__group { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
   .disp-dialog__check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; color: var(--text); cursor: pointer; }
   .disp-dialog__check input { width: 15px; height: 15px; accent-color: var(--danger); cursor: pointer; }
   .disp-dialog__slope-slider { width: 220px; max-width: 55vw; accent-color: var(--danger); }
   .disp-dialog__slope-slider:disabled { opacity: 0.4; }
-  .disp-dialog__slope-label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
+  .disp-dialog__label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
   #disp-custom-slope-num:disabled { opacity: 0.4; }
+  .disp-dialog__range { column-gap: var(--space-md); }
+  .disp-dialog__range .param-number[aria-invalid='true'] { border-color: var(--danger); color: var(--danger); }
   .disp-dialog__grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--space-md); align-items: start; }
   .disp-dialog__cell { display: flex; flex-direction: column; min-width: 0; }
   .disp-dialog__canvas-box { position: relative; width: 100%; }
@@ -1187,6 +1209,14 @@ initPermalinks({
   // hit boxes for the enlarged (modal) plots, in that canvas's own coordinates
   let modalDispHits: DispersionPointHit[] = [];
   let modalPhaseHits: GroupVelocityPointHit[] = [];
+  // Plot window of the enlarged dispersion / group-velocity plots, as typed in the
+  // dialog (null = automatic). A view setting only: it never triggers a recompute,
+  // and the in-page plots ignore it.
+  type DispRangeKey = 'q0' | 'q1' | 'w0' | 'w1';
+  const DISP_RANGE_KEYS: DispRangeKey[] = ['q0', 'q1', 'w0', 'w1'];
+  // public permalink keys, spelled out so shared links do not depend on the internal names
+  const DISP_RANGE_PARAM: Record<DispRangeKey, string> = { q0: 'dq0', q1: 'dq1', w0: 'dw0', w1: 'dw1' };
+  const dispRange: Record<DispRangeKey, number | null> = { q0: null, q1: null, w0: null, w1: null };
   let selectedFieldPoint: FieldSelection | null = null;
 
   function clampFinite(value: number, min: number, max: number, fallback: number): number {
@@ -2586,6 +2616,67 @@ initPermalinks({
     return lineGroupVelocityAtEnergy(energyEv, energy => materialEpsilonAtEnergy(energy)[0]);
   }
 
+  /** One axis of a plot window. `custom`: a typed bound is in effect (not ignored). */
+  interface PlotWindow { lo: number; hi: number; bad0: boolean; bad1: boolean; custom: boolean }
+
+  function autoWindow(lo: number, hi: number): PlotWindow {
+    return { lo, hi, bad0: false, bad1: false, custom: false };
+  }
+
+  /**
+   * One axis of the enlarged plots' window: a typed bound replaces the automatic
+   * one unless it leaves no room — min ≥ max, or a window under 1/1000 of the
+   * automatic span, where the tick labels would run together — in which case that
+   * bound is dropped back to automatic (the maximum first, then the minimum) and flagged.
+   */
+  function resolveWindow(set0: number | null, set1: number | null, auto0: number, auto1: number): PlotWindow {
+    const minSpan = Math.max(1e-3 * (auto1 - auto0), 1e-6);
+    const fits = (lo: number, hi: number) => hi - lo >= minSpan;
+    const win = (lo: number, hi: number, bad0: boolean, bad1: boolean): PlotWindow =>
+      ({ lo, hi, bad0, bad1, custom: (set0 !== null && !bad0) || (set1 !== null && !bad1) });
+    const lo = set0 ?? auto0, hi = set1 ?? auto1;
+    if (fits(lo, hi)) return win(lo, hi, false, false);
+    if (set1 !== null && fits(lo, auto1)) return win(lo, auto1, false, true);
+    if (set0 !== null && fits(auto0, hi)) return win(auto0, hi, true, false);
+    return win(auto0, auto1, set0 !== null, set1 !== null);
+  }
+
+  /**
+   * The dialog's window on both axes, resolved against the automatic limits the
+   * placeholders show (q_z: 0 to qMaxAuto; ħω: ω_min to ω_max). Both enlarged
+   * plots and the invalid-bound cue read this one result.
+   */
+  function dispWindows(): { q: PlotWindow; w: PlotWindow } {
+    return {
+      q: resolveWindow(dispRange.q0, dispRange.q1, 0, qMaxAuto),
+      w: resolveWindow(dispRange.w0, dispRange.w1, state.w_min, state.w_max),
+    };
+  }
+
+  /**
+   * Tick labels of a window axis: the usual fixed decimals while it is automatic;
+   * once a bound is typed, enough decimals that each of the `ticks` steps spans at
+   * least two units of the last digit (resolveWindow's minimum span keeps this ≤ 8).
+   */
+  function windowTickFormat(win: PlotWindow, ticks: number, minDecimals: number): (v: number) => string {
+    const dec = win.custom
+      ? Math.min(8, Math.max(minDecimals, Math.ceil(-Math.log10((win.hi - win.lo) / ticks / 2))))
+      : minDecimals;
+    return v => v.toFixed(dec);
+  }
+
+  /** ħω interval (ħω ≥ 0) over which the line q = slope·ħω lies inside the axes' window, or null. */
+  function lineWindowSpan(ax: Axes, slope: number): [number, number] | null {
+    let lo = Math.max(0, ax.yMin), hi = ax.yMax;
+    if (slope > 0) { lo = Math.max(lo, ax.xMin / slope); hi = Math.min(hi, ax.xMax / slope); }
+    else if (ax.xMin > 0 || ax.xMax < 0) return null;
+    return hi > lo ? [lo, hi] : null;
+  }
+
+  function inAxesWindow(ax: Axes, x: number, y: number): boolean {
+    return x >= ax.xMin && x <= ax.xMax && y >= ax.yMin && y <= ax.yMax;
+  }
+
   function drawPhaseVelocityPlot(target?: HTMLCanvasElement) {
     if (state.view !== 'disp-wq') return;
     if (!target && phasePlotPanel.style.display === 'none') return;
@@ -2601,8 +2692,14 @@ initPermalinks({
     // numerical artifacts (points far outside this range) can't blow up the view.
     const xMin = 0;
     const xMax = 1.05;
-    const yMin = yIsQ ? 0 : state.w_min;
-    const yMax = yIsQ ? Math.max(0.01, qMaxAuto) : state.w_max;
+    // The enlarged plot's vertical axis is the dialog's q_z or ħω window (the same one
+    // as the enlarged dispersion plot) once a bound is in effect; otherwise, and
+    // in-page, it is the automatic axis, whose q_z top is floored at 0.01 nm⁻¹.
+    const dialogWin = target ? dispWindows()[yIsQ ? 'q' : 'w'] : null;
+    const yWin = dialogWin?.custom ? dialogWin
+      : autoWindow(yIsQ ? 0 : state.w_min, yIsQ ? Math.max(0.01, qMaxAuto) : state.w_max);
+    const yMin = yWin.lo;
+    const yMax = yWin.hi;
     const ax = makeAxes(
       ctx,
       w,
@@ -2614,7 +2711,7 @@ initPermalinks({
       'v_g / c',
       yIsQ ? 'q_z (nm^-1)' : '\u210F\u03C9 (eV)',
     );
-    drawAxesFrame(ax, 5, 6, v => v.toFixed(1), yIsQ ? v => v.toFixed(3) : v => v.toFixed(1), [0, 0.2, 0.4, 0.6, 0.8, 1.0]);
+    drawAxesFrame(ax, 5, 6, v => v.toFixed(1), windowTickFormat(yWin, 6, yIsQ ? 3 : 1), [0, 0.2, 0.4, 0.6, 0.8, 1.0]);
 
     ctx.save();
     ctx.beginPath();
@@ -2649,6 +2746,8 @@ initPermalinks({
     ctx.setLineDash([]);
 
     for (const p of points) {
+      // the enlarged plot neither draws nor hit-tests points outside its window
+      if (target && !inAxesWindow(ax, p.vg, yIsQ ? p.q : p.w)) continue;
       const color = colorForM(p.m);
       const x = ax.xTo(p.vg);
       const y = ax.yTo(yIsQ ? p.q : p.w);
@@ -2661,9 +2760,10 @@ initPermalinks({
 
     if (selectedFieldPoint) {
       const vg = groupVelocityForPoint(selectedFieldPoint);
+      const yVal = yIsQ ? selectedFieldPoint.q : selectedFieldPoint.w;
       const x = ax.xTo(vg);
-      const y = ax.yTo(yIsQ ? selectedFieldPoint.q : selectedFieldPoint.w);
-      if (Number.isFinite(x) && Number.isFinite(y)) {
+      const y = ax.yTo(yVal);
+      if (Number.isFinite(x) && Number.isFinite(y) && (!target || inAxesWindow(ax, vg, yVal))) {
         ctx.strokeStyle = '#111827';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -2683,9 +2783,12 @@ initPermalinks({
 
   function drawDispersionWQ(target?: HTMLCanvasElement) {
     const { ctx, w, h } = setupCanvas(target);
-    const ax = makeAxes(ctx, w, h, 0, qMaxAuto, state.w_min, state.w_max,
+    // the enlarged view honours the dialog's plot window; the in-page plot is always automatic
+    const { q: qWin, w: wWin } = target ? dispWindows()
+      : { q: autoWindow(0, qMaxAuto), w: autoWindow(state.w_min, state.w_max) };
+    const ax = makeAxes(ctx, w, h, qWin.lo, qWin.hi, wWin.lo, wWin.hi,
                          'q_z (nm^-1)', '\u210F\u03C9 (eV)');
-    drawAxesFrame(ax, 6, 6, v => v.toFixed(3), v => v.toFixed(1));
+    drawAxesFrame(ax, 6, 6, windowTickFormat(qWin, 6, 3), windowTickFormat(wWin, 6, 1));
     const pointHits: DispersionPointHit[] = [];
 
     ctx.save();
@@ -2697,42 +2800,51 @@ initPermalinks({
     const k0_at = (we: number) => we / HC_EV_NM;
     const qLightMax = Math.sqrt(state.eps_h) * k0_at(state.w_max);
     const qMatMax = Math.sqrt(Math.max(0, materialEpsilonAtEnergy(state.w_max)[0])) * k0_at(state.w_max);
+    const qCustomMax = k0_at(state.w_max) / Math.max(1e-6, state.dispCustomSlope);
+    // Each line q = qAtWMax·ħω/ħω_max runs straight through the origin. The in-page
+    // plot strokes it from the origin to ω_max. The enlarged view strokes only the
+    // part inside its window, which may reach above ω_max, so that a narrow window
+    // never strokes a dashed path far longer than the plot.
+    const strokeLine = (qAtWMax: number) => {
+      ctx.beginPath();
+      if (target) {
+        const slope = qAtWMax / Math.max(1e-12, state.w_max);
+        const span = lineWindowSpan(ax, slope);
+        if (!span) return;
+        ctx.moveTo(ax.xTo(slope * span[0]), ax.yTo(span[0]));
+        ctx.lineTo(ax.xTo(slope * span[1]), ax.yTo(span[1]));
+      } else {
+        ctx.moveTo(ax.xTo(0), ax.yTo(0));
+        ctx.lineTo(ax.xTo(qAtWMax), ax.yTo(state.w_max));
+      }
+      ctx.stroke();
+    };
 
     ctx.setLineDash([5, 4]);
     ctx.lineWidth = 1.4;
     ctx.strokeStyle = '#94A3B8';
-    ctx.beginPath();
-    ctx.moveTo(ax.xTo(0), ax.yTo(0));
-    ctx.lineTo(ax.xTo(qLightMax), ax.yTo(state.w_max));
-    ctx.stroke();
-
+    strokeLine(qLightMax);
     ctx.strokeStyle = '#CBD5E1';
-    ctx.beginPath();
-    ctx.moveTo(ax.xTo(0), ax.yTo(0));
-    ctx.lineTo(ax.xTo(qMatMax), ax.yTo(state.w_max));
-    ctx.stroke();
+    strokeLine(qMatMax);
     ctx.setLineDash([]);
 
-    // Shaded guided region
+    // Shaded guided region, filled up to ω_max (enlarged view: the top of its window)
+    const wEnd = target ? Math.max(0, wWin.hi) : state.w_max;
+    const fillScale = wEnd / Math.max(1e-12, state.w_max);
     ctx.fillStyle = 'rgba(99,102,241,0.04)';
     ctx.beginPath();
     ctx.moveTo(ax.xTo(0), ax.yTo(0));
-    ctx.lineTo(ax.xTo(qLightMax), ax.yTo(state.w_max));
-    ctx.lineTo(ax.xTo(qMatMax), ax.yTo(state.w_max));
+    ctx.lineTo(ax.xTo(qLightMax * fillScale), ax.yTo(wEnd));
+    ctx.lineTo(ax.xTo(qMatMax * fillScale), ax.yTo(wEnd));
     ctx.closePath();
     ctx.fill();
 
     // Custom slope (v/c) line — q = k₀ / (v/c); magnified view only
     if (target && state.dispCustomSlopeOn) {
-      const slope = Math.max(1e-6, state.dispCustomSlope);
-      const qCustomMax = k0_at(state.w_max) / slope;
       ctx.strokeStyle = '#DC2626';
       ctx.setLineDash([4, 3]);
       ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.moveTo(ax.xTo(0), ax.yTo(0));
-      ctx.lineTo(ax.xTo(qCustomMax), ax.yTo(state.w_max));
-      ctx.stroke();
+      strokeLine(qCustomMax);
       ctx.setLineDash([]);
     }
 
@@ -2741,6 +2853,8 @@ initPermalinks({
       const color = colorForM(br.m);
       ctx.fillStyle = color;
       for (const p of br.points) {
+        // the enlarged view neither draws nor hit-tests points outside its window
+        if (target && !inAxesWindow(ax, p.q, p.w)) continue;
         const x = ax.xTo(p.q);
         const y = ax.yTo(p.w);
         pointHits.push({ m: br.m, w: p.w, q: p.q, x, y });
@@ -2750,7 +2864,8 @@ initPermalinks({
     if (selectedFieldPoint) {
       const sx = ax.xTo(selectedFieldPoint.q);
       const sy = ax.yTo(selectedFieldPoint.w);
-      if (Number.isFinite(sx) && Number.isFinite(sy)) {
+      if (Number.isFinite(sx) && Number.isFinite(sy)
+          && (!target || inAxesWindow(ax, selectedFieldPoint.q, selectedFieldPoint.w))) {
         ctx.strokeStyle = '#111827';
         ctx.lineWidth = 2.2;
         ctx.beginPath();
@@ -2767,10 +2882,10 @@ initPermalinks({
     if (!target) dispersionPointHits = pointHits; else modalDispHits = pointHits;
 
     // Line labels
-    drawLineLabel(ax, 'light line', qLightMax, '#94A3B8');
-    drawLineLabel(ax, 'material line', qMatMax, '#94A3B8');
+    drawLineLabel(ax, 'light line', qLightMax, '#94A3B8', !!target);
+    drawLineLabel(ax, 'material line', qMatMax, '#94A3B8', !!target);
     if (target && state.dispCustomSlopeOn) {
-      drawLineLabel(ax, `v/c = ${state.dispCustomSlope.toFixed(2)}`, k0_at(state.w_max) / Math.max(1e-6, state.dispCustomSlope), '#DC2626');
+      drawLineLabel(ax, `v/c = ${state.dispCustomSlope.toFixed(2)}`, qCustomMax, '#DC2626', true);
     }
     drawDispersionModeLegend(ax, !target);
   }
@@ -3400,14 +3515,38 @@ initPermalinks({
     drawMapInset(ax, state.mapLogColor ? minVal : rawMin, state.mapLogColor ? maxVal : rawMax);
   }
 
-  function drawLineLabel(ax: Axes, text: string, qLineMax: number, color: string) {
+  /**
+   * Label a line q = qLineMax·ħω/ħω_max through the origin. With `fitWindow`
+   * (the enlarged, windowed view) the label sits on the part of the line inside
+   * the axes' window and is clipped to the plot area; it is skipped when that part
+   * is too short to hold the whole text.
+   */
+  function drawLineLabel(ax: Axes, text: string, qLineMax: number, color: string, fitWindow = false) {
     const { ctx } = ax;
     ctx.fillStyle = color;
     ctx.font = '9px Inter, system-ui, sans-serif';
-    const labelEnergy = state.w_min + (state.w_max - state.w_min) * 0.72;
+    let labelEnergy = state.w_min + (state.w_max - state.w_min) * 0.72;
+    if (fitWindow) {
+      const slope = qLineMax / Math.max(1e-12, state.w_max);
+      const span = lineWindowSpan(ax, slope);
+      if (!span) return;
+      const [lo, hi] = span;
+      // The text is right-aligned at its anchor and runs back towards the origin:
+      // put the anchor 72% of the way along the visible part, or further out if the
+      // whole text (plus padding) would not fit behind that point.
+      const segPx = Math.hypot(ax.xTo(slope * hi) - ax.xTo(slope * lo), ax.yTo(hi) - ax.yTo(lo));
+      const need = (ctx.measureText(text).width + 16) / Math.max(1e-9, segPx);
+      if (need > 0.95) return;
+      labelEnergy = lo + (hi - lo) * Math.max(0.72, need);
+    }
     const qAtLabel = qLineMax * labelEnergy / Math.max(1e-12, state.w_max);
     const lx = ax.xTo(qAtLabel), ly = ax.yTo(labelEnergy);
     ctx.save();
+    if (fitWindow) {
+      ctx.beginPath();
+      ctx.rect(ax.m.left, ax.m.top, ax.pw, ax.ph);
+      ctx.clip();
+    }
     ctx.translate(lx - 4, ly + 10);
     const angle = Math.atan2(ax.yTo(state.w_max) - ax.yTo(0), ax.xTo(qLineMax) - ax.xTo(0));
     ctx.rotate(angle);
@@ -4380,6 +4519,7 @@ initPermalinks({
 
   // ===== Full-width dispersion / group-velocity dialog =====
   function renderDispModal() {
+    syncDispRangeUI();
     const dchart = document.getElementById('disp-modal-chart') as HTMLCanvasElement | null;
     const pchart = document.getElementById('disp-modal-phase') as HTMLCanvasElement | null;
     if (dchart) drawDispersionWQ(dchart);
@@ -4442,6 +4582,74 @@ initPermalinks({
   dispCustomSlider.addEventListener('input', () => setDispCustomSlope(dispCustomSlider.value, true));
   dispCustomNum.addEventListener('input', () => setDispCustomSlope(dispCustomNum.value, false));
   dispCustomNum.addEventListener('change', () => { dispCustomNum.value = state.dispCustomSlope.toFixed(2); });
+
+  // ── plot window of the enlarged plots: blank = automatic, a view setting (no recompute) ──
+  const dispRangeInputs: Record<DispRangeKey, HTMLInputElement> = {
+    q0: $<HTMLInputElement>('disp-range-q0'), q1: $<HTMLInputElement>('disp-range-q1'),
+    w0: $<HTMLInputElement>('disp-range-w0'), w1: $<HTMLInputElement>('disp-range-w1'),
+  };
+  /**
+   * Placeholders show the automatic limits a blank box stands for (the q_z maximum
+   * is qMaxAuto in both enlarged plots once any q_z bound is in effect); a bound
+   * that is ignored is flagged, with the reason as its tooltip.
+   */
+  function syncDispRangeUI() {
+    dispRangeInputs.q0.placeholder = '0';
+    dispRangeInputs.q1.placeholder = String(Number(qMaxAuto.toPrecision(3)));
+    dispRangeInputs.w0.placeholder = String(state.w_min);
+    dispRangeInputs.w1.placeholder = String(state.w_max);
+    const { q, w } = dispWindows();
+    const bad: Record<DispRangeKey, boolean> = { q0: q.bad0, q1: q.bad1, w0: w.bad0, w1: w.bad1 };
+    for (const key of DISP_RANGE_KEYS) {
+      const el = dispRangeInputs[key];
+      const why = el.validity.badInput ? 'Ignored: not a number'
+        : bad[key] ? 'Ignored: the minimum must be below the maximum' : '';
+      if (why) { el.setAttribute('aria-invalid', 'true'); el.title = why; }
+      else { el.removeAttribute('aria-invalid'); el.removeAttribute('title'); }
+    }
+  }
+  /** Boxes from dispRange; the next renderDispModal refreshes placeholders and flags. */
+  function fillDispRangeInputs() {
+    for (const key of DISP_RANGE_KEYS) {
+      const v = dispRange[key];
+      dispRangeInputs[key].value = v === null ? '' : String(v);
+    }
+  }
+  function clearDispRange() {
+    for (const key of DISP_RANGE_KEYS) dispRange[key] = null;
+    fillDispRangeInputs();
+  }
+  /**
+   * While typing (`input`), a bound applies only once it is a number that keeps
+   * its axis's window valid, so half-typed text ('-', '1e', a maximum still below
+   * the minimum) neither snaps the plot back to automatic nor flashes the cue.
+   * On commit (`change`) the box applies as it stands: blank or unreadable means
+   * automatic, and a bound that leaves no room is ignored and flagged.
+   */
+  function setDispRangeBound(key: DispRangeKey, commit: boolean) {
+    const el = dispRangeInputs[key];
+    const v = parseFloat(el.value);
+    const next = Number.isFinite(v) ? v : null;
+    const prev = dispRange[key];
+    if (!commit) {
+      if (el.validity.badInput) return;
+      dispRange[key] = next;
+      const win = dispWindows()[key.startsWith('q') ? 'q' : 'w'];
+      if (win.bad0 || win.bad1) { dispRange[key] = prev; return; }
+    } else {
+      if (next === prev && !el.validity.badInput) return; // already applied while typing
+      dispRange[key] = next;
+    }
+    renderDispModal();
+  }
+  for (const key of DISP_RANGE_KEYS) {
+    dispRangeInputs[key].addEventListener('input', () => setDispRangeBound(key, false));
+    dispRangeInputs[key].addEventListener('change', () => setDispRangeBound(key, true));
+  }
+  $('disp-range-auto').addEventListener('click', () => {
+    clearDispRange();
+    renderDispModal();
+  });
 
   $('disp-modal-dl-png').addEventListener('click', () => {
     const c = document.getElementById('disp-modal-chart') as HTMLCanvasElement;
@@ -4863,6 +5071,7 @@ initPermalinks({
     state.fieldParts = { ex: 're', ey: 're', ez: 're' };
     state.perpGridQuality = 'standard';
     state.drude = { epsB: 1, wpEv: 5, gammaEv: 0.05 };
+    clearDispRange();
     $<HTMLInputElement>('r-num').value = '15';
     $<HTMLInputElement>('r-slider').value = '15';
     $<HTMLInputElement>('eh-num').value = '1.00';
@@ -5138,6 +5347,11 @@ initPermalinks({
     if (state.fieldNormalized) p.set('fnorm', '1');
     if (state.fieldLogMag) p.set('flog', '1');
     p.set('pgrid', state.perpGridQuality);
+    // plot window of the enlarged dispersion view: new keys, written only for a set bound
+    for (const key of DISP_RANGE_KEYS) {
+      const v = dispRange[key];
+      if (v !== null) p.set(DISP_RANGE_PARAM[key], String(v));
+    }
     if (state.materialId === 'drude') {
       p.set('depsb', String(state.drude.epsB));
       p.set('dwp', String(state.drude.wpEv));
@@ -5236,6 +5450,11 @@ initPermalinks({
     if (p.has('depsb')) { state.drude.epsB = parseFloat(p.get('depsb')!); drudeInputs.epsB.value = String(state.drude.epsB); }
     if (p.has('dwp')) { state.drude.wpEv = parseFloat(p.get('dwp')!); drudeInputs.wpEv.value = String(state.drude.wpEv); }
     if (p.has('dgamma')) { state.drude.gammaEv = parseFloat(p.get('dgamma')!); drudeInputs.gammaEv.value = String(state.drude.gammaEv); }
+    for (const key of DISP_RANGE_KEYS) {
+      const v = parseFloat(p.get(DISP_RANGE_PARAM[key]) ?? '');
+      if (Number.isFinite(v)) dispRange[key] = v;
+    }
+    fillDispRangeInputs();
     syncTabs('axis-tabs', 'axis', state.axisMode);
     syncTabs('material-prop-tabs', 'materialProp', state.materialProp);
     syncTabs('quantity-tabs', 'qty', state.spectrumQuantity);
