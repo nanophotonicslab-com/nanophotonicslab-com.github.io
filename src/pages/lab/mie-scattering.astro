@@ -151,18 +151,60 @@ const miePresets = [
             </div>
           </div>
 
-          <!-- Custom epsilon for shell/particle -->
-          <div class="param hidden" id="eps-group">
+          <!-- Custom dielectric for shell/particle: one pair is typed, the other is derived -->
+          <div class="param custom-eps hidden" id="eps-group">
             <div class="param-header">
-              <label>&epsilon;<sub>r</sub></label>
-              <input type="number" class="param-number" id="eps-num" value="10" step="0.5" min="1">
+              <label>Input</label>
+              <div class="plot-tabs plot-tabs--toolbar eps-mode-tabs" role="radiogroup" aria-label="Custom dielectric input">
+                <button type="button" class="plot-tab active" data-eps-mode="eps" role="radio" aria-checked="true">&epsilon;</button>
+                <button type="button" class="plot-tab" data-eps-mode="nk" role="radio" aria-checked="false">n, k</button>
+              </div>
             </div>
-            <input type="range" class="param-slider" id="eps-slider" aria-label="Relative permittivity" min="1" max="50" step="0.5" value="10">
-            <div class="param-limits">
-              <input type="number" class="param-limit" id="eps-min" value="1" step="0.5" min="0.1">
-              <span class="param-limit-dash">&mdash;</span>
-              <input type="number" class="param-limit" id="eps-max" value="50" step="0.5" min="0.1">
+            <div class="eps-pair eps-pair--eps">
+              <div class="param-header">
+                <label for="eps-num">Re(&epsilon;)</label>
+                <input type="number" class="param-number eps-re-num" id="eps-num" value="10" step="0.01">
+              </div>
+              <input type="range" class="param-slider eps-re-slider" id="eps-slider" aria-label="Real part of the permittivity Re(&epsilon;)" min="-50" max="50" step="0.1" value="10">
+              <div class="param-limits">
+                <input type="number" class="param-limit eps-re-min" id="eps-min" value="-50" step="0.5">
+                <span class="param-limit-dash">&mdash;</span>
+                <input type="number" class="param-limit eps-re-max" id="eps-max" value="50" step="0.5">
+              </div>
+              <div class="param-header">
+                <label for="eps-im-num">Im(&epsilon;)</label>
+                <input type="number" class="param-number eps-im-num" id="eps-im-num" value="0" step="0.01" min="0">
+              </div>
+              <input type="range" class="param-slider eps-im-slider" id="eps-im-slider" aria-label="Imaginary part of the permittivity Im(&epsilon;)" min="0" max="50" step="0.1" value="0">
+              <div class="param-limits">
+                <input type="number" class="param-limit eps-im-min" id="eps-im-min" value="0" step="0.5" min="0">
+                <span class="param-limit-dash">&mdash;</span>
+                <input type="number" class="param-limit eps-im-max" id="eps-im-max" value="50" step="0.5" min="0.1">
+              </div>
             </div>
+            <div class="eps-pair eps-pair--nk">
+              <div class="param-header">
+                <label for="eps-n-num">n</label>
+                <input type="number" class="param-number eps-n-num" id="eps-n-num" value="3.16" step="0.01" min="0">
+              </div>
+              <input type="range" class="param-slider eps-n-slider" id="eps-n-slider" aria-label="Refractive index n" min="0" max="10" step="0.01" value="3.16">
+              <div class="param-limits">
+                <input type="number" class="param-limit eps-n-min" id="eps-n-min" value="0" step="0.1" min="0">
+                <span class="param-limit-dash">&mdash;</span>
+                <input type="number" class="param-limit eps-n-max" id="eps-n-max" value="10" step="0.1" min="0.1">
+              </div>
+              <div class="param-header">
+                <label for="eps-k-num">k</label>
+                <input type="number" class="param-number eps-k-num" id="eps-k-num" value="0" step="0.01" min="0">
+              </div>
+              <input type="range" class="param-slider eps-k-slider" id="eps-k-slider" aria-label="Extinction coefficient k" min="0" max="10" step="0.01" value="0">
+              <div class="param-limits">
+                <input type="number" class="param-limit eps-k-min" id="eps-k-min" value="0" step="0.1" min="0">
+                <span class="param-limit-dash">&mdash;</span>
+                <input type="number" class="param-limit eps-k-max" id="eps-k-max" value="10" step="0.1" min="0.1">
+              </div>
+            </div>
+            <span class="material-ref eps-echo"></span>
           </div>
 
           <!-- Core section (core-shell only, collapsible) -->
@@ -210,17 +252,59 @@ const miePresets = [
                   </label>
                 </div>
               </div>
-              <div class="param" id="core-eps-group" style="display:none">
+              <div class="param custom-eps" id="core-eps-group" style="display:none">
                 <div class="param-header">
-                  <label>&epsilon;<sub>r</sub></label>
-                  <input type="number" class="param-number" id="core-eps-num" value="10" step="0.5" min="1">
+                  <label>Input</label>
+                  <div class="plot-tabs plot-tabs--toolbar eps-mode-tabs" role="radiogroup" aria-label="Core custom dielectric input">
+                    <button type="button" class="plot-tab active" data-eps-mode="eps" role="radio" aria-checked="true">&epsilon;</button>
+                    <button type="button" class="plot-tab" data-eps-mode="nk" role="radio" aria-checked="false">n, k</button>
+                  </div>
                 </div>
-                <input type="range" class="param-slider" id="core-eps-slider" aria-label="Core relative permittivity" min="1" max="50" step="0.5" value="10">
-                <div class="param-limits">
-                  <input type="number" class="param-limit" id="core-eps-min" value="1" step="0.5" min="0.1">
-                  <span class="param-limit-dash">&mdash;</span>
-                  <input type="number" class="param-limit" id="core-eps-max" value="50" step="0.5" min="0.1">
+                <div class="eps-pair eps-pair--eps">
+                  <div class="param-header">
+                    <label for="core-eps-num">Re(&epsilon;)</label>
+                    <input type="number" class="param-number eps-re-num" id="core-eps-num" value="10" step="0.01">
+                  </div>
+                  <input type="range" class="param-slider eps-re-slider" id="core-eps-slider" aria-label="Core real part of the permittivity Re(&epsilon;)" min="-50" max="50" step="0.1" value="10">
+                  <div class="param-limits">
+                    <input type="number" class="param-limit eps-re-min" id="core-eps-min" value="-50" step="0.5">
+                    <span class="param-limit-dash">&mdash;</span>
+                    <input type="number" class="param-limit eps-re-max" id="core-eps-max" value="50" step="0.5">
+                  </div>
+                  <div class="param-header">
+                    <label for="core-eps-im-num">Im(&epsilon;)</label>
+                    <input type="number" class="param-number eps-im-num" id="core-eps-im-num" value="0" step="0.01" min="0">
+                  </div>
+                  <input type="range" class="param-slider eps-im-slider" id="core-eps-im-slider" aria-label="Core imaginary part of the permittivity Im(&epsilon;)" min="0" max="50" step="0.1" value="0">
+                  <div class="param-limits">
+                    <input type="number" class="param-limit eps-im-min" id="core-eps-im-min" value="0" step="0.5" min="0">
+                    <span class="param-limit-dash">&mdash;</span>
+                    <input type="number" class="param-limit eps-im-max" id="core-eps-im-max" value="50" step="0.5" min="0.1">
+                  </div>
                 </div>
+                <div class="eps-pair eps-pair--nk">
+                  <div class="param-header">
+                    <label for="core-eps-n-num">n</label>
+                    <input type="number" class="param-number eps-n-num" id="core-eps-n-num" value="3.16" step="0.01" min="0">
+                  </div>
+                  <input type="range" class="param-slider eps-n-slider" id="core-eps-n-slider" aria-label="Core refractive index n" min="0" max="10" step="0.01" value="3.16">
+                  <div class="param-limits">
+                    <input type="number" class="param-limit eps-n-min" id="core-eps-n-min" value="0" step="0.1" min="0">
+                    <span class="param-limit-dash">&mdash;</span>
+                    <input type="number" class="param-limit eps-n-max" id="core-eps-n-max" value="10" step="0.1" min="0.1">
+                  </div>
+                  <div class="param-header">
+                    <label for="core-eps-k-num">k</label>
+                    <input type="number" class="param-number eps-k-num" id="core-eps-k-num" value="0" step="0.01" min="0">
+                  </div>
+                  <input type="range" class="param-slider eps-k-slider" id="core-eps-k-slider" aria-label="Core extinction coefficient k" min="0" max="10" step="0.01" value="0">
+                  <div class="param-limits">
+                    <input type="number" class="param-limit eps-k-min" id="core-eps-k-min" value="0" step="0.1" min="0">
+                    <span class="param-limit-dash">&mdash;</span>
+                    <input type="number" class="param-limit eps-k-max" id="core-eps-k-max" value="10" step="0.1" min="0.1">
+                  </div>
+                </div>
+                <span class="material-ref eps-echo"></span>
               </div>
               <div class="param" id="core-r-group">
                 <div class="param-header">
@@ -784,6 +868,18 @@ initPermalinks({
   .param-limit:focus { border-color: var(--primary-light); color: var(--text-soft); }
   .param-limit::-webkit-inner-spin-button, .param-limit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   #eps-group.hidden { display: none; }
+  /* Custom dielectric: the typed pair keeps its sliders, the derived pair collapses
+     to two muted read-outs side by side so the column does not grow by four rows. */
+  .custom-eps .eps-mode-tabs { flex: 0 0 auto; }
+  .eps-pair { display: flex; flex-direction: column; gap: 0.32rem; }
+  .eps-pair.is-derived { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.4rem; }
+  .eps-pair.is-derived .param-slider, .eps-pair.is-derived .param-limits { display: none; }
+  .eps-pair.is-derived .param-header { gap: 0.3rem; min-width: 0; }
+  .eps-pair.is-derived .param-header label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+  /* one step deeper than the panel (lab.css .custom-eps), so a derived box still
+     reads as read-only now that the panel itself is --bg-soft */
+  .eps-pair.is-derived .param-number { width: 100%; min-width: 0; font-weight: 500; color: var(--text-muted); background: var(--bg-muted); cursor: default; }
+  .eps-echo { font-variant-numeric: tabular-nums; }
   .shell-section { display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid var(--bg-muted); padding-top: var(--space-sm); margin-top: var(--space-xs); }
   .shell-header { display: flex; justify-content: space-between; align-items: center; }
   .shell-header label { font-size: 0.8125rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -1441,7 +1537,22 @@ initPermalinks({
 
   // === Param + Tab helpers ===
 
-  interface ParamHandle { readonly value: number; setValue(v: number): void; }
+  interface ParamHandle {
+    readonly value: number;
+    setValue(v: number): void;
+    /**
+     * Take `v`, widening the slider's own window first if `v` falls outside it.
+     *
+     * setValue clamps to the window, which is right for a user dragging a
+     * slider and wrong for a value that arrives from a preset, a shared link or
+     * a unit conversion: an ε derived from n, k has no reason to respect the ε
+     * slider's current range, and silently clipping it would plot a different
+     * material than the one being described.
+     *
+     * A row's `floor` is the one bound fit() does respect — see setupParamEl.
+     */
+    fit(v: number): void;
+  }
   /**
    * One value driven by a precise number box and a coarse slider.
    *
@@ -1455,8 +1566,8 @@ initPermalinks({
    * computed is exactly the one on screen — no hidden precision behind a
    * rounded display.
    */
-  function setupParamEl(num: HTMLInputElement, slider: HTMLInputElement, minIn: HTMLInputElement, maxIn: HTMLInputElement, fmt: (v: number) => string, onChange: () => void): ParamHandle {
-    function clamp(v: number) { return Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)); }
+  function setupParamEl(num: HTMLInputElement, slider: HTMLInputElement, minIn: HTMLInputElement, maxIn: HTMLInputElement, fmt: (v: number) => string, onChange: () => void, floor = -Infinity): ParamHandle {
+    function clamp(v: number) { return Math.max(Math.max(floor, parseFloat(slider.min)), Math.min(parseFloat(slider.max), v)); }
     function apply(v: number) {
       num.value = fmt(v);
       current = parseFloat(num.value);
@@ -1465,9 +1576,27 @@ initPermalinks({
     let current = clamp(parseFloat(num.value) || 0);
     slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); current = parseFloat(num.value); onChange(); });
     num.addEventListener('change', () => { apply(clamp(parseFloat(num.value) || 0)); onChange(); });
-    function fl() { const lo = parseFloat(minIn.value), hi = parseFloat(maxIn.value); if (isNaN(lo) || isNaN(hi) || lo >= hi) return; slider.min = lo.toString(); slider.max = hi.toString(); apply(clamp(current)); onChange(); }
+    function fl() {
+      const raw = parseFloat(minIn.value), hi = parseFloat(maxIn.value);
+      if (isNaN(raw) || isNaN(hi)) return;
+      // A floored row owns its own lower bound. `min=` in the markup is only a
+      // validity hint — the box still accepts a typed −5 — so without this a
+      // widened window let Im ε or k go negative, i.e. gain: the kernel then
+      // returns C_ext < C_sca while every label still read "−0.73i".
+      const lo = Math.max(floor, raw);
+      if (lo >= hi) return;
+      if (lo !== raw) minIn.value = String(lo);
+      slider.min = lo.toString(); slider.max = hi.toString(); apply(clamp(current)); onChange();
+    }
     minIn.addEventListener('change', fl); maxIn.addEventListener('change', fl);
-    return { get value() { return current; }, setValue(v: number) { apply(clamp(v)); onChange(); } };
+    function fit(v: number) {
+      if (!Number.isFinite(v)) return;
+      v = Math.max(floor, v);
+      if (v < parseFloat(slider.min)) { slider.min = String(v); minIn.value = String(v); }
+      if (v > parseFloat(slider.max)) { slider.max = String(v); maxIn.value = String(v); }
+      apply(v); onChange();
+    }
+    return { get value() { return current; }, setValue(v: number) { apply(clamp(v)); onChange(); }, fit };
   }
   function setupParam(numId: string, sliderId: string, minId: string, maxId: string, fmt: (v: number) => string, onChange: () => void): ParamHandle {
     return setupParamEl(
@@ -1480,8 +1609,10 @@ initPermalinks({
   }
   /** Radii accept two decimals; trailing zeros are dropped so 50 stays "50". */
   const fmtRadius = (v: number) => String(Math.round(v * 100) / 100);
-  function setupTabs(cId: string, attr: string, init: string, onSel: (v: string) => void) {
-    const tabs = document.getElementById(cId)!.querySelectorAll<HTMLButtonElement>('.plot-tab');
+  interface TabHandle { readonly value: string; select(v: string, silent?: boolean): void; }
+  /** Element-based, like setupParamEl: the shell sections have no ids to look up. */
+  function setupTabsEl(container: HTMLElement, attr: string, init: string, onSel: (v: string) => void): TabHandle {
+    const tabs = container.querySelectorAll<HTMLButtonElement>('.plot-tab');
     let cur = init;
     tabs.forEach(t => t.addEventListener('click', () => {
       if (t.disabled || t.getAttribute('aria-disabled') === 'true') return;
@@ -1492,6 +1623,257 @@ initPermalinks({
       for (const t of tabs) { if (t.dataset[attr] === v) { tabs.forEach(t2 => { t2.classList.remove('active'); t2.setAttribute('aria-checked', 'false'); }); t.classList.add('active'); t.setAttribute('aria-checked', 'true'); cur = v; if (!silent) onSel(v); return; } }
     }
     return { get value() { return cur; }, select };
+  }
+  function setupTabs(cId: string, attr: string, init: string, onSel: (v: string) => void): TabHandle {
+    return setupTabsEl(document.getElementById(cId)!, attr, init, onSel);
+  }
+
+  // === Custom dielectric: ε or (n, k), one pair typed and the other derived ===
+
+  /**
+   * What the ε / n / k boxes show: two decimals, trailing zeros dropped, so 10
+   * stays "10" and √10 reads 3.16 rather than 3.16228. The box and the material
+   * never disagree — switching the pair being typed adopts the rounded value
+   * (see setMode), which is why one decimal would not do: it turned
+   * ε = −4.42 + 0.73i into −4.4 + 0.7i.
+   *
+   * Below 0.1 the same two decimals destroy the material instead of tidying it.
+   * k is the quantity a mode switch rounds and Im ε = 2nk, so the smallest
+   * non-zero loss two decimals can express is 0.02n — at ε = 12.25 + 0.014i,
+   * k = 0.002 rounds to 0 and a weakly absorbing dielectric becomes perfectly
+   * transparent (peak C_abs 518 nm² → 0) on one click. Small magnitudes
+   * therefore keep five decimals: still short to read, and display is still
+   * exactly the value.
+   */
+  const roundEps = (v: number) => {
+    const dp = Math.abs(v) < 0.1 ? 100000 : 100;
+    return Math.round(v * dp) / dp;
+  };
+  const fmtEpsVal = (v: number) => String(roundEps(v));
+  /** Links, filenames and exports keep what was typed, not what is shown. */
+  const fmtEpsFull = (v: number) => String(Math.round(v * 100000) / 100000);
+  /**
+   * ε for a label or a header: "10" when lossless, "−4.42 + 0.73i" otherwise.
+   *
+   * One minus glyph throughout: fmtEpsVal emits ASCII "-" for a negative real
+   * part, which sat badly next to the U+2212 between the two terms.
+   */
+  function fmtEpsLabel(e: { re: number; im: number }): string {
+    const re = fmtEpsVal(e.re).replace('-', '−');
+    return e.im === 0 ? re : `${re} ${e.im < 0 ? '−' : '+'} ${fmtEpsVal(Math.abs(e.im))}i`;
+  }
+  /**
+   * ε = 0 is not a material, and it sits one slider stop away: Re ε steps
+   * through 0 while Im ε = 0, n steps through 0 while k = 0 (k's own default),
+   * and (n, k) = (0.02, 0.02) rounds onto it on a mode switch. The kernel
+   * divides by |mx|² and |m|² (src/lib/mie.ts), so m = 0 turns every
+   * coefficient, cross-section, near field, angular pattern and EELS/CL curve
+   * into NaN — and recompute() does not throw on NaN, so the page just drew an
+   * empty chart. Approaching zero is numerically flat (n = 1e-2, 1e-6 and
+   * 1e-12 agree to seven digits), so the physics path substitutes the ε → 0
+   * limit and the echo says the typed ε is degenerate.
+   */
+  const EPS_DEGENERATE = 1e-18;          // n² + k², i.e. |ε| below 1e-9
+  /** One slot's four rows, with the aria-label tail each shell slider gets. */
+  const EPS_ROWS = [
+    ['re', 'real part of the permittivity Re(ε)'],
+    ['im', 'imaginary part of the permittivity Im(ε)'],
+    ['n', 'refractive index n'],
+    ['k', 'extinction coefficient k'],
+  ] as const;
+
+  /**
+   * One material slot's "Custom dielectric" entry.
+   *
+   * A custom material used to be a single real ε, so it could not absorb at all:
+   * the Mie kernel was handed [√ε, 0] and C_abs came back as zero whatever was
+   * typed. It now carries the full complex ε, entered either as Re/Im ε or as
+   * n, k — whichever pair the user picks is the authoritative one, and the other
+   * is derived through the conversions in src/lib/materials.ts and shown
+   * read-only, so the two can never disagree.
+   *
+   * Re(ε) deliberately keeps the original control and the original permalink
+   * key: Im ε defaults to 0 and the mode defaults to ε, so every link and every
+   * preset written before this reproduces exactly the same curve.
+   */
+  interface CustomEpsHandle {
+    /** Re ε — the control this slot has always had. */
+    reParam: ParamHandle;
+    imParam: ParamHandle;
+    /** Authoritative while mode === 'nk'; the derived read-out otherwise. */
+    nParam: ParamHandle;
+    kParam: ParamHandle;
+    readonly mode: 'eps' | 'nk';
+    /** Switch the pair being typed, carrying the material across unchanged. */
+    setMode(m: 'eps' | 'nk'): void;
+    /** ε = ε' + iε'', from the pair being typed — exactly as typed. */
+    eps(): { re: number; im: number };
+    /**
+     * The same material as (n, k) — what every dielectric function here
+     * returns, and the only accessor the Mie kernel sees. ε = 0 leaves here as
+     * the ε → 0 limit rather than the NaN it would otherwise cause; every other
+     * value passes through untouched, so no export can state an ε the curve
+     * did not use.
+     */
+    nk(): [number, number];
+  }
+
+  function setupCustomEps(root: HTMLElement, onChange: () => void): CustomEpsHandle {
+    const input = (sel: string) => root.querySelector(sel) as HTMLInputElement;
+    /**
+     * `floor` is 0 for every row but Re ε. A negative Re ε is what a metal is;
+     * a negative Im ε or k is gain, and a negative n is the wrong square root.
+     * The floor, not the markup's `min=`, is what actually holds them — see
+     * setupParamEl.
+     */
+    const row = (name: string, floor = -Infinity) => setupParamEl(
+      input(`.eps-${name}-num`), input(`.eps-${name}-slider`),
+      input(`.eps-${name}-min`), input(`.eps-${name}-max`),
+      fmtEpsVal, commit, floor,
+    );
+    const epsPair = root.querySelector('.eps-pair--eps') as HTMLElement;
+    const nkPair = root.querySelector('.eps-pair--nk') as HTMLElement;
+    const echo = root.querySelector('.eps-echo') as HTMLElement;
+    let mode: 'eps' | 'nk' = 'eps';
+    // The two fit() calls that carry a value across a mode switch must not be
+    // seen as edits — the pair they write is only half-updated while they run.
+    let adopting = false;
+
+    function state(): { re: number; im: number; n: number; k: number } {
+      if (mode === 'nk') {
+        const e = nkToEpsilon(nP.value, kP.value);
+        return { re: e.re, im: e.im, n: nP.value, k: kP.value };
+      }
+      const [n, k] = epsilonToNK(reP.value, imP.value);
+      return { re: reP.value, im: imP.value, n, k };
+    }
+
+    function sync(): void {
+      const s = state();
+      const derivedNK = mode === 'eps';
+      // The derived pair is a read-out, not a control — but it is written
+      // through its own handles rather than straight into the boxes. A raw
+      // `.value =` never reaches setupParamEl's `current`, so the handle kept
+      // whatever the markup said (n = 3.16) while the box showed the real
+      // derived value, and anything that read nParam/kParam — the share link
+      // does — got the stale number. fit() only ever widens its window, so the
+      // pair nobody is dragging still cannot be clipped by it.
+      const wasAdopting = adopting;
+      adopting = true;
+      try {
+        if (derivedNK) { nP.fit(roundEps(s.n)); kP.fit(roundEps(s.k)); }
+        else { reP.fit(roundEps(s.re)); imP.fit(roundEps(s.im)); }
+      } finally { adopting = wasAdopting; }
+      epsPair.classList.toggle('is-derived', !derivedNK);
+      nkPair.classList.toggle('is-derived', derivedNK);
+      for (const [name] of EPS_ROWS) {
+        const ro = derivedNK === (name === 'n' || name === 'k');
+        const el = input(`.eps-${name}-num`);
+        el.readOnly = ro;
+        el.setAttribute('aria-readonly', ro ? 'true' : 'false');
+        el.title = ro ? 'Computed from the pair being entered' : '';
+      }
+      const degenerate = s.n * s.n + s.k * s.k < EPS_DEGENERATE;
+      echo.textContent = `ε = ${fmtEpsLabel({ re: s.re, im: s.im })} · n = ${fmtEpsVal(s.n)}, k = ${fmtEpsVal(s.k)}`
+        + (degenerate ? ' · ε = 0 is not a material — plotted as the ε → 0 limit' : '');
+    }
+
+    function commit(): void { if (adopting) return; sync(); onChange(); }
+
+    const reP = row('re'), imP = row('im', 0), nP = row('n', 0), kP = row('k', 0);
+    const modeTabs = setupTabsEl(
+      root.querySelector('.eps-mode-tabs') as HTMLElement, 'epsMode', 'eps',
+      v => setMode(v === 'nk' ? 'nk' : 'eps'),
+    );
+
+    function setMode(m: 'eps' | 'nk'): void {
+      if (m === mode || adopting) return;
+      const s = state();            // the material, read from the pair being left
+      mode = m;
+      adopting = true;
+      try {
+        // rounded, so the pair now being typed holds exactly what its box shows
+        if (m === 'nk') { nP.fit(roundEps(s.n)); kP.fit(roundEps(s.k)); }
+        else { reP.fit(roundEps(s.re)); imP.fit(roundEps(s.im)); }
+      } finally { adopting = false; }
+      modeTabs.select(m, true);
+      commit();
+    }
+
+    sync();
+    return {
+      reParam: reP, imParam: imP, nParam: nP, kParam: kP,
+      get mode() { return mode; },
+      setMode,
+      eps() { const s = state(); return { re: s.re, im: s.im }; },
+      nk() {
+        const s = state();
+        // The one point the kernel cannot divide by — see EPS_DEGENERATE.
+        return s.n * s.n + s.k * s.k < EPS_DEGENERATE ? [1e-9, 0] : [s.n, s.k];
+      },
+    };
+  }
+
+  /**
+   * Point a slot at ε = re + i·im, typed as ε — what every preset here means.
+   *
+   * Re ε is free to go negative (that is what a metal is); a negative Im ε is
+   * gain, and the Im ε row's floor is what holds it at zero, here and
+   * everywhere else the value can be set.
+   */
+  function setCustomEps(h: CustomEpsHandle, re: number, im = 0): void {
+    h.setMode('eps');
+    h.reParam.fit(re);
+    h.imParam.fit(im);
+  }
+  /** The page default for a custom slot: ε = 10, lossless, typed as ε. */
+  const resetCustomEps = (h: CustomEpsHandle) => setCustomEps(h, 10, 0);
+
+  /**
+   * Share-link round trip for one slot.
+   *
+   * '<prefix>eps' keeps its old meaning (Re ε) and every addition is omitted at
+   * its default, so every URL the previous version could produce is written
+   * byte-for-byte the same and read back to the same material.
+   *
+   * In n, k mode the ε keys are the *derived* pair, and they cannot carry the
+   * link on their own: restoring them runs them through fit(), which re-formats
+   * the box and reads it back, so the typed pair is rebuilt from a value that
+   * has been rounded twice. n = 0.07, k = 0.05 went out as ε = 0.0024 + 0.007i
+   * and came back as (0.07, 0.07); n = 0.07, k = 0 came back as (0, 0), which
+   * is the degenerate point. '<prefix>epsn' / '<prefix>epsk' therefore carry
+   * the pair that is authoritative, at full precision, and are written only in
+   * n, k mode — so no URL the ε-mode path produces changes at all.
+   */
+  function serializeCustomEps(h: CustomEpsHandle, p: URLSearchParams, prefix: string): void {
+    const e = h.eps();
+    p.set(`${prefix}eps`, fmtEpsFull(e.re));
+    if (e.im !== 0) p.set(`${prefix}epsi`, fmtEpsFull(e.im));
+    if (h.mode !== 'eps') {
+      p.set(`${prefix}epsm`, h.mode);
+      p.set(`${prefix}epsn`, fmtEpsFull(h.nParam.value));
+      p.set(`${prefix}epsk`, fmtEpsFull(h.kParam.value));
+    }
+  }
+  function restoreCustomEps(h: CustomEpsHandle, p: URLSearchParams, prefix: string): void {
+    const num = (key: string, fallback: number) => {
+      const v = parseFloat(p.get(key) ?? '');
+      return Number.isFinite(v) ? v : fallback;
+    };
+    // A hand-written link can name 'custom' and no values at all. Half-applying
+    // it left the slot on a material from neither the link nor the UI, so take
+    // the documented default instead.
+    if (!p.has(`${prefix}eps`)) { resetCustomEps(h); return; }
+    h.setMode('eps');                                        // the ε keys are the authority
+    h.reParam.fit(num(`${prefix}eps`, h.reParam.value));
+    h.imParam.fit(num(`${prefix}epsi`, 0));                  // absent means lossless, as it always did
+    if (p.get(`${prefix}epsm`) === 'nk') {
+      h.setMode('nk');                                       // …and the n, k boxes follow it
+      // setMode *derives* n, k from the ε pair above, so the typed pair has to
+      // land after the switch, not before it.
+      if (p.has(`${prefix}epsn`)) h.nParam.fit(num(`${prefix}epsn`, h.nParam.value));
+      if (p.has(`${prefix}epsk`)) h.kParam.fit(num(`${prefix}epsk`, h.kParam.value));
+    }
   }
 
   // === UI Setup ===
@@ -1684,10 +2066,10 @@ initPermalinks({
     resetAndUpdate();
   });
 
-  const epsParam = setupParam('eps-num', 'eps-slider', 'eps-min', 'eps-max', v => v.toFixed(1), resetAndUpdate);
+  const mainEps = setupCustomEps(epsGroup, resetAndUpdate);
   const rParam = setupParam('r-num', 'r-slider', 'r-min', 'r-max', fmtRadius, () => radiusChanged(1));
   const nhParam = setupParam('nh-num', 'nh-slider', 'nh-min', 'nh-max', v => v.toFixed(2), resetAndUpdate);
-  const coreEpsParam = setupParam('core-eps-num', 'core-eps-slider', 'core-eps-min', 'core-eps-max', v => v.toFixed(1), resetAndUpdate);
+  const coreEps = setupCustomEps(coreEpsGroup, resetAndUpdate);
   const coreRParam = setupParam('core-r-num', 'core-r-slider', 'core-r-min', 'core-r-max', fmtRadius, () => radiusChanged(0));
   const electronBParam = setupParam('electron-b-num', 'electron-b-slider', 'electron-b-min', 'electron-b-max', v => v.toFixed(0), resetAndUpdate);
   const electronBetaParam = setupParam('electron-beta-num', 'electron-beta-slider', 'electron-beta-min', 'electron-beta-max', v => v.toFixed(2), electronBetaChanged);
@@ -1926,6 +2308,12 @@ initPermalinks({
   thermalRangeMax.addEventListener('change', applyThermalRange);
 
   // Default thermal properties per material (κ W/mK, g 10¹⁶ W/m³K, G MW/m²K).
+  // `metal` means "this layer has an electron bath you may specify", i.e. the g
+  // box is live. A custom slot qualifies now that it can be typed as a metal
+  // (ε = −4.42 + 0.73i and the like): with the box disabled, tlVal read the
+  // fixed "0", isMetal (g > 0 && Im ε > 0.2) could never be true, and the
+  // two-temperature channel was unreachable however the slot was filled. g
+  // still defaults to 0, so nothing changes until a value is entered.
   const THERMAL_MAT: Record<string, { kappa: number; g: number; G: number; metal: boolean }> = {
     au:    { kappa: 314, g: 3,  G: 105, metal: true },
     ag:    { kappa: 429, g: 2.8, G: 100, metal: true },
@@ -1933,7 +2321,7 @@ initPermalinks({
     drude: { kappa: 100, g: 3,  G: 105, metal: true },
     si:    { kappa: 150, g: 0,  G: 100, metal: false },
     tio2:  { kappa: 8,   g: 0,  G: 60,  metal: false },
-    custom:{ kappa: 1.0, g: 0,  G: 100, metal: false },
+    custom:{ kappa: 1.0, g: 0,  G: 100, metal: true  },
     file:  { kappa: 1.0, g: 0,  G: 100, metal: false },
     rii:   { kappa: 1.0, g: 0,  G: 100, metal: false },
   };
@@ -2007,9 +2395,6 @@ initPermalinks({
   function relaxRadiusSlider(slider: HTMLInputElement | null) {
     if (slider) { slider.min = '1'; slider.step = '1'; if (parseFloat(slider.max) < 520) slider.max = '520'; }
   }
-  function relaxStepSlider(slider: HTMLInputElement | null) {   // allow fine values (e.g. SiO₂ ε = 2.10)
-    if (slider) slider.step = '0.01';
-  }
   function setTLInput(i: number, key: string, val: number) {
     const el = thermalLayersEl.querySelector(`input[data-tl="${i}"][data-tlk="${key}"]`) as HTMLInputElement | null;
     if (el) el.value = String(val);
@@ -2060,17 +2445,17 @@ initPermalinks({
       } else {
         geoTabs.select('coreshell');
         setSelectValue(coreMaterialSelect, p.layers[0].mat);
-        if (p.layers[0].mat === 'custom') { relaxStepSlider(document.getElementById('core-eps-slider') as HTMLInputElement); coreEpsParam.setValue(SILICA_EPS); }
+        if (p.layers[0].mat === 'custom') setCustomEps(coreEps, SILICA_EPS, 0);   // SiO₂ is lossless: Im ε = 0, stated
         relaxRadiusSlider(document.getElementById('core-r-slider') as HTMLInputElement);
         coreRParam.setValue(p.layers[0].r);
         setSelectValue(materialSelect, p.layers[1].mat);
-        if (p.layers[1].mat === 'custom') { relaxStepSlider(document.getElementById('eps-slider') as HTMLInputElement); epsParam.setValue(SILICA_EPS); }
+        if (p.layers[1].mat === 'custom') setCustomEps(mainEps, SILICA_EPS, 0);
         relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
         rParam.setValue(p.layers[1].r);
         for (let i = 2; i < p.layers.length; i++) {
           const h = createShellSection(p.layers[i].r);
           setSelectValue(h.material, p.layers[i].mat);
-          if (p.layers[i].mat === 'custom') { relaxStepSlider(h.el.querySelector('.sh-eps-slider') as HTMLInputElement); h.epsParam.setValue(SILICA_EPS); }
+          if (p.layers[i].mat === 'custom') setCustomEps(h.customEps, SILICA_EPS, 0);
           relaxRadiusSlider(h.el.querySelector('.sh-r-slider') as HTMLInputElement);
           h.rParam.setValue(p.layers[i].r);
         }
@@ -2606,14 +2991,14 @@ initPermalinks({
     clearMaterialSource(mainSource, riiHandle, fileNameEl);
     syncMainMaterialRef();
     setDrude(drudeHandle);
-    epsParam.setValue(10);
+    resetCustomEps(mainEps);
     rParam.setValue(ELECTRON_DEFAULT_RADIUS_NM);
     nhParam.setValue(1.33);
     coreMaterialSelect.value = 'au';
     syncCoreMaterialRef();
     coreDrudeGroup.style.display = 'none';
     setDrude(coreDrudeHandle);
-    coreEpsParam.setValue(10);
+    resetCustomEps(coreEps);
     coreRParam.setValue(60);
     (document.getElementById('lam-min') as HTMLInputElement).value = '300';
     (document.getElementById('lam-max') as HTMLInputElement).value = '1200';
@@ -2652,14 +3037,14 @@ initPermalinks({
     clearMaterialSource(mainSource, riiHandle, fileNameEl);
     syncMainMaterialRef();
     setDrude(drudeHandle);
-    epsParam.setValue(10);
+    resetCustomEps(mainEps);
     rParam.setValue(50);
     nhParam.setValue(1.33);
     coreMaterialSelect.value = 'au';
     syncCoreMaterialRef();
     coreDrudeGroup.style.display = 'none';
     setDrude(coreDrudeHandle);
-    coreEpsParam.setValue(10);
+    resetCustomEps(coreEps);
     coreRParam.setValue(60);
     (document.getElementById('lam-min') as HTMLInputElement).value = '300';
     (document.getElementById('lam-max') as HTMLInputElement).value = '900';
@@ -2701,10 +3086,8 @@ initPermalinks({
       dipoleRegion = p.region;
       // pick a matching material so the Material view shows a coherent ε(λ)
       setSelectValue(materialSelect, p.mat);
-      if (p.mat === 'custom' && p.customEps !== undefined) {
-        relaxStepSlider(document.getElementById('eps-slider') as HTMLInputElement);
-        epsParam.setValue(p.customEps);
-      }
+      // the Kim figures with a custom slot are lossless dielectrics: Im ε = 0, stated
+      if (p.mat === 'custom' && p.customEps !== undefined) setCustomEps(mainEps, p.customEps, 0);
       relaxRadiusSlider(document.getElementById('r-slider') as HTMLInputElement);
       rParam.setValue(p.aNm);
       nhParam.setValue(1.0);                        // all reference figures use a vacuum host
@@ -2784,7 +3167,7 @@ initPermalinks({
 
   function getDielectric(lambdaNm: number): [number, number] {
     const mat = materialSelect.value;
-    if (mat === 'custom') return [Math.sqrt(epsParam.value), 0];
+    if (mat === 'custom') return mainEps.nk();
     if (mat === 'drude') return drudeNK(lambdaNm, drudeHandle);
     if ((mat === 'file' || mat === 'rii') && mainSource.kind === mat && mainSource.data) return interpolateNK(mainSource.data, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
@@ -2793,7 +3176,7 @@ initPermalinks({
 
   function getCoreDielectric(lambdaNm: number): [number, number] {
     const mat = coreMaterialSelect.value;
-    if (mat === 'custom') return [Math.sqrt(coreEpsParam.value), 0];
+    if (mat === 'custom') return coreEps.nk();
     if (mat === 'drude') return drudeNK(lambdaNm, coreDrudeHandle);
     if ((mat === 'file' || mat === 'rii') && coreSource.kind === mat && coreSource.data) return interpolateNK(coreSource.data, lambdaNm);
     if (mat === 'file' || mat === 'rii') return [1, 0];
@@ -2804,7 +3187,7 @@ initPermalinks({
   interface ShellHandle {
     el: HTMLElement;
     material: HTMLSelectElement;
-    epsParam: ParamHandle;
+    customEps: CustomEpsHandle;
     epsGroup: HTMLElement;
     drudeHandle: DrudeHandle;
     rParam: ParamHandle;
@@ -2823,8 +3206,10 @@ initPermalinks({
    */
   function shellDielectric(sh: ShellHandle): (lambdaNm: number) => [number, number] {
     const mat = sh.material.value;
-    const eps = sh.epsParam.value;
-    if (mat === 'custom') return (_: number): [number, number] => [Math.sqrt(eps), 0];
+    if (mat === 'custom') {
+      const nk = sh.customEps.nk();   // read once, like the other branches capture their table
+      return (_: number): [number, number] => nk;
+    }
     if (mat === 'drude') return (lnm: number): [number, number] => drudeNK(lnm, sh.drudeHandle);
     if (mat === 'file' || mat === 'rii') {
       // Only the table the current source actually put there: a leftover from the
@@ -2865,7 +3250,13 @@ initPermalinks({
     for (let i = 0; i < extraShells.length; i++) {
       const lbl = extraShells[i].el.querySelector('.shell-label')!;
       lbl.textContent = `Shell ${i + 2}`;
-      extraShells[i].el.querySelector('.sh-eps-slider')?.setAttribute('aria-label', `Shell ${i + 2} relative permittivity`);
+      for (const [row, name] of EPS_ROWS) {
+        // Both halves of the row: a shell slot has no ids, so its number boxes
+        // are named by aria-label rather than by a <label for>.
+        extraShells[i].el.querySelector(`.eps-${row}-slider`)?.setAttribute('aria-label', `Shell ${i + 2} ${name}`);
+        extraShells[i].el.querySelector(`.eps-${row}-num`)?.setAttribute('aria-label', `Shell ${i + 2} ${name}`);
+      }
+      extraShells[i].el.querySelector('.eps-mode-tabs')?.setAttribute('aria-label', `Shell ${i + 2} custom dielectric input`);
       extraShells[i].el.querySelector('.sh-r-slider')?.setAttribute('aria-label', `Shell ${i + 2} outer radius (nm)`);
     }
   }
@@ -2932,17 +3323,59 @@ initPermalinks({
             </label>
           </div>
         </div>
-        <div class="param shell-eps-group">
+        <div class="param custom-eps shell-eps-group">
           <div class="param-header">
-            <label>&epsilon;<sub>r</sub></label>
-            <input type="number" class="param-number sh-eps-num" value="10" step="0.5" min="1">
+            <label>Input</label>
+            <div class="plot-tabs plot-tabs--toolbar eps-mode-tabs" role="radiogroup" aria-label="Shell ${idx + 2} custom dielectric input">
+              <button type="button" class="plot-tab active" data-eps-mode="eps" role="radio" aria-checked="true">&epsilon;</button>
+              <button type="button" class="plot-tab" data-eps-mode="nk" role="radio" aria-checked="false">n, k</button>
+            </div>
           </div>
-          <input type="range" class="param-slider sh-eps-slider" aria-label="Shell ${idx + 2} relative permittivity" min="1" max="50" step="0.5" value="10">
-          <div class="param-limits">
-            <input type="number" class="param-limit sh-eps-min" value="1" step="0.5" min="0.1">
-            <span class="param-limit-dash">&mdash;</span>
-            <input type="number" class="param-limit sh-eps-max" value="50" step="0.5" min="0.1">
+          <div class="eps-pair eps-pair--eps">
+            <div class="param-header">
+              <label>Re(&epsilon;)</label>
+              <input type="number" class="param-number eps-re-num" aria-label="Shell ${idx + 2} real part of the permittivity Re(&epsilon;)" value="10" step="0.01">
+            </div>
+            <input type="range" class="param-slider eps-re-slider" aria-label="Shell ${idx + 2} real part of the permittivity Re(&epsilon;)" min="-50" max="50" step="0.1" value="10">
+            <div class="param-limits">
+              <input type="number" class="param-limit eps-re-min" value="-50" step="0.5">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit eps-re-max" value="50" step="0.5">
+            </div>
+            <div class="param-header">
+              <label>Im(&epsilon;)</label>
+              <input type="number" class="param-number eps-im-num" aria-label="Shell ${idx + 2} imaginary part of the permittivity Im(&epsilon;)" value="0" step="0.01" min="0">
+            </div>
+            <input type="range" class="param-slider eps-im-slider" aria-label="Shell ${idx + 2} imaginary part of the permittivity Im(&epsilon;)" min="0" max="50" step="0.1" value="0">
+            <div class="param-limits">
+              <input type="number" class="param-limit eps-im-min" value="0" step="0.5" min="0">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit eps-im-max" value="50" step="0.5" min="0.1">
+            </div>
           </div>
+          <div class="eps-pair eps-pair--nk">
+            <div class="param-header">
+              <label>n</label>
+              <input type="number" class="param-number eps-n-num" aria-label="Shell ${idx + 2} refractive index n" value="3.16" step="0.01" min="0">
+            </div>
+            <input type="range" class="param-slider eps-n-slider" aria-label="Shell ${idx + 2} refractive index n" min="0" max="10" step="0.01" value="3.16">
+            <div class="param-limits">
+              <input type="number" class="param-limit eps-n-min" value="0" step="0.1" min="0">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit eps-n-max" value="10" step="0.1" min="0.1">
+            </div>
+            <div class="param-header">
+              <label>k</label>
+              <input type="number" class="param-number eps-k-num" aria-label="Shell ${idx + 2} extinction coefficient k" value="0" step="0.01" min="0">
+            </div>
+            <input type="range" class="param-slider eps-k-slider" aria-label="Shell ${idx + 2} extinction coefficient k" min="0" max="10" step="0.01" value="0">
+            <div class="param-limits">
+              <input type="number" class="param-limit eps-k-min" value="0" step="0.1" min="0">
+              <span class="param-limit-dash">&mdash;</span>
+              <input type="number" class="param-limit eps-k-max" value="10" step="0.1" min="0.1">
+            </div>
+          </div>
+          <span class="material-ref eps-echo"></span>
         </div>
         <div class="param">
           <div class="param-header">
@@ -2969,13 +3402,7 @@ initPermalinks({
       wp: sec.querySelector('.sh-drude-wp') as HTMLInputElement,
       gamma: sec.querySelector('.sh-drude-gamma') as HTMLInputElement,
     };
-    const epsP = setupParamEl(
-      sec.querySelector('.sh-eps-num') as HTMLInputElement,
-      sec.querySelector('.sh-eps-slider') as HTMLInputElement,
-      sec.querySelector('.sh-eps-min') as HTMLInputElement,
-      sec.querySelector('.sh-eps-max') as HTMLInputElement,
-      v => v.toFixed(1), resetAndUpdate,
-    );
+    const shellEps = setupCustomEps(epsGrp, resetAndUpdate);
     let handle: ShellHandle;
     const rP = setupParamEl(
       sec.querySelector('.sh-r-num') as HTMLInputElement,
@@ -3030,7 +3457,7 @@ initPermalinks({
     });
 
     handle = {
-      el: sec, material: matSel, epsParam: epsP, epsGroup: epsGrp, drudeHandle: shellDrudeHandle,
+      el: sec, material: matSel, customEps: shellEps, epsGroup: epsGrp, drudeHandle: shellDrudeHandle,
       rParam: rP, refEl, source: newMaterialSource(), riiHandle: shRiiHandle,
     };
 
@@ -4293,17 +4720,17 @@ initPermalinks({
   }
 
   function updateConfigCheck() {
-    interface CLayer { r: number; mat: string; eps: number; ref: string; name: string; }
+    interface CLayer { r: number; mat: string; eps: { re: number; im: number }; ref: string; name: string; }
     const layers: CLayer[] = [];
     if (geometry === 'coreshell') {
-      layers.push({ r: coreRParam.value, mat: coreMaterialSelect.value, eps: coreEpsParam.value, ref: coreMaterialRefEl.textContent || '', name: 'Core' });
-      layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Shell 1' });
+      layers.push({ r: coreRParam.value, mat: coreMaterialSelect.value, eps: coreEps.eps(), ref: coreMaterialRefEl.textContent || '', name: 'Core' });
+      layers.push({ r: rParam.value, mat: materialSelect.value, eps: mainEps.eps(), ref: materialRefEl.textContent || '', name: 'Shell 1' });
       for (let i = 0; i < extraShells.length; i++) {
         const sh = extraShells[i];
-        layers.push({ r: sh.rParam.value, mat: sh.material.value, eps: sh.epsParam.value, ref: sh.refEl.textContent || '', name: `Shell ${i+2}` });
+        layers.push({ r: sh.rParam.value, mat: sh.material.value, eps: sh.customEps.eps(), ref: sh.refEl.textContent || '', name: `Shell ${i+2}` });
       }
     } else {
-      layers.push({ r: rParam.value, mat: materialSelect.value, eps: epsParam.value, ref: materialRefEl.textContent || '', name: 'Particle' });
+      layers.push({ r: rParam.value, mat: materialSelect.value, eps: mainEps.eps(), ref: materialRefEl.textContent || '', name: 'Particle' });
     }
 
     const maxR = layers[layers.length - 1].r;
@@ -4351,7 +4778,7 @@ initPermalinks({
       s += `<line x1="${edgeX}" y1="${cy}" x2="${labelX - 2}" y2="${ly}" stroke="${ct.textMuted}" stroke-width="0.6" stroke-dasharray="2,2"/>`;
       s += `<circle cx="${edgeX}" cy="${cy}" r="1.5" fill="${MAT_COLORS[layers[i].mat] || '#ddd'}" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>`;
       // Layer name + material
-      const matLabel = layers[i].mat === 'custom' ? `\u03B5=${layers[i].eps}` : (MAT_NAMES[layers[i].mat] || layers[i].mat);
+      const matLabel = layers[i].mat === 'custom' ? `\u03B5=${fmtEpsLabel(layers[i].eps)}` : (MAT_NAMES[layers[i].mat] || layers[i].mat);
       const refParts = layers[i].ref ? layers[i].ref.split(':')[0].split(' ').slice(0, 2).join(' ') : '';
       const detail = refParts ? `${matLabel} (${refParts})` : matLabel;
       s += `<text x="${labelX}" y="${ly - 1}" fill="${ct.text}" font-size="8.5" font-weight="600" font-family="Inter,system-ui">${layers[i].name}</text>`;
@@ -4393,9 +4820,13 @@ initPermalinks({
   // === Downloads ===
 
   import { downloadBlob } from '../../lib/download';
+  /** ε in a filename: "eps10" while lossless, "eps10_im0.5" once it absorbs. */
+  function epsFilenamePart(e: { re: number; im: number }): string {
+    return 'eps' + fmtEpsFull(e.re) + (e.im === 0 ? '' : `_im${fmtEpsFull(e.im)}`);
+  }
   function filenameStem() {
     const m = materialSelect.value;
-    const matPart = m === 'custom' ? 'eps' + epsParam.value : m === 'drude' ? `drude_wp${readDrude(drudeHandle).wp}` : m;
+    const matPart = m === 'custom' ? epsFilenamePart(mainEps.eps()) : m === 'drude' ? `drude_wp${readDrude(drudeHandle).wp}` : m;
     if (excitation === 'electron') return `electron_sphere_${matPart}_R${rParam.value}nm_b${electronBParam.value}nm`;
     if (excitation === 'dipole') return `dipole_decay_${matPart}_R${rParam.value}nm_${dipoleRegion}_${dipoleLambdaParam.value.toFixed(0)}nm`;
     if (geometry === 'coreshell') {
@@ -4405,8 +4836,10 @@ initPermalinks({
     return `mie_${matPart}_R${rParam.value}nm_n${nhParam.value}`;
   }
 
-  function materialLabelForExport(mat: string, eps: number, handle: DrudeHandle, ref = ''): string {
-    if (mat === 'custom') return `eps_r=${eps}`;
+  function materialLabelForExport(mat: string, eps: { re: number; im: number }, handle: DrudeHandle, ref = ''): string {
+    // eps_i is written only when it is there, so a lossless custom slot still
+    // exports the header line it has always exported.
+    if (mat === 'custom') return eps.im === 0 ? `eps_r=${fmtEpsFull(eps.re)}` : `eps_r=${fmtEpsFull(eps.re)}, eps_i=${fmtEpsFull(eps.im)}`;
     if (mat === 'drude') {
       const { epsB, wp, gamma } = readDrude(handle);
       return `drude(eps_b=${epsB},wp_eV=${wp},gamma_eV=${gamma})`;
@@ -4456,20 +4889,21 @@ initPermalinks({
     const rows: Array<Array<string | number>> = [
       [`# Mie structure drawing, excitation=${excitation}, geometry=${geometry}, n_host=${nhParam.value}, ${spectralRange}`],
       ['# Generated by NanophotonicsLab (nanophotonicslab.com)'],
-      ['layer', 'material', 'epsilon_r', 'outer_radius_nm', 'reference'],
+      ['layer', 'material', 'epsilon_r', 'epsilon_i', 'outer_radius_nm', 'reference'],
     ];
-    const addRow = (layer: string, mat: string, eps: number, radius: number, ref: string) => {
-      rows.push([layer, MAT_NAMES[mat] || mat, mat === 'custom' ? eps : '', radius, ref]);
+    const addRow = (layer: string, mat: string, eps: { re: number; im: number }, radius: number, ref: string) => {
+      const custom = mat === 'custom';
+      rows.push([layer, MAT_NAMES[mat] || mat, custom ? fmtEpsFull(eps.re) : '', custom ? fmtEpsFull(eps.im) : '', radius, ref]);
     };
     if (geometry === 'coreshell') {
-      addRow('Core', coreMaterialSelect.value, coreEpsParam.value, coreRParam.value, coreMaterialRefEl.textContent || '');
-      addRow('Shell 1', materialSelect.value, epsParam.value, rParam.value, materialRefEl.textContent || '');
+      addRow('Core', coreMaterialSelect.value, coreEps.eps(), coreRParam.value, coreMaterialRefEl.textContent || '');
+      addRow('Shell 1', materialSelect.value, mainEps.eps(), rParam.value, materialRefEl.textContent || '');
       for (let i = 0; i < extraShells.length; i++) {
         const sh = extraShells[i];
-        addRow(`Shell ${i + 2}`, sh.material.value, sh.epsParam.value, sh.rParam.value, sh.refEl.textContent || '');
+        addRow(`Shell ${i + 2}`, sh.material.value, sh.customEps.eps(), sh.rParam.value, sh.refEl.textContent || '');
       }
     } else {
-      addRow('Particle', materialSelect.value, epsParam.value, rParam.value, materialRefEl.textContent || '');
+      addRow('Particle', materialSelect.value, mainEps.eps(), rParam.value, materialRefEl.textContent || '');
     }
     if (excitation === 'electron') {
       rows.push([]);
@@ -4573,7 +5007,7 @@ initPermalinks({
       const eps = currentDipoleEps();
       const d = dipoleData;
       const lines = [
-        `# Dipole decay rates near a sphere — ${materialLabelForExport(materialSelect.value, epsParam.value, drudeHandle, materialRefEl.textContent || '')}, R=${rParam.value} nm, n_host=${nhParam.value}, lambda=${dipoleLambdaParam.value} nm`,
+        `# Dipole decay rates near a sphere — ${materialLabelForExport(materialSelect.value, mainEps.eps(), drudeHandle, materialRefEl.textContent || '')}, R=${rParam.value} nm, n_host=${nhParam.value}, lambda=${dipoleLambdaParam.value} nm`,
         `# region=${dipoleRegion}, eps_sphere=${eps.re.toFixed(4)}${eps.im >= 0 ? '+' : ''}${eps.im.toFixed(4)}i, lmax=${Math.round(dipoleLmaxParam.value)}${dipoleRegion === 'inside' && Math.abs(eps.im) > 1e-9 ? `, f_omega=${dipoleFInput.value}` : ''}`,
         '# gamma normalized to the free-space rate (gamma/gamma_0). d/a = distance from the sphere centre / radius.',
         '# radial = dipole ⟂ surface; tangential = dipole ∥ surface. Reference: Kim, Leung & George, Surf. Sci. 195, 1 (1988).',
@@ -4613,7 +5047,7 @@ initPermalinks({
     }
 
     const mat = materialSelect.value;
-    const matS = materialLabelForExport(mat, epsParam.value, drudeHandle, materialRefEl.textContent || '');
+    const matS = materialLabelForExport(mat, mainEps.eps(), drudeHandle, materialRefEl.textContent || '');
     let headerLine: string;
     if (geometry === 'coreshell') {
       const nLayers = 1 + 1 + extraShells.length;
@@ -4675,7 +5109,7 @@ initPermalinks({
       const dp = riiHandle.currentPath();
       if (dp) p.set('dp', dp);
     }
-    if (materialSelect.value === 'custom') p.set('eps', epsParam.value.toString());
+    if (materialSelect.value === 'custom') serializeCustomEps(mainEps, p, '');
     p.set('r', rParam.value.toString());
     p.set('nh', nhParam.value.toString());
     p.set('lmin', lamMinInput.value);
@@ -4730,7 +5164,7 @@ initPermalinks({
         const cdp = coreRiiHandle.currentPath();
         if (cdp) p.set('cdp', cdp);
       }
-      if (coreMaterialSelect.value === 'custom') p.set('ceps', coreEpsParam.value.toString());
+      if (coreMaterialSelect.value === 'custom') serializeCustomEps(coreEps, p, 'c');
       if (coreMaterialSelect.value === 'drude') {
         const d = readDrude(coreDrudeHandle);
         p.set('cdepsb', d.epsB.toString());
@@ -4745,7 +5179,7 @@ initPermalinks({
           const sdp = sh.riiHandle.currentPath();
           if (sdp) p.set(`s${i + 2}dp`, sdp);
         }
-        if (sh.material.value === 'custom') p.set(`s${i + 2}eps`, sh.epsParam.value.toString());
+        if (sh.material.value === 'custom') serializeCustomEps(sh.customEps, p, `s${i + 2}`);
         if (sh.material.value === 'drude') {
           const d = readDrude(sh.drudeHandle);
           p.set(`s${i + 2}depsb`, d.epsB.toString());
@@ -4824,7 +5258,7 @@ initPermalinks({
     // message — the link plotted a different material than it claimed.
     if (mat && isKnownMaterial(mat)) { materialSelect.value = mat; materialSelect.dispatchEvent(new Event('change')); }
     restoreMaterialSource(mat, p.get('dp'), mainSource, riiHandle, syncMainMaterialRef);
-    if (mat === 'custom' && p.has('eps')) epsParam.setValue(parseFloat(p.get('eps')!));
+    if (mat === 'custom') restoreCustomEps(mainEps, p, '');
     if (mat === 'drude') {
       setDrude(
         drudeHandle,
@@ -4899,7 +5333,7 @@ initPermalinks({
       const cm = p.get('cmat');
       if (cm && isKnownMaterial(cm)) { coreMaterialSelect.value = cm; coreMaterialSelect.dispatchEvent(new Event('change')); }
       restoreMaterialSource(cm, p.get('cdp'), coreSource, coreRiiHandle, syncCoreMaterialRef);
-      if (cm === 'custom' && p.has('ceps')) coreEpsParam.setValue(parseFloat(p.get('ceps')!));
+      if (cm === 'custom') restoreCustomEps(coreEps, p, 'c');
       if (cm === 'drude') {
         setDrude(
           coreDrudeHandle,
@@ -4928,7 +5362,7 @@ initPermalinks({
         const sm = p.get(`s${n}mat`);
         if (sm && isKnownMaterial(sm)) { sh.material.value = sm; sh.material.dispatchEvent(new Event('change')); }
         restoreMaterialSource(sm, p.get(`s${n}dp`), sh.source, sh.riiHandle, () => syncShellMaterialRef(sh));
-        if (sm === 'custom' && p.has(`s${n}eps`)) sh.epsParam.setValue(parseFloat(p.get(`s${n}eps`)!));
+        if (sm === 'custom') restoreCustomEps(sh.customEps, p, `s${n}`);
         if (sm === 'drude') {
           setDrude(
             sh.drudeHandle,

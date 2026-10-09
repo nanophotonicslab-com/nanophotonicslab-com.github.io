@@ -933,7 +933,10 @@
   font-weight: 600;
   color: var(--text-soft);
 }
-.drude-panel {
+/* A model's own inputs, set apart from the plain parameters above them: the
+   Drude parameters, and the Mie lab's custom dielectric (eps or n, k). */
+.drude-panel,
+.custom-eps {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
