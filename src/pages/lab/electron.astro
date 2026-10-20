@@ -48,6 +48,10 @@ import '../../styles/lab.css';
             <span class="module-card__name">PINEM</span>
             <span class="module-card__desc">Photon-induced near-field electron microscopy</span>
           </button>
+          <button type="button" class="module-card" id="module-tr" role="radio" aria-checked="false">
+            <span class="module-card__name">Transition radiation</span>
+            <span class="module-card__desc">Light from an electron crossing a surface or a thin film</span>
+          </button>
         </div>
       </div>
 
@@ -692,6 +696,340 @@ import '../../styles/lab.css';
           </ul>
         </div>
       </div><!-- /#panel-pinem -->
+
+      <!-- ===================== TRANSITION RADIATION module ===================== -->
+      <div id="panel-tr" hidden>
+        <div class="widget-layout">
+          <!-- ===== Controls ===== -->
+          <ParamsDrawer>
+          <div class="controls card">
+            <h3>Parameters</h3>
+
+            <div class="fields">
+              <div class="field"><label for="tr-vc">v / c</label><input type="text" class="field-input" id="tr-vc" inputmode="decimal" value="0.5"></div>
+              <div class="field"><label for="tr-kev">K (keV)</label><input type="text" class="field-input" id="tr-kev" inputmode="decimal"></div>
+            </div>
+
+            <div class="sp-param">
+              <div class="sp-param__head"><label id="tr-geom-label">Geometry</label></div>
+              <div class="plot-tabs tr-seg" id="tr-geom" role="radiogroup" aria-labelledby="tr-geom-label">
+                <button type="button" class="plot-tab active" data-geom="half" role="radio" aria-checked="true">Semi-infinite</button>
+                <button type="button" class="plot-tab" data-geom="film" role="radio" aria-checked="false">Film</button>
+              </div>
+            </div>
+
+            <div class="sp-param" id="tr-d-field" hidden>
+              <div class="sp-param__head"><label for="tr-d">Thickness d (nm)</label><input type="number" class="field-input sp-num" id="tr-d" value="200" step="5" min="1" max="20000"></div>
+              <input type="range" class="sp-slider" id="tr-d-slider" aria-label="Film thickness d (nm)" min="1" max="1000" step="1" value="200">
+            </div>
+
+            <div class="param">
+              <div class="param-header"><label for="tr-material">Material</label></div>
+              <select id="tr-material" class="param-select">
+                <option value="ag" selected>Silver (Ag)</option>
+                <option value="au">Gold (Au)</option>
+                <option value="al">Aluminum (Al)</option>
+                <option value="cu">Copper (Cu)</option>
+                <option value="si">Silicon (Si)</option>
+                <option value="tio2">Titanium dioxide (TiO2)</option>
+                <option value="drude">Drude metal&hellip;</option>
+                <option value="custom">Custom &epsilon;</option>
+                <option value="file">Upload file&hellip;</option>
+                <option value="rii">Search database&hellip;</option>
+              </select>
+              <span class="material-ref" id="tr-material-ref"></span>
+              <div class="file-upload-row" id="tr-file-group" hidden>
+                <input type="file" id="tr-file" accept=".csv,.tsv,.txt,.dat" class="file-input">
+                <div class="tr-import-row">
+                  <label>axis
+                    <select id="tr-file-axis" class="param-select">
+                      <option value="wavelength-nm">&lambda; (nm)</option>
+                      <option value="wavelength-um">&lambda; (&micro;m)</option>
+                      <option value="energy-ev">E (eV)</option>
+                    </select>
+                  </label>
+                  <label>values
+                    <select id="tr-file-values" class="param-select">
+                      <option value="nk">n, k</option>
+                      <option value="epsilon">&epsilon;&prime;, &epsilon;&Prime;</option>
+                    </select>
+                  </label>
+                </div>
+                <span class="file-name" id="tr-file-name"></span>
+              </div>
+              <div class="rii-search" id="tr-rii-group" hidden>
+                <input type="text" id="tr-rii-search" class="param-number rii-input" placeholder="Search materials&hellip;">
+                <div class="rii-results" id="tr-rii-results"></div>
+                <span class="material-ref" id="tr-rii-status"></span>
+              </div>
+            </div>
+
+            <!-- Drude parameters — the Mie lab's tinted .drude-panel, same controls -->
+            <div class="param drude-panel" id="tr-drude-group" hidden>
+              <span class="drude-formula">&epsilon; = &epsilon;<sub>b</sub> - &omega;<sub>p</sub><sup>2</sup> / [&omega;(&omega; + i&gamma;)]</span>
+              <div class="drude-grid">
+                <label>
+                  <span>&epsilon;<sub>b</sub></span>
+                  <input type="number" class="param-number" id="tr-drude-epsb" value="1" step="0.1">
+                </label>
+                <label>
+                  <span>&#8463;&omega;<sub>p</sub> (eV)</span>
+                  <input type="number" class="param-number" id="tr-drude-wp" value="9" step="0.01" min="0.01">
+                </label>
+                <label>
+                  <span>&#8463;&gamma; (eV)</span>
+                  <input type="number" class="param-number" id="tr-drude-gamma" value="0.1" step="0.001" min="0">
+                </label>
+              </div>
+            </div>
+
+            <!-- Custom dielectric — the Mie lab's tinted .custom-eps: one pair is typed, the other derived -->
+            <div class="param custom-eps" id="tr-eps-group" hidden>
+              <div class="param-header">
+                <label>Input</label>
+                <div class="plot-tabs plot-tabs--toolbar eps-mode-tabs" role="radiogroup" aria-label="Custom dielectric input">
+                  <button type="button" class="plot-tab active" data-eps-mode="eps" role="radio" aria-checked="true">&epsilon;</button>
+                  <button type="button" class="plot-tab" data-eps-mode="nk" role="radio" aria-checked="false">n, k</button>
+                </div>
+              </div>
+              <div class="eps-pair eps-pair--eps">
+                <div class="param-header">
+                  <label for="tr-eps-num">Re(&epsilon;)</label>
+                  <input type="number" class="param-number eps-re-num" id="tr-eps-num" value="-10" step="0.01">
+                </div>
+                <input type="range" class="param-slider eps-re-slider" id="tr-eps-slider" aria-label="Real part of the permittivity Re(&epsilon;)" min="-50" max="50" step="0.1" value="-10">
+                <div class="param-limits">
+                  <input type="number" class="param-limit eps-re-min" id="tr-eps-min" value="-50" step="0.5">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit eps-re-max" id="tr-eps-max" value="50" step="0.5">
+                </div>
+                <div class="param-header">
+                  <label for="tr-eps-im-num">Im(&epsilon;)</label>
+                  <input type="number" class="param-number eps-im-num" id="tr-eps-im-num" value="0.5" step="0.01" min="0">
+                </div>
+                <input type="range" class="param-slider eps-im-slider" id="tr-eps-im-slider" aria-label="Imaginary part of the permittivity Im(&epsilon;)" min="0" max="50" step="0.1" value="0.5">
+                <div class="param-limits">
+                  <input type="number" class="param-limit eps-im-min" id="tr-eps-im-min" value="0" step="0.5" min="0">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit eps-im-max" id="tr-eps-im-max" value="50" step="0.5" min="0.1">
+                </div>
+              </div>
+              <div class="eps-pair eps-pair--nk">
+                <div class="param-header">
+                  <label for="tr-eps-n-num">n</label>
+                  <input type="number" class="param-number eps-n-num" id="tr-eps-n-num" value="0.08" step="0.01" min="0">
+                </div>
+                <input type="range" class="param-slider eps-n-slider" id="tr-eps-n-slider" aria-label="Refractive index n" min="0" max="10" step="0.01" value="0.08">
+                <div class="param-limits">
+                  <input type="number" class="param-limit eps-n-min" id="tr-eps-n-min" value="0" step="0.1" min="0">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit eps-n-max" id="tr-eps-n-max" value="10" step="0.1" min="0.1">
+                </div>
+                <div class="param-header">
+                  <label for="tr-eps-k-num">k</label>
+                  <input type="number" class="param-number eps-k-num" id="tr-eps-k-num" value="3.16" step="0.01" min="0">
+                </div>
+                <input type="range" class="param-slider eps-k-slider" id="tr-eps-k-slider" aria-label="Extinction coefficient k" min="0" max="10" step="0.01" value="3.16">
+                <div class="param-limits">
+                  <input type="number" class="param-limit eps-k-min" id="tr-eps-k-min" value="0" step="0.1" min="0">
+                  <span class="param-limit-dash">&mdash;</span>
+                  <input type="number" class="param-limit eps-k-max" id="tr-eps-k-max" value="10" step="0.1" min="0.1">
+                </div>
+              </div>
+              <span class="material-ref eps-echo"></span>
+            </div>
+
+            <div class="sp-param">
+              <div class="sp-param__head"><label id="tr-side-label">Collection side</label></div>
+              <div class="plot-tabs tr-seg" id="tr-side" role="radiogroup" aria-labelledby="tr-side-label">
+                <button type="button" class="plot-tab active" data-side="backward" role="radio" aria-checked="true">Backward</button>
+                <button type="button" class="plot-tab" data-side="forward" role="radio" aria-checked="false">Forward</button>
+              </div>
+              <p class="sp-aol" id="tr-side-note">&mdash;</p>
+            </div>
+
+            <div class="sp-range">
+              <label>Collection cone &theta; (&deg;)</label>
+              <div class="sp-range__row">
+                <input type="number" class="field-input sp-rnum" id="tr-th-min" value="0" step="5" min="0" max="90" aria-label="Collection cone minimum (degrees)">
+                <span class="sp-range__dash">to</span>
+                <input type="number" class="field-input sp-rnum" id="tr-th-max" value="90" step="5" min="0" max="90" aria-label="Collection cone maximum (degrees)">
+              </div>
+            </div>
+
+            <div class="sp-range">
+              <div class="sp-range__head">
+                <label>Wavelength (nm)</label>
+                <!-- a radiogroup owns radios: these are the two states of one choice, not a pair of toggles -->
+                <div class="sp-unit-toggle" id="tr-unit" role="radiogroup" aria-label="x-axis unit">
+                  <button type="button" data-xu="nm" class="active" role="radio" aria-checked="true">nm</button>
+                  <button type="button" data-xu="eV" role="radio" aria-checked="false">eV</button>
+                </div>
+              </div>
+              <div class="sp-range__row">
+                <input type="number" class="field-input sp-rnum" id="tr-lam-min" value="300" step="10" min="1" aria-label="Wavelength range minimum (nm)">
+                <span class="sp-range__dash">to</span>
+                <input type="number" class="field-input sp-rnum" id="tr-lam-max" value="900" step="10" min="2" aria-label="Wavelength range maximum (nm)">
+              </div>
+            </div>
+
+            <div id="tr-wl-field" hidden>
+              <div class="fields">
+                <div class="field"><label for="tr-wl-nm">&lambda; (nm)</label><input type="text" class="field-input" id="tr-wl-nm" inputmode="decimal" value="600"></div>
+                <div class="field"><label for="tr-wl-ev">E (eV)</label><input type="text" class="field-input" id="tr-wl-ev" inputmode="decimal" value="2.066"></div>
+              </div>
+              <div class="sp-wl-slider-row">
+                <input type="range" class="sp-slider" id="tr-wl-slider" aria-label="Wavelength λ (nm)" min="100" max="2000" step="5" value="600">
+              </div>
+            </div>
+
+            <div class="sp-range" id="tr-dmap-field" hidden>
+              <label>Thickness axis d (nm)</label>
+              <div class="sp-range__row">
+                <input type="number" class="field-input sp-rnum" id="tr-dmap-min" value="5" step="5" min="1" aria-label="Thickness axis minimum (nm)">
+                <span class="sp-range__dash">to</span>
+                <input type="number" class="field-input sp-rnum" id="tr-dmap-max" value="400" step="10" min="2" aria-label="Thickness axis maximum (nm)">
+              </div>
+            </div>
+
+            <div class="sp-param" id="tr-overlay-field" hidden>
+              <div class="sp-param__head"><label id="tr-overlay-label">Thick-film reference</label></div>
+              <div class="plot-tabs tr-seg" id="tr-overlay" role="radiogroup" aria-labelledby="tr-overlay-label">
+                <button type="button" class="plot-tab active" data-ov="1" role="radio" aria-checked="true">Overlay d&rarr;&infin;</button>
+                <button type="button" class="plot-tab" data-ov="0" role="radio" aria-checked="false">Off</button>
+              </div>
+            </div>
+
+            <!-- Geometry sketch — click to enlarge (same idiom as the Mie lab) -->
+            <button type="button" class="config-check" id="tr-config-check" aria-haspopup="dialog" aria-controls="tr-structure-dialog" title="Open geometry sketch"></button>
+          </div>
+          </ParamsDrawer>
+
+          <!-- ===== Results ===== -->
+          <div class="sp-results-col">
+            <!-- The view switcher is the Mie lab's chart-toolbar pills, not the
+                 .sp-view-tabs bar the Fields / Smith–Purcell / PINEM modules use:
+                 this module's results column is the Mie one (material section,
+                 ε / n,k switch, geometry sketch), so it keeps that idiom throughout. -->
+            <div class="chart-toolbar">
+              <div class="plot-tabs plot-tabs--sm" id="tr-view-tabs" role="radiogroup" aria-label="View">
+                <button type="button" class="plot-tab active" data-view="spectrum" role="radio" aria-checked="true">Spectrum</button>
+                <button type="button" class="plot-tab" data-view="angular" role="radio" aria-checked="false">Angular</button>
+                <button type="button" class="plot-tab" data-view="thickness" role="radio" aria-checked="false" id="tr-view-thickness" hidden>Thickness map</button>
+                <button type="button" class="plot-tab" data-view="terms" role="radio" aria-checked="false" id="tr-view-terms" hidden>Terms</button>
+                <button type="button" class="plot-tab" data-view="material" role="radio" aria-checked="false">Material</button>
+              </div>
+              <!-- what the Material view plots — the Mie lab's ε / n,k display switch -->
+              <div class="plot-tabs plot-tabs--toolbar" id="tr-mat-prop" role="radiogroup" aria-label="Material quantity" hidden>
+                <button type="button" class="plot-tab active" data-mprop="eps" role="radio" aria-checked="true">&epsilon;</button>
+                <button type="button" class="plot-tab" data-mprop="nk" role="radio" aria-checked="false">n, k</button>
+              </div>
+            </div>
+
+            <div class="result-panel card sp-result-card" id="tr-result-card">
+              <div class="sp-chart-head">
+                <div class="sp-chart-title" id="tr-chart-title">&mdash;</div>
+              </div>
+              <div class="chart-wrap sp-chart-wrap tr-chart-wrap">
+                <canvas id="tr-chart" aria-label="Transition-radiation result plot"></canvas>
+                <div class="tr-cross" id="tr-cross" hidden></div>
+                <div class="chart-tooltip" id="tr-tooltip"></div>
+              </div>
+              <div class="sp-export-bar">
+                <button type="button" class="tool-btn" id="tr-export-png" title="Download the plot as PNG">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  PNG
+                </button>
+                <button type="button" class="tool-btn" id="tr-export-csv" title="Download the plotted data as CSV">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  CSV
+                </button>
+                <button type="button" class="tool-btn" id="tr-share" title="Copy a link that reopens this exact calculation">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Share
+                </button>
+              </div>
+            </div>
+
+            <!-- numerical results, the PINEM metric box -->
+            <div class="pn-metrics card" id="tr-metrics">
+              <div class="pn-metrics__grid" id="tr-metrics-grid"></div>
+              <p class="tr-metrics-note" id="tr-metrics-note" hidden></p>
+            </div>
+
+            <div class="notes-card card" id="tr-notes">
+              <h4>Notes</h4>
+              <p>
+                <strong>Transition radiation.</strong> An electron crossing the boundary between two
+                media radiates because its image charge is created or destroyed there&nbsp;[1,&nbsp;2].
+                For a <em>semi-infinite</em> half space there is a single interface and only the
+                backward lobe, emitted into the vacuum&nbsp;[2,&nbsp;3]. For a free-standing
+                <em>film</em> of thickness&nbsp;d the entrance interface (B<sub>1</sub>), the film
+                interior including Cherenkov radiation (B<sub>2</sub>) and the exit interface
+                (B<sub>3</sub>) interfere, and light leaves on both sides&nbsp;[1,&nbsp;4].
+                As d grows the film tends to the half-space result, which the
+                <em>d&nbsp;&rarr;&nbsp;&infin;</em> overlay makes visible.
+              </p>
+              <p>
+                <strong>Angular pattern.</strong> The emission is p-polarized and vanishes both along
+                the beam (&theta;&nbsp;=&nbsp;0) and in the surface plane (&theta;&nbsp;=&nbsp;90&deg;),
+                so the lobe is a hollow cone about the trajectory. The <em>Angular</em> view draws the
+                Ginzburg&ndash;Frank perfect-conductor limit&nbsp;[5] as a reference. A perfect mirror
+                transmits nothing, so that limit exists for backward emission only: it is omitted on
+                a film's forward side, where there is nothing for it to be the limit of.
+              </p>
+              <p>
+                <strong>Resonances.</strong> The two interface contributions add in phase when
+                t&thinsp;&sigma;&nbsp;+&nbsp;t/&beta;&nbsp;=&nbsp;2&pi;(m&nbsp;&minus;&nbsp;&frac12;) with
+                t&nbsp;=&nbsp;2&pi;d/&lambda; (Eq.&nbsp;3 of&nbsp;[4]); the orders m&nbsp;=&nbsp;1,&nbsp;2,&nbsp;3
+                are drawn over the thickness map. <em>Terms</em> compares the full result with the
+                B<sub>1</sub>+B<sub>3</sub> interface-only control.
+              </p>
+              <p>
+                <strong>Material.</strong> The <em>Material</em> view plots the permittivity the
+                formulas above are actually being handed &mdash; Re&nbsp;&epsilon; and
+                Im&nbsp;&epsilon; (dashed), or n and k &mdash; for the built-in tables, the Drude
+                model, a custom &epsilon;, an uploaded table or a refractiveindex.info entry alike.
+                It is read through the same accessor the kernels use, so what is drawn is what is
+                computed; with no data loaded it says so instead of drawing a vacuum line.
+              </p>
+              <p class="theory-note">
+                <strong>Model and assumptions.</strong> Normal incidence; a free-standing film in
+                vacuum (no substrate); local, isotropic, linear permittivity &epsilon;(&omega;) with
+                Im&nbsp;&epsilon;&nbsp;&ge;&nbsp;0; a classical dielectric response and a straight,
+                non-recoiling electron trajectory. Begrenzung, surface roughness, finite beam size,
+                bulk-plasmon losses and quantum recoil are not included. Probabilities are photons per
+                electron per nm (or per eV) of the free-space wavelength, integrated over the
+                collection cone, or per steradian where the axis says so.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="references card">
+          <h4>References</h4>
+          <ul class="reference-list">
+            <li><span class="ref-index">[1]</span><span>R. H. Ritchie &amp; H. B. Eldridge, <em>Optical emission from irradiated foils. I</em>, Phys. Rev. <strong>126</strong>, 1935 (1962), <a href="https://doi.org/10.1103/PhysRev.126.1935" target="_blank" rel="noopener">doi:10.1103/PhysRev.126.1935</a>.</span></li>
+            <li><span class="ref-index">[2]</span><span>F. J. Garc&iacute;a de Abajo, <em>Optical excitations in electron microscopy</em>, Rev. Mod. Phys. <strong>82</strong>, 209 (2010), <a href="https://doi.org/10.1103/RevModPhys.82.209" target="_blank" rel="noopener">doi:10.1103/RevModPhys.82.209</a>.</span></li>
+            <li><span class="ref-index">[3]</span><span>B. J. M. Brenny, <em>Probing light emission at the nanoscale with cathodoluminescence</em>, PhD thesis, University of Amsterdam / AMOLF (2016), ch. 3&ndash;5.</span></li>
+            <li><span class="ref-index">[4]</span><span>S. Ebel, M. N&oslash;rgaard, C. Nicolaisen Hansen, N. A. Mortensen &amp; S. Morozov, <em>Velocity-tunable exciton&ndash;photon hybridization in cathodoluminescence</em>, Adv. Funct. Mater. <strong>36</strong>, e76737 (2026), <a href="https://doi.org/10.1002/adfm.76737" target="_blank" rel="noopener">doi:10.1002/adfm.76737</a>.</span></li>
+            <li><span class="ref-index">[5]</span><span>V. L. Ginzburg &amp; I. M. Frank, <em>Radiation of a uniformly moving electron due to its transition from one medium into another</em>, J. Phys. USSR <strong>9</strong>, 353 (1945).</span></li>
+          </ul>
+        </div>
+
+        <dialog class="structure-dialog" id="tr-structure-dialog" aria-labelledby="tr-structure-dialog-title">
+          <div class="structure-dialog__panel">
+            <div class="structure-dialog__header">
+              <h3 id="tr-structure-dialog-title">Geometry Sketch</h3>
+              <div class="structure-dialog__actions">
+                <button type="button" class="chart-tool-btn" id="tr-structure-export-png" title="Download geometry sketch as PNG">Export PNG</button>
+                <button type="button" class="structure-dialog__close" id="tr-structure-dialog-close" aria-label="Close geometry sketch">&times;</button>
+              </div>
+            </div>
+            <div class="structure-dialog__art" id="tr-structure-dialog-art"></div>
+          </div>
+        </dialog>
+      </div><!-- /#panel-tr -->
     </div>
   </section>
 <script>
@@ -701,7 +1039,9 @@ initPermalinks({ kev: 'kev' });
 </Layout>
 
 <!-- ===== Scoped styles ===== -->
-<style>  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }
+<style>  .module-bar { --module-cols: 4; }
+  @media (max-width: 1024px) { .module-bar { --module-cols: 2; } }
+  @media (max-width: 760px) { .module-bar__grid { grid-template-columns: 1fr; } }
   .param-box {
     padding: var(--space-sm);
     border: 1px solid var(--bg-muted);
@@ -905,6 +1245,60 @@ initPermalinks({ kev: 'kev' });
   :global(.pn-metric__label) { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
   :global(.pn-metric__val) { font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--primary); line-height: 1.2; overflow-wrap: anywhere; }
   :global(.pn-metric__val em) { font-style: normal; font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
+
+  /* ── Transition-radiation module ── */
+  /* The view pills sit above the result card, so the column gap would double up
+     into a wide band of white space — the same negative margin .sp-view-tabs
+     uses in the other modules pulls the card back up under the tabs. */
+  #panel-tr .chart-toolbar { align-items: center; margin-bottom: calc(var(--space-sm) - var(--space-lg)); }
+  .tr-metrics-note { margin: 0; font-size: 0.72rem; color: var(--text-muted); }
+  .tr-metrics-note[hidden] { display: none; }
+  /* [hidden] alone loses to any author rule that sets display, so each of these
+     is re-hidden by an id + attribute selector (see .sp-dipole[hidden] above). */
+  #tr-d-field[hidden], #tr-wl-field[hidden], #tr-dmap-field[hidden], #tr-overlay-field[hidden],
+  #tr-file-group[hidden], #tr-rii-group[hidden], #tr-eps-group[hidden], #tr-drude-group[hidden],
+  #tr-mat-prop[hidden], #tr-view-tabs .plot-tab[hidden] { display: none; }
+  .tr-seg button[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .tr-seg button { white-space: nowrap; }
+  .tr-import-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+  .tr-import-row label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.68rem; font-weight: 600; color: var(--text-muted); }
+  .tr-import-row select { font-size: 0.72rem; padding: 0.2rem 0.3rem; }
+  #tr-config-check { cursor: zoom-in; }
+  #tr-chart { cursor: crosshair; }
+  /* the thickness map has no x sample grid, so it promises no read-out */
+  #tr-chart.tr-no-readout { cursor: default; }
+  /* Cursor read-out: a crosshair and a tooltip laid over the canvas, so moving
+     the mouse never repaints the plot or recomputes the physics. */
+  .tr-chart-wrap { position: relative; }
+  .tr-cross { position: absolute; width: 1px; background: var(--primary); opacity: 0.5; pointer-events: none; }
+  .tr-cross[hidden] { display: none; }
+  #tr-tooltip { z-index: 2; }
+
+  /* Material section — the Mie lab's controls, class for class. The tinted
+     boxes themselves (.drude-panel, .custom-eps) are the shared rule in
+     lab.css; what follows is the part mie-scattering.astro keeps scoped, so
+     this module's Drude and custom-ε panels read exactly like that lab's. */
+  .plot-tabs--toolbar { padding: 2px; }
+  .plot-tabs--toolbar .plot-tab { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
+  .param-limits { display: flex; align-items: center; gap: 0.25rem; }
+  .param-limit {
+    -moz-appearance: textfield;
+    width: 3.5rem; padding: 0.1rem 0.25rem; border: 1px solid transparent; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 0.6875rem; font-variant-numeric: tabular-nums; color: var(--text-muted);
+    text-align: center; background: var(--bg-soft); outline: none; transition: border-color 0.15s, color 0.15s;
+  }
+  .param-limit:focus { border-color: var(--primary-light); color: var(--text-soft); }
+  .param-limit::-webkit-inner-spin-button, .param-limit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  /* Custom dielectric: the typed pair keeps its sliders, the derived pair collapses
+     to two muted read-outs side by side so the column does not grow by four rows. */
+  .custom-eps .eps-mode-tabs { flex: 0 0 auto; }
+  .eps-pair { display: flex; flex-direction: column; gap: 0.32rem; }
+  .eps-pair.is-derived { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.4rem; }
+  .eps-pair.is-derived .param-slider, .eps-pair.is-derived .param-limits { display: none; }
+  .eps-pair.is-derived .param-header { gap: 0.3rem; min-width: 0; }
+  .eps-pair.is-derived .param-header label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+  .eps-pair.is-derived .param-number { width: 100%; min-width: 0; font-weight: 500; color: var(--text-muted); background: var(--bg-muted); cursor: default; }
+  .eps-echo { font-variant-numeric: tabular-nums; }
 </style>
 
 <!-- ===== Script ===== -->
@@ -3079,25 +3473,32 @@ initPermalinks({ kev: 'kev' });
   $('sp-export-png').addEventListener('click', () => exportPng($('sp-chart') as HTMLCanvasElement, spChartName() + '.png'));
   $('sp-export-csv').addEventListener('click', () => { const { name, csv } = spResultCSV(); downloadBlob(new Blob([csv], { type: 'text/csv' }), name); });
 
-  // ── module switching (Fields / Smith–Purcell / PINEM) ──
+  // ── module switching (Fields / Smith–Purcell / PINEM / Transition radiation) ──
   let spReady = false;
   function setModule(id: string) {
-    const isSP = id === 'smith-purcell', isPinem = id === 'pinem';
+    const isSP = id === 'smith-purcell', isPinem = id === 'pinem', isTr = id === 'tr';
     // current shared electron velocity (Fields' vc, else the SP value)
     const fb = parseFloat(($('vc') as HTMLInputElement).value || ($('vc') as HTMLInputElement).placeholder || '');
     const betaNow = (fb > 0 && fb < 1) ? fb : sp.vc;
     if (isSP) sp.vc = betaNow;
     else if (id === 'fields') (window as any).__electronFieldsSetBeta?.(sp.vc);   // push velocity back into Fields
-    ($('panel-fields') as HTMLElement).hidden = isSP || isPinem;
+    ($('panel-fields') as HTMLElement).hidden = isSP || isPinem || isTr;
     ($('panel-sp') as HTMLElement).hidden = !isSP;
     ($('panel-pinem') as HTMLElement).hidden = !isPinem;
+    ($('panel-tr') as HTMLElement).hidden = !isTr;
     document.querySelectorAll('.module-card').forEach(b => { const a = b.id === 'module-' + id; b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false'); });
     if (isSP) { if (!spReady) { spReady = true; renderSubTabs(); } syncBetaK(sp.vc); renderSP(); }
     if (isPinem) (window as any).__pinemActivate?.(betaNow);
+    if (isTr) (window as any).__trActivate?.(betaNow);
+    // so the TR module can drop its permalink keys when it is not the one on screen
+    (window as any).__trModuleChanged?.(isTr);
   }
   $('module-fields').addEventListener('click', () => setModule('fields'));
   $('module-smith-purcell').addEventListener('click', () => setModule('smith-purcell'));
   $('module-pinem').addEventListener('click', () => setModule('pinem'));
+  $('module-tr').addEventListener('click', () => setModule('tr'));
+  // the Transition-radiation block restores its own permalink and needs to open its panel
+  (window as any).__electronSetModule = setModule;
 
   // re-render the SP charts on resize when visible
   let rT: number; window.addEventListener('resize', () => { clearTimeout(rT); rT = window.setTimeout(() => { if (!($('panel-sp') as HTMLElement).hidden) renderSP(); }, 120); });
@@ -3421,4 +3822,1653 @@ initPermalinks({ kev: 'kev' });
     renderPn();
   };
   pnSyncBeta(pn.beta);
+</script>
+
+<!-- ===================== Transition-radiation module ===================== -->
+<script>
+  /**
+   * Transition radiation from a semi-infinite half space or a free-standing
+   * film. All physics comes from src/lib/transition-radiation.ts (the port of
+   * the validated Python `trlib`); this block only resolves ε, lays out grids,
+   * draws and exports. Nothing here re-derives a formula.
+   */
+  import {
+    betaFromKeV, energyFromBeta, gaussLegendre, perNmToPerEv,
+    interfaceSpectrum, interfaceSrPerNm,
+    filmSpectrum, filmSrPerNm, thicknessMap, thickFilmLimitSrPerNm,
+    perfectConductorSrPerNm, resonanceThicknessNm,
+    wavelengthToEv, evToWavelength,
+    type C, type TrSide, type FilmTerm,
+  } from '../../lib/transition-radiation';
+  import { MATERIALS, interpolateNK, nkToEpsilon, epsilonToNK, drudeEpsilon } from '../../lib/materials';
+  import { setupRIISearch } from '../../lib/material-picker';
+  import {
+    parseOpticalFile, convertOpticalRows, inferImportModes,
+    type ImportAxisMode, type ImportValueMode, type RawOpticalRow,
+  } from '../../lib/optical-file';
+  import { downloadBlob as trDownload } from '../../lib/download';
+  import { chartTheme as trChartTheme, onThemeChange as trOnThemeChange } from '../../lib/chart-theme';
+
+  const $t = (id: string) => document.getElementById(id) as HTMLElement;
+  const $ti = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const TPI = Math.PI, TDEG = Math.PI / 180;
+  const tvar = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+
+  type TrView = 'spectrum' | 'angular' | 'thickness' | 'terms' | 'material';
+
+  const tr = {
+    beta: 0.5,
+    geom: 'half' as 'half' | 'film',
+    dNm: 200,
+    material: 'ag',
+    /** Mirrors the custom-ε handle, so every label, export and share link reads one number. */
+    epsRe: -10, epsIm: 0.5,
+    /** Degenerate ε = 0: the formulas divide by it, so the kernel gets the ε → 0 limit instead. */
+    epsDegenerate: false,
+    drudeEpsB: 1, drudeWp: 9, drudeGamma: 0.1,
+    /** What the Material view plots — the Mie lab's ε / n,k display switch. */
+    matProp: 'eps' as 'eps' | 'nk',
+    side: 'backward' as TrSide,
+    thMin: 0, thMax: 90,
+    lamMin: 300, lamMax: 900,
+    unit: 'nm' as 'nm' | 'eV',
+    view: 'spectrum' as TrView,
+    lamNm: 600,
+    dMapMin: 5, dMapMax: 400,
+    overlay: true,
+  };
+
+  // user-supplied optical constants (uploaded file or refractiveindex.info entry)
+  let trTable: number[][] | null = null;
+  let trTableKind: 'file' | 'rii' | null = null;
+  let trTableLabel = '';
+  let trRiiPath: string | null = null;
+  let trFileRows: RawOpticalRow[] | null = null;   // raw rows, so axis/values can be re-read without re-opening the file
+  let trFileName = '';
+  let trSharedRiiMissing = false;
+
+  // ── custom dielectric: the Mie lab's control, mirrored ───────────────────
+  //
+  // mie-scattering.astro ships setupParamEl / setupTabsEl / setupCustomEps and
+  // the markup above reuses its class names so lab.css's tinted .custom-eps
+  // panel and the derived-read-out styling apply unchanged. The behaviour is
+  // mirrored here rather than lifted into src/lib: hoisting it would mean
+  // editing mie-scattering.astro to import it back, and that lab is out of
+  // scope for this change. The contract is the same, down to the rounding —
+  // see the comments in mie-scattering.astro for why each rule is what it is.
+
+  /**
+   * Two decimals, trailing zeros dropped — but five below 0.1, because k is the
+   * quantity a mode switch rounds and Im ε = 2nk: at k = 0.002 two decimals turn
+   * a weakly absorbing material into a perfectly transparent one.
+   */
+  const trRoundEps = (v: number) => {
+    const dp = Math.abs(v) < 0.1 ? 100000 : 100;
+    return Math.round(v * dp) / dp;
+  };
+  const trFmtEpsVal = (v: number) => String(trRoundEps(v));
+  /** Links and exports keep what was typed, not what is shown. */
+  const trFmtEpsFull = (v: number) => String(Math.round(v * 100000) / 100000);
+  /** One minus glyph throughout: "−10 + 0.5i". */
+  function trFmtEpsLabel(re: number, im: number): string {
+    const r = trFmtEpsVal(re).replace('-', '−');
+    return im === 0 ? r : `${r} ${im < 0 ? '−' : '+'} ${trFmtEpsVal(Math.abs(im))}i`;
+  }
+  /** n² + k² below this is ε = 0, which the TR formulas divide by. */
+  const TR_EPS_DEGENERATE = 1e-18;
+  const TR_EPS_ROWS = ['re', 'im', 'n', 'k'] as const;
+
+  interface TrParamHandle {
+    readonly value: number;
+    /** Take `v`, widening the slider's own window first if `v` falls outside it. */
+    fit(v: number): void;
+  }
+  /**
+   * One value driven by a precise number box and a coarse slider. The value is
+   * held here, not read back out of the slider: a range input quantises
+   * whatever is assigned to it, so routing through `slider.value` would make
+   * the step the resolution limit of the whole control.
+   */
+  function trSetupParamEl(
+    num: HTMLInputElement, slider: HTMLInputElement, minIn: HTMLInputElement, maxIn: HTMLInputElement,
+    fmt: (v: number) => string, onChange: () => void, floor = -Infinity,
+  ): TrParamHandle {
+    const clamp = (v: number) => Math.max(Math.max(floor, parseFloat(slider.min)), Math.min(parseFloat(slider.max), v));
+    function apply(v: number) {
+      num.value = fmt(v);
+      current = parseFloat(num.value);      // read back, so the value is exactly what is on screen
+      slider.value = String(current);       // thumb only
+    }
+    let current = clamp(parseFloat(num.value) || 0);
+    slider.addEventListener('input', () => { num.value = fmt(parseFloat(slider.value)); current = parseFloat(num.value); onChange(); });
+    num.addEventListener('change', () => { apply(clamp(parseFloat(num.value) || 0)); onChange(); });
+    function widen() {
+      const raw = parseFloat(minIn.value), hi = parseFloat(maxIn.value);
+      if (!Number.isFinite(raw) || !Number.isFinite(hi)) return;
+      // `min=` in the markup is only a validity hint — the floor is what holds
+      // Im ε, n and k at zero when the window itself is widened.
+      const lo = Math.max(floor, raw);
+      if (lo >= hi) return;
+      if (lo !== raw) minIn.value = String(lo);
+      slider.min = String(lo); slider.max = String(hi); apply(clamp(current)); onChange();
+    }
+    minIn.addEventListener('change', widen); maxIn.addEventListener('change', widen);
+    return {
+      get value() { return current; },
+      fit(v: number) {
+        if (!Number.isFinite(v)) return;
+        v = Math.max(floor, v);
+        if (v < parseFloat(slider.min)) { slider.min = String(v); minIn.value = String(v); }
+        if (v > parseFloat(slider.max)) { slider.max = String(v); maxIn.value = String(v); }
+        apply(v); onChange();
+      },
+    };
+  }
+
+  interface TrTabHandle { readonly value: string; select(v: string, silent?: boolean): void; }
+  function trSetupTabsEl(container: HTMLElement, attr: string, init: string, onSel: (v: string) => void): TrTabHandle {
+    const tabs = container.querySelectorAll<HTMLButtonElement>('.plot-tab');
+    const mark = (hit: HTMLButtonElement) => tabs.forEach(t => {
+      const a = t === hit;
+      t.classList.toggle('active', a); t.setAttribute('aria-checked', a ? 'true' : 'false');
+    });
+    let cur = init;
+    tabs.forEach(t => t.addEventListener('click', () => {
+      if (t.disabled) return;
+      mark(t); cur = t.dataset[attr]!; onSel(cur);
+    }));
+    return {
+      get value() { return cur; },
+      select(v: string, silent = false) {
+        for (const t of tabs) {
+          if (t.dataset[attr] === v) { mark(t); cur = v; if (!silent) onSel(v); return; }
+        }
+      },
+    };
+  }
+
+  interface TrCustomEpsHandle {
+    reParam: TrParamHandle; imParam: TrParamHandle; nParam: TrParamHandle; kParam: TrParamHandle;
+    readonly mode: 'eps' | 'nk';
+    setMode(m: 'eps' | 'nk'): void;
+    /** ε = ε' + iε'', from the pair being typed — exactly as typed. */
+    eps(): { re: number; im: number };
+    /** True when the typed material is ε = 0, which is not a material. */
+    degenerate(): boolean;
+  }
+
+  function trSetupCustomEps(root: HTMLElement, onChange: () => void): TrCustomEpsHandle {
+    const input = (sel: string) => root.querySelector(sel) as HTMLInputElement;
+    // `floor` is 0 for every row but Re ε: a negative Re ε is what a metal is,
+    // a negative Im ε or k is gain, and a negative n is the wrong square root.
+    const row = (name: string, floor = -Infinity) => trSetupParamEl(
+      input(`.eps-${name}-num`), input(`.eps-${name}-slider`),
+      input(`.eps-${name}-min`), input(`.eps-${name}-max`),
+      trFmtEpsVal, commit, floor,
+    );
+    const epsPair = root.querySelector('.eps-pair--eps') as HTMLElement;
+    const nkPair = root.querySelector('.eps-pair--nk') as HTMLElement;
+    const echo = root.querySelector('.eps-echo') as HTMLElement;
+    let mode: 'eps' | 'nk' = 'eps';
+    // The fit() calls that carry a value across a mode switch must not be seen
+    // as edits — the pair they write is only half-updated while they run.
+    let adopting = false;
+
+    function state(): { re: number; im: number; n: number; k: number } {
+      if (mode === 'nk') {
+        const e = nkToEpsilon(nP.value, kP.value);
+        return { re: e.re, im: e.im, n: nP.value, k: kP.value };
+      }
+      const [n, k] = epsilonToNK(reP.value, imP.value);
+      return { re: reP.value, im: imP.value, n, k };
+    }
+
+    function sync(): void {
+      const s = state();
+      const derivedNK = mode === 'eps';
+      // The derived pair is a read-out, but it is written through its own
+      // handles: a raw `.value =` never reaches the handle's `current`, and
+      // anything reading it — the share link does — would get a stale number.
+      const wasAdopting = adopting;
+      adopting = true;
+      try {
+        if (derivedNK) { nP.fit(trRoundEps(s.n)); kP.fit(trRoundEps(s.k)); }
+        else { reP.fit(trRoundEps(s.re)); imP.fit(trRoundEps(s.im)); }
+      } finally { adopting = wasAdopting; }
+      epsPair.classList.toggle('is-derived', !derivedNK);
+      nkPair.classList.toggle('is-derived', derivedNK);
+      for (const name of TR_EPS_ROWS) {
+        const ro = derivedNK === (name === 'n' || name === 'k');
+        const el = input(`.eps-${name}-num`);
+        el.readOnly = ro;
+        el.setAttribute('aria-readonly', ro ? 'true' : 'false');
+        el.title = ro ? 'Computed from the pair being entered' : '';
+      }
+      const degenerate = s.n * s.n + s.k * s.k < TR_EPS_DEGENERATE;
+      echo.textContent = `ε = ${trFmtEpsLabel(s.re, s.im)} · n = ${trFmtEpsVal(s.n)}, k = ${trFmtEpsVal(s.k)}`
+        + (degenerate ? ' · ε = 0 is not a material — plotted as the ε → 0 limit' : '');
+    }
+
+    function commit(): void { if (adopting) return; sync(); onChange(); }
+
+    const reP = row('re'), imP = row('im', 0), nP = row('n', 0), kP = row('k', 0);
+    const modeTabs = trSetupTabsEl(
+      root.querySelector('.eps-mode-tabs') as HTMLElement, 'epsMode', 'eps',
+      v => setMode(v === 'nk' ? 'nk' : 'eps'),
+    );
+
+    function setMode(m: 'eps' | 'nk'): void {
+      if (m === mode || adopting) return;
+      const s = state();            // the material, read from the pair being left
+      mode = m;
+      adopting = true;
+      try {
+        // rounded, so the pair now being typed holds exactly what its box shows
+        if (m === 'nk') { nP.fit(trRoundEps(s.n)); kP.fit(trRoundEps(s.k)); }
+        else { reP.fit(trRoundEps(s.re)); imP.fit(trRoundEps(s.im)); }
+      } finally { adopting = false; }
+      modeTabs.select(m, true);
+      commit();
+    }
+
+    sync();
+    return {
+      reParam: reP, imParam: imP, nParam: nP, kParam: kP,
+      get mode() { return mode; },
+      setMode,
+      eps() { const s = state(); return { re: s.re, im: s.im }; },
+      degenerate() { const s = state(); return s.n * s.n + s.k * s.k < TR_EPS_DEGENERATE; },
+    };
+  }
+
+  // ── material → ε(λ) ──────────────────────────────────────────────────────
+  const trActiveTable = (): number[][] | null =>
+    (tr.material === 'file' || tr.material === 'rii') ? trTable : (MATERIALS[tr.material]?.data ?? null);
+  const trMaterialReady = (): boolean =>
+    tr.material === 'custom' || tr.material === 'drude' || !!trActiveTable();
+
+  /** ε(λ) in the library's convention: Im ε ≥ 0 for an absorbing medium. */
+  function epsAt(lambdaNm: number): C {
+    if (tr.material === 'custom') {
+      // ε = 0 sits one slider stop away and every TR amplitude divides by it
+      // (σ + με, 1 − bσ, Δ); the ε → 0 limit is numerically flat, so take that
+      // rather than hand the formulas a NaN. The echo line says so.
+      if (tr.epsDegenerate) return [1e-18, 0];
+      return [tr.epsRe, Math.max(0, tr.epsIm)];
+    }
+    if (tr.material === 'drude') {
+      const e = drudeEpsilon(lambdaNm, { epsB: tr.drudeEpsB, wpEv: tr.drudeWp, gammaEv: tr.drudeGamma });
+      return [e.re, Math.max(0, e.im)];
+    }
+    const data = trActiveTable();
+    if (!data) return [1, 0];                       // nothing loaded → vacuum → no emission
+    const [n, k] = interpolateNK(data, lambdaNm);
+    const e = nkToEpsilon(n, k);
+    return [e.re, Math.max(0, e.im)];
+  }
+
+  function trMaterialLabel(): string {
+    if (tr.material === 'custom') return `ε = ${trFmtEpsLabel(tr.epsRe, tr.epsIm)}`;
+    if (tr.material === 'drude') return `Drude (ħω_p = ${tr.drudeWp} eV)`;
+    if (tr.material === 'file' || tr.material === 'rii') return trTableLabel || 'no data loaded';
+    return MATERIALS[tr.material]?.label ?? tr.material;
+  }
+  function trMaterialRefText(): string {
+    if (tr.material === 'rii' && trSharedRiiMissing) return 'Shared database entry is no longer available';
+    if (tr.material === 'file' || tr.material === 'rii') return trTableLabel ? `data: ${trTableLabel}` : 'no data loaded yet';
+    if (tr.material === 'custom') return 'non-dispersive ε, constant over the whole range';
+    if (tr.material === 'drude') return 'ε = ε_b − ω_p²/[ω(ω + iγ)]';
+    return MATERIALS[tr.material]?.ref ?? '';
+  }
+
+  // ── grids ────────────────────────────────────────────────────────────────
+  const trKeV = () => energyFromBeta(tr.beta);
+  const trLamLo = () => Math.max(1, Math.min(tr.lamMin, tr.lamMax));
+  const trLamHi = () => Math.max(trLamLo() + 1, Math.max(tr.lamMin, tr.lamMax));
+  const trD = () => Math.max(0.1, tr.dNm);
+
+  /** Collected polar band [θ_min, θ_max] in rad, ordered and kept inside (0, π/2]. */
+  function trCone(): [number, number] {
+    const a = Math.max(0, Math.min(89.9, Math.min(tr.thMin, tr.thMax)));
+    const b = Math.max(a + 0.1, Math.min(90, Math.max(tr.thMin, tr.thMax)));
+    return [a * TDEG, b * TDEG];
+  }
+
+  /**
+   * Sample grid, uniform in the *displayed* unit — so the thickness map's pixels
+   * stay evenly spaced when the x axis is photon energy, not wavelength.
+   */
+  function trAxis(n: number): { lam: Float64Array; x: Float64Array } {
+    const lo = trLamLo(), hi = trLamHi();
+    const lam = new Float64Array(n), x = new Float64Array(n);
+    if (tr.unit === 'eV') {
+      const e0 = wavelengthToEv(hi), e1 = wavelengthToEv(lo);
+      for (let i = 0; i < n; i++) { const e = e0 + (e1 - e0) * i / (n - 1); x[i] = e; lam[i] = evToWavelength(e); }
+    } else {
+      for (let i = 0; i < n; i++) { const l = lo + (hi - lo) * i / (n - 1); x[i] = l; lam[i] = l; }
+    }
+    return { lam, x };
+  }
+
+  const TR_NSPEC = 240, TR_NTHETA = 96;
+  const TR_NANG = 181;
+  const TR_NDMAP = 140, TR_NLMAP = 200, TR_NTHMAP = 48;
+
+  /** Angle-integrated spectrum of the active geometry (photons per electron per nm or per eV). */
+  function trSpectrumOn(lam: Float64Array, terms?: readonly FilmTerm[]): Float64Array {
+    const [t0, t1] = trCone();
+    const common = {
+      wavelengthNm: lam, eps: epsAt, energyKeV: trKeV(), side: tr.side,
+      thetaMinRad: t0, thetaMaxRad: t1, nTheta: TR_NTHETA, per: tr.unit,
+    };
+    if (tr.geom === 'film') return filmSpectrum({ ...common, thicknessNm: trD(), ...(terms ? { terms } : {}) });
+    return interfaceSpectrum({ ...common, side: 'backward' });
+  }
+
+  /**
+   * The d → ∞ limit of the film formulas, integrated over the same cone —
+   * the semi-infinite curve the film tends to. `thickFilmLimitSrPerNm` is the
+   * library's closed form; only the quadrature (its own `gaussLegendre`) is here.
+   */
+  function trThickLimit(lam: Float64Array): Float64Array {
+    const [t0, t1] = trCone();
+    const { x: th, w: wt } = gaussLegendre(t0, t1, TR_NTHETA);
+    const K = trKeV(), out = new Float64Array(lam.length);
+    for (let l = 0; l < lam.length; l++) {
+      const e = epsAt(lam[l]);
+      let acc = 0;
+      for (let i = 0; i < th.length; i++) {
+        acc += 2 * TPI * wt[i] * Math.sin(th[i]) * thickFilmLimitSrPerNm(th[i], lam[l], K, e, tr.side);
+      }
+      out[l] = tr.unit === 'eV' ? perNmToPerEv(acc, lam[l]) : acc;
+    }
+    return out;
+  }
+
+  /**
+   * Ginzburg–Frank is the *backward* perfect-conductor limit: a perfect mirror
+   * transmits nothing, so it has no forward counterpart and must not be drawn
+   * beside a film's forward lobe, where it would be a different quantity at a
+   * comparable magnitude.
+   */
+  const trRefShown = () => !(tr.geom === 'film' && tr.side === 'forward');
+
+  /** Emission cone at one wavelength, with the Ginzburg–Frank perfect-conductor reference. */
+  function trAngular(): { thDeg: Float64Array; y: Float64Array; ref: Float64Array } {
+    const thDeg = new Float64Array(TR_NANG), y = new Float64Array(TR_NANG), ref = new Float64Array(TR_NANG);
+    const lam = Math.max(1, tr.lamNm), K = trKeV(), e = epsAt(lam), per = tr.unit;
+    const withRef = trRefShown();
+    for (let i = 0; i < TR_NANG; i++) {
+      const deg = 90 * i / (TR_NANG - 1), t = deg * TDEG;
+      thDeg[i] = deg;
+      y[i] = tr.geom === 'film'
+        ? filmSrPerNm(t, lam, trD(), K, e, tr.side, { per })
+        : interfaceSrPerNm(t, lam, K, e, 'backward', per);
+      ref[i] = withRef ? perfectConductorSrPerNm(t, lam, K, per) : NaN;   // trLine skips non-finite points
+    }
+    return { thDeg, y, ref };
+  }
+
+  type TrMap = { lam: Float64Array; x: Float64Array; d: Float64Array; g: Float64Array; max: number };
+  let trMap: TrMap | null = null;        // cached heavy result, dropped on every state change
+  let trMapPending = 0;
+
+  function trComputeMap(): TrMap {
+    const { lam, x } = trAxis(TR_NLMAP);
+    const lo = Math.max(0.5, Math.min(tr.dMapMin, tr.dMapMax));
+    const hi = Math.max(lo + 1, Math.max(tr.dMapMin, tr.dMapMax));
+    const d = new Float64Array(TR_NDMAP);
+    for (let i = 0; i < TR_NDMAP; i++) d[i] = lo + (hi - lo) * i / (TR_NDMAP - 1);
+    const [t0, t1] = trCone();
+    const g = thicknessMap({
+      wavelengthNm: lam, eps: epsAt, thicknessNm: d, energyKeV: trKeV(), side: tr.side,
+      thetaMinRad: t0, thetaMaxRad: t1, nTheta: TR_NTHMAP, per: tr.unit,
+    });
+    let max = 0;
+    for (let i = 0; i < g.length; i++) if (g[i] > max) max = g[i];
+    return { lam, x, d, g, max };
+  }
+
+  // ── canvas helpers (same idiom as the Smith–Purcell block) ───────────────
+  function trCtx(canvas: HTMLCanvasElement) {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return null;          // hidden panel → zero-size canvas
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    return { ctx, w: r.width, h: r.height };
+  }
+  type TrPlot = { px: (x: number) => number; py: (y: number) => number; m: { l: number; r: number; t: number; b: number } };
+
+  // ── cursor read-out ──────────────────────────────────────────────────────
+  // Each 1-D view hands the crosshair its axis mapping and the curves it just
+  // drew, so hovering reads values straight out of those arrays: no repaint of
+  // the canvas and no recomputation of the physics while the mouse moves.
+
+  /** One plotted curve, as the read-out needs it. */
+  type TrHoverSeries = { label: string; color: string; y: ArrayLike<number> };
+  /** Set after every 1-D draw; null for the thickness map, which has no x grid. */
+  let trHoverPlot: { p: TrPlot; x: ArrayLike<number>; xFmt: (v: number) => string; series: TrHoverSeries[] } | null = null;
+
+  const trHoverVal = (v: number) =>
+    v === 0 ? '0'                               // the hollow cone's exact nodes, not 0.000e+0
+      : Math.abs(v) >= 1e-3 && Math.abs(v) < 1e4 ? v.toPrecision(4) : v.toExponential(3);
+
+  function trHideHover(): void {
+    ($t('tr-cross') as HTMLElement).hidden = true;
+    $t('tr-tooltip').classList.remove('visible');
+  }
+
+  /** Nearest sample to a pixel x. The search is in pixel space, so the sample order does not matter. */
+  function trNearestIx(p: TrPlot, x: ArrayLike<number>, mx: number): number {
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < x.length; i++) {
+      const d = Math.abs(p.px(x[i]) - mx);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  function trShowHover(ev: MouseEvent): void {
+    const cache = trHoverPlot;
+    const canvas = $t('tr-chart') as HTMLCanvasElement;
+    if (!cache || !cache.x.length) { trHideHover(); return; }
+    const r = canvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    const { p } = cache;
+    const x0 = p.m.l, x1 = r.width - p.m.r, y0 = p.m.t, y1 = r.height - p.m.b;
+    if (mx < x0 || mx > x1 || my < y0 || my > y1) { trHideHover(); return; }
+    const i = trNearestIx(p, cache.x, mx);
+    const cx = p.px(cache.x[i]);
+    const cross = $t('tr-cross') as HTMLElement;
+    cross.hidden = false;
+    cross.style.left = `${cx.toFixed(1)}px`;
+    cross.style.top = `${y0}px`;
+    cross.style.height = `${(y1 - y0).toFixed(1)}px`;
+    const tip = $t('tr-tooltip');
+    tip.innerHTML = cache.xFmt(cache.x[i]) + cache.series
+      .filter(s => Number.isFinite(s.y[i]))
+      .map(s => `<br><span style="color:${s.color}">&#9679;</span> ${trEsc(s.label)} = ${trHoverVal(s.y[i])}`)
+      .join('');
+    tip.classList.add('visible');
+    let tl = cx + 12;
+    if (tl + tip.offsetWidth > r.width - 4) tl = cx - tip.offsetWidth - 12;
+    tip.style.left = `${Math.max(4, tl).toFixed(1)}px`;
+    tip.style.top = `${Math.max(4, Math.min(my - tip.offsetHeight - 10, r.height - tip.offsetHeight - 4)).toFixed(1)}px`;
+  }
+
+  ($t('tr-chart') as HTMLCanvasElement).addEventListener('mousemove', trShowHover);
+  ($t('tr-chart') as HTMLCanvasElement).addEventListener('mouseleave', trHideHover);
+
+  const TR_SUP = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+  const trSup = (p: number) => (p < 0 ? '⁻' : '') + String(Math.abs(p)).split('').map(d => TR_SUP[+d]).join('');
+  function trNiceTicks(lo: number, hi: number, n = 5): number[] {
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return [];
+    const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag, step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+    const out: number[] = [];
+    for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + step * 0.5; v += step) out.push(+v.toPrecision(6));
+    return out;
+  }
+  const trTick = (v: number) => {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    return (a >= 1e4 || a < 1e-3) ? v.toExponential(1) : String(+v.toPrecision(4));
+  };
+  /** Shared power-of-ten so the y tick labels stay short; the exponent moves into the axis title. */
+  function trYScale(ymax: number): { div: number; suffix: string } {
+    if (!(ymax > 0) || !Number.isFinite(ymax)) return { div: 1, suffix: '' };
+    const p = Math.floor(Math.log10(ymax));
+    if (p >= -2 && p <= 3) return { div: 1, suffix: '' };
+    return { div: 10 ** p, suffix: ` ×10${trSup(p)}` };
+  }
+
+  function trAxes(
+    ctx: CanvasRenderingContext2D, w: number, h: number,
+    xmin: number, xmax: number, ymin: number, ymax: number,
+    xlabel: string, ylabel: string, xticks: number[], yticks: number[],
+    fmtY: (v: number) => string, marginRight = 18,
+  ): TrPlot {
+    // 12 px ticks / 13 px axis titles, as in the Mie lab; the left and bottom
+    // margins carry the larger glyphs without clipping the tick labels.
+    const m = { l: 68, r: marginRight, t: 16, b: 46 };
+    const px = (x: number) => m.l + (x - xmin) / (xmax - xmin || 1) * (w - m.l - m.r);
+    const py = (y: number) => h - m.b - (y - ymin) / (ymax - ymin || 1) * (h - m.t - m.b);
+    const font = tvar('--font') || 'sans-serif';
+    ctx.font = '12px ' + font;
+    ctx.strokeStyle = tvar('--bg-muted'); ctx.lineWidth = 1;
+    ctx.strokeRect(m.l, m.t, w - m.l - m.r, h - m.t - m.b);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const y of yticks) {
+      const Y = py(y); if (Y < m.t - 1 || Y > h - m.b + 1) continue;
+      ctx.strokeStyle = 'rgba(140,140,150,0.18)'; ctx.beginPath(); ctx.moveTo(m.l, Y); ctx.lineTo(w - m.r, Y); ctx.stroke();
+      ctx.fillStyle = tvar('--text-muted'); ctx.fillText(fmtY(y), m.l - 6, Y);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const x of xticks) {
+      const X = px(x); if (X < m.l - 1 || X > w - m.r + 1) continue;
+      ctx.fillStyle = tvar('--text-muted'); ctx.fillText(trTick(x), X, h - m.b + 6);
+    }
+    ctx.font = '600 13px ' + font;
+    ctx.fillStyle = tvar('--text-soft');
+    ctx.fillText(xlabel, (m.l + w - m.r) / 2, h - 17);
+    ctx.save(); ctx.translate(16, (m.t + h - m.b) / 2); ctx.rotate(-TPI / 2); ctx.fillText(ylabel, 0, 0); ctx.restore();
+    return { px, py, m };
+  }
+  const trClip = (ctx: CanvasRenderingContext2D, w: number, h: number, p: TrPlot) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(p.m.l, p.m.t, w - p.m.l - p.m.r, h - p.m.t - p.m.b); ctx.clip();
+  };
+  function trLine(ctx: CanvasRenderingContext2D, p: TrPlot, xs: ArrayLike<number>, ys: ArrayLike<number>, color: string, lw: number, dash: number[] = []) {
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash); ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < xs.length; i++) {
+      const v = ys[i];
+      if (!Number.isFinite(v)) { started = false; continue; }
+      const X = p.px(xs[i]), Y = p.py(v);
+      if (started) ctx.lineTo(X, Y); else { ctx.moveTo(X, Y); started = true; }
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  /**
+   * Right-aligned legend, measured rather than guessed: a material label carries
+   * the file name and the table's range, so a fixed offset clipped it off the
+   * canvas. The block is pushed as far right as its widest label allows, never
+   * past the y axis, and a label too wide even for the full plot is ellipsised.
+   */
+  function trLegend(ctx: CanvasRenderingContext2D, p: TrPlot, w: number, items: { label: string; color: string; dash: number[] }[]) {
+    ctx.font = '12px ' + (tvar('--font') || 'sans-serif'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    // inside the plot frame, not merely inside the canvas: p.m.r is the frame's
+    // right margin, so the legend can never hang over the axis or off the box
+    const swatch = 23, right = w - p.m.r - 8, minX = p.m.l + 8;
+    const avail = Math.max(40, right - minX - swatch);
+    const fit = (s: string) => {
+      if (ctx.measureText(s).width <= avail) return s;
+      let t = s;
+      while (t.length > 1 && ctx.measureText(t + '…').width > avail) t = t.slice(0, -1);
+      return t + '…';
+    };
+    const labels = items.map(it => fit(it.label));
+    let wmax = 0;
+    for (const l of labels) wmax = Math.max(wmax, ctx.measureText(l).width);
+    const lx = Math.max(minX, right - swatch - wmax);
+    let ly = p.m.t + 12;
+    items.forEach((it, i) => {
+      ctx.strokeStyle = it.color; ctx.lineWidth = 2; ctx.setLineDash(it.dash);
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 18, ly); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = tvar('--text-soft'); ctx.fillText(labels[i], lx + swatch, ly);
+      ly += 15;
+    });
+  }
+
+  // sequential colormap for the thickness map (RGB stops — the palette lives here, not in CSS)
+  const TR_STOPS = [[12, 10, 42], [58, 20, 110], [124, 34, 122], [188, 55, 99], [234, 110, 56], [250, 186, 62], [252, 250, 205]];
+  const trCmap = (t: number): number[] => {
+    t = Math.max(0, Math.min(1, t));
+    const x = t * (TR_STOPS.length - 1), i = Math.min(TR_STOPS.length - 2, Math.floor(x)), f = x - i;
+    const a = TR_STOPS[i], b = TR_STOPS[i + 1];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+  };
+
+  // ── geometry sketch (SVG, redrawn from the live parameters) ──────────────
+  const trEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function trGeometrySvg(suffix: string): string {
+    const ct = trChartTheme();
+    const film = tr.geom === 'film';
+    const [t0, t1] = trCone();
+    const W = 320, H = 224, cx = 156, R = 60;
+    const ySurf = film ? 88 : 108;
+    // Thickness drawn on a √ scale against a 1200 nm reference, so a 1 nm film
+    // is still visible and a thick one still fits: 300 nm is half the height of
+    // 1200 nm, not a quarter, and everything from 1200 nm up draws the same.
+    // The caption says "compressed" rather than "to scale" for exactly that reason.
+    const dPx = film ? Math.max(7, Math.min(54, 54 * Math.sqrt(Math.min(1, tr.dNm / 1200)))) : 0;
+    const yExit = ySurf + dPx;
+    const prim = tvar('--primary'), beamCol = tvar('--blue'), matCol = tvar('--amber');
+    const arr = 'tr-arr-' + suffix;
+    const P = (apexY: number, up: boolean, sign: number, th: number) =>
+      [cx + sign * R * Math.sin(th), apexY + (up ? -1 : 1) * R * Math.cos(th)];
+    const wedge = (apexY: number, up: boolean, sign: number, on: boolean) => {
+      const [x1, y1] = P(apexY, up, sign, t0), [x2, y2] = P(apexY, up, sign, t1);
+      const sweep = (sign > 0) === up ? 1 : 0;
+      return `<path d="M ${cx} ${apexY} L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R} ${R} 0 0 ${sweep} ${x2.toFixed(1)} ${y2.toFixed(1)} Z"`
+        + ` fill="${on ? prim : ct.textMuted}" fill-opacity="${on ? 0.32 : 0.1}"`
+        + ` stroke="${on ? prim : ct.textMuted}" stroke-width="${on ? 1.2 : 0.6}" stroke-opacity="${on ? 0.95 : 0.5}"/>`;
+    };
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    s += `<defs><marker id="${arr}" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">`
+      + `<path d="M0,0 L5,2.5 L0,5 Z" fill="${beamCol}"/></marker></defs>`;
+    s += `<rect width="${W}" height="${H}" fill="${ct.grid}" rx="6"/>`;
+
+    // media
+    const matBottom = film ? yExit : H - 22;
+    s += `<rect x="10" y="${ySurf}" width="${W - 20}" height="${(matBottom - ySurf).toFixed(1)}" fill="${matCol}" fill-opacity="0.34" stroke="${ct.textSoft}" stroke-width="0.7"/>`;
+    s += `<text x="16" y="20" fill="${ct.textMuted}" font-size="8" font-family="Inter,system-ui">vacuum</text>`;
+    if (film) s += `<text x="16" y="${H - 8}" fill="${ct.textMuted}" font-size="8" font-family="Inter,system-ui">vacuum</text>`;
+    const matY = film ? (ySurf + yExit) / 2 + 3 : ySurf + 14;
+    s += `<text x="${W - 16}" y="${matY.toFixed(1)}" text-anchor="end" fill="${ct.text}" font-size="8.5" font-weight="700" font-family="Inter,system-ui">${trEsc(trMaterialLabel())}</text>`;
+
+    // emission cones — the collected side is opaque, the other faint
+    const backOn = tr.side === 'backward';
+    s += wedge(ySurf, true, 1, backOn) + wedge(ySurf, true, -1, backOn);
+    if (film) {
+      const fwdOn = tr.side === 'forward';
+      s += wedge(yExit, false, 1, fwdOn) + wedge(yExit, false, -1, fwdOn);
+    } else {
+      s += `<text x="${cx}" y="${H - 8}" text-anchor="middle" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">semi-infinite — no forward side</text>`;
+    }
+
+    // normal + collection-angle arc on the collected side
+    const apex = backOn || !film ? ySurf : yExit, upSide = backOn || !film;
+    const nTip = upSide ? apex - R - 6 : apex + R + 6;
+    s += `<line x1="${cx}" y1="${apex}" x2="${cx}" y2="${nTip}" stroke="${ct.textMuted}" stroke-width="0.7" stroke-dasharray="3,3"/>`;
+    const ra = 30;
+    const [ax1, ay1] = P(apex, upSide, 1, t0), [ax2, ay2] = P(apex, upSide, 1, t1);
+    const sc = ra / R;
+    const a1x = cx + (ax1 - cx) * sc, a1y = apex + (ay1 - apex) * sc;
+    const a2x = cx + (ax2 - cx) * sc, a2y = apex + (ay2 - apex) * sc;
+    s += `<path d="M ${a1x.toFixed(1)} ${a1y.toFixed(1)} A ${ra} ${ra} 0 0 ${upSide ? 1 : 0} ${a2x.toFixed(1)} ${a2y.toFixed(1)}" fill="none" stroke="${prim}" stroke-width="1.1"/>`;
+    const labY = upSide ? apex - 34 : apex + 40;
+    s += `<text x="${cx + 40}" y="${labY.toFixed(1)}" fill="${prim}" font-size="8" font-weight="700" font-family="Inter,system-ui">θ = ${(t0 / TDEG).toFixed(0)}–${(t1 / TDEG).toFixed(0)}°</text>`;
+    s += `<text x="${cx + 40}" y="${(labY + 10).toFixed(1)}" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">${tr.side} (collected)</text>`;
+
+    // electron beam
+    const beamEnd = film ? H - 12 : ySurf + 34;
+    s += `<line x1="${cx}" y1="8" x2="${cx}" y2="${beamEnd}" stroke="${beamCol}" stroke-width="2" stroke-linecap="round" marker-end="url(#${arr})"/>`;
+    // Beam label in the top-right corner. Beside the beam it sat on top of the
+    // drawing — over the backward wedges — and was hard to read.
+    s += `<text x="${W - 10}" y="16" text-anchor="end" fill="${beamCol}" font-size="8.5" font-weight="700" font-family="Inter,system-ui">e⁻ ${trKeV().toFixed(1)} keV</text>`;
+    s += `<text x="${W - 10}" y="26" text-anchor="end" fill="${beamCol}" font-size="7.5" font-family="Inter,system-ui">β = ${tr.beta.toFixed(3)}</text>`;
+    if (!film) s += `<text x="${cx + 6}" y="${(ySurf + 46).toFixed(1)}" fill="${ct.textMuted}" font-size="7.5" font-family="Inter,system-ui">absorbed</text>`;
+
+    // thickness dimension
+    if (film) {
+      const dx = 26;
+      s += `<line x1="${dx}" y1="${ySurf}" x2="${dx}" y2="${yExit.toFixed(1)}" stroke="${ct.text}" stroke-width="0.8"/>`;
+      s += `<line x1="${dx - 4}" y1="${ySurf}" x2="${dx + 4}" y2="${ySurf}" stroke="${ct.text}" stroke-width="0.8"/>`;
+      s += `<line x1="${dx - 4}" y1="${yExit.toFixed(1)}" x2="${dx + 4}" y2="${yExit.toFixed(1)}" stroke="${ct.text}" stroke-width="0.8"/>`;
+      s += `<text x="${dx + 7}" y="${((ySurf + yExit) / 2 + 3).toFixed(1)}" fill="${ct.text}" font-size="8" font-weight="700" font-family="Inter,system-ui">d = ${tr.dNm} nm</text>`;
+    }
+    s += `<text x="${W - 10}" y="${H - 8}" text-anchor="end" fill="${ct.textMuted}" font-size="7" font-family="Inter,system-ui">λ ${trLamLo().toFixed(0)}–${trLamHi().toFixed(0)} nm${film ? ' · thickness shown compressed' : ''}</text>`;
+    s += '</svg>';
+    return s;
+  }
+
+  function trUpdateConfigCheck() {
+    $t('tr-config-check').innerHTML = trGeometrySvg('card');
+    $t('tr-config-check').setAttribute('aria-label',
+      `Open enlarged geometry sketch — ${tr.geom === 'film' ? 'free-standing film' : 'semi-infinite half space'}`);
+    $t('tr-structure-dialog-art').innerHTML = trGeometrySvg('modal');
+  }
+
+  // ── views ────────────────────────────────────────────────────────────────
+  const trXLabel = () => tr.unit === 'eV' ? 'Photon energy (eV)' : 'Wavelength (nm)';
+  const trYUnit = () => tr.unit === 'eV' ? 'eV' : 'nm';
+
+  function trDrawSpectrum(terms?: readonly FilmTerm[]) {
+    const cc = trCtx($t('tr-chart') as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc;
+    const { lam, x } = trAxis(TR_NSPEC);
+    const main = trSpectrumOn(lam);
+    const extra = terms ? trSpectrumOn(lam, terms)
+      : (tr.geom === 'film' && tr.overlay ? trThickLimit(lam) : null);
+    let ymax = 0;
+    for (let i = 0; i < main.length; i++) if (Number.isFinite(main[i]) && main[i] > ymax) ymax = main[i];
+    if (extra) for (let i = 0; i < extra.length; i++) if (Number.isFinite(extra[i]) && extra[i] > ymax) ymax = extra[i];
+    if (!(ymax > 0)) ymax = 1;
+    const sc = trYScale(ymax);
+    const xlo = Math.min(x[0], x[x.length - 1]), xhi = Math.max(x[0], x[x.length - 1]);
+    const yhi = ymax * 1.08;
+    const p = trAxes(ctx, w, h, xlo, xhi, 0, yhi, trXLabel(),
+      `photons / (electron ${trYUnit()})${sc.suffix}`,
+      trNiceTicks(xlo, xhi), trNiceTicks(0, yhi), v => trTick(v / sc.div));
+    trClip(ctx, w, h, p);
+    if (extra) trLine(ctx, p, x, extra, terms ? tvar('--rose') : tvar('--text-muted'), 1.6, [6, 4]);
+    trLine(ctx, p, x, main, tvar('--primary'), 2);
+    ctx.restore();
+    const legend = terms
+      ? [{ label: 'full (B₁+B₂+B₃)', color: tvar('--primary'), dash: [] }, { label: 'B₁+B₃ interfaces only', color: tvar('--rose'), dash: [6, 4] }]
+      : extra
+        ? [{ label: `film, d = ${tr.dNm} nm`, color: tvar('--primary'), dash: [] }, { label: 'thick-film limit d → ∞', color: tvar('--text-muted'), dash: [6, 4] }]
+        : [{ label: tr.geom === 'film' ? `film, d = ${tr.dNm} nm` : 'semi-infinite', color: tvar('--primary'), dash: [] }];
+    trLegend(ctx, p, w, legend);
+    // the dashed curve is drawn first but is always the second legend entry
+    const hoverSeries = [{ label: legend[0].label, color: legend[0].color, y: main as ArrayLike<number> }];
+    if (extra) hoverSeries.push({ label: legend[1].label, color: legend[1].color, y: extra as ArrayLike<number> });
+    trHoverPlot = {
+      p, x, series: hoverSeries,
+      xFmt: v => tr.unit === 'eV' ? `E = ${v.toFixed(3)} eV` : `λ = ${v.toFixed(1)} nm`,
+    };
+  }
+
+  function trDrawAngular() {
+    const cc = trCtx($t('tr-chart') as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc;
+    const { thDeg, y, ref } = trAngular();
+    let ymax = 0;
+    for (let i = 0; i < TR_NANG; i++) { if (Number.isFinite(y[i]) && y[i] > ymax) ymax = y[i]; if (Number.isFinite(ref[i]) && ref[i] > ymax) ymax = ref[i]; }
+    if (!(ymax > 0)) ymax = 1;
+    const sc = trYScale(ymax), yhi = ymax * 1.08;
+    const p = trAxes(ctx, w, h, 0, 90, 0, yhi, 'Emission angle θ from the normal (°)',
+      `photons / (electron sr ${trYUnit()})${sc.suffix}`,
+      [0, 15, 30, 45, 60, 75, 90], trNiceTicks(0, yhi), v => trTick(v / sc.div));
+    trClip(ctx, w, h, p);
+    // collected band
+    const [t0, t1] = trCone();
+    ctx.fillStyle = tvar('--primary'); ctx.globalAlpha = 0.1;
+    ctx.fillRect(p.px(t0 / TDEG), p.m.t, Math.max(1, p.px(t1 / TDEG) - p.px(t0 / TDEG)), h - p.m.t - p.m.b);
+    ctx.globalAlpha = 1;
+    if (trRefShown()) trLine(ctx, p, thDeg, ref, tvar('--emerald'), 1.6, [5, 4]);
+    trLine(ctx, p, thDeg, y, tvar('--primary'), 2);
+    ctx.restore();
+    const legend: { label: string; color: string; dash: number[] }[] = [
+      { label: `${tr.geom === 'film' ? 'film' : 'half space'}, λ = ${tr.lamNm.toFixed(0)} nm`, color: tvar('--primary'), dash: [] },
+    ];
+    if (trRefShown()) legend.push({ label: 'Ginzburg–Frank (perfect conductor, backward)', color: tvar('--emerald'), dash: [5, 4] });
+    trLegend(ctx, p, w, legend);
+    const series: TrHoverSeries[] = [{ label: legend[0].label, color: legend[0].color, y: y as ArrayLike<number> }];
+    if (legend.length > 1) series.push({ label: legend[1].label, color: legend[1].color, y: ref as ArrayLike<number> });
+    trHoverPlot = { p, x: thDeg, series, xFmt: v => `θ = ${v.toFixed(1)}°` };
+  }
+
+  function trDrawMap() {
+    const cc = trCtx($t('tr-chart') as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc;
+    trHoverPlot = null;        // a 2-D map has no x sample grid to read out
+    if (!trMap) {
+      ctx.fillStyle = tvar('--text-muted'); ctx.font = '12px ' + (tvar('--font') || 'sans-serif');
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Computing thickness map…', w / 2, h / 2);
+      return;
+    }
+    const { lam: mapLam, x, d, g, max } = trMap;
+    const nx = x.length, ny = d.length;
+    const xlo = Math.min(x[0], x[nx - 1]), xhi = Math.max(x[0], x[nx - 1]);
+    const dlo = d[0], dhi = d[ny - 1];
+    const sc = trYScale(max || 1);
+    const p = trAxes(ctx, w, h, xlo, xhi, dlo, dhi, trXLabel(), 'Film thickness d (nm)',
+      trNiceTicks(xlo, xhi), trNiceTicks(dlo, dhi), v => trTick(v), 74);
+
+    // heat image (row 0 of the image is the largest thickness, so d grows upwards)
+    const off = document.createElement('canvas');
+    off.width = nx; off.height = ny;
+    const octx = off.getContext('2d')!;
+    const img = octx.createImageData(nx, ny);
+    const norm = max > 0 ? 1 / max : 0;
+    // trAxis builds x ascending in both units (eV runs from the long-wavelength
+    // end up), so the image columns follow the sample order directly.
+    for (let row = 0; row < ny; row++) {
+      const di = ny - 1 - row;
+      for (let ix = 0; ix < nx; ix++) {
+        const c3 = trCmap(g[di * nx + ix] * norm);
+        const o = (row * nx + ix) * 4;
+        img.data[o] = c3[0]; img.data[o + 1] = c3[1]; img.data[o + 2] = c3[2]; img.data[o + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    const pl = p.m.l, pt = p.m.t, pw = w - p.m.l - p.m.r, ph = h - p.m.t - p.m.b;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, pl, pt, pw, ph);
+
+    // resonance orders m = 1, 2, 3 at the centre of the collection cone (Eq. 3 of Ebel et al.)
+    const [t0, t1] = trCone(), thMid = 0.5 * (t0 + t1);
+    const K = trKeV();
+    trClip(ctx, w, h, p);
+    ctx.strokeStyle = tvar('--bg'); ctx.lineWidth = 1.6;
+    ctx.font = '10px ' + (tvar('--font') || 'sans-serif'); ctx.textBaseline = 'bottom';
+    for (let m = 1; m <= 3; m++) {
+      ctx.beginPath();
+      let started = false, lastX = 0, lastY = 0;
+      for (let i = 0; i < nx; i++) {
+        const dm = resonanceThicknessNm(mapLam[i], K, epsAt(mapLam[i]), m, thMid);
+        if (!Number.isFinite(dm)) { started = false; continue; }
+        const X = p.px(x[i]), Y = p.py(dm);
+        if (started) ctx.lineTo(X, Y); else { ctx.moveTo(X, Y); started = true; }
+        lastX = X; lastY = Y;
+      }
+      ctx.stroke();
+      if (started && lastY > pt && lastY < pt + ph) {
+        ctx.fillStyle = tvar('--bg'); ctx.textAlign = 'right';
+        ctx.fillText('m = ' + m, Math.min(lastX, pl + pw - 4), lastY - 3);
+      }
+    }
+    ctx.restore();
+    ctx.strokeStyle = tvar('--bg-muted'); ctx.lineWidth = 1; ctx.strokeRect(pl, pt, pw, ph);
+
+    // colour bar
+    const bx = w - p.m.r + 14, bw = 12, by = pt, bh = ph;
+    const bar = ctx.createLinearGradient(0, by + bh, 0, by);
+    for (let i = 0; i <= 10; i++) { const c3 = trCmap(i / 10); bar.addColorStop(i / 10, `rgb(${c3[0] | 0},${c3[1] | 0},${c3[2] | 0})`); }
+    ctx.fillStyle = bar; ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = tvar('--bg-muted'); ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = tvar('--text-muted'); ctx.font = '10px ' + (tvar('--font') || 'sans-serif');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(trTick(max / sc.div), bx + bw + 3, by + 5);
+    ctx.fillText('0', bx + bw + 3, by + bh - 5);
+    ctx.save(); ctx.translate(w - 4, by + bh / 2); ctx.rotate(-TPI / 2);
+    ctx.textAlign = 'center'; ctx.fillStyle = tvar('--text-soft');
+    ctx.fillText(`photons / (electron ${trYUnit()})${sc.suffix}`, 0, 0);
+    ctx.restore();
+  }
+
+  /**
+   * The optical constants the TR formulas are actually being fed: `epsAt` is
+   * the one accessor, so the curve is ε(λ) as the kernels see it — Drude, a
+   * custom ε, an uploaded table or a database entry alike, with the custom
+   * slot's ε → 0 substitution included rather than hidden.
+   */
+  function trMaterialCurves(): {
+    lam: Float64Array; x: Float64Array; a: Float64Array; b: Float64Array;
+    n: Float64Array; k: Float64Array; epsRe: Float64Array; epsIm: Float64Array;
+    aLabel: string; bLabel: string; yLabel: string;
+  } {
+    const { lam, x } = trAxis(TR_NSPEC);
+    const m = lam.length;
+    const n = new Float64Array(m), k = new Float64Array(m);
+    const epsRe = new Float64Array(m), epsIm = new Float64Array(m);
+    for (let i = 0; i < m; i++) {
+      const e = epsAt(lam[i]);
+      epsRe[i] = e[0]; epsIm[i] = e[1];
+      const [nn, kk] = epsilonToNK(e[0], e[1]);
+      n[i] = nn; k[i] = kk;
+    }
+    const nk = tr.matProp === 'nk';
+    return {
+      lam, x, n, k, epsRe, epsIm,
+      a: nk ? n : epsRe,
+      b: nk ? k : epsIm,
+      aLabel: nk ? 'n' : 'Re ε',
+      bLabel: nk ? 'k' : 'Im ε',
+      yLabel: nk ? 'Refractive index' : 'Dielectric function ε',
+    };
+  }
+
+  function trMessage(ctx: CanvasRenderingContext2D, w: number, h: number, lines: string[]) {
+    ctx.font = '12px ' + (tvar('--font') || 'sans-serif');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const y0 = h / 2 - (lines.length - 1) * 9;
+    lines.forEach((t, i) => {
+      ctx.fillStyle = i === 0 ? tvar('--text-soft') : tvar('--text-muted');
+      ctx.fillText(t, w / 2, y0 + i * 18);
+    });
+  }
+
+  /** Material view — the same ε / n,k plot the Mie and Cylinder labs draw. */
+  function trDrawMaterial() {
+    const cc = trCtx($t('tr-chart') as HTMLCanvasElement); if (!cc) return;
+    const { ctx, w, h } = cc;
+    trHoverPlot = null;        // set at the end, once the curves exist; the empty state has none
+    if (!trMaterialReady()) {
+      // An honest empty state: the fallback ε = 1 would draw a flat vacuum
+      // line that looks like a measurement of nothing.
+      trMessage(ctx, w, h, [
+        tr.material === 'rii' && trSharedRiiMissing
+          ? 'That database entry is no longer available.'
+          : 'No optical data loaded.',
+        tr.material === 'file'
+          ? 'Choose a file with λ (or E) and n, k — or ε′, ε″ — columns.'
+          : 'Search refractiveindex.info, or pick a built-in material, Drude or a custom ε.',
+      ]);
+      return;
+    }
+    const { x, a, b, aLabel, bLabel, yLabel } = trMaterialCurves();
+    let ylo = Infinity, yhi = -Infinity;
+    for (let i = 0; i < a.length; i++) {
+      for (const v of [a[i], b[i]]) {
+        if (!Number.isFinite(v)) continue;
+        if (v < ylo) ylo = v;
+        if (v > yhi) yhi = v;
+      }
+    }
+    if (!Number.isFinite(ylo) || !Number.isFinite(yhi)) { ylo = 0; yhi = 1; }
+    const pad = (yhi - ylo) * 0.08 || Math.max(1, Math.abs(yhi) * 0.1);
+    ylo -= pad; yhi += pad;
+    const xlo = Math.min(x[0], x[x.length - 1]), xhi = Math.max(x[0], x[x.length - 1]);
+    const p = trAxes(ctx, w, h, xlo, xhi, ylo, yhi, trXLabel(), yLabel,
+      trNiceTicks(xlo, xhi), trNiceTicks(ylo, yhi), trTick);
+    trClip(ctx, w, h, p);
+    if (ylo < 0 && yhi > 0) {
+      // ε′ = 0 is the metal/dielectric line — worth seeing where it is crossed
+      ctx.strokeStyle = tvar('--bg-muted'); ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(p.m.l, p.py(0)); ctx.lineTo(w - p.m.r, p.py(0)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    trLine(ctx, p, x, b, tvar('--rose'), 1.8, [5, 4]);
+    trLine(ctx, p, x, a, tvar('--primary'), 2);
+    ctx.restore();
+    const legend = [
+      { label: `${trMaterialLabel()} — ${aLabel}`, color: tvar('--primary'), dash: [] },
+      { label: bLabel, color: tvar('--rose'), dash: [5, 4] },
+    ];
+    trLegend(ctx, p, w, legend);
+    // the same crosshair the 1-D views get: the Mie lab reads this plot out too
+    trHoverPlot = {
+      p, x,
+      series: [
+        { label: aLabel, color: legend[0].color, y: a as ArrayLike<number> },
+        { label: bLabel, color: legend[1].color, y: b as ArrayLike<number> },
+      ],
+      xFmt: v => tr.unit === 'eV' ? `E = ${v.toFixed(3)} eV` : `λ = ${v.toFixed(1)} nm`,
+    };
+  }
+
+  // ── render ───────────────────────────────────────────────────────────────
+  const TR_TITLES: Record<TrView, string> = {
+    spectrum: 'Spectrum — angle-integrated emission over the collection cone',
+    angular: 'Angular — emission cone at a single wavelength',
+    thickness: 'Thickness map — wavelength × film thickness',
+    terms: 'Terms — full result vs the B₁+B₃ interface-only control',
+    material: 'Material — ε(λ) exactly as the transition-radiation formulas receive it',
+  };
+
+  function trUpdateControlVis() {
+    const film = tr.geom === 'film';
+    ($t('tr-d-field') as HTMLElement).hidden = !film;
+    // The box reaches 20 µm, the slider only 1 µm. Say so rather than leave the
+    // thumb pinned at the end as if it agreed with the number beside it.
+    const dSlider = $ti('tr-d-slider'), dSliderMax = parseFloat(dSlider.max);
+    dSlider.title = Number.isFinite(dSliderMax) && tr.dNm > dSliderMax
+      ? `d = ${tr.dNm} nm is beyond the slider's range (${dSlider.min}–${dSlider.max} nm); moving the slider will reduce it.`
+      : '';
+    ($t('tr-view-thickness') as HTMLElement).hidden = !film;
+    ($t('tr-view-terms') as HTMLElement).hidden = !film;
+    ($t('tr-overlay-field') as HTMLElement).hidden = !(film && tr.view === 'spectrum');
+    ($t('tr-wl-field') as HTMLElement).hidden = tr.view !== 'angular';
+    ($t('tr-dmap-field') as HTMLElement).hidden = tr.view !== 'thickness';
+    ($t('tr-mat-prop') as HTMLElement).hidden = tr.view !== 'material';
+    ($t('tr-file-group') as HTMLElement).hidden = tr.material !== 'file';
+    ($t('tr-rii-group') as HTMLElement).hidden = tr.material !== 'rii';
+    ($t('tr-eps-group') as HTMLElement).hidden = tr.material !== 'custom';
+    ($t('tr-drude-group') as HTMLElement).hidden = tr.material !== 'drude';
+    $t('tr-material-ref').textContent = trMaterialRefText();
+    const fwd = $t('tr-side').querySelector('button[data-side="forward"]') as HTMLButtonElement;
+    fwd.disabled = !film;
+    fwd.title = film
+      ? 'Light emitted downstream, on the far side of the film'
+      : 'A semi-infinite half space has no exit interface: the electron never comes out, so there is no forward lobe.';
+    $t('tr-side-note').textContent = film
+      ? (tr.side === 'backward'
+        ? 'Backward: light emitted back towards the electron source, through the entrance interface.'
+        : 'Forward: light emitted downstream, through the exit interface.')
+      : 'Semi-infinite: only the backward lobe exists — there is no exit interface, so Forward is disabled.';
+    const markRadio = (groupId: string, pick: (el: HTMLElement) => boolean) =>
+      $t(groupId).querySelectorAll('button').forEach(b => {
+        const a = pick(b as HTMLElement);
+        b.classList.toggle('active', a); b.setAttribute('aria-checked', a ? 'true' : 'false');
+      });
+    markRadio('tr-geom', el => el.dataset.geom === tr.geom);
+    markRadio('tr-side', el => el.dataset.side === tr.side);
+    markRadio('tr-overlay', el => (el.dataset.ov === '1') === tr.overlay);
+    markRadio('tr-view-tabs', el => el.dataset.view === tr.view);
+    markRadio('tr-mat-prop', el => el.dataset.mprop === tr.matProp);
+    // the λ/eV switch keeps the .sp-unit-toggle look of the Smith–Purcell one next
+    // to it, but is a radiogroup like every other group here: aria-checked, not pressed
+    markRadio('tr-unit', el => el.dataset.xu === tr.unit);
+  }
+
+  /** One tile of the numerical-results box — the PINEM module's markup. */
+  const trMetric = (label: string, val: string) =>
+    `<div class="pn-metric"><span class="pn-metric__label">${label}</span><span class="pn-metric__val">${val}</span></div>`;
+
+  /**
+   * Numerical results: what the material actually *is* at the wavelength being
+   * looked at, in the Materials calculator's own set — Re ε, Im ε, n, k and the
+   * skin depth — rather than the parameters, which the controls already show.
+   */
+  function trReadout() {
+    // the angular view fixes one wavelength; every other view sweeps the range
+    const lamRef = tr.view === 'angular' ? tr.lamNm : 0.5 * (trLamLo() + trLamHi());
+    const e = epsAt(lamRef);
+    const [n, k] = epsilonToNK(e[0], e[1]);
+    const f = (v: number) => Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 1e-3) ? v.toExponential(2) : v.toPrecision(4);
+    // δ = 1/(2(ω/c)k) = λ/(4πk): the 1/e penetration depth of the field intensity
+    const delta = k > 0 ? lamRef / (4 * Math.PI * k) : Infinity;
+    let html = trMetric('Wavelength &lambda;', `${lamRef.toFixed(0)} <em>nm</em>`)
+      + trMetric('Re &epsilon;', f(e[0]))
+      + trMetric('Im &epsilon;', f(e[1]))
+      + trMetric('n', f(n))
+      + trMetric('k', f(k))
+      + trMetric('Skin depth &delta;', Number.isFinite(delta) ? `${f(delta)} <em>nm</em>` : '&infin;');
+    const notes = ['&delta; = &lambda;/(4&pi;k) is the 1/e penetration depth of the field intensity; it diverges for a lossless material.'];
+    // A table is held at its endpoint outside the measured window (the site-wide
+    // convention), which draws a flat tail with nothing on screen to say so.
+    const tbl = trActiveTable();
+    if (tbl && tbl.length > 1) {
+      const tLo = tbl[0][0] * 1000, tHi = tbl[tbl.length - 1][0] * 1000;
+      const qLo = tr.view === 'angular' ? lamRef : trLamLo();
+      const qHi = tr.view === 'angular' ? lamRef : trLamHi();
+      if (qLo < tLo - 1e-6 || qHi > tHi + 1e-6) {
+        notes.push(`The table covers ${tLo.toFixed(0)}&ndash;${tHi.toFixed(0)} nm; outside it &epsilon; is held at the endpoint value.`);
+      }
+    }
+    if (tr.geom === 'film') {
+      const [c0, c1] = trCone();
+      const thMid = 0.5 * (c0 + c1);
+      const d1 = resonanceThicknessNm(lamRef, trKeV(), e, 1, thMid);
+      html += trMetric('m = 1 resonance', Number.isFinite(d1) ? `${d1.toFixed(0)} <em>nm</em>` : '—')
+        + trMetric('d / &delta;', Number.isFinite(delta) && delta > 0 ? f(tr.dNm / delta) : '0');
+      notes.push(`The m = 1 resonant thickness is quoted at θ = ${(thMid / TDEG).toFixed(0)}°, the cone centre the resonance overlays use.`);
+    }
+    if (!trMaterialReady()) notes.push('No optical data loaded — the curve is the vacuum (zero) result.');
+    $t('tr-metrics-grid').innerHTML = html;
+    const note = $t('tr-metrics-note');
+    note.innerHTML = notes.join(' ');
+    note.hidden = false;
+  }
+
+  let trRenderToken = 0;
+  let trUrlPending = 0;
+  function renderTR() {
+    // Drop any queued map compute *before* anything else. Every other way out of
+    // the thickness view — a view tab, the geometry switch, a module change, a
+    // slider drag on another view — used to leave the 30 ms timer armed with a
+    // token that still matched, so ~1.3M kernel evaluations ran on the main
+    // thread and were thrown away, freezing a panel nobody was looking at.
+    ++trRenderToken;
+    window.clearTimeout(trMapPending);
+    trMapPending = 0;
+    if (($t('panel-tr') as HTMLElement).hidden) return;
+    // a redraw the mouse did not ask for (resize, theme, keyboard, deferred map)
+    // would otherwise leave the old crosshair and tooltip over the new plot
+    trHideHover();
+    trHoverPlot = null;
+    trUpdateControlVis();
+    trUpdateConfigCheck();
+    $t('tr-chart-title').textContent = TR_TITLES[tr.view];
+    trReadout();
+    ($t('tr-chart') as HTMLElement).classList.toggle('tr-no-readout', tr.view === 'thickness');
+    if (tr.view === 'thickness') {
+      if (trMap) { $t('tr-result-card').classList.remove('is-computing'); trDrawMap(); }
+      else {
+        // heavy: paint the busy state first, compute on the next frame
+        $t('tr-result-card').classList.add('is-computing');
+        trDrawMap();
+        const token = trRenderToken;
+        trMapPending = window.setTimeout(() => {
+          if (token !== trRenderToken) return;
+          trMap = trComputeMap();
+          $t('tr-result-card').classList.remove('is-computing');
+          if (tr.view === 'thickness') trDrawMap();
+        }, 30);
+      }
+    } else {
+      $t('tr-result-card').classList.remove('is-computing');
+      if (tr.view === 'angular') trDrawAngular();
+      else if (tr.view === 'material') trDrawMaterial();
+      else if (tr.view === 'terms') trDrawSpectrum(['B1', 'B3']);
+      else trDrawSpectrum();
+    }
+    // Last, and debounced: one slider drag emits hundreds of input events, and
+    // WebKit throws SecurityError past 100 replaceState calls in 30 s. Writing
+    // the URL after the drawing means such a throw can never suppress the plot.
+    trScheduleUrl();
+  }
+  /** Any state change invalidates the cached map. */
+  const trChanged = () => { trMap = null; renderTR(); };
+
+  // ── controls ─────────────────────────────────────────────────────────────
+  const trFmt = (v: number) => {
+    if (!Number.isFinite(v)) return '';
+    const a = Math.abs(v);
+    return (a !== 0 && (a < 1e-3 || a >= 1e6)) ? v.toExponential(3) : String(+v.toPrecision(6));
+  };
+  function trSyncBeta(beta: number, src?: 'vc' | 'kev') {
+    tr.beta = Math.max(0.001, Math.min(0.9999, beta));
+    if (src !== 'vc') $ti('tr-vc').value = trFmt(tr.beta);
+    if (src !== 'kev') $ti('tr-kev').value = trFmt(energyFromBeta(tr.beta));
+  }
+  $ti('tr-vc').addEventListener('input', e => {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (Number.isFinite(v) && v > 0 && v < 1) { trSyncBeta(v, 'vc'); trChanged(); }
+  });
+  $ti('tr-kev').addEventListener('input', e => {
+    const k = parseFloat((e.target as HTMLInputElement).value);
+    if (Number.isFinite(k) && k > 0) { trSyncBeta(betaFromKeV(k), 'kev'); trChanged(); }
+  });
+  // trSyncBeta clamps β to [0.001, 0.9999] but deliberately leaves the field being
+  // typed in alone, so '0.99995' would stay in the box while the state, the partner
+  // field and the share link all held 0.9999. Correct the box once the edit ends
+  // (change fires on blur or Enter, so nothing is rewritten mid-keystroke).
+  $ti('tr-vc').addEventListener('change', () => { $ti('tr-vc').value = trFmt(tr.beta); });
+  $ti('tr-kev').addEventListener('change', () => { $ti('tr-kev').value = trFmt(energyFromBeta(tr.beta)); });
+
+  $t('tr-geom').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-geom]') as HTMLButtonElement | null; if (!btn) return;
+    const g = btn.dataset.geom as 'half' | 'film'; if (g === tr.geom) return;
+    tr.geom = g;
+    if (g === 'half') {
+      tr.side = 'backward';
+      if (tr.view === 'thickness' || tr.view === 'terms') tr.view = 'spectrum';
+    }
+    trChanged();
+  });
+  $t('tr-side').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-side]') as HTMLButtonElement | null;
+    if (!btn || btn.disabled) return;
+    const s = btn.dataset.side as TrSide; if (s === tr.side) return;
+    tr.side = s; trChanged();
+  });
+  $t('tr-unit').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-xu]') as HTMLButtonElement | null; if (!btn) return;
+    const u = btn.dataset.xu as 'nm' | 'eV'; if (u === tr.unit) return;
+    tr.unit = u; trChanged();
+  });
+  $t('tr-overlay').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-ov]') as HTMLButtonElement | null; if (!btn) return;
+    tr.overlay = btn.dataset.ov === '1'; trChanged();
+  });
+  $t('tr-view-tabs').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('.plot-tab') as HTMLButtonElement | null; if (!btn || btn.hidden) return;
+    tr.view = btn.dataset.view as TrView;
+    renderTR();
+  });
+  $t('tr-mat-prop').addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-mprop]') as HTMLButtonElement | null; if (!btn) return;
+    const m = btn.dataset.mprop as 'eps' | 'nk'; if (m === tr.matProp) return;
+    tr.matProp = m; renderTR();        // a display switch: nothing to recompute
+  });
+
+  // thickness: number + slider, value kept in state so the slider's step never truncates it
+  function trBindNum(id: string, apply: (v: number) => void, read: () => number, isInt = false) {
+    const num = $ti(id), slider = document.getElementById(id + '-slider') as HTMLInputElement | null;
+    /** The bounds an input declares. A number box does not enforce its own on a typed value. */
+    const clampTo = (el: HTMLInputElement, v: number) => {
+      const lo = parseFloat(el.min), hi = parseFloat(el.max);
+      if (Number.isFinite(lo)) v = Math.max(lo, v);
+      if (Number.isFinite(hi)) v = Math.min(hi, v);
+      return v;
+    };
+    const run = (raw: string, from: HTMLInputElement) => {
+      let v = parseFloat(raw); if (!Number.isFinite(v)) return;
+      if (isInt) v = Math.round(v);
+      // Clamp before anything is written anywhere: the raw value used to reach the
+      // partner control unclamped, so typing −5 left the box at −5, the slider at
+      // its own min of 1 and the state at 0.1 — three different thicknesses.
+      v = clampTo(num, v);
+      apply(v);
+      if (from !== num) num.value = String(v);
+      // a range input silently clamps an assigned value; keep that explicit
+      if (slider && from !== slider) slider.value = String(clampTo(slider, v));
+      trChanged();
+    };
+    num.addEventListener('input', () => run(num.value, num));
+    if (slider) slider.addEventListener('input', () => run(slider.value, slider));
+    // Reconcile the box with the state when the edit finishes rather than
+    // mid-keystroke, so a clamp never rewrites digits under the caret.
+    num.addEventListener('change', () => { num.value = String(read()); });
+  }
+  trBindNum('tr-d', v => { tr.dNm = Math.max(0.1, v); }, () => tr.dNm, true);
+  /**
+   * `bounds`, where given, is the range the control declares: min/max do not stop
+   * a number being typed into the box, and an out-of-range cone used to reach the
+   * state, the read-out and the CSV header while `trCone()` quietly clamped what
+   * the kernels were actually given.
+   */
+  const trBindRange = (id: string, apply: (v: number) => void, bounds?: [number, number]) => {
+    const el = $ti(id);
+    const hold = (v: number) => bounds ? Math.min(bounds[1], Math.max(bounds[0], v)) : v;
+    el.addEventListener('input', () => {
+      const v = parseFloat(el.value);
+      if (Number.isFinite(v)) { apply(hold(v)); trChanged(); }
+    });
+    // correct the box itself once the edit is over, not under the caret
+    if (bounds) el.addEventListener('change', () => {
+      const v = parseFloat(el.value);
+      if (Number.isFinite(v)) el.value = String(hold(v));
+    });
+  };
+  trBindRange('tr-th-min', v => { tr.thMin = v; }, [0, 90]);
+  trBindRange('tr-th-max', v => { tr.thMax = v; }, [0, 90]);
+  trBindRange('tr-lam-min', v => { tr.lamMin = v; });
+  trBindRange('tr-lam-max', v => { tr.lamMax = v; });
+  trBindRange('tr-dmap-min', v => { tr.dMapMin = v; });
+  trBindRange('tr-dmap-max', v => { tr.dMapMax = v; });
+  trBindRange('tr-drude-epsb', v => { tr.drudeEpsB = v; });
+  trBindRange('tr-drude-wp', v => { tr.drudeWp = v; });
+  trBindRange('tr-drude-gamma', v => { tr.drudeGamma = v; });
+
+  // single wavelength (Angular view): λ ⇄ E ⇄ slider
+  function trSetLambda(nm: number, src: 'nm' | 'ev' | 'slider') {
+    tr.lamNm = Math.max(1, nm);
+    if (src !== 'nm') $ti('tr-wl-nm').value = String(+tr.lamNm.toFixed(1));
+    if (src !== 'ev') $ti('tr-wl-ev').value = String(+wavelengthToEv(tr.lamNm).toFixed(4));
+    if (src !== 'slider') $ti('tr-wl-slider').value = String(Math.round(tr.lamNm));
+    trChanged();
+  }
+  $ti('tr-wl-nm').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) trSetLambda(v, 'nm'); });
+  $ti('tr-wl-ev').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) trSetLambda(evToWavelength(v), 'ev'); });
+  $ti('tr-wl-slider').addEventListener('input', e => { const v = parseFloat((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v > 0) trSetLambda(v, 'slider'); });
+
+  // ── material plumbing (shared with the Mie / Cylinder labs) ──────────────
+  /**
+   * The custom-ε slot. The handle is the authority; `tr.epsRe` / `tr.epsIm`
+   * mirror it so the readout, the CSV header, the sketch label and the share
+   * link all state the same ε the formulas were given.
+   */
+  const trCustomEps = trSetupCustomEps($t('tr-eps-group'), () => {
+    const e = trCustomEps.eps();
+    tr.epsRe = e.re;
+    tr.epsIm = Math.max(0, e.im);
+    tr.epsDegenerate = trCustomEps.degenerate();
+    if (tr.material === 'custom') trChanged();
+  });
+  /** setupCustomEps's own sync() is silent, so seed the mirror from the handle. */
+  function trPullCustomEps() {
+    const e = trCustomEps.eps();
+    tr.epsRe = e.re;
+    tr.epsIm = Math.max(0, e.im);
+    tr.epsDegenerate = trCustomEps.degenerate();
+  }
+  trPullCustomEps();
+
+  const trRiiRefSink = document.createElement('span');
+  const trRii = setupRIISearch(
+    {
+      group: $t('tr-rii-group'),
+      input: $ti('tr-rii-search'),
+      results: $t('tr-rii-results'),
+      status: $t('tr-rii-status'),
+      ref: trRiiRefSink,
+    },
+    (data) => {
+      trTable = data; trTableKind = 'rii';
+      trTableLabel = trRiiRefSink.textContent?.trim() ?? '';
+      trRiiPath = trRii.currentPath();
+      trSharedRiiMissing = false;
+      trChanged();
+    },
+  );
+
+  function trApplyFileRows() {
+    if (!trFileRows) return;
+    const axis = $ti('tr-file-axis').value as ImportAxisMode;
+    const values = $ti('tr-file-values').value as ImportValueMode;
+    const conv = convertOpticalRows(trFileRows, axis, values);
+    const nameEl = $t('tr-file-name');
+    if ('error' in conv) {
+      nameEl.className = 'file-error'; nameEl.textContent = conv.error;
+      // the kind goes with the table: leaving it at 'file' made the next switch
+      // to the database clear a table that no longer existed
+      trTable = null; trTableLabel = ''; trTableKind = null;
+      return;
+    }
+    trTable = conv.data; trTableKind = 'file';
+    trTableLabel = `${trFileName} · ${conv.data.length} pts, ${conv.lambdaMinNm.toFixed(0)}–${conv.lambdaMaxNm.toFixed(0)} nm`;
+    nameEl.className = 'file-name'; nameEl.textContent = trTableLabel;
+  }
+  $ti('tr-file').addEventListener('change', () => {
+    const file = $ti('tr-file').files?.[0]; if (!file) return;
+    const nameEl = $t('tr-file-name');
+    nameEl.className = 'file-name'; nameEl.textContent = 'Reading…';
+    file.text().then(text => {
+      const parsed = parseOpticalFile(text);
+      if ('error' in parsed) {
+        nameEl.className = 'file-error'; nameEl.textContent = parsed.error;
+        trTable = null; trTableLabel = ''; trFileRows = null;
+        $ti('tr-file').value = '';
+        trChanged();
+        return;
+      }
+      trFileRows = parsed.rows; trFileName = file.name;
+      const guess = inferImportModes(parsed.rows);
+      $ti('tr-file-axis').value = guess.axis;
+      $ti('tr-file-values').value = guess.values;
+      trApplyFileRows();
+      trChanged();
+    });
+  });
+  $ti('tr-file-axis').addEventListener('change', () => { trApplyFileRows(); trChanged(); });
+  $ti('tr-file-values').addEventListener('change', () => { trApplyFileRows(); trChanged(); });
+
+  $ti('tr-material').addEventListener('change', () => {
+    const v = $ti('tr-material').value;
+    tr.material = v;
+    if (v !== 'rii') trSharedRiiMissing = false;
+    // a table belonging to the other user-supplied source would be computed under the new name
+    if ((v === 'file' || v === 'rii') && trTableKind && trTableKind !== v) {
+      trTable = null; trTableLabel = ''; trTableKind = null; trRiiPath = null; trFileRows = null;
+      // clear the native control too, the way the parse-error path does: it kept
+      // showing the old filename for data that had just been discarded, and
+      // re-picking the same file would not have fired `change`
+      $ti('tr-file').value = '';
+      $t('tr-file-name').className = 'file-name';
+      $t('tr-file-name').textContent = '';
+      trRii.clear();
+    }
+    if (v === 'rii') void trRii.ensureCatalog();
+    trChanged();
+  });
+
+  // ── geometry dialog ──────────────────────────────────────────────────────
+  const trDlg = $t('tr-structure-dialog') as HTMLDialogElement;
+  $t('tr-config-check').addEventListener('click', () => {
+    trUpdateConfigCheck();
+    if (typeof trDlg.showModal === 'function') trDlg.showModal(); else trDlg.setAttribute('open', '');
+  });
+  $t('tr-structure-dialog-close').addEventListener('click', () => trDlg.close());
+  trDlg.addEventListener('click', e => { if (e.target === trDlg) trDlg.close(); });
+
+  function trExportStructurePng() {
+    const svg = $t('tr-structure-dialog-art').querySelector('svg') as SVGSVGElement | null;
+    if (!svg) return;
+    const copy = svg.cloneNode(true) as SVGSVGElement;
+    const vb = (copy.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+    const width = vb.length === 4 && Number.isFinite(vb[2]) ? vb[2] : 320;
+    const height = vb.length === 4 && Number.isFinite(vb[3]) ? vb[3] : 224;
+    copy.setAttribute('width', String(width)); copy.setAttribute('height', String(height));
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const scale = 4, canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
+      const c2 = canvas.getContext('2d')!;
+      c2.scale(scale, scale);
+      c2.fillStyle = trChartTheme().bg; c2.fillRect(0, 0, width, height);
+      c2.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b => { if (b) trDownload(b, trStem() + '_geometry.png'); }, 'image/png');
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  }
+  $t('tr-structure-export-png').addEventListener('click', trExportStructurePng);
+
+  // ── export ───────────────────────────────────────────────────────────────
+  const trStem = () => `tr_${tr.geom === 'film' ? `film_d${Math.round(tr.dNm)}nm` : 'halfspace'}_${tr.material}_${Math.round(trKeV())}keV_${tr.side}`;
+  const trName = () => `${trStem()}_${tr.view}`;
+
+  function trExportPng() {
+    const src = $t('tr-chart') as HTMLCanvasElement;
+    if (!src.width) return;
+    const off = document.createElement('canvas');
+    off.width = src.width; off.height = src.height;
+    const o = off.getContext('2d')!;
+    o.fillStyle = trChartTheme().bg; o.fillRect(0, 0, off.width, off.height);
+    o.drawImage(src, 0, 0);
+    off.toBlob(b => { if (b) trDownload(b, trName() + '.png'); }, 'image/png');
+  }
+  $t('tr-export-png').addEventListener('click', trExportPng);
+
+  function trCsv(): string {
+    const p6 = (v: number) => Number.isFinite(v) ? v.toPrecision(6) : 'nan';
+    // the cone comes from trCone(), the one the kernels were given: the raw state
+    // can hold anything that was typed, and the header must describe the numbers
+    const [cone0, cone1] = trCone();
+    const head = [
+      `# Transition radiation — ${tr.geom === 'film' ? `free-standing film, d=${tr.dNm} nm` : 'semi-infinite half space'}`,
+      `# material=${trMaterialLabel()}, K=${trKeV().toFixed(3)} keV, beta=${tr.beta.toFixed(5)}, side=${tr.side}`,
+      `# collection cone theta=${+(cone0 / TDEG).toFixed(3)}-${+(cone1 / TDEG).toFixed(3)} deg, lambda=${trLamLo()}-${trLamHi()} nm`,
+      '# Generated by NanophotonicsLab (nanophotonicslab.com)',
+    ];
+    // the plotted x axis, so an eV export says why its rows run backwards in lambda
+    if (tr.view !== 'angular') {
+      head.splice(head.length - 1, 0,
+        `# x axis = ${tr.unit === 'eV' ? 'photon energy (eV); the rows run descending in lambda' : 'wavelength (nm)'}`);
+    }
+    const xcol = tr.unit === 'eV' ? 'energy_eV' : 'x_nm';
+    if (tr.view === 'material') {
+      if (!trMaterialReady()) {
+        return [...head, '# no optical data loaded — nothing to export', ''].join('\n');
+      }
+      const { lam, x, n, k, epsRe, epsIm } = trMaterialCurves();
+      const rows = [`lambda_nm,${xcol},n,k,epsilon_re,epsilon_im`];
+      for (let i = 0; i < lam.length; i++) {
+        rows.push(`${p6(lam[i])},${p6(x[i])},${p6(n[i])},${p6(k[i])},${p6(epsRe[i])},${p6(epsIm[i])}`);
+      }
+      return [...head, '# epsilon(lambda) as the TR formulas receive it', ...rows].join('\n') + '\n';
+    }
+    if (tr.view === 'angular') {
+      const { thDeg, y, ref } = trAngular();
+      // the Ginzburg–Frank column is the backward perfect-conductor limit, so it
+      // is absent on a film's forward side exactly as it is absent from the plot
+      const withRef = trRefShown();
+      const rows = [`theta_deg,dGamma_per_sr_per_${trYUnit()}${withRef ? `,ginzburg_frank_backward_per_sr_per_${trYUnit()}` : ''}`];
+      for (let i = 0; i < thDeg.length; i++) rows.push(`${thDeg[i].toFixed(2)},${p6(y[i])}${withRef ? ',' + p6(ref[i]) : ''}`);
+      return [...head, `# angular cut at lambda=${tr.lamNm} nm`, ...rows].join('\n') + '\n';
+    }
+    if (tr.view === 'thickness') {
+      const map = trMap ?? trComputeMap();
+      // keep the provenance line last
+      head.splice(head.length - 1, 0, '# the m = 1, 2, 3 resonance curves drawn over the map are not exported');
+      const rows = [`lambda_nm,${xcol},d_nm,photons_per_electron_per_${trYUnit()}`];
+      for (let di = 0; di < map.d.length; di++) {
+        for (let i = 0; i < map.lam.length; i++) {
+          rows.push(`${p6(map.lam[i])},${p6(map.x[i])},${p6(map.d[di])},${p6(map.g[di * map.lam.length + i])}`);
+        }
+      }
+      return [...head, ...rows].join('\n') + '\n';
+    }
+    const { lam, x } = trAxis(TR_NSPEC);
+    const main = trSpectrumOn(lam);
+    if (tr.view === 'terms') {
+      const ctrl = trSpectrumOn(lam, ['B1', 'B3']);
+      const rows = [`lambda_nm,${xcol},full_per_${trYUnit()},B1_B3_per_${trYUnit()}`];
+      for (let i = 0; i < lam.length; i++) rows.push(`${p6(lam[i])},${p6(x[i])},${p6(main[i])},${p6(ctrl[i])}`);
+      return [...head, ...rows].join('\n') + '\n';
+    }
+    const extra = (tr.geom === 'film' && tr.overlay) ? trThickLimit(lam) : null;
+    const rows = [`lambda_nm,${xcol},photons_per_electron_per_${trYUnit()}${extra ? `,thick_limit_per_${trYUnit()}` : ''}`];
+    for (let i = 0; i < lam.length; i++) {
+      rows.push(`${p6(lam[i])},${p6(x[i])},${p6(main[i])}${extra ? ',' + p6(extra[i]) : ''}`);
+    }
+    return [...head, ...rows].join('\n') + '\n';
+  }
+  $t('tr-export-csv').addEventListener('click', () => {
+    trDownload(new Blob([trCsv()], { type: 'text/csv' }), trName() + '.csv');
+  });
+
+  // Share: the URL write keeps the address bar in step with every control, so the
+  // current URL already *is* the permalink — flush the pending write, then copy
+  // it, with the Mie lab's feedback. The markup is captured once, not per click:
+  // reading it back off the button made a second click within the 1.5 s window
+  // adopt 'Copied!' as the thing to restore, destroying the icon for good.
+  const trShareBtn = $t('tr-share');
+  const TR_SHARE_HTML = trShareBtn.innerHTML;
+  let trShareTimer = 0;
+  trShareBtn.addEventListener('click', () => {
+    trFlushUrl();
+    const say = (msg: string) => {
+      trShareBtn.textContent = msg;
+      window.clearTimeout(trShareTimer);
+      trShareTimer = window.setTimeout(() => { trShareBtn.innerHTML = TR_SHARE_HTML; }, 1500);
+    };
+    // the Clipboard API is absent on insecure origins and in some browsers
+    const copy = navigator.clipboard?.writeText(location.href);
+    if (copy) copy.then(() => say('Copied!'), () => say('Press Ctrl+C'));
+    else say('Press Ctrl+C');
+  });
+
+  // ── permalink (additive `tr…` query keys; nothing existing is renamed) ───
+  const TR_KEYS = ['tr', 'trgeom', 'trd', 'trmat', 'trrii', 'treps', 'trepsm', 'trepsn', 'trepsk', 'trdrude', 'trkev', 'trside', 'trth', 'trwl', 'trunit', 'trview', 'trmprop', 'trlam', 'trdmap', 'trov'];
+  let trRestoring = false;
+  function trWriteUrl() {
+    if (trRestoring) return;
+    if (($t('panel-tr') as HTMLElement).hidden) return;   // another module owns the query string now
+    const u = new URL(window.location.href);
+    for (const k of TR_KEYS) u.searchParams.delete(k);
+    u.searchParams.set('tr', '1');
+    u.searchParams.set('trgeom', tr.geom);
+    if (tr.geom === 'film') u.searchParams.set('trd', String(tr.dNm));
+    u.searchParams.set('trmat', tr.material);
+    if (tr.material === 'rii' && trRiiPath) u.searchParams.set('trrii', trRiiPath);
+    if (tr.material === 'custom') {
+      // 'treps' keeps its meaning (the ε pair). In n, k mode the ε keys are the
+      // *derived* pair and cannot carry the link on their own — restoring them
+      // rounds twice — so the typed pair rides along at full precision, and is
+      // written only in that mode: every ε-mode link is byte-for-byte as before.
+      u.searchParams.set('treps', `${trFmtEpsFull(tr.epsRe)},${trFmtEpsFull(tr.epsIm)}`);
+      if (trCustomEps.mode === 'nk') {
+        u.searchParams.set('trepsm', 'nk');
+        u.searchParams.set('trepsn', trFmtEpsFull(trCustomEps.nParam.value));
+        u.searchParams.set('trepsk', trFmtEpsFull(trCustomEps.kParam.value));
+      }
+    }
+    if (tr.material === 'drude') u.searchParams.set('trdrude', `${tr.drudeEpsB},${tr.drudeWp},${tr.drudeGamma}`);
+    u.searchParams.set('trkev', trKeV().toPrecision(8));
+    u.searchParams.set('trside', tr.side);
+    u.searchParams.set('trth', `${tr.thMin},${tr.thMax}`);
+    u.searchParams.set('trwl', `${tr.lamMin},${tr.lamMax}`);
+    u.searchParams.set('trunit', tr.unit);
+    u.searchParams.set('trview', tr.view);
+    // Scoped to the geometry, like `trov`, not to the view: keys written only
+    // while their own view was open dropped the other views' settings, so a link
+    // shared from the Spectrum view restored someone else's λ, thickness axis and
+    // ε / n,k choice the moment the recipient clicked another tab.
+    u.searchParams.set('trmprop', tr.matProp);
+    u.searchParams.set('trlam', String(tr.lamNm));
+    if (tr.geom === 'film') {
+      u.searchParams.set('trdmap', `${tr.dMapMin},${tr.dMapMax}`);
+      u.searchParams.set('trov', tr.overlay ? '1' : '0');
+    }
+    // Safari throws SecurityError past ~100 replaceState calls in 30 s. The URL
+    // is a convenience; losing it must not take anything else down with it.
+    try { history.replaceState(null, '', u.toString()); } catch { /* throttled: the address bar lags, the plot does not */ }
+  }
+
+  /**
+   * The URL write is debounced: it used to run on every render, so one drag of a
+   * slider emitted several hundred `replaceState` calls. The Share handler
+   * flushes it synchronously, so the copied link is never one edit behind.
+   */
+  function trScheduleUrl() {
+    window.clearTimeout(trUrlPending);
+    trUrlPending = window.setTimeout(() => { trUrlPending = 0; trWriteUrl(); }, 250);
+  }
+  function trFlushUrl() {
+    window.clearTimeout(trUrlPending);
+    trUrlPending = 0;
+    trWriteUrl();
+  }
+
+  /** Set while a permalink supplied the energy, so the shared velocity does not overwrite it on activation. */
+  let trPinnedBeta = false;
+  const trPair = (s: string | null): [number, number] | null => {
+    if (!s) return null;
+    const p = s.split(',').map(Number);
+    return p.length === 2 && p.every(Number.isFinite) ? [p[0], p[1]] : null;
+  };
+  /** A query value is whatever someone put in the link: hold it to what the control allows. */
+  const trClamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const trClampPair = (p: [number, number], lo: number, hi: number): [number, number] =>
+    [trClamp(p[0], lo, hi), trClamp(p[1], lo, hi)];
+  function trRestore(): boolean {
+    const q = new URL(window.location.href).searchParams;
+    if (q.get('tr') !== '1') return false;
+    trRestoring = true;
+    const geom = q.get('trgeom'); if (geom === 'film' || geom === 'half') tr.geom = geom;
+    const dRaw = Number(q.get('trd'));
+    if (Number.isFinite(dRaw) && dRaw > 0) {
+      const d = trClamp(dRaw, 1, 20000);                       // the #tr-d bounds
+      tr.dNm = d; $ti('tr-d').value = String(d);
+      $ti('tr-d-slider').value = String(trClamp(d, 1, 1000));  // the slider's own, narrower range
+    }
+    const kev = Number(q.get('trkev')); if (Number.isFinite(kev) && kev > 0) { trSyncBeta(betaFromKeV(kev)); trPinnedBeta = true; }
+    const side = q.get('trside'); if (side === 'backward' || side === 'forward') tr.side = side;
+    // the cone is clamped to 0–90° here as well as in trCone(), so the controls
+    // and the CSV header cannot advertise a band the kernels never used
+    const th = trPair(q.get('trth'));
+    if (th) { const c = trClampPair(th, 0, 90); [tr.thMin, tr.thMax] = c; $ti('tr-th-min').value = String(c[0]); $ti('tr-th-max').value = String(c[1]); }
+    const wl = trPair(q.get('trwl'));
+    if (wl) { const c = trClampPair(wl, 1, 1e6); [tr.lamMin, tr.lamMax] = c; $ti('tr-lam-min').value = String(c[0]); $ti('tr-lam-max').value = String(c[1]); }
+    const unit = q.get('trunit'); if (unit === 'nm' || unit === 'eV') tr.unit = unit;
+    const view = q.get('trview');
+    if (view === 'spectrum' || view === 'angular' || view === 'thickness' || view === 'terms' || view === 'material') tr.view = view;
+    const mprop = q.get('trmprop'); if (mprop === 'eps' || mprop === 'nk') tr.matProp = mprop;
+    const lamRaw = Number(q.get('trlam'));
+    if (Number.isFinite(lamRaw) && lamRaw > 0) {
+      const lam = trClamp(lamRaw, 1, 1e6);
+      tr.lamNm = lam; $ti('tr-wl-nm').value = String(lam); $ti('tr-wl-ev').value = String(+wavelengthToEv(lam).toFixed(4)); $ti('tr-wl-slider').value = String(Math.round(lam));
+    }
+    const dm = trPair(q.get('trdmap'));
+    if (dm) { const c = trClampPair(dm, 1, 1e6); [tr.dMapMin, tr.dMapMax] = c; $ti('tr-dmap-min').value = String(c[0]); $ti('tr-dmap-max').value = String(c[1]); }
+    const ov = q.get('trov'); if (ov === '0' || ov === '1') tr.overlay = ov === '1';
+    const eps = trPair(q.get('treps'));
+    if (eps) {
+      // The ε keys are the authority; the n, k boxes follow the mode switch,
+      // and the typed pair lands *after* it because setMode derives n, k from ε.
+      trCustomEps.setMode('eps');
+      trCustomEps.reParam.fit(eps[0]);
+      trCustomEps.imParam.fit(Math.max(0, eps[1]));
+      if (q.get('trepsm') === 'nk') {
+        trCustomEps.setMode('nk');
+        const tn = Number(q.get('trepsn')); if (Number.isFinite(tn)) trCustomEps.nParam.fit(tn);
+        const tk = Number(q.get('trepsk')); if (Number.isFinite(tk)) trCustomEps.kParam.fit(tk);
+      }
+      trPullCustomEps();
+    }
+    const dr = q.get('trdrude');
+    if (dr) {
+      const p = dr.split(',').map(Number);
+      if (p.length === 3 && p.every(Number.isFinite)) {
+        [tr.drudeEpsB, tr.drudeWp, tr.drudeGamma] = p as [number, number, number];
+        $ti('tr-drude-epsb').value = String(p[0]); $ti('tr-drude-wp').value = String(p[1]); $ti('tr-drude-gamma').value = String(p[2]);
+      }
+    }
+    // The one key that used to be taken verbatim: an unmatched value sets the
+    // <select> to selectedIndex = -1, which renders blank, hides every material
+    // sub-panel, makes epsAt fall back to vacuum and was written straight back
+    // into the URL. No UI interaction can produce that state, so refuse it.
+    const mat = q.get('trmat');
+    const matOk = !!mat && Array.from($ti('tr-material').querySelectorAll('option')).some(o => o.value === mat);
+    if (matOk) { tr.material = mat as string; $ti('tr-material').value = mat as string; }
+    // consistency: the restored combination must still be a legal one
+    if (tr.geom === 'half') {
+      tr.side = 'backward';
+      if (tr.view === 'thickness' || tr.view === 'terms') tr.view = 'spectrum';
+    }
+    trRestoring = false;
+    const riiPath = q.get('trrii');
+    if (tr.material === 'rii' && riiPath) {
+      // kept optimistically so a link copied before the fetch resolves still carries the entry
+      trRiiPath = riiPath;
+      void trRii.selectByPath(riiPath).then(ok => {
+        if (!ok) { trSharedRiiMissing = true; trTableLabel = ''; trRiiPath = null; }
+        trChanged();
+      });
+    }
+    return true;
+  }
+
+  // ── activation / lifecycle ───────────────────────────────────────────────
+  (window as any).__trActivate = (beta: number) => {
+    // the panel is revealed by setModule before this runs, so the canvas now has a width.
+    // A permalink's own energy wins over the page-wide velocity, once.
+    if (trPinnedBeta) trPinnedBeta = false;
+    else if (beta > 0 && beta < 1) trSyncBeta(beta);
+    trMap = null;
+    renderTR();
+  };
+
+  /** Leaving the module takes the tr… keys back out, so a link shared from another module is that module's. */
+  (window as any).__trModuleChanged = (active: boolean) => {
+    if (active) return;
+    // The panel is already hidden, so renderTR cannot reach its own cancels:
+    // drop the queued map compute (it would run a discarded 1.3M-point map on
+    // the main thread) and the queued URL write (it would put the keys back).
+    ++trRenderToken;
+    window.clearTimeout(trMapPending);
+    trMapPending = 0;
+    window.clearTimeout(trUrlPending);
+    trUrlPending = 0;
+    const u = new URL(window.location.href);
+    let touched = false;
+    for (const k of TR_KEYS) if (u.searchParams.has(k)) { u.searchParams.delete(k); touched = true; }
+    if (touched) history.replaceState(null, '', u.toString());
+  };
+
+  let trRT = 0;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(trRT);
+    trRT = window.setTimeout(() => { if (!($t('panel-tr') as HTMLElement).hidden) renderTR(); }, 120);
+  });
+  trOnThemeChange(() => { if (!($t('panel-tr') as HTMLElement).hidden) renderTR(); });
+
+  trSyncBeta(tr.beta);
+  $ti('tr-material').value = tr.material;
+  if (trRestore()) {
+    (window as any).__electronSetModule?.('tr');
+    if (tr.material === 'rii') void trRii.ensureCatalog();
+  }
 </script>
