@@ -324,6 +324,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-beam">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Gaussian Beam</h3>
 
@@ -380,6 +381,7 @@ const laserPresets = [
               &theta;&nbsp;=&nbsp;M&sup2;&lambda;/(&pi;w<sub>0</sub>).
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -413,6 +415,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-focus">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Focus &amp; Fluence</h3>
 
@@ -468,10 +471,14 @@ const laserPresets = [
             <p class="theory-note">
               <strong>Focus.</strong>
               w<sub>0</sub>&nbsp;&approx;&nbsp;M&sup2;&thinsp;&lambda;&thinsp;f/(&pi;&thinsp;w<sub>in</sub>).
-              I&nbsp;=&nbsp;P<sub>peak</sub>/(&pi;w<sub>0</sub>&sup2;).
-              F&nbsp;=&nbsp;E/(&pi;w<sub>0</sub>&sup2;).
+              On-axis peak values of a Gaussian beam, twice the average over the
+              1/e&sup2; disc:
+              I<sub>peak</sub>&nbsp;=&nbsp;2P<sub>peak</sub>/(&pi;w<sub>0</sub>&sup2;),
+              F<sub>peak</sub>&nbsp;=&nbsp;2E/(&pi;w<sub>0</sub>&sup2;),
+              with P<sub>peak</sub>&nbsp;=&nbsp;0.9394&thinsp;E/&Delta;t.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -489,7 +496,7 @@ const laserPresets = [
                 <span class="result-value" id="foc-out-I">&mdash;</span>
               </div>
               <div class="result-item">
-                <span class="result-label">Fluence</span>
+                <span class="result-label">Peak fluence</span>
                 <span class="result-value" id="foc-out-F">&mdash;</span>
               </div>
               <div class="result-item">
@@ -513,6 +520,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-chirp">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Chirp &amp; Compressor</h3>
 
@@ -567,6 +575,7 @@ const laserPresets = [
               Sign of GDD tells you if pulse has positive or negative chirp.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -600,6 +609,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-nlc">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Nonlinear Conversion</h3>
 
@@ -634,6 +644,7 @@ const laserPresets = [
               &lambda;<sub>out</sub> = &lambda;/2.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -667,6 +678,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-bright">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Spectral Brightness</h3>
 
@@ -738,6 +750,7 @@ const laserPresets = [
               Defaults from Elu&nbsp;et&nbsp;al., Nature Photon. (2021).
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Results</h3>
@@ -779,6 +792,7 @@ const laserPresets = [
       <!-- ============================================================ -->
       <div class="tab-panel" id="panel-modes">
         <div class="widget-layout">
+          <ParamsDrawer>
           <div class="controls card">
             <h3>Beam Modes</h3>
 
@@ -834,6 +848,7 @@ const laserPresets = [
               and p radial nodes. Donut profile for &ell;&ne;0.
             </p>
           </div>
+          </ParamsDrawer>
 
           <div class="results card">
             <h3>Intensity profile</h3>
@@ -1795,13 +1810,16 @@ initPermalinks({
     // Peak power (assume Gaussian)
     const P_peak = 0.9394 * E_J / dt_s;
 
-    // Intensity: I = P_peak / (π · w0²)
+    // On-axis peak, not the average over the 1/e² disc: a Gaussian carries
+    // half its energy inside πw0², so the peak is twice P/(πw0²). Cross-checked
+    // against the Light Conversion Optics Toolbox (pulse peak intensity and
+    // fluence), which reports the same 2E/(πw0²).
     const area_m2 = Math.PI * w0_m * w0_m;
     const area_cm2 = area_m2 * 1e4;
-    const I_W_cm2 = P_peak / area_cm2;
+    const I_W_cm2 = 2 * P_peak / area_cm2;
 
-    // Fluence: F = E / (π · w0²)
-    const F_J_cm2 = E_J / area_cm2;
+    // Peak fluence: F = 2E / (π · w0²)
+    const F_J_cm2 = 2 * E_J / area_cm2;
 
     // Display
     el<HTMLElement>('foc-out-w0').textContent = w0_um >= 1 ? w0_um.toFixed(2) + ' \u00b5m' : (w0_um * 1000).toFixed(1) + ' nm';
