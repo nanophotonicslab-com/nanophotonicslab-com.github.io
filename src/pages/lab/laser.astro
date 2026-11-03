@@ -1,10 +1,43 @@
 ---
+import katex from 'katex';
 import Layout from '../../layouts/Layout.astro';
 import ModelInfo from '../../components/ModelInfo.astro';
 import PresetStrip from '../../components/PresetStrip.astro';
 import ToolMeta from '../../components/ToolMeta.astro';
 import ParamsDrawer from '../../components/ParamsDrawer.astro';
 import '../../styles/lab.css';
+import 'katex/dist/katex.min.css';
+
+/* ------------------------------------------------------------------ *
+ *  Build-time mathematics for the Notes boxes.
+ *
+ *  The notes are static prose, so every formula in them is typeset here,
+ *  during the build, and injected with set:html. The only KaTeX asset the
+ *  browser sees is the stylesheet imported above — no auto-render bundle,
+ *  no runtime cost (contrast src/pages/lab/assistant.astro, whose notes are
+ *  model output and therefore have to be rendered client-side).
+ *
+ *  Injected markup carries no Astro scope attribute, so a CSS rule aimed at
+ *  anything KaTeX emits has to be written as :global() in the <style> block.
+ * ------------------------------------------------------------------ */
+/** Display equation. */
+const eq = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: true });
+/** Inline symbol, for use inside a sentence. */
+const im = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: false });
+/** Symbol glossary: a <dl> of symbol/meaning pairs, the symbols typeset and the
+ *  descriptions plain HTML. The <style> block lays it out as two columns, so
+ *  each symbol stays beside its own definition. */
+const defs = (items: [string, string][]) =>
+  '<dl class="note-defs">'
+  + items.map(([sym, text]) => `<dt>${im(sym)}</dt><dd>${text}</dd>`).join('')
+  + '</dl>';
+/** Extra attributes for every `.note-eq` box.
+ *  A formula can be wider than the notes column, and the box is then a
+ *  horizontal scroll container; a scroll container with no focusable
+ *  descendant is unreachable for a keyboard-only user (WCAG 2.1.1, axe
+ *  `scrollable-region-focusable`), so each box is a focusable group. The
+ *  equation itself is still read from the MathML KaTeX emits. */
+const eqAttrs = { tabindex: 0, role: 'group', 'aria-label': 'Equation' } as const;
 
 const laserPresets = [
   { label: 'Ti:sapphire (100 fs)', values: { 'tbp-lam': 800, 'tbp-dt': 100, 'peak-pavg': 1, 'peak-frep': 80, 'peak-dt': 100, 'gdd-wl': 800, 'gdd-dt': 100 } },
@@ -90,15 +123,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Time-bandwidth product.</strong>
-              &Delta;t&thinsp;&middot;&thinsp;&Delta;&nu;&nbsp;&ge;&nbsp;TBP.
-              Gaussian:&nbsp;0.4413, sech&sup2;:&nbsp;0.3148, Lorentzian:&nbsp;0.2206.
-              &Delta;&nu;&nbsp;=&nbsp;c&thinsp;&Delta;&lambda;/&lambda;&sup2;.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -138,6 +166,58 @@ const laserPresets = [
                 Share
               </button>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Time&ndash;bandwidth product.</strong> Converts the width of a
+              pulse spectrum into the shortest duration that spectrum can support,
+              and counts how many optical cycles that duration holds&nbsp;[3].
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\Delta\nu=\frac{c\,\Delta\lambda}{\lambda_0^{2}},
+              \qquad \Delta t\,\Delta\nu\ \ge\ K`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\Delta t_{\mathrm{TL}}=\frac{K}{\Delta\nu},
+              \qquad N_{\mathrm{cyc}}=\frac{\Delta t}{\lambda_0/c}`)} />
+            <div set:html={defs([
+              ['\\Delta\\lambda', 'FWHM of the intensity spectrum'],
+              ['\\Delta\\nu', 'the same width in frequency'],
+              ['\\Delta t', 'intensity FWHM in time'],
+              ['\\lambda_0', 'centre wavelength'],
+              ['c', 'vacuum speed of light'],
+              ['K', 'the shape-dependent product set by the shape buttons'],
+              ['N_{\\mathrm{cyc}}', 'duration in optical cycles'],
+            ])} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`K=\tfrac{2\ln 2}{\pi}=0.4413\ \text{(Gaussian)},
+              \qquad \tfrac{4\ln^{2}\!\left(1+\sqrt{2}\right)}{\pi^{2}}=0.3148\ (\mathrm{sech}^{2})`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`K=0.2206\ \text{(Lorentzian, by convention)}`)} />
+            <p>
+              The first two are exact for intensity FWHM in both domains; the third is
+              not derived. A Lorentzian intensity profile has no finite
+              FWHM&ndash;FWHM transform limit &mdash; the spectrum of its field diverges
+              logarithmically at line centre &mdash; and treating the nearest
+              well-defined Lorentzian pulse consistently, intensity FWHM in both
+              domains, gives 0.142 instead, so read 0.2206 as a nominal,
+              convention-dependent figure rather than a derived one. For the same
+              reason the two panels, which are drawn from one profile function in both
+              domains, are a Fourier pair for the Gaussian and
+              sech&sup2; cases but not for the Lorentzian.
+            </p>
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                Both directions are evaluated <em>at</em> the transform limit, so the
+                reported TBP ratio is 1 by construction &mdash; a measured, chirped
+                pulse belongs in the Chirp tab.
+              </li>
+              <li>
+                <span set:html={im('\\Delta\\nu = c\\,\\Delta\\lambda/\\lambda_0^{2}')} /> is
+                the narrowband linearisation
+                (<span set:html={im('\\Delta\\lambda\\ll\\lambda_0')} />), applied to the FWHM
+                of the intensity spectrum.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -200,15 +280,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Peak power.</strong>
-              E&nbsp;=&nbsp;P<sub>avg</sub>/f<sub>rep</sub>, &ensp;
-              P<sub>peak</sub>&nbsp;=&nbsp;k&thinsp;E/&Delta;t.
-              k: Gaussian&nbsp;0.94, sech&sup2;&nbsp;0.88, rect&nbsp;1.0.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -232,6 +307,50 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="peak-chart" aria-label="Pulse train and peak power diagram"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Peak power.</strong> Splits an average power into per-pulse
+              energy and the temporal peak of the pulse power, for a train of
+              identical pulses&nbsp;[3].
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`E=\frac{P_{\mathrm{avg}}}{f_{\mathrm{rep}}},
+              \qquad P_{\mathrm{peak}}=k\,\frac{E}{\Delta t},
+              \qquad D=\Delta t\,f_{\mathrm{rep}}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\frac{P_{\mathrm{peak}}}{P_{\mathrm{avg}}}
+              =\frac{k}{\Delta t\,f_{\mathrm{rep}}}=\frac{k}{D}`)} />
+            <div set:html={defs([
+              ['P_{\\mathrm{avg}}', 'average power'],
+              ['f_{\\mathrm{rep}}', 'repetition rate'],
+              ['\\Delta t', 'intensity FWHM of one pulse'],
+              ['E', 'energy per pulse'],
+              ['D', 'duty cycle'],
+              ['k', 'shape factor: the true peak power in units of E/&Delta;t'],
+            ])} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`k=2\sqrt{\tfrac{\ln 2}{\pi}}=0.9394\ \text{(Gaussian)},
+              \qquad 0.8813\approx\ln\!\left(1+\sqrt{2}\right)\ (\mathrm{sech}^{2})`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`k=1\ \text{(rectangular)}`)} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                One pulse per period, with all of the average power in the pulse train
+                &mdash; a CW pedestal or ASE background would inflate
+                <span set:html={im('P_{\\mathrm{peak}}')} />.
+              </li>
+              <li>
+                A power, not an intensity: no beam area enters, and focusing is handled
+                in the Focus&nbsp;&amp;&nbsp;Fluence tab.
+              </li>
+              <li>
+                The shape buttons set <span set:html={im('k')} /> for every number here,
+                but the sketch below draws only the Gaussian and sech&sup2; envelopes:
+                with <em>Rectangular</em> selected the arithmetic uses
+                <span set:html={im('k=1')} /> while the drawn envelope stays Gaussian.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -263,7 +382,7 @@ const laserPresets = [
                   <select class="field-input" id="gdd-mat">
                     <option value="sio2">Fused silica</option>
                     <option value="bk7">BK7</option>
-                    <option value="caf2">CaF&sub2;</option>
+                    <option value="caf2">CaF&#8322;</option>
                     <option value="sapphire">Sapphire</option>
                     <option value="sf10">SF10</option>
                     <option value="custom">Custom GVD</option>
@@ -288,14 +407,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>GDD broadening (Gaussian).</strong>
-              &Delta;t<sub>out</sub>&nbsp;=&nbsp;&Delta;t<sub>in</sub>&thinsp;&radic;(1&nbsp;+&nbsp;(4&thinsp;ln2&thinsp;&middot;&thinsp;GDD/&Delta;t<sub>in</sub>&sup2;)&sup2;).
-              GDD&nbsp;=&nbsp;GVD&thinsp;&times;&thinsp;L&thinsp;&times;&thinsp;passes.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -315,6 +430,58 @@ const laserPresets = [
             <div class="chart-wrap" id="gdd-chart-wrap">
               <canvas id="gdd-chart" aria-label="Pulse duration vs material thickness"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>GDD broadening.</strong> Stretches a transform-limited Gaussian
+              pulse by the second-order dispersion of a given thickness of
+              material&nbsp;[3]. The group-velocity dispersion comes from each
+              material's Sellmeier fit&nbsp;[6], differentiated numerically.
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\mathrm{GDD}=\beta_2\,L\,N_{\mathrm{pass}}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\frac{\Delta t_{\mathrm{out}}}{\Delta t_{\mathrm{in}}}
+              =\sqrt{1+\left(\frac{4\ln 2\;\mathrm{GDD}}{\Delta t_{\mathrm{in}}^{2}}\right)^{\!2}}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\beta_2=\frac{\lambda^{3}}{2\pi c^{2}}\,
+              \frac{\mathrm{d}^{2}n}{\mathrm{d}\lambda^{2}},
+              \qquad n^{2}(\lambda)=1+\sum_i\frac{B_i\lambda^{2}}{\lambda^{2}-C_i}`)} />
+            <div set:html={defs([
+              ['\\beta_2', 'GVD per unit length (fs&sup2;/mm)'],
+              ['L', 'thickness traversed per pass'],
+              ['N_{\\mathrm{pass}}', 'number of passes, so the glass path is L&nbsp;&times;&nbsp;passes'],
+              ['\\Delta t_{\\mathrm{in}}', 'input intensity FWHM'],
+              ['\\Delta t_{\\mathrm{out}}/\\Delta t_{\\mathrm{in}}', 'the reported broadening factor'],
+              ['n(\\lambda)', 'refractive index from the Sellmeier coefficients, with &lambda; in &micro;m'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                Transform-limited Gaussian input and second-order dispersion only
+                &mdash; no TOD, no self-phase modulation.
+              </li>
+              <li>
+                Normal incidence, so the optical path per pass is exactly the quoted
+                thickness.
+              </li>
+              <li>
+                <span set:html={im('\\mathrm{d}^{2}n/\\mathrm{d}\\lambda^{2}')} /> is a
+                central finite difference (0.0001&nbsp;&micro;m, i.e. a 0.1&nbsp;nm step)
+                on the analytic Sellmeier curve, so it is only meaningful inside each
+                material's transparency range; fused silica at 800&nbsp;nm gives
+                <span set:html={im('\\beta_2\\approx+36.2')} />&nbsp;fs&sup2;/mm.
+              </li>
+              <li>
+                The sapphire coefficients are those of the ordinary ray: sapphire is
+                uniaxial, and the extraordinary ray differs by a few per cent in
+                <span set:html={im('\\beta_2')} />.
+              </li>
+              <li>
+                <em>Custom GVD</em> accepts any value, negative included, for chirped
+                mirrors or a prism/grating compressor.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -351,7 +518,7 @@ const laserPresets = [
               <div class="fields waist-fields">
                 <div class="field">
                   <label for="beam-w1e">1/e intensity radius (&mu;m)</label>
-                  <input type="text" class="field-input" id="beam-w1e" inputmode="decimal" value="7.07">
+                  <input type="text" class="field-input" id="beam-w1e" inputmode="decimal" value="7.07107">
                 </div>
                 <div class="field">
                   <label for="beam-w0">1/e<sup>2</sup> intensity radius w<sub>0</sub> (&mu;m)</label>
@@ -359,7 +526,7 @@ const laserPresets = [
                 </div>
                 <div class="field">
                   <label for="beam-fwhm">FWHM intensity &empty; (&mu;m)</label>
-                  <input type="text" class="field-input" id="beam-fwhm" inputmode="decimal" value="11.77">
+                  <input type="text" class="field-input" id="beam-fwhm" inputmode="decimal" value="11.7741">
                 </div>
               </div>
             </div>
@@ -374,15 +541,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Gaussian beam.</strong>
-              z<sub>R</sub>&nbsp;=&nbsp;&pi;w<sub>0</sub>&sup2;/(M&sup2;&lambda;), &ensp;
-              w(z)&nbsp;=&nbsp;w<sub>0</sub>&radic;(1+(z/z<sub>R</sub>)&sup2;), &ensp;
-              &theta;&nbsp;=&nbsp;M&sup2;&lambda;/(&pi;w<sub>0</sub>).
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -406,6 +568,53 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="beam-chart" aria-label="Beam radius vs propagation distance"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Gaussian beam.</strong> Free-space propagation away from the
+              waist of a beam of quality <span set:html={im('M^{2}')} />: Rayleigh
+              range, far-field divergence and the radius at a chosen
+              distance&nbsp;[1,&nbsp;2].
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`z_R=\frac{\pi w_0^{2}}{M^{2}\lambda},
+              \qquad w(z)=w_0\sqrt{1+\left(\frac{z}{z_R}\right)^{\!2}}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\theta=\frac{M^{2}\lambda}{\pi w_0}=\frac{w_0}{z_R}`)} />
+            <div set:html={defs([
+              ['w_0', 'waist radius at the 1/e&sup2; intensity level'],
+              ['\\lambda', 'vacuum wavelength'],
+              ['M^{2}', 'beam-quality factor (1 for a diffraction-limited beam)'],
+              ['z', 'distance from the waist'],
+              ['z_R', 'Rayleigh range, where the area has doubled'],
+              ['\\theta', 'far-field divergence half-angle'],
+            ])} />
+            <p>
+              The three waist fields are the same beam written in the three usual
+              conventions &mdash; edit any one and the others follow:
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`w_{1/e,I}=\frac{w_0}{\sqrt{2}},
+              \qquad \mathrm{FWHM}_{\emptyset}=w_0\sqrt{2\ln 2}=1.1774\,w_0`)} />
+            <div set:html={defs([
+              ['w_{1/e,I}', 'radius where the <em>intensity</em> falls to 1/e of its peak (the 1/e radius of the field is w<sub>0</sub> itself)'],
+              ['\\mathrm{FWHM}_{\\emptyset}', 'full width at half maximum of the intensity, as a diameter'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                Propagation in vacuum or air (<span set:html={im('n=1')} />) from a waist
+                at <span set:html={im('z=0')} />, with a stigmatic (circular,
+                non-astigmatic) beam.
+              </li>
+              <li>
+                The <span set:html={im('M^{2}')} /> treatment is the embedded-Gaussian
+                one: exact for TEM<sub>00</sub>, and for
+                <span set:html={im('M^{2}>1')} /> a second-moment description of the real
+                beam's width and divergence&nbsp;[2], not a statement about its profile
+                shape.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -468,18 +677,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Focus.</strong>
-              w<sub>0</sub>&nbsp;&approx;&nbsp;M&sup2;&thinsp;&lambda;&thinsp;f/(&pi;&thinsp;w<sub>in</sub>).
-              On-axis peak values of a Gaussian beam, twice the average over the
-              1/e&sup2; disc:
-              I<sub>peak</sub>&nbsp;=&nbsp;2P<sub>peak</sub>/(&pi;w<sub>0</sub>&sup2;),
-              F<sub>peak</sub>&nbsp;=&nbsp;2E/(&pi;w<sub>0</sub>&sup2;),
-              with P<sub>peak</sub>&nbsp;=&nbsp;0.9394&thinsp;E/&Delta;t.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -511,6 +712,56 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="foc-chart" aria-label="Focused beam profile and intensity"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Focus &amp; fluence.</strong> Focuses a collimated beam with a
+              thin lens and reports the on-axis peak intensity and fluence of the
+              resulting spot&nbsp;[1].
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`w_0=\frac{M^{2}\lambda f}{\pi w_{\mathrm{in}}},
+              \qquad w_{\mathrm{in}}=\frac{\emptyset}{2},
+              \qquad z_R=\frac{\pi w_0^{2}}{M^{2}\lambda}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`P_{\mathrm{peak}}=0.9394\,\frac{E}{\Delta t},
+              \qquad I_{\mathrm{peak}}=\frac{2P_{\mathrm{peak}}}{\pi w_0^{2}},
+              \qquad F_{\mathrm{peak}}=\frac{2E}{\pi w_0^{2}}`)} />
+            <div set:html={defs([
+              ['\\emptyset', '1/e&sup2; beam diameter before the lens'],
+              ['f', 'focal length'],
+              ['w_0', 'focused 1/e&sup2; spot radius'],
+              ['E', 'pulse energy'],
+              ['\\Delta t', 'intensity FWHM'],
+              ['I_{\\mathrm{peak}}', 'on-axis intensity at the temporal peak'],
+              ['F_{\\mathrm{peak}}', 'on-axis fluence (time-integrated)'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                The input is collimated with its waist at a thin, aberration-free lens
+                filled without clipping, and
+                <span set:html={im('f\\ll z_{R,\\mathrm{in}}')} /> &mdash; which is what
+                reduces the focusing law to the expression above.
+              </li>
+              <li>
+                The factors of 2 make these the on-axis peak of a Gaussian profile:
+                twice the <em>total</em> power (or energy) divided by the 1/e&sup2; area
+                <span set:html={im('\\pi w_0^{2}')} />, inside which only
+                <span set:html={im('1-e^{-2}=86.5\\%')} /> of the power actually lies.
+              </li>
+              <li>
+                Both outputs are peak, not area-averaged, values &mdash; the mean
+                intensity over that disc is
+                <span set:html={im('0.432\\,I_{\\mathrm{peak}}')} />, not half of it
+                &mdash; and both are quoted per cm&sup2;.
+              </li>
+              <li>
+                <span set:html={im('P_{\\mathrm{peak}}')} /> uses the Gaussian shape
+                factor here regardless of what the Peak&nbsp;Power tab is set to&nbsp;[3].
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -560,7 +811,7 @@ const laserPresets = [
                   <select class="field-input" id="chirp-mat">
                     <option value="sio2">Fused silica</option>
                     <option value="bk7">BK7</option>
-                    <option value="caf2">CaF&sub2;</option>
+                    <option value="caf2">CaF&#8322;</option>
                     <option value="sapphire">Sapphire</option>
                     <option value="sf10">SF10</option>
                   </select>
@@ -568,15 +819,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Chirp compensation.</strong>
-              GDD&nbsp;=&nbsp;&plusmn;&Delta;t<sub>in</sub>&thinsp;&radic;((&Delta;t<sub>actual</sub>/&Delta;t<sub>TL</sub>)&sup2;&minus;1)/(4&thinsp;ln2).
-              L&nbsp;=&nbsp;|GDD|/GVD.
-              Sign of GDD tells you if pulse has positive or negative chirp.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -600,6 +846,62 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="chirp-chart" aria-label="Pulse duration vs GDD"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Chirp &amp; compressor.</strong> Compares a measured duration with
+              the transform limit implied by the spectrum, inverts the Gaussian
+              broadening law for the residual GDD, and converts it into a thickness of
+              glass&nbsp;[3,&nbsp;4].
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\Delta t_{\mathrm{TL}}=\frac{K_{\mathrm{G}}}{\Delta\nu},
+              \qquad \Delta\nu=\frac{c\,\Delta\lambda}{\lambda_0^{2}},
+              \qquad K_{\mathrm{G}}=0.4413`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\mathrm{GDD}=\pm\,\frac{\Delta t_{\mathrm{TL}}^{2}}{4\ln 2}
+              \sqrt{\left(\frac{\Delta t}{\Delta t_{\mathrm{TL}}}\right)^{\!2}-1}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`L=\frac{\left|\mathrm{GDD}\right|}{\left|\beta_2\right|}`)} />
+            <div set:html={defs([
+              ['\\Delta t', 'measured intensity FWHM'],
+              ['\\Delta t_{\\mathrm{TL}}', 'transform-limited FWHM of the same spectrum'],
+              ['\\Delta\\lambda', 'spectral FWHM'],
+              ['\\mathrm{GDD}', 'group-delay dispersion carried by the pulse (fs&sup2;)'],
+              ['\\beta_2', "the selected material's GVD at &lambda;<sub>0</sub>&nbsp;[6]"],
+              ['L', 'thickness whose |GDD| matches'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                A Gaussian pulse with pure second-order chirp &mdash; the Gaussian
+                constant is used whatever shape the other tabs are set to, and
+                <span set:html={im('\\Delta t\\ge\\Delta t_{\\mathrm{TL}}')} /> is required.
+              </li>
+              <li>
+                Duration is an even function of GDD, so the sign cannot be recovered
+                from <span set:html={im('\\Delta t')} /> alone: the readouts give the
+                magnitude with both signs
+                (<span set:html={im('\\pm')} />&nbsp;/&nbsp;<span set:html={im('\\mp')} />),
+                and fixing the sign takes a phase-sensitive measurement&nbsp;[4].
+              </li>
+              <li>
+                <span set:html={im('L')} /> uses
+                <span set:html={im('\\left|\\beta_2\\right|')} />, so it is the thickness
+                that <em>matches</em> the dispersion, not a claim that adding glass
+                compresses the pulse.
+              </li>
+              <li>
+                These materials have <span set:html={im('\\beta_2>0')} /> only below their
+                zero-dispersion wavelength &mdash; roughly 1.27&nbsp;&micro;m for fused
+                silica, 1.32&nbsp;&micro;m for BK7, 1.31&nbsp;&micro;m for sapphire,
+                1.55&nbsp;&micro;m for CaF<sub>2</sub> and 1.71&nbsp;&micro;m for SF10.
+                Above it <span set:html={im('\\beta_2<0')} />: the printed thickness is
+                still positive, but that glass would <em>compress</em> a positively
+                chirped pulse instead of stretching it, so removing positive chirp there
+                needs a compressor rather than more glass.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -638,14 +940,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note" id="nlc-note">
-              <strong>SHG.</strong>
-              &omega; + &omega; &rarr; 2&omega;.
-              &lambda;<sub>out</sub> = &lambda;/2.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid" id="nlc-results">
@@ -669,6 +967,85 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="nlc-chart" aria-label="Nonlinear conversion energy diagram"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Nonlinear conversion.</strong> Photon-energy bookkeeping for the
+              harmonic and three-wave mixing processes: energy conservation fixes the
+              output wavelength, and the photon energy follows from it&nbsp;[5].
+            </p>
+            <div id="nlc-note-variants">
+              <div data-process="shg">
+                <p>
+                  <strong>SHG.</strong> Two photons of one beam add to a
+                  second-harmonic photon.
+                </p>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\omega+\omega\rightarrow 2\omega,
+                  \qquad \lambda_{\mathrm{out}}=\frac{\lambda_1}{2}`)} />
+              </div>
+              <div data-process="thg" hidden>
+                <p>
+                  <strong>THG.</strong> The degenerate third-harmonic sum. In a real
+                  setup this is usually SHG followed by SFG of the two beams, not a
+                  single third-order step.
+                </p>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\omega+\omega+\omega\rightarrow 3\omega,
+                  \qquad \lambda_{\mathrm{out}}=\frac{\lambda_1}{3}`)} />
+              </div>
+              <div data-process="sfg" hidden>
+                <p>
+                  <strong>SFG.</strong> Two different input photons add; the output is
+                  always the shortest wavelength of the three.
+                </p>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\omega_3=\omega_1+\omega_2,
+                  \qquad \frac{1}{\lambda_{\mathrm{out}}}=\frac{1}{\lambda_1}+\frac{1}{\lambda_2}`)} />
+              </div>
+              <div data-process="dfg" hidden>
+                <p>
+                  <strong>DFG.</strong> The difference frequency. The modulus makes the
+                  order of the two inputs irrelevant here.
+                </p>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\omega_3=\left|\omega_1-\omega_2\right|,
+                  \qquad \frac{1}{\lambda_{\mathrm{out}}}
+                  =\left|\frac{1}{\lambda_1}-\frac{1}{\lambda_2}\right|`)} />
+              </div>
+              <div data-process="opa" hidden>
+                <p>
+                  <strong>OPA.</strong> A pump photon splits into signal and idler;
+                  <span set:html={im('\\lambda_1')} /> is the pump and
+                  <span set:html={im('\\lambda_2')} /> the seeded signal, which must be the
+                  longer of the two. The idler is reported as the output.
+                </p>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`\omega_{\mathrm{p}}
+                  =\omega_{\mathrm{s}}+\omega_{\mathrm{i}},
+                  \qquad \frac{1}{\lambda_{\mathrm{p}}}
+                  =\frac{1}{\lambda_{\mathrm{s}}}+\frac{1}{\lambda_{\mathrm{i}}}`)} />
+              </div>
+            </div>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`E=\frac{hc}{\lambda},
+              \qquad hc=1239.84193\ \mathrm{eV\,nm}`)} />
+            <div set:html={defs([
+              ['\\lambda_1,\\ \\lambda_2', 'input wavelengths (pump and signal for OPA)'],
+              ['\\lambda_{\\mathrm{out}}', 'generated wavelength'],
+              ['\\omega', 'angular frequency, 2&pi;c/&lambda;'],
+              ['E', 'photon energy of the output'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                Energy conservation only: phase matching
+                (<span set:html={im('\\Delta k=0')} />), the crystal and its transparency
+                and damage limits, the conversion efficiency and the finite bandwidth of
+                the pulses are all outside this calculator.
+              </li>
+              <li>
+                A wavelength it returns is therefore allowed by energy conservation, not
+                necessarily reachable in a given crystal&nbsp;[5].
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -742,16 +1119,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note">
-              <strong>Spectral brightness.</strong>
-              B&nbsp;=&nbsp;P/(&Delta;&lambda;&thinsp;&middot;&thinsp;A&thinsp;&middot;&thinsp;&Omega;).
-              For Gaussian beam: A&middot;&Omega;&nbsp;=&nbsp;M<sup>4</sup>&lambda;&sup2;, so
-              B&nbsp;=&nbsp;P/(M<sup>4</sup>&lambda;&sup2;&Delta;&lambda;).
-              Defaults from Elu&nbsp;et&nbsp;al., Nature Photon. (2021).
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Results</h3>
             <div class="result-grid">
@@ -783,6 +1154,70 @@ const laserPresets = [
             <div class="chart-wrap">
               <canvas id="brt-chart" aria-label="Brightness comparison"></canvas>
             </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Spectral brightness.</strong> Turns the power, spectrum and beam
+              quality of a laser source into photon brightness (brilliance) in a
+              1/e&sup2; area-times-solid-angle convention &mdash; within a numerical
+              factor of the phase-space convention used for synchrotron brilliance, so a
+              table-top source can be put on the same axis as a large facility.
+            </p>
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`A\Omega=\left(\pi w_0^{2}\right)
+              \left(\pi\theta^{2}\right)=M^{4}\lambda_0^{2},
+              \qquad \theta=\frac{M^{2}\lambda_0}{\pi w_0}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`S=\frac{P}{\Delta\lambda},
+              \qquad P_{\mathrm{peak}}=0.9394\,\frac{P_{\mathrm{avg}}}{f_{\mathrm{rep}}\,\Delta t},
+              \qquad P\in\left\{P_{\mathrm{avg}},\ P_{\mathrm{peak}}\right\}`)} />
+            <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`B=\frac{P}{A\Omega}\cdot
+              \frac{10^{-3}\lambda_0}{\Delta\lambda}\cdot\frac{\lambda_0}{hc}\cdot 10^{-12}`)} />
+            <div set:html={defs([
+              ['A\\Omega', 'area&ndash;solid-angle product (&eacute;tendue) of the beam, in m&sup2;&middot;sr'],
+              ['\\lambda_0,\\ \\Delta\\lambda', 'centre wavelength and spectral FWHM'],
+              ['S', 'spectral power density, reported in W per nm of bandwidth for both the average and the peak power'],
+              ['M^{2}', 'beam-quality factor, the same in both transverse directions'],
+              ['hc/\\lambda_0', 'photon energy at the centre wavelength'],
+              ['10^{-3}\\lambda_0/\\Delta\\lambda', 'the fraction of the power inside a 0.1% bandwidth'],
+              ['10^{-12}', 'converts m&sup2;&middot;sr to mm&sup2;&middot;mrad&sup2;'],
+              ['B', 'photons per second per mm&sup2; per mrad&sup2; per 0.1% bandwidth'],
+            ])} />
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                The waist cancels out of <span set:html={im('A\\Omega')} />, so
+                <span set:html={im('w_0')} /> only has to be a sensible nonzero number
+                &mdash; brightness is set by <span set:html={im('M^{2}')} /> and
+                <span set:html={im('\\lambda_0')} /> alone&nbsp;[1,&nbsp;2].
+              </li>
+              <li>
+                The 0.1%-bandwidth slice assumes a <em>flat</em> spectral density over
+                <span set:html={im('\\Delta\\lambda')} />, which for the multi-octave
+                default spectrum is a rough approximation, and the photon energy is
+                taken at <span set:html={im('\\lambda_0')} /> for the whole band.
+              </li>
+              <li>
+                The synchrotron figure of merit is built from rms phase-space areas,
+                which for a diffraction-limited beam give
+                <span set:html={im('A\\Omega=\\lambda_0^{2}/4')} /> &mdash; four times
+                smaller than the 1/e&sup2; product used here, so the bar for your source
+                sits about 0.6&nbsp;decades below a brilliance quoted in that convention.
+              </li>
+              <li>
+                Average brightness uses the time-averaged power, peak brightness the
+                within-pulse peak with the Gaussian shape factor.
+              </li>
+              <li>
+                The defaults loaded here are the multi-octave source of&nbsp;[7].
+              </li>
+              <li>
+                The four comparison bars (thermal lamp, third-generation synchrotron,
+                table-top HHG, XFEL) are order-of-magnitude markers for orientation
+                only, not sourced measurements of any particular facility.
+              </li>
+            </ul>
+          </div>
           </div>
         </div>
       </div>
@@ -842,14 +1277,10 @@ const laserPresets = [
               </div>
             </div>
 
-            <p class="theory-note" id="modes-note">
-              <strong>LG<sub>&ell;,p</sub>.</strong>
-              Modes with orbital angular momentum &ell;&hbar; per photon
-              and p radial nodes. Donut profile for &ell;&ne;0.
-            </p>
           </div>
           </ParamsDrawer>
 
+          <div class="widget-column widget-column--results">
           <div class="results card">
             <h3>Intensity profile</h3>
             <div class="result-grid">
@@ -866,15 +1297,84 @@ const laserPresets = [
               <canvas id="modes-chart" aria-label="Beam mode intensity profile"></canvas>
             </div>
           </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p>
+              <strong>Beam modes.</strong> Draws the transverse intensity pattern of a
+              free-space Laguerre&ndash;Gauss or Hermite&ndash;Gauss mode at its
+              waist&nbsp;[1].
+            </p>
+            <div id="modes-note-math">
+              <div data-family="lg">
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`I_{\ell,p}(r)\propto
+                  \left(\frac{2r^{2}}{w_0^{2}}\right)^{\!\left|\ell\right|}
+                  \left[L_p^{\left|\ell\right|}\!\!\left(\frac{2r^{2}}{w_0^{2}}\right)\right]^{2}
+                  \exp\!\left(-\frac{2r^{2}}{w_0^{2}}\right)`)} />
+                <div set:html={defs([
+                  ['r', 'radius from the axis'],
+                  ['w_0', '1/e&sup2; waist radius of the fundamental mode'],
+                  ['\\ell', 'azimuthal index; the mode carries &ell;&hbar; of orbital angular momentum per photon'],
+                  ['p', 'radial index, giving p radial nodes'],
+                  ['L_p^{\\left|\\ell\\right|}', 'generalised Laguerre polynomial'],
+                ])} />
+              </div>
+              <div data-family="hg" hidden>
+                <div class="note-eq" {...eqAttrs} set:html={eq(String.raw`I_{m,n}(x,y)\propto
+                  H_m^{2}\!\!\left(\frac{\sqrt{2}\,x}{w_0}\right)
+                  H_n^{2}\!\!\left(\frac{\sqrt{2}\,y}{w_0}\right)
+                  \exp\!\left(-\frac{2\left(x^{2}+y^{2}\right)}{w_0^{2}}\right)`)} />
+                <div set:html={defs([
+                  ['x,\\ y', 'Cartesian transverse coordinates'],
+                  ['w_0', '1/e&sup2; waist radius of the fundamental mode'],
+                  ['m,\\ n', 'horizontal and vertical indices, giving m and n nodal lines'],
+                  ['H_m', 'Hermite polynomial (physicists&rsquo; convention)'],
+                ])} />
+              </div>
+            </div>
+            <p id="modes-note">
+              <strong>LG<sub>1,0</sub>.</strong> Donut mode with 1&#8463; OAM. Central
+              null from phase singularity.
+            </p>
+            <p class="theory-note"><strong>Assumptions.</strong></p>
+            <ul>
+              <li>
+                The profile is taken at the waist (<span set:html={im('z=0')} />), so
+                there is no Gouy phase, curvature or <span set:html={im('z')} /> scaling.
+              </li>
+              <li>
+                The azimuthal phase <span set:html={im('e^{i\\ell\\varphi}')} /> that
+                carries the angular momentum is not drawn, only
+                <span set:html={im('\\left|E\\right|^{2}')} />.
+              </li>
+              <li>
+                The map spans <span set:html={im('\\pm 3w_0')} /> in units of the waist
+                and is normalised to its own maximum, so the pattern is identical for
+                every <span set:html={im('w_0')} /> &mdash; the waist only sets the
+                physical width printed under the map.
+              </li>
+            </ul>
+          </div>
+          </div>
         </div>
       </div>
 
       <!-- Examples — below the result box, aligned to the result-box width (as in the Mie scattering lab) -->
-      <div class="widget-layout examples-row">
-        <div class="examples-spacer" aria-hidden="true"></div>
-        <div class="card">
-          <PresetStrip presets={laserPresets} showCopy={false} />
-        </div>
+      <div class="examples-row" id="examples-row">
+        <PresetStrip presets={laserPresets} showCopy={false} />
+      </div>
+
+      <div class="references card">
+        <h4>References</h4>
+        <ul class="reference-list">
+          <li><span class="ref-index">[1]</span><span>A. E. Siegman, <em>Lasers</em> (University Science Books, 1986).</span></li>
+          <li><span class="ref-index">[2]</span><span>ISO 11146-1:2021, <em>Lasers and laser-related equipment &mdash; Test methods for laser beam widths, divergence angles and beam propagation ratios &mdash; Part 1: Stigmatic and simple astigmatic beams</em> (ISO, 2021).</span></li>
+          <li><span class="ref-index">[3]</span><span>J.-C. Diels &amp; W. Rudolph, <em>Ultrashort Laser Pulse Phenomena</em>, 2nd ed. (Academic Press, 2006).</span></li>
+          <li><span class="ref-index">[4]</span><span>R. Trebino, <em>Frequency-Resolved Optical Gating: The Measurement of Ultrashort Laser Pulses</em> (Kluwer Academic, 2000).</span></li>
+          <li><span class="ref-index">[5]</span><span>R. W. Boyd, <em>Nonlinear Optics</em>, 4th ed. (Academic Press, 2020).</span></li>
+          <li><span class="ref-index">[6]</span><span>Sellmeier coefficients: I. H. Malitson, <em>Interspecimen comparison of the refractive index of fused silica</em>, J. Opt. Soc. Am. <strong>55</strong>, 1205 (1965), <a href="https://doi.org/10.1364/JOSA.55.001205" target="_blank" rel="noopener">doi:10.1364/JOSA.55.001205</a>; I. H. Malitson, <em>A redetermination of some optical properties of calcium fluoride</em>, Appl. Opt. <strong>2</strong>, 1103 (1963), <a href="https://doi.org/10.1364/AO.2.001103" target="_blank" rel="noopener">doi:10.1364/AO.2.001103</a>; I. H. Malitson &amp; M. J. Dodge, J. Opt. Soc. Am. <strong>62</strong>, 1405 (1972) (sapphire); SCHOTT optical glass catalogue (N-BK7, SF10).</span></li>
+          <li><span class="ref-index">[7]</span><span>U. Elu, L. Maidment, L. Vamos, F. Tani, D. Novoa, M. H. Frosz, V. Badikov, D. Badikov, V. Petrov, P. St. J. Russell &amp; J. Biegert, <em>Seven-octave high-brightness and carrier-envelope-phase-stable light source</em>, Nature Photonics <strong>15</strong>, 277&ndash;280 (2021), <a href="https://doi.org/10.1038/s41566-020-00735-1" target="_blank" rel="noopener">doi:10.1038/s41566-020-00735-1</a>.</span></li>
+        </ul>
       </div>
     </div>
   </section>
@@ -912,10 +1412,64 @@ initPermalinks({
   .tab-panel.active { display: block; }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
 
+  /* ---- Notes boxes ----
+     Same type scale as the other labs' notes cards (electron.astro keeps these
+     local too, so nothing shared is needed). The KaTeX markup is injected with
+     set:html and therefore carries no scope attribute: every rule that reaches
+     into it has to be :global(). */
+  .notes-card p { font-size: 0.8125rem; line-height: 1.55; color: var(--text-soft); margin: 0; max-width: none; }
+  /* The second selector catches a paragraph that follows a .note-eq or one of
+     the per-process/per-family wrappers instead of another paragraph. */
+  .notes-card p + p,
+  .notes-card div + p { margin-top: var(--space-sm); }
+  /* The itemised assumptions are the body of the "Assumptions." line above them,
+     so the list takes the same gap every other block in the card gets. The
+     shared .notes-card ul rule (lab.css) zeroes the margin for lists that open a
+     card, and this is two classes to its one, so it wins. */
+  .notes-card .theory-note + ul { margin-top: var(--space-sm); }
+  /* Only the colour is ours: KaTeX's own 1.21em compensates for a much smaller
+     x-height than Inter's, so forcing 1em would make every inline symbol read
+     smaller than the prose around it. */
+  .notes-card :global(.katex) { color: var(--text); }
+  /* A formula wider than the column scrolls inside its own box rather than
+     widening the page. The box itself is the scroll container and is focusable
+     (see eqAttrs), and the line is left-aligned inside it: KaTeX centres
+     display math, and a centred nowrap line overflows the inline-start edge
+     too, which in LTR is not part of the scrollable region and so would be
+     clipped with no way to scroll it back. */
+  .note-eq { margin: var(--space-sm) 0; overflow-x: auto; overflow-y: hidden; padding: 0.15rem 0; }
+  .note-eq :global(.katex-display) { margin: 0; }
+  .note-eq :global(.katex-display) > :global(.katex) { text-align: left; }
+  .note-eq:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+  /* Glossary as a two-column list: symbol beside its meaning, so the reader can
+     scan for a symbol instead of parsing a run-on sentence. One column when the
+     notes column is narrow. */
+  .notes-card :global(.note-defs) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.7rem;
+    margin: var(--space-sm) 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .notes-card :global(.note-defs dt) {
+    color: var(--text);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .notes-card :global(.note-defs dd) { margin: 0; color: var(--text-soft); }
+  /* Keep a multi-atom symbol (e.g. a comma-separated pair) from wrapping in the
+     middle of itself in the narrow <dt> column. */
+  .notes-card :global(.note-defs .katex) { white-space: nowrap; }
+  @media (max-width: 560px) {
+    .notes-card :global(.note-defs) { grid-template-columns: 1fr; gap: 0.15rem; }
+    .notes-card :global(.note-defs dt) { text-align: left; margin-top: 0.3rem; }
+  }
+
   /* Examples strip — sits below and matches the width of the result box */
-  .examples-row { margin-top: var(--space-lg); }
-  .examples-row :global(.preset-strip) { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-  @media (max-width: 900px) { .examples-spacer { display: none; } }
+  .examples-row :global(.preset-strip) {
+    margin: 0; padding: 0; border-bottom: none;
+  }
   .waist-fields {
     gap: 0.65rem;
   }
@@ -977,12 +1531,19 @@ initPermalinks({
   const tabs = document.querySelectorAll<HTMLButtonElement>('.calc-tab');
   const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
   const downloadBar = document.querySelector<HTMLElement>('.download-bar');
+  const examplesRow = document.querySelector<HTMLElement>('#examples-row');
 
   function moveDownloadBarToActivePanel() {
     const activePanel = document.querySelector<HTMLElement>('.tab-panel.active');
     const activeResults = activePanel?.querySelector<HTMLElement>('.results.card');
     if (downloadBar && activeResults && downloadBar.parentElement !== activeResults) {
       activeResults.appendChild(downloadBar);
+    }
+    // The examples strip is one element shared by nine panels, like the download
+    // bar: park it in the active panel's results column, directly above the Notes.
+    const notes = activePanel?.querySelector<HTMLElement>('.notes-card');
+    if (examplesRow && notes && examplesRow.nextElementSibling !== notes) {
+      notes.parentElement!.insertBefore(examplesRow, notes);
     }
   }
 
@@ -1198,7 +1759,9 @@ initPermalinks({
     const L = parseFloat(el<HTMLInputElement>('gdd-L').value);
     const passes = parseInt(el<HTMLInputElement>('gdd-passes').value) || 1;
 
-    if (!dt_in || isNaN(gvd) || !L) return;
+    // L = 0 means no material: GDD = 0 and the pulse comes out unchanged. Testing
+    // for truthiness bailed out instead and left the previous length's numbers up.
+    if (!dt_in || isNaN(gvd) || !Number.isFinite(L)) return;
 
     const GDD = gvd * L * passes;  // fs²
     const ratio = 4 * ln2 * GDD / (dt_in * dt_in);
@@ -1575,10 +2138,15 @@ initPermalinks({
   const beamFwhmInput = el<HTMLInputElement>('beam-fwhm');
   let beamWaistLastEdited: 'w1e' | 'w0' | 'fwhm' = 'w0';
 
+  /* Six significant figures, trailing zeros trimmed. The three waist fields are
+     three views of one number and getBeamW0 reads whichever was typed last, so a
+     field has to carry enough digits to reproduce the other two. Two decimals was
+     not enough above 10: a FWHM shown as 11.77 µm is w0 = 9.9965 µm, and the tab
+     reported w0 = 10 µm beside zR = 392.4 µm where 10 µm gives 392.7 µm. */
   function formatBeamWaist(value: number): string {
     if (!Number.isFinite(value)) return '';
-    const digits = value >= 10 ? 2 : value >= 1 ? 3 : 4;
-    return value.toFixed(digits).replace(/\.?0+$/, '');
+    const s = value.toPrecision(6);
+    return s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s;
   }
 
   function getBeamW0(): number {
@@ -1604,7 +2172,9 @@ initPermalinks({
     const M2 = parseFloat(el<HTMLInputElement>('beam-M2').value) || 1;
     const z_mm = parseFloat(el<HTMLInputElement>('beam-z').value);
 
-    if (!lam_nm || !w0_um || !z_mm) return;
+    // z = 0 is the waist, where w(z) = w0 — a legitimate value, so test for a
+    // number rather than for truthiness, which bailed out and left stale results.
+    if (!lam_nm || !w0_um || !Number.isFinite(z_mm)) return;
     syncBeamWaistFields(w0_um);
 
     const lam_um = lam_nm / 1000;
@@ -1810,10 +2380,12 @@ initPermalinks({
     // Peak power (assume Gaussian)
     const P_peak = 0.9394 * E_J / dt_s;
 
-    // On-axis peak, not the average over the 1/e² disc: a Gaussian carries
-    // half its energy inside πw0², so the peak is twice P/(πw0²). Cross-checked
-    // against the Light Conversion Optics Toolbox (pulse peak intensity and
-    // fluence), which reports the same 2E/(πw0²).
+    // On-axis peak, not an area average: for I(r) = I0·exp(-2r²/w0²) the total
+    // power is P = I0·πw0²/2, so the peak is exactly twice the TOTAL power over
+    // the 1/e² area πw0² (of which 1-e⁻² = 86.5% lies inside r < w0; the mean
+    // intensity over that disc is 0.432·I0, not I0/2). Cross-checked against the
+    // Light Conversion Optics Toolbox (pulse peak intensity and fluence), which
+    // reports the same 2E/(πw0²).
     const area_m2 = Math.PI * w0_m * w0_m;
     const area_cm2 = area_m2 * 1e4;
     const I_W_cm2 = 2 * P_peak / area_cm2;
@@ -1979,8 +2551,19 @@ initPermalinks({
 
   function nlcProcess(): string { return getActiveShape('nlc-process'); }
 
+  /* The per-process paragraph used to be written into the parameter box as a
+     string of HTML entities. It now lives in the Notes card, where all five
+     variants are typeset at build time and this only picks one — so changing
+     process still changes the note, without a KaTeX runtime. */
+  const nlcNoteVariants = document.querySelectorAll<HTMLElement>('#nlc-note-variants > [data-process]');
+
+  function showNLCNote(proc: string) {
+    nlcNoteVariants.forEach(v => { v.hidden = v.dataset.process !== proc; });
+  }
+
   function calcNLC() {
     const proc = nlcProcess();
+    showNLCNote(proc);
     const lam1 = parseFloat(el<HTMLInputElement>('nlc-lam1').value);
     if (!lam1 || lam1 <= 0) return;
     const lam2 = parseFloat(el<HTMLInputElement>('nlc-lam2').value);
@@ -1988,7 +2571,6 @@ initPermalinks({
     const lam2Field = el<HTMLElement>('nlc-lam2-field');
     const sigItem = el<HTMLElement>('nlc-sig-item');
     const idlItem = el<HTMLElement>('nlc-idl-item');
-    const noteEl = el<HTMLElement>('nlc-note');
 
     // Hide/show λ₂ and signal/idler fields based on process
     const needsLam2 = proc === 'sfg' || proc === 'dfg' || proc === 'opa';
@@ -2002,21 +2584,17 @@ initPermalinks({
     switch (proc) {
       case 'shg':
         lamOut = lam1 / 2;
-        noteEl.innerHTML = '<strong>SHG.</strong> \u03c9 + \u03c9 \u2192 2\u03c9. \u03bb<sub>out</sub> = \u03bb/2.';
         break;
       case 'thg':
         lamOut = lam1 / 3;
-        noteEl.innerHTML = '<strong>THG.</strong> \u03c9 + \u03c9 + \u03c9 \u2192 3\u03c9. \u03bb<sub>out</sub> = \u03bb/3.';
         break;
       case 'sfg':
         if (!lam2 || lam2 <= 0) return;
         lamOut = 1 / (1 / lam1 + 1 / lam2);
-        noteEl.innerHTML = '<strong>SFG.</strong> 1/\u03bb<sub>out</sub> = 1/\u03bb<sub>1</sub> + 1/\u03bb<sub>2</sub>.';
         break;
       case 'dfg':
         if (!lam2 || lam2 <= 0) return;
         lamOut = 1 / Math.abs(1 / lam1 - 1 / lam2);
-        noteEl.innerHTML = '<strong>DFG.</strong> 1/\u03bb<sub>out</sub> = |1/\u03bb<sub>1</sub> \u2212 1/\u03bb<sub>2</sub>|.';
         break;
       case 'opa':
         if (!lam2 || lam2 <= 0) return;
@@ -2030,7 +2608,6 @@ initPermalinks({
         lamSig = lam2;
         lamIdl = 1 / (1 / lam1 - 1 / lam2);
         lamOut = lamIdl;
-        noteEl.innerHTML = '<strong>OPA.</strong> \u03bb<sub>1</sub> = pump, \u03bb<sub>2</sub> = signal (\u03bb<sub>s</sub> > \u03bb<sub>p</sub>). 1/\u03bb<sub>p</sub> = 1/\u03bb<sub>s</sub> + 1/\u03bb<sub>i</sub>.';
         break;
     }
 
@@ -2587,12 +3164,18 @@ initPermalinks({
     return prev1;
   }
 
+  /* LG and HG have one typeset profile each, pre-rendered in the Notes card;
+     the indices are unbounded, so the line that names the mode and counts its
+     nodes stays plain HTML written below. */
+  const modesNoteMath = document.querySelectorAll<HTMLElement>('#modes-note-math > [data-family]');
+
   function calcModes() {
     const family = modesFamily();
     const w0 = parseFloat(el<HTMLInputElement>('modes-w0').value) || 100;
 
     el<HTMLElement>('modes-lg-params').style.display = family === 'lg' ? '' : 'none';
     el<HTMLElement>('modes-hg-params').style.display = family === 'hg' ? '' : 'none';
+    modesNoteMath.forEach(v => { v.hidden = v.dataset.family !== family; });
 
     if (family === 'lg') {
       const l = parseInt(el<HTMLInputElement>('modes-l').value) || 0;
@@ -2632,7 +3215,7 @@ initPermalinks({
     ctx.fillStyle = ct.bg;
     ctx.fillRect(0, 0, W, H);
 
-    const ml = 16 * fs, mr = 50 * fs, mt = 8 * fs, mb = 8 * fs;
+    const ml = 16 * fs, mr = 50 * fs, mt = 8 * fs, mb = 20 * fs;
     const side = Math.min(W - ml - mr, H - mt - mb);
     if (side < 10) return;
     const ox = ml + (W - ml - mr - side) / 2;
@@ -2715,6 +3298,12 @@ initPermalinks({
     ctx.fillStyle = ct.textSoft; ctx.font = `${9 * fs}px ${font}`; ctx.textAlign = 'left';
     ctx.fillText('max', cbX + cbW + 3 * fs, cbY + 4 * fs);
     ctx.fillText('0', cbX + cbW + 3 * fs, cbY + cbH + 1 * fs);
+
+    /* The pattern is in units of w0, so the waist is the only physical length on
+       this tab. Print the width the map covers, under it, so the waist field has
+       a visible effect instead of being a control that does nothing. */
+    ctx.textAlign = 'center';
+    ctx.fillText(`${(2 * extent * w0).toPrecision(3)} µm across`, ox + side / 2, oy + side + 12 * fs);
   }
 
   setupShapeButtons('modes-family', calcModes);
