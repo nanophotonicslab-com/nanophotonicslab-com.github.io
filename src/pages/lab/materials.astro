@@ -9,15 +9,15 @@ import '../../styles/lab.css';
 const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, ref: m.ref }));
 ---
 
-<Layout title="Materials — Optical Constants" description="Optical constants explorer: dielectric function ε(ω) and refractive index n, k of common nanophotonics materials versus photon energy or wavelength, plus an analytic Drude model.">
+<Layout title="Materials — Optical Constants" description="Optical constants explorer: dielectric function ε(ω), its inverse 1/ε, and refractive index n, k of common nanophotonics materials versus photon energy or wavelength, plus an analytic Drude model.">
   <section class="widget-hero">
     <div class="container">
       <a href="/lab/" class="back-link">&larr; Back to Lab</a>
       <h1>Optical <span class="gradient-text">Materials</span></h1>
       <p class="widget-hero__subtitle">
-        Explore the complex dielectric function ε(ω) and the refractive index
-        n, k of common nanophotonics materials versus photon energy or
-        wavelength, plus an analytic Drude model. All curves use the same
+        Explore the complex dielectric function ε(ω), its inverse 1/ε, and the
+        refractive index n, k of common nanophotonics materials versus photon
+        energy or wavelength, plus an analytic Drude model. All curves use the same
         tabulated optical constants as the rest of the Lab.
       </p>
       <ToolMeta slug="materials" name="Materials — Optical Constants" />
@@ -27,7 +27,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   <ModelInfo status="Beta">
     <dl>
       <dt>Model</dt>
-      <dd>Tabulated refractive-index data <em>n(λ), k(λ)</em> interpolated in wavelength; ε = (n + ik)² with the e<sup>−iωt</sup> convention (Im ε &gt; 0 for loss). The Drude module evaluates ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub>² / [ω(ω + iγ)] analytically.</dd>
+      <dd>Tabulated refractive-index data <em>n(λ), k(λ)</em> interpolated in wavelength; ε = (n + ik)² with the e<sup>−iωt</sup> convention (Im ε &gt; 0 for loss). The Drude module evaluates ε(ω) = ε<sub>∞</sub> − ω<sub>p</sub>² / [ω(ω + iγ)] analytically. The inverse view plots 1/ε = (Re ε − i Im ε)/|ε|², whose negative imaginary part −Im(1/ε) is the energy-loss function — positive under the same convention, and peaked where Re ε = 0.</dd>
       <dt>Assumptions</dt>
       <dd>Linear, isotropic, local, non-magnetic media. Values outside a table's measured range are clamped to the nearest endpoint (no extrapolation).</dd>
       <dt>Data sources</dt>
@@ -279,9 +279,20 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
           <div class="fields" id="display-fields">
             <div class="field" id="qty-field">
               <label>Quantity</label>
+              <!-- Short labels on purpose. The three buttons share one row of
+                   #display-fields — 254px beside the chart, 277px on a phone with
+                   the parameters drawer open — and `.seg` clips to hidden, so a
+                   label that outgrows its third is cut off rather than wrapped.
+                   "ε" / "n, k" / "1/ε" need 106px of min-content between them,
+                   which leaves the row most of its width for a fourth option or a
+                   narrower viewport; it is also the house style for terse maths
+                   (heterostructures ships "Re r", "Im r", "|r|"). The legend above
+                   the chart names Re and Im, and the title attributes carry the
+                   long form. -->
               <div class="seg" id="qty-tabs" role="radiogroup" aria-label="Quantity">
-                <button type="button" class="seg-btn active" data-qty="eps" role="radio" aria-checked="true">ε (Re, Im)</button>
-                <button type="button" class="seg-btn" data-qty="nk" role="radio" aria-checked="false">n, k</button>
+                <button type="button" class="seg-btn active" data-qty="eps" role="radio" aria-checked="true" title="Dielectric function ε — real and imaginary parts">ε</button>
+                <button type="button" class="seg-btn" data-qty="nk" role="radio" aria-checked="false" title="Refractive index n and extinction coefficient k">n, k</button>
+                <button type="button" class="seg-btn" data-qty="inveps" role="radio" aria-checked="false" title="Inverse dielectric function 1/ε — minus its imaginary part is the energy-loss function">1/ε</button>
               </div>
             </div>
             <div class="field" id="gr-unit-field" hidden>
@@ -439,8 +450,25 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   .module-bar { --module-cols: 4; }
   @media (max-width: 760px) { .module-bar { --module-cols: 2; } }
   @media (max-width: 900px) { .widget-layout { grid-template-columns: 1fr; } }
+  /* At ≤640px global.css turns .widget-layout into a flex column so the chart
+     comes first. lab.css's `align-items: start` — written for the grid, where it
+     only stops the columns stretching to equal height — then lands on the cross
+     axis of that flex column and sizes the controls panel to its own content
+     instead of the full width. It stayed hidden while some control happened to
+     be wide; once the E_F / T rows became compact the panel collapsed to 139px
+     of a 483px layout. align-self on the child beats the parent's align-items.
+     `:global()` on the children because .params-drawer is rendered by the
+     ParamsDrawer component and so carries its scope id, not this page's. */
+  @media (max-width: 640px) {
+    .widget-layout > :global(.params-drawer),
+    .widget-layout > :global(.controls) { align-self: stretch; }
+  }
   .controls-title { margin: 0 0 0.25rem !important; padding-top: 0 !important; border-top: none !important; font-size: 0.95rem !important; }
-  .seg.controls-head__toggle { flex: 0 0 auto; width: 104px; }   /* fixed width, hugs right margin */
+  /* Fixed width so the two halves stay equal, but sized to the labels rather
+     than padded out: "LIN" measures 19px beside 11.2px of padding either side,
+     so 44px a side is the button's own width and 104px left ~10px of slack in
+     each half. */
+  .seg.controls-head__toggle { flex: 0 0 auto; width: 88px; }   /* hugs right margin */
   .controls-head__toggle[hidden] { display: none; }  /* equal LIN / NL halves */
   .ctrl-group h3 { margin-top: 0; padding-top: 0; border-top: none; }
   .ctrl-group[hidden] { display: none; }
@@ -454,7 +482,12 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
      extra top margin separates it from the "Parameters" header. */
   #gr-model-field { flex-direction: column; align-items: stretch; gap: 0.4rem; margin-top: 0.6rem; }
   #gr-model-field > label { min-width: 0; font-weight: 600; }
-  #gr-model-tabs .seg-btn { padding-left: 0.2rem; padding-right: 0.2rem; }
+  /* Share the seg's width three ways. Without a flex basis the buttons sized to
+     their labels and left the rest of the group empty, so "Drude" and the track
+     beside "Nonlocal RPA" read as dead space inside one box. The side padding
+     stays trimmed: at the 320px sidebar an equal third is ~84px, and "Nonlocal
+     RPA" needs 67px of that only because the padding is tight. */
+  #gr-model-tabs .seg-btn { flex: 1; padding-left: 0.2rem; padding-right: 0.2rem; }
 
   /* right column: result card + Notes card stacked as independent cards (like the Mie lab) */
   .mat-results-col { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; }
@@ -548,16 +581,54 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
      the UA [hidden] rule; restate the guard at matching specificity. */
   #ctrl-materials .field[hidden] { display: none; }
 
-  /* The Display segmented controls carry multi-word labels — "ε (Re, Im)",
-     "Wavelength", and in graphene mode a four-way unit switch. Side by side in
-     the shared two-column .fields grid they got 97px and 149px, so every label
-     broke onto two lines and the pills stood 38px tall. The two together need
-     ~247px of the 254px available, which is too tight to keep on one row, so
-     each control takes a row of its own and its buttons share the width evenly.
-     No `display` here: `.field[hidden]` must keep hiding the graphene-only
-     units control. */
+  /* The Display segmented controls carry multi-word labels — "Wavelength", a
+     three-way quantity switch, and in graphene mode a four-way unit switch.
+     Side by side in the shared two-column .fields grid they got 97px and 149px,
+     so every label broke onto two lines and the pills stood 38px tall. Each
+     takes a row of its own instead, and its buttons share the width evenly —
+     which is what lets the quantity control carry three options in the same
+     254px the X-axis pair needs for two. No `display` here: `.field[hidden]`
+     must keep hiding the graphene-only units control. */
   #display-fields { grid-template-columns: 1fr; }
   #display-fields .seg-btn { flex: 1; white-space: nowrap; }
+
+  /* Nothing in the graphene group is a short numeric field that pairs with a
+     neighbour: the model switch is three radio labels whose shortest is "Local
+     RPA", the γ / τ / μ triplet is already a three-up row, the process select
+     holds "Optical rectification (Cox)", and E_F and T each carry a slider. The
+     shared two-column grid gave the left column 137px, which broke all three
+     model labels over three lines — 82px-tall pills — and squeezed the three
+     mini-fields to 42px, clipping 0.0037, 177.9 and 4448 to "0.0", "177" and
+     "444". One full-width column, as #ctrl-materials already does. */
+  #ctrl-graphene .fields { grid-template-columns: 1fr; }
+
+  /* Label, number and slider on one line. lab.css already sizes the two inputs
+     as flex items — `.gr-ef-num { flex: 0 0 4rem }` and `.gr-ef-field .gr-slider
+     { flex: 1 1 auto }` — but those were written for plasmonic-nanoparticles,
+     where the div is a bare `.gr-ef-field` and therefore a row. Here it is
+     `class="field gr-ef-field"`, and `.field` is a flex *column*, so the basis
+     resolved down the cross axis instead: the number box came out 4rem TALL and
+     full width with the slider stranded below it, 142px of height per control.
+     Restoring the row those rules assume brings E_F, T and Q cut to one line
+     each. The label gets the same 4rem basis as the number so the two rows line
+     up under each other. */
+  .field.gr-ef-field { flex-direction: row; align-items: center; gap: 0.5rem; }
+  .field.gr-ef-field > label { flex: 0 0 4rem; }
+
+  /* The four Drude inputs are meant to read as a 2x2 — ε∞ and ℏω_p above, γ and
+     τ below — but the mini-row holding γ and τ is a single grid item, so the two
+     of them shared one 123px column while each field above had a column to
+     itself: the bottom row came out half the width of the top one. Span it, and
+     its two `flex: 1 1 0` fields line up under the pair above. The gap matches
+     .fields so the four boxes share one vertical seam. */
+  #ctrl-drude .mini-row { grid-column: 1 / -1; gap: 0.5rem; }
+
+  /* The Au/Ag/Al/Cu presets are a sibling of .fields with no margin of their
+     own, so they sat the same 0.5rem from the γ/τ inputs that those inputs sit
+     from the pair above — reading as a fifth field rather than as a separate
+     shortcut row. A full space-md sets them apart. Scoped: .preset-row is
+     shared with seven other lab pages. */
+  #ctrl-drude .preset-row { margin-top: var(--space-md); }
 
   /* Unit, min and max are one setting read left to right, so they belong on one
      row; the shared two-column grid split them and dropped "λ max" onto a line of
@@ -601,9 +672,22 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   }
   :global(.readout-row) { display: grid; gap: 0.5rem; align-items: stretch; }
   :global(.readout-shared) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  :global(.readout-mat) { grid-template-columns: minmax(84px, 0.8fr) repeat(5, minmax(0, 1fr)); }
+  :global(.readout-mat) { grid-template-columns: minmax(84px, 0.8fr) repeat(7, minmax(0, 1fr)); }
   :global(.readout-sig) { grid-template-columns: minmax(56px, 0.5fr) repeat(4, minmax(0, 1fr)); }
   :global(.readout-nl) { grid-template-columns: minmax(64px, 0.6fr) repeat(2, minmax(0, 1fr)); }
+  /* Seven stats need ~80px each to keep a value like -49.35 on one line, and
+     `.stat-value` wraps (overflow-wrap: anywhere) rather than clipping, so too
+     narrow a track breaks a number mid-digit instead of overflowing visibly.
+     Above 900px .widget-layout is two columns and the readout is the narrower
+     right-hand card: measured, seven tracks are 55px at a 1024px viewport (five
+     of the seven values on two lines) and 66px at 1100px, reaching a safe 82px
+     only around 1280px. Through that band drop to four columns and let the
+     stats run onto a second row — the shape the ≤620px rule below already uses.
+     Under 901px .widget-layout is single-column, so the row is wide again. */
+  @media (min-width: 901px) and (max-width: 1279px) {
+    :global(.readout-mat) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    :global(.readout-mat__name) { grid-column: 1 / -1; }
+  }
   @media (max-width: 620px) {
     :global(.readout-mat) { grid-template-columns: 1fr 1fr; }
     :global(.readout-mat__name) { grid-column: 1 / -1; }
@@ -697,7 +781,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
   interface Source { label: string; color: string; nk: (lamNm: number) => { re: number; im: number; n: number; k: number }; dataLo: number; dataHi: number; }
 
   type Mod = 'materials' | 'drude' | 'graphene' | 'tmdc';
-  type Quantity = 'eps' | 'nk';
+  type Quantity = 'eps' | 'nk' | 'inveps';
   const isSigma = () => mod === 'graphene';
   type Axis = 'energy' | 'wavelength';
   let mod: Mod = 'materials';
@@ -1099,12 +1183,33 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   // ── Linear nonlocal Mermin-RPA, T=0 (Koppens et al., Nano Lett. 11, 3370) → a.u. ──
   const _Gc = (z: C): C => { const s = cSqrt(cSub(cMul(z, z), cc(1))); return cSub(cMul(z, s), cLog(cAdd(z, s))); };
+  /* Q → 0 is the local RPA, and the closed form below cannot be evaluated there.
+     It builds F ~ Q² and multiplies it by G((ω ± 2E_F)/v_F Q) ~ 1/Q², so the
+     finite limit only emerges as the difference of two terms that each diverge:
+     the Q² cancels analytically but not in floating point. At the 1e-9 nm⁻¹
+     floor this function used to clamp to, nothing survived — σ/σ₀ came back as
+     −3.8e3 where the answer is 0.14, which is the noise the Q = 0 column and the
+     Q = 0 cut were showing. Take the limit analytically instead, from the local
+     RPA this page already evaluates in closed form (T = 0, which is the only
+     temperature this model runs at).
+
+     The crossover is measured, not guessed: against the local form over
+     ω ∈ [0.05, 3] eV with E_F and γ across their control ranges, the two agree
+     to ≤ 1.1e-3 at Q/k_F = 1e-3, and the error grows either side of it — to 4e-1
+     at 1e-3 of that (round-off) and 9e-2 ten times above it (real nonlocality).
+     So this sits in the floor of the valley and the switch is invisible. */
+  const GR_Q0_OVER_KF = 1e-3;
   function grNonlocal(wEv: number, qNm?: number): C {
     const vF = VF_AU, vF2 = vF * vF;
-    const EF = num('gr-ef', 0.4) * EV_AU, gam = grNLgam(), w = wEv * EV_AU;
-    let Q = Math.max(1e-9, qNm ?? grQcutNm()) / NM_AU, Q2 = Q * Q;
+    const EFev = num('gr-ef', 0.4), gamEv = Math.max(0, num('gr-gamma', 0.0037));
+    const EF = EFev * EV_AU, gam = gamEv * EV_AU, w = wEv * EV_AU;
+    const Q = Math.max(0, qNm ?? grQcutNm()) / NM_AU, Q2 = Q * Q;
     const wg2 = c2p(cc(w, gam)), kF = EF / vF;
-    if (Q / kF <= 1e-10) { Q = 1e-10 * kF; Q2 = Q * Q; }
+    // Negated so a non-finite Q/k_F (E_F = 0 ⇒ k_F = 0) also takes the limit.
+    if (!(Q / kF >= GR_Q0_OVER_KF)) {
+      const d = grDrude(EFev, gamEv, wEv), i = grInterT0(EFev, gamEv, wEv);
+      return cc(d.re + i.re, d.im + i.im);
+    }
     const wpE = cScale(1 / (vF * Q), cc(w + 2 * EF, gam));
     const wmE = cScale(1 / (vF * Q), cc(w - 2 * EF, gam));
     const F = cDiv(cc(vF2 * Q2 / (4 * PI)), cSqrt(cSub(wg2, cc(vF2 * Q2))));
@@ -1362,6 +1467,22 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         if (!valid) { series[j].real[i] = NaN; series[j].imag[i] = NaN; continue; }
         const o = src[j].nk(l);
         if (isSigma() || quantity === 'eps') { series[j].real[i] = o.re; series[j].imag[i] = o.im; }
+        else if (quantity === 'inveps') {
+          /* 1/ε = (Re ε − i Im ε)/|ε|², undefined only where ε itself vanishes.
+             That needs Re ε and Im ε to be zero together, which the six built-in
+             tables never reach — but it is not unreachable in general: γ = 0 is
+             typable in the Drude box and puts ε exactly on zero at ω = ωp/√ε∞,
+             and an uploaded table with an n = k = 0 row lands on it directly.
+             Away from that the result is bounded but can be large: wherever
+             Re ε = 0 with Im ε > 0, −Im(1/ε) peaks at 1/Im ε. The truthiness
+             test also catches a NaN ε, which the TMDC path returns outside its
+             validity window. NaN is the right output for all of these —
+             drawLine breaks the path on a non-finite sample, so the curve shows
+             a gap rather than a spike to the edge of the canvas. */
+          const d = o.re * o.re + o.im * o.im;
+          series[j].real[i] = d ? o.re / d : NaN;
+          series[j].imag[i] = d ? -o.im / d : NaN;
+        }
         else { series[j].real[i] = o.n; series[j].imag[i] = o.k; }
       }
     }
@@ -1384,6 +1505,30 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     let s = a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(2) : v.toFixed(3);
     if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
     return s;
+  };
+
+  /* Both tick loops walk the axis by accumulating `v += step`, which lands on an
+     exact 0 only when the step is binary-exact. It is for the integer steps ε and
+     n,k autoscale to, but not for 1/ε, whose values are often well under 1: a
+     0.005 step walks −0.02, −0.015, −0.01, −0.005 and then arrives at 1.7e-18
+     where 0 belongs, which fmt renders as "1.7e-18" on the axis. Snap anything
+     within a millionth of a step to zero before formatting. */
+  const tickFmt = (v: number, step: number): string => fmt(Math.abs(v) < Math.abs(step) * 1e-6 ? 0 : v);
+
+  /* One row per Quantity: the rotated y-axis title, the chart title, and the
+     legend keys for the solid (real) and dashed (imaginary) curves. The TMDC
+     module has its own title because its ε is temperature-dependent. These four
+     strings were four separate two-way ternaries, in three functions that have
+     to agree with each other; a third quantity would have made every one of them
+     a nested ternary. A fourth is now a row here, and the Record makes the
+     compiler name the row you forgot. Strings are unchanged from the ternaries. */
+  const QTY_LABELS: Record<Quantity, { axis: string; title: string; titleT: string; re: string; im: string }> = {
+    eps: { axis: 'Dielectric function ε', title: 'Dielectric function ε(ω)', titleT: 'Dielectric function ε(ω,T)', re: 'Re ε', im: 'Im ε' },
+    nk: { axis: 'Refractive index', title: 'Refractive index n, k', titleT: 'Refractive index n, k (ω,T)', re: 'n', im: 'k' },
+    // Parenthesised: juxtaposition binds tighter than the slash, so a bare
+    // "Im 1/ε" reads as (Im 1)/ε. The notes and the button tooltip write it the
+    // same way, and the legend sits right beside "Re ε" / "Im ε".
+    inveps: { axis: 'Inverse dielectric function 1/ε', title: 'Inverse dielectric function 1/ε(ω)', titleT: 'Inverse dielectric function 1/ε(ω,T)', re: 'Re(1/ε)', im: 'Im(1/ε)' },
   };
 
   function paint(hoverIdx = -1) {
@@ -1411,7 +1556,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     // adaptive left margin so wide tick labels (esu ~5e7, SI ~6e-5) clear the y-axis title
     ctx.font = '11px Inter, system-ui, sans-serif';
     let maxYW = 0;
-    for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) { const w = ctx.measureText(fmt(v)).width; if (w > maxYW) maxYW = w; }
+    for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) { const w = ctx.measureText(tickFmt(v, ys.step)).width; if (w > maxYW) maxYW = w; }
     const PAD = { l: Math.max(56, Math.ceil(maxYW) + 30), r: 16, t: 14, b: 42 };
     const pw = cw - PAD.l - PAD.r, ph = ch - PAD.t - PAD.b;
     const tx = (v: number) => PAD.l + (v - xsc.min) / (xsc.max - xsc.min) * pw;
@@ -1424,13 +1569,13 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     for (let v = ys.min; v <= ys.max + ys.step * 0.5; v += ys.step) {
       const y = ty(v); if (y < PAD.t - 1 || y > PAD.t + ph + 1) continue;
       ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + pw, y); ctx.stroke();
-      ctx.fillText(fmt(v), PAD.l - 8, y);
+      ctx.fillText(tickFmt(v, ys.step), PAD.l - 8, y);
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     for (let v = xsc.min; v <= xsc.max + xsc.step * 0.5; v += xsc.step) {
       const x = tx(v); if (x < PAD.l - 1 || x > PAD.l + pw + 1) continue;
       ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, PAD.t + ph); ctx.stroke();
-      ctx.fillText(fmt(v), x, PAD.t + ph + 6);
+      ctx.fillText(tickFmt(v, xsc.step), x, PAD.t + ph + 6);
     }
     // zero line
     if (ys.min < 0 && ys.max > 0) {
@@ -1494,7 +1639,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     if (axis === 'energy' && energyUnit === 'EF') drawSubF(ctx, 'Photon energy ℏω / E', PAD.l + pw / 2, ch - 12, 12);
     else ctx.fillText(xAxisLabel(), PAD.l + pw / 2, ch - 12);
     ctx.save(); ctx.translate(13, PAD.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
-    const yLab = !isSigma() ? (quantity === 'eps' ? 'Dielectric function ε' : 'Refractive index')
+    const yLab = !isSigma() ? QTY_LABELS[quantity].axis
       : grNL ? `${grProcSymbol()}${grProcUnit()}` : sigmaUnit().axis;
     ctx.fillText(yLab, 0, 0); ctx.restore();
   }
@@ -1633,6 +1778,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         <div class="readout-mat__name" style="color:${s.color}"><span class="readout-mat__dot" style="background:${s.color}"></span>${s.label}</div>
         <div class="stat"><span class="stat-label">Re ε</span><span class="stat-value" id="r-re-${i}">—</span></div>
         <div class="stat"><span class="stat-label">Im ε</span><span class="stat-value" id="r-im-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">Re(1/ε)</span><span class="stat-value" id="r-ire-${i}">—</span></div>
+        <div class="stat"><span class="stat-label">Im(1/ε)</span><span class="stat-value" id="r-iim-${i}">—</span></div>
         <div class="stat"><span class="stat-label">n</span><span class="stat-value" id="r-n-${i}">—</span></div>
         <div class="stat"><span class="stat-label">k</span><span class="stat-value" id="r-k-${i}">—</span></div>
         <div class="stat"><button class="stat-info" type="button" aria-label="Skin depth info">i<span class="stat-tooltip" role="tooltip">Skin depth δ = 1 / (2·(ω/c)·k) = λ / (4π·k) — the 1/e penetration depth of the field intensity (k = Im n). δ → ∞ when k = 0.</span></button><span class="stat-label">δ (nm)</span><span class="stat-value" id="r-d-${i}">—</span></div>
@@ -1662,7 +1809,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     const src = current.src;
     if (invalid) {
       setEl('r-lambda', '—'); setEl('r-wavenum', '—'); setEl('r-energy', '—');
-      src.forEach((_, i) => ['re', 'im', 'n', 'k', 'd'].forEach(q => setEl(`r-${q}-${i}`, '—')));
+      src.forEach((_, i) => ['re', 'im', 'ire', 'iim', 'n', 'k', 'd'].forEach(q => setEl(`r-${q}-${i}`, '—')));
       return;
     }
     const lam = current.lam[idx];
@@ -1670,6 +1817,11 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     src.forEach((s, i) => {
       const o = s.nk(lam);
       setEl(`r-re-${i}`, fmt(o.re)); setEl(`r-im-${i}`, fmt(o.im)); setEl(`r-n-${i}`, fmt(o.n)); setEl(`r-k-${i}`, fmt(o.k));
+      /* 1/ε is shown here whatever the plot is set to, like ε and n,k already
+         are — otherwise the 1/ε view would be the one view whose own numbers you
+         cannot read off the crosshair. Em dash where ε = 0, matching δ's ∞. */
+      const d = o.re * o.re + o.im * o.im;
+      setEl(`r-ire-${i}`, d ? fmt(o.re / d) : '—'); setEl(`r-iim-${i}`, d ? fmt(-o.im / d) : '—');
       // skin depth δ = 1/(2·(ω/c)·k) = λ/(4π·k); ∞ when k = 0
       setEl(`r-d-${i}`, Number.isFinite(o.k) && o.k > 0 ? fmt(lam / (4 * Math.PI * o.k)) : '∞');
     });
@@ -1677,8 +1829,8 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
 
   // Legend: fixed Re/Im style key (top-right) + one coloured entry per material (below the title).
   function buildLegend(src: Source[]) {
-    const realLab = isSigma() ? (grNL ? 'Re' : 'Re σ') : quantity === 'eps' ? 'Re ε' : 'n';
-    const imagLab = isSigma() ? (grNL ? 'Im' : 'Im σ') : quantity === 'eps' ? 'Im ε' : 'k';
+    const realLab = isSigma() ? (grNL ? 'Re' : 'Re σ') : QTY_LABELS[quantity].re;
+    const imagLab = isSigma() ? (grNL ? 'Im' : 'Im σ') : QTY_LABELS[quantity].im;
     $('mat-legend-style').innerHTML =
         `<span class="mat-legend-item mat-legend-item--toggle${showReal ? '' : ' mat-legend-item--off'}" data-toggle="real" role="button" tabindex="0" aria-pressed="${showReal}" title="Show/hide the real part"><span class="mat-legend-swatch ml-solid"></span>${realLab}</span>`
       + `<span class="mat-legend-item mat-legend-item--toggle${showImag ? '' : ' mat-legend-item--off'}" data-toggle="imag" role="button" tabindex="0" aria-pressed="${showImag}" title="Show/hide the imaginary part"><span class="mat-legend-swatch ml-dashed"></span>${imagLab}</span>`;
@@ -1693,9 +1845,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     syncDrudePreset();   // keep the Au/Ag/Al/Cu preset highlight in sync with the inputs
     $('mat-title').textContent = isSigma()
       ? (grNL ? grProcTitle() : 'Surface conductivity σ(ω,T)')
-      : mod === 'tmdc'
-        ? (quantity === 'eps' ? 'Dielectric function ε(ω,T)' : 'Refractive index n, k (ω,T)')
-        : quantity === 'eps' ? 'Dielectric function ε(ω)' : 'Refractive index n, k';
+      : mod === 'tmdc' ? QTY_LABELS[quantity].titleT : QTY_LABELS[quantity].title;
     compute();
     buildLegend(current!.src);
     rebuildReadout(current!.src);
@@ -1733,7 +1883,7 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
     $('ctrl-drude').hidden = m !== 'drude';
     $('ctrl-graphene').hidden = m !== 'graphene';
     $('ctrl-tmdc').hidden = m !== 'tmdc';
-    $('qty-field').hidden = m === 'graphene';            // ε / n,k (materials, Drude, TMDC)
+    $('qty-field').hidden = m === 'graphene';            // ε / n,k / 1/ε (materials, Drude, TMDC)
     $('lin-nl-tabs').hidden = m !== 'graphene';           // LIN / NL (graphene)
     refreshUnitSelect();                                  // add/remove the E_F energy unit
     updateGrapheneUI();
@@ -1819,11 +1969,31 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
         ${vo2ActiveSlots().map(s => `<li>${vo2NoteText(s)}</li>`).join('')}
       </ul>`;
     }
+    /* The 1/ε view is offered by every module that shows the Quantity control,
+       so its note is appended to whichever module's list is up rather than
+       copied into three branches. It has to stay below the module chain: every
+       branch there assigns `html =`, so this is the one `html +=` in the
+       function and moving it above them would simply be overwritten.
+       `.notes-card ul` has no margin, so the second list reads as a
+       continuation of the first rather than a new block — which is why it
+       carries no heading of its own (notes-card h4 has margin-top 0 and would
+       sit flush against the list above it). Shown only while the view is
+       active, which is what the updateNotes() call in #qty-tabs is for. */
+    if (mod !== 'graphene' && quantity === 'inveps') {
+      html += `<ul>
+        <li><b>1/ε = (Re ε − i Im ε)/|ε|<sup>2</sup></b> — the same ε as the other two views, inverted. Solid is Re(1/ε), dashed is Im(1/ε).</li>
+        <li>Under this page's e<sup>−iωt</sup> convention a passive material has Im ε &gt; 0, so <b>Im(1/ε) &lt; 0</b> and the dashed curve runs below the axis. Its positive counterpart <b>−Im(1/ε)</b> is the <b>energy-loss function</b>; in the non-retarded bulk limit a fast electron's energy-loss probability is proportional to it.</li>
+        <li><b>−Im(1/ε)</b> peaks where <b>Re ε = 0</b> — the longitudinal (bulk-plasmon) condition, at ω ≈ ω<sub>p</sub>/√ε<sub>∞</sub> for the Drude form — so the dashed curve dips to its most negative value there while Re(1/ε) crosses zero. Loss bounds that peak at <b>≈ 1/Im ε</b>, so the curve stays finite as long as Im ε &gt; 0; set γ = 0 and it diverges instead, and the line breaks.</li>
+        <li>That peak is often far narrower than the 216 samples the curve is drawn from, so the height you read off a wide window is a property of the window as much as of the material — <b>narrow the range</b> around the crossing to resolve it, and expect the peak to set the vertical scale while you do.</li>
+        <li>In a transparent window (k = 0) the dashed curve sits on zero and the solid one is <b>1/n<sup>2</sup></b>.</li>
+      </ul>`;
+    }
     $('mat-notes').innerHTML = html;
     updateRefs();
   }
 
   // References box — papers behind the active module (citations live here, not in the notes).
+  let refsHtml: string | null = null;   // what updateRefs last wrote, so repeat calls can skip the DOM write
   function updateRefs() {
     let refs: string[];
     if (mod === 'graphene') {
@@ -1848,9 +2018,17 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       if (vo2ActiveSlots().length) refs.push(
         `R. Beaini, B. Baloukas, S. Loquai, J. E. Klemberg-Sapieha &amp; L. Martinu, <em>Thermochromic VO₂-based smart radiator devices with ultralow refractive index cavities for increased performance</em>, Sol. Energy Mater. Sol. Cells <strong>205</strong>, 110260 (2020), <a href="https://doi.org/10.1016/j.solmat.2019.110260" target="_blank" rel="noopener">doi:10.1016/j.solmat.2019.110260</a>.`);
     }
-    $('mat-refs').hidden = refs.length === 0;
-    $('mat-refs').innerHTML = refs.length === 0 ? '' : `<h4>References</h4><ul class="reference-list">`
+    const html = refs.length === 0 ? '' : `<h4>References</h4><ul class="reference-list">`
       + refs.map((r, i) => `<li><span class="ref-index">[${i + 1}]</span><span>${r}</span></li>`).join('') + `</ul>`;
+    $('mat-refs').hidden = refs.length === 0;
+    /* updateNotes() ends by calling this, and the Quantity control now calls
+       updateNotes() on every click. Assigning innerHTML each time would tear
+       down and rebuild the DOI anchors for a change that cannot affect them —
+       the citations follow the module and the material, never the plotted
+       quantity. Compare against what was written rather than against
+       innerHTML, which the parser normalises (&iacute; comes back as í), so
+       the comparison would never match. */
+    if (html !== refsHtml) { refsHtml = html; $('mat-refs').innerHTML = html; }
   }
   $('module-materials').addEventListener('click', () => selectModule('materials'));
   $('module-drude').addEventListener('click', () => selectModule('drude'));
@@ -1887,7 +2065,13 @@ const materialOptions = Object.entries(MATERIALS).map(([key, m]) => ({ key, labe
       });
     });
   }
-  wireSeg('qty-tabs', v => { quantity = v as Quantity; });
+  /* Validated rather than cast. QTY_LABELS is indexed by this value in three
+     places, so a data-qty outside the union would read undefined and throw on
+     .title instead of quietly plotting the wrong curve — the cast was harmless
+     only while every branch was an if/else. updateNotes() because the 1/ε
+     bullets are view-dependent; it rebuilds the References box too, which
+     updateRefs() now skips when the citations have not changed. */
+  wireSeg('qty-tabs', v => { quantity = v === 'nk' || v === 'inveps' ? v : 'eps'; updateNotes(); });
   // Switching the X axis converts the range inputs to the new axis/unit.
   wireSeg('axis-tabs', v => { axis = v as Axis; refreshUnitSelect(); refreshRangeInputs(); });
 
