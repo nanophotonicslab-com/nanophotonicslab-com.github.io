@@ -4,9 +4,9 @@ Reference values
 ----------------
 * Bright eigenvalues ``eta = -0.0687, -0.0184, -0.0107`` and the interleaved
   dark mode at ``-0.0289``: NPLab ``nl-graphene.ts`` RIBBON_ETA_J, from Cox, Yu
-  and Garcia de Abajo, Phys. Rev. B 96, 045442 (2017), Table S2 (paper 406
-  quotes -0.0689, -0.0289, -0.0184 for the first three eigenvalues *including*
-  the dark one).
+  and Garcia de Abajo, Phys. Rev. B 96, 045442 (2017), Table S2 (which quotes
+  -0.0689, -0.0289, -0.0184 for the first three eigenvalues *including* the
+  dark one).
 * Dipole overlaps ``zeta = 0.943, 0.239, 0.137`` from the same table; the
   ratios 0.2535 and 0.1453 are normalisation independent and are what is
   asserted.  The absolute scale of this implementation's normalisation is

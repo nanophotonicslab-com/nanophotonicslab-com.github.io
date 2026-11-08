@@ -5,10 +5,13 @@ photon energy E [eV] (and, for the drift-biased case, of the guided wave vector
 Q [1/nm]), returning a 2D conductivity in the Gaussian eV-nm-fs units of
 :mod:`units`.  Sources:
 
-* "paper 406" = J. D. Cox, R. Yu & F. J. Garcia de Abajo, *Analytical
-  description of the nonlinear plasmonic response in nanographene*,
-  Phys. Rev. B 96, 045442 (2017) -- linear Drude Eq. (8), second-order
-  Eqs. (11)-(12), third-order Eqs. (14)-(15), cascaded Eqs. (15a)-(15d).
+* "paper 406" = T. P. Rasmussen, A. Rodriguez Echarri, F. J. Garcia de Abajo
+  & J. D. Cox, *Nonlocal and cascaded effects in nonlinear graphene
+  nanoplasmonics*, Nanoscale 15, 3150-3158 (2023).
+* J. D. Cox, R. Yu & F. J. Garcia de Abajo, *Analytical description of the
+  nonlinear plasmonic response in nanographene*, Phys. Rev. B 96, 045442
+  (2017) -- linear Drude Eq. (8), second-order Eqs. (11)-(12), third-order
+  Eqs. (14)-(15), cascaded Eqs. (15a)-(15d).
 * "paper 456" -- drift-biased anisotropic nonlocal conductivity, Eqs. (12a)-(12b)
   and the thermal Drude weight quoted after Eq. (11).
 * "paper 430" -- thin-film mapping of a local dielectric function onto a sheet
@@ -194,7 +197,7 @@ def graphene_drude(E_ev: ArrayLike, EF_ev: ArrayLike, gamma_ev: ArrayLike) -> Cx
     """Intraband (Drude) sheet conductivity of extended doped graphene  [nm/fs].
 
     ``sigma(E) = 1j e^2 |E_F| / [pi hbar (E + 1j gamma)]``
-    -- paper 406 (Cox, Yu & Garcia de Abajo, PRB 96, 045442 (2017)), Eq. (8).
+    -- Cox, Yu & Garcia de Abajo, PRB 96, 045442 (2017), Eq. (8).
 
     Parameters are broadcast against each other, so any of them may be an array.
     """

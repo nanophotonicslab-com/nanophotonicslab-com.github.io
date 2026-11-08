@@ -11,7 +11,7 @@ Reference values
 ----------------
 * Bright ribbon eigenvalues ``eta = -0.0687, -0.0184, -0.0107`` with an
   interleaved DARK mode at ``-0.0289``: Cox, Yu and Garcia de Abajo, Phys. Rev.
-  B 96, 045442 (2017), Table S2 (paper 406).  Same anchors as
+  B 96, 045442 (2017), Table S2.  Same anchors as
   ``tests/test_solver.py``.
 * ``hbar omega_1 = 0.578 eV`` for ``E_F = 0.5 eV``, ``W = 10 nm``,
   ``eta_1 = -0.0687``, from the Drude closed form
