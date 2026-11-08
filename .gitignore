@@ -38,3 +38,10 @@ packages/optics/dist/
 
 # local visual-regression snapshots
 .visual/
+# development logs and agent-run derivation dumps for the modules under
+# scripts/: a collaborator's name, paths into private reference MATLAB,
+# parameters of unpublished manuscripts, local paths and session ids -- same
+# reason as paper/ above.  They are kept locally, not published.
+scripts/**/RESUME.md
+scripts/electrostatics_fd/derivations-*.md
+scripts/electrostatics_fd/notes/

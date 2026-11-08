@@ -1,0 +1,1543 @@
+---
+import katex from 'katex';
+import Layout from '../../layouts/Layout.astro';
+import ModelInfo from '../../components/ModelInfo.astro';
+import ToolMeta from '../../components/ToolMeta.astro';
+import ParamsDrawer from '../../components/ParamsDrawer.astro';
+import PresetStrip from '../../components/PresetStrip.astro';
+import '../../styles/lab.css';
+import 'katex/dist/katex.min.css';
+
+/* ------------------------------------------------------------------ *
+ *  Build-time mathematics for the Notes box, following laser.astro.
+ *  The notes are static prose, so every formula is typeset here during
+ *  the build and injected with set:html; the only KaTeX asset the browser
+ *  downloads is the stylesheet imported above. Injected markup carries no
+ *  Astro scope attribute, so every rule aimed at KaTeX output is :global()
+ *  in the <style> block below.
+ * ------------------------------------------------------------------ */
+/** Display equation. */
+const eq = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: true });
+/** Inline equation. */
+const im = (tex: string) => katex.renderToString(tex, { throwOnError: false, displayMode: false });
+
+/* Preset buttons address controls by element id, which is all PresetStrip can
+   do (it resolves each key with getElementById and assigns .value). So the
+   ribbon controls are a FIXED set of five id-addressed blocks, shown or hidden
+   by the count, rather than rows built on demand: that keeps the preset and
+   share-link behaviour working unchanged. Five is a UI limit, not a solver one
+   — the solver takes any number, bounded only by the node ceiling — and it is
+   where the controls column stops being readable. Raising it means adding
+   blocks here and nothing else.
+
+   `efd-scene-hint` carries "<excitation>:<observable>", so a preset lands you on
+   the excitation and the observable its figure actually shows. The numbers
+   mirror web.presets() on the Python side, which holds the per-parameter
+   provenance; the labels cite the reference list by number so every example reads the
+   same way. Where the only evidence tying parameters to a published figure is a
+   comment in the reference MATLAB, that is said at the reference itself. */
+const presets: { label: string; values: Record<string, string | number> }[] = [
+  {
+    label: 'Single 10 nm ribbon',
+    values: {
+      'efd-scene-hint': 'plane:spectrum',
+      'efd-nribbons': 1,
+      'efd-w-0': 10, 'efd-x0-0': 0, 'efd-z0-0': 0, 'efd-l-0': 150,
+      'efd-ef-0': 0.5, 'efd-gamma-0': 0.0263, 'efd-beta-0': 0,
+      'efd-eps-a': 1, 'efd-eps-b': 1, 'efd-sub-eps': 0, 'efd-temp-0': 0,
+      'efd-e-min': 0.3, 'efd-e-max': 1.2, 'efd-e-n': 180, 'efd-q': 0,
+    },
+  },
+  {
+    label: 'Two ribbons · Ref [5], Fig. 5c',
+    values: {
+      'efd-scene-hint': 'plane:spectrum',
+      'efd-nribbons': 2,
+      'efd-w-0': 51, 'efd-x0-0': 0, 'efd-z0-0': 0, 'efd-l-0': 255,
+      'efd-ef-0': 1.0, 'efd-gamma-0': 0.02, 'efd-beta-0': 0,
+      'efd-w-1': 22, 'efd-x0-1': 39.5, 'efd-z0-1': 0, 'efd-l-1': 110,
+      'efd-ef-1': 1.0, 'efd-gamma-1': 0.02, 'efd-beta-1': 0, 'efd-temp-1': 0,
+      'efd-eps-a': 1, 'efd-eps-b': 1, 'efd-sub-eps': 0, 'efd-temp-0': 0,
+      'efd-e-min': 0.45, 'efd-e-max': 0.65, 'efd-e-n': 120, 'efd-q': 0,
+    },
+  },
+  {
+    label: 'Second harmonic · Ref [1], Fig. 1b',
+    values: {
+      'efd-scene-hint': 'plane:nonlinear',
+      'efd-nribbons': 2,
+      'efd-w-0': 160, 'efd-x0-0': 0, 'efd-z0-0': 0, 'efd-l-0': 400,
+      'efd-ef-0': 0.4, 'efd-gamma-0': 0.01, 'efd-beta-0': 0,
+      'efd-w-1': 40, 'efd-x0-1': 102.5, 'efd-z0-1': 0, 'efd-l-1': 250,
+      'efd-ef-1': 0.4, 'efd-gamma-1': 0.01, 'efd-beta-1': 0, 'efd-temp-1': 0,
+      'efd-eps-a': 1, 'efd-eps-b': 1, 'efd-sub-eps': 0, 'efd-temp-0': 0,
+      'efd-e-min': 0.05, 'efd-e-max': 0.3, 'efd-e-n': 60, 'efd-q': 0,
+    },
+  },
+  {
+    label: 'Drift LDOS · Ref [3]',
+    values: {
+      'efd-scene-hint': 'dipole:ldos',
+      'efd-nribbons': 1,
+      'efd-w-0': 10, 'efd-x0-0': 5, 'efd-z0-0': 0, 'efd-l-0': 150,
+      'efd-ef-0': 0.5, 'efd-gamma-0': 0.0263, 'efd-beta-0': 0.2573,
+      'efd-eps-a': 1, 'efd-eps-b': 1, 'efd-sub-eps': 0, 'efd-temp-0': 0,
+      'efd-e-min': 0.1, 'efd-e-max': 1.0, 'efd-e-n': 40,
+      'efd-q-min': 0.02, 'efd-q-max': 0.5, 'efd-q-npos': 16,
+      'efd-dip-x': 5, 'efd-dip-z': 5, 'efd-dip-p': 'x', 'efd-npeaks': 3,
+    },
+  },
+  {
+    label: 'The same, no drift',
+    values: {
+      'efd-scene-hint': 'dipole:ldos',
+      'efd-nribbons': 1,
+      'efd-w-0': 10, 'efd-x0-0': 5, 'efd-z0-0': 0, 'efd-l-0': 150,
+      'efd-ef-0': 0.5, 'efd-gamma-0': 0.0263, 'efd-beta-0': 0,
+      'efd-eps-a': 1, 'efd-eps-b': 1, 'efd-sub-eps': 0, 'efd-temp-0': 0,
+      'efd-e-min': 0.1, 'efd-e-max': 1.0, 'efd-e-n': 80,
+      'efd-q-min': 0.02, 'efd-q-max': 0.5, 'efd-q-npos': 24,
+      'efd-dip-x': 5, 'efd-dip-z': 5, 'efd-dip-p': 'x', 'efd-npeaks': 3,
+    },
+  },
+];
+
+/** Up to five structures. Index 1 keeps the two-ribbon default that the
+ *  coupled-ribbon examples use; 2-4 are staggered so that switching the count
+ *  up gives a sane, non-overlapping arrangement rather than a pile at x = 0. */
+const RIBBONS = [0, 1, 2, 3, 4];
+const RIBBON_DEFAULTS = [
+  { W: 10, x0: 0, L: 121 },
+  { W: 22, x0: 39.5, L: 61 },
+  { W: 10, x0: 65, L: 61 },
+  { W: 10, x0: 85, L: 61 },
+  { W: 10, x0: 105, L: 61 },
+];
+---
+
+<Layout
+  title="Electrostatics-FD"
+  description="Quasistatic finite-difference response of coupled 2D nanostructures: eigenmodes, bands, cross sections, EELS and LDOS, drift-biased and substrate-coupled, solved in the browser."
+  noindex
+>
+  <section class="widget-hero">
+    <div class="container">
+      <a href="/lab/" class="back-link">&larr; Back to Lab</a>
+      <h1>Electrostatics <span class="gradient-text">finite differences</span></h1>
+      <p class="widget-hero__subtitle">
+        Self-consistent quasistatic response of coupled two-dimensional
+        nanostructures, by finite differences. Eigenmodes and bands for any
+        geometry; cross sections under a plane wave, the local density of states
+        around a dipole, and electron energy loss for a swift electron &mdash;
+        drift-biased and substrate-coupled throughout.
+      </p>
+      <ToolMeta slug="electrostatics-fd" name="Electrostatics-FD" />
+    </div>
+  </section>
+
+  <ModelInfo status="Experimental">
+    <dl>
+      <dt>Model</dt>
+      <dd>
+        Quasistatic self-consistent response, discretised by finite differences.
+        A single dimensionless <span set:html={im('\\eta(\\omega)')} /> carries all
+        the material and frequency dependence; the geometry enters through a
+        Coulomb kernel <span set:html={im('\\mathcal{V}^{(q)}')} /> and a
+        second-derivative operator <span set:html={im('\\mathcal{D}^{(q)}')} />, and
+        the potential solves
+        <span set:html={im('\\vec\\phi=[\\mathbb{1}-(\\mathcal{M}+\\bar{\\mathcal{M}})]^{-1}\\vec\\phi^{\\,\\rm ext}')} />.
+        Perturbative orders (SHG, THG with the cascaded contribution) are each
+        screened at their own harmonic. Runs this project's Python reference
+        library in the browser through Pyodide &mdash; the same code the tests and
+        the MATLAB comparison use, not a port.
+      </dd>
+      <dt>Assumptions</dt>
+      <dd>
+        Quasistatic: every dimension and separation well below the free-space
+        wavelength, retardation entering only through the sources' Lorentz
+        factors. Sheets are strictly two-dimensional and carry no thickness.
+        <span set:html={im('\\sigma')} /> is local in real space &mdash; nonlocal in
+        <span set:html={im('Q')} /> only through the drift tensor &mdash; and is
+        evaluated pointwise at the guided <span set:html={im('q')} />. Swift
+        electrons are aloof and parallel: there is no penetrating-trajectory
+        formalism here.
+      </dd>
+      <dt>Validity</dt>
+      <dd>
+        Graphene with <span set:html={im('|E_{\\rm F}|\\gg k_{\\rm B}T')} /> in the
+        plasmonic window below the interband edge at
+        <span set:html={im('2|E_{\\rm F}|')} />; thin metal films for
+        <span set:html={im('t\\ll W')} />. The drift closed forms are
+        <span set:html={im('T=0')} /> in the tensor itself, though the Drude weight
+        carries temperature. Nonlinear conductivities keep field gradients to
+        linear order, valid for optical wave vectors
+        <span set:html={im('\\lesssim 1\\,\\mathrm{nm}^{-1}')} />.
+      </dd>
+      <dt>Limitations</dt>
+      <dd>
+        Nanoribbons only for now; nanotubes and nanodisks are not wired up.
+        Nonlinear orders and drift have never been derived together, and the tool
+        refuses the pair rather than guessing. A substrate screens both the
+        response and the source through the same reflection coefficient, but it
+        has no third-party implementation to have been checked against; what is
+        checked is its perfect-mirror limit, which reproduces the textbook image
+        construction to 2&times;10<sup>&minus;13</sup>. The LDOS is in
+        <strong>arbitrary units</strong>: its
+        <span set:html={im('2\\pi^2|\\mathbf{p}|^2')} /> normalisation has no
+        external confirmation. Absolute magnitudes carry a 3&ndash;12&nbsp;%
+        modelling choice in the edge cell weights, though peak positions do not.
+      </dd>
+      <dt>References</dt>
+      <dd>
+        Rasmussen <em>et&nbsp;al.</em>, Nanoscale <strong>15</strong>, 3150 (2023);
+        Sci. Adv. <strong>10</strong>, eadn6312 (2024);
+        Rodr&iacute;guez Echarri, Garc&iacute;a de Abajo &amp; Cox, Nat. Commun.
+        <strong>17</strong>, 1114 (2026). Full list below.
+      </dd>
+    </dl>
+  </ModelInfo>
+
+  <section class="section">
+    <div class="container">
+      <!-- The system: the same shared module bar as the Mie, Materials and
+           Electron labs. Nanotubes and nanodisks are deliberately disabled
+           rather than hidden — the formalism carries the same drift split to
+           both, so they belong on the map even before they are wired up. -->
+      <div class="module-bar card" role="radiogroup" aria-label="Electrostatics-FD system">
+        <span class="module-bar__label">System</span>
+        <div class="module-bar__grid">
+          <button type="button" class="module-card active" id="module-ribbons" role="radio" aria-checked="true">
+            <span class="module-card__name">Nanoribbons</span>
+            <span class="module-card__desc">Coupled 2D strips &middot; finite differences</span>
+          </button>
+          <button type="button" class="module-card" id="module-tubes" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">Nanotubes <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Fully analytic &middot; same drift tensor</span>
+          </button>
+          <button type="button" class="module-card" id="module-disks" role="radio" aria-checked="false" aria-disabled="true" disabled title="Coming soon">
+            <span class="module-card__name">Nanodisks <span class="module-card__badge">Soon</span></span>
+            <span class="module-card__desc">Azimuthal kernel &middot; layered substrate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- The two choices that frame everything else, on one band above the
+           work area and on the same grid as it: the excitation over the
+           parameters it adds, the observable over the result it selects.
+           Excitation decides which observables exist at all, so neither can be
+           buried inside the box it governs. -->
+      <div class="efd-topbar">
+        <div class="param excitation-param">
+          <div class="param-header"><label>Excitation</label></div>
+          <div class="plot-tabs" id="efd-excitation-tabs" role="radiogroup" aria-label="Excitation">
+            <button class="plot-tab active" type="button" data-excitation="plane" role="radio" aria-checked="true">Plane wave</button>
+            <button class="plot-tab" type="button" data-excitation="dipole" role="radio" aria-checked="false">Dipole</button>
+            <button class="plot-tab" type="button" data-excitation="electron" role="radio" aria-checked="false">Electron</button>
+          </div>
+          {/* Carries the drive through initPermalinks, which syncs form fields
+              and these are buttons. Restored BEFORE the observable below:
+              switching drive bounces an observable that drive does not offer,
+              which would undo a view restored first. */}
+          <input type="hidden" id="efd-src" value="plane">
+        </div>
+        <div class="param excitation-param">
+          <div class="param-header"><label>Observable</label></div>
+          <div class="plot-tabs efd-obs-tabs" id="efd-observable-tabs" role="radiogroup" aria-label="Observable">
+            <button class="plot-tab active" type="button" data-obs="spectrum" role="radio" aria-checked="true">Cross section</button>
+            <button class="plot-tab" type="button" data-obs="nonlinear" role="radio" aria-checked="false">Nonlinear</button>
+            <button class="plot-tab" type="button" data-obs="ldos" role="radio" aria-checked="false">LDOS</button>
+            <button class="plot-tab" type="button" data-obs="eels" role="radio" aria-checked="false">EELS</button>
+            <button class="plot-tab" type="button" data-obs="nearfield" role="radio" aria-checked="false">Near field</button>
+            <button class="plot-tab" type="button" data-obs="modes" role="radio" aria-checked="false">Modes</button>
+            <button class="plot-tab" type="button" data-obs="dispersion" role="radio" aria-checked="false">Dispersion</button>
+            <button class="plot-tab" type="button" data-obs="material" role="radio" aria-checked="false">Material</button>
+          </div>
+          {/* Same idea as efd-src: which panel you are reading is the first
+              thing a shared link has to restore, and it is not a form field. */}
+          <input type="hidden" id="efd-view" value="spectrum">
+        </div>
+      </div>
+
+      <div class="widget-layout">
+        <!-- ===================== Controls ===================== -->
+        <div class="widget-column widget-column--controls">
+          <ParamsDrawer>
+          <div class="controls card">
+            <div class="params-head">
+              <h3>Parameters</h3>
+              <button id="efd-run" class="chart-tool-btn efd-run-btn" type="button">Run</button>
+            </div>
+
+            <!-- The preset strip writes "<excitation>:<observable>" here. -->
+            <input type="hidden" id="efd-scene-hint" value="plane:spectrum">
+
+            <!-- ===== One self-contained block per ribbon =====
+                 Every ribbon carries its own geometry AND its own material,
+                 because the solver has always taken W, x0, z0, L, EF, gamma and
+                 beta per ribbon -- `_build_system` reads them off each ribbon
+                 dict and `eta_pair` reads them off each Ribbon object. Splitting
+                 them across a Geometry block and a Material block implied a
+                 shared material that never existed. -->
+            <div class="param-header efd-count-row">
+              <label for="efd-nribbons">Number of ribbons</label>
+              <select id="efd-nribbons" class="param-select efd-count-select">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            {RIBBONS.map((j) => (
+              <div class="efd-ribbon-group" data-ribbon={j} hidden={j >= 1}>
+                {/* The name shares the Geometry heading's line. On its own row
+                    it cost the card a whole line of height for two words, five
+                    times over. */}
+                <div class="efd-ribbon-head">
+                  <span class="efd-sub-title">Geometry</span>
+                  <span class="efd-ribbon-name">Ribbon {j + 1}</span>
+                </div>
+                {/* Label, number and slider on one line, after the graphene
+                    calculator's .gr-ef-field (/lab/materials#graphene). Every
+                    ribbon gets both sliders now, not just the first: the five
+                    cards are meant to read as five of the same thing. */}
+                <div class="param efd-slider-row">
+                  <label for={`efd-w-${j}`} title="Ribbon width">W (nm)</label>
+                  <input type="number" class="param-number efd-slider-num" id={`efd-w-${j}`} value={RIBBON_DEFAULTS[j].W} step="1" min="0.5">
+                  <input type="range" class="gr-slider" id={`efd-w-${j}-slider`} aria-label={`Ribbon ${j + 1} width (nm)`} min="2" max="200" step="1" value={RIBBON_DEFAULTS[j].W}>
+                </div>
+                <div class="param efd-param-pair">
+                  <label>
+                    <span>Centre x&#8320; (nm)</span>
+                    <input type="number" class="param-number" id={`efd-x0-${j}`} value={RIBBON_DEFAULTS[j].x0} step="0.5">
+                  </label>
+                  <label>
+                    <span>Height z&#8320; (nm)</span>
+                    <input type="number" class="param-number" id={`efd-z0-${j}`} value="0" step="0.5">
+                  </label>
+                </div>
+
+                {/* The node count on its own never said what it bought you.
+                    The solver lays nodes at x = x0 + W*linspace(-0.5, 0.5, L),
+                    so the spacing is W/(L-1) exactly -- not W/L -- and that is
+                    the number that decides whether the edge singularity is
+                    resolved. It is derived, so it is an <output>: dashed and
+                    muted, and nothing reads it back. */}
+                <span class="efd-sub-title">Discretization</span>
+                <div class="param efd-param-pair">
+                  <label>
+                    <span>Nodes L</span>
+                    <input type="number" class="param-number" id={`efd-l-${j}`} value={RIBBON_DEFAULTS[j].L} step="2" min="5" max="2048">
+                  </label>
+                  <label>
+                    <span>&Delta;x (nm)</span>
+                    <output class="efd-derived" id={`efd-dx-${j}`} title="Node spacing W/(L-1), the grid the solver will use">&mdash;</output>
+                  </label>
+                </div>
+
+                <span class="efd-sub-title">Material</span>
+                <div class="param efd-slider-row">
+                  <label for={`efd-ef-${j}`} title="Fermi energy; negative is hole doping">E<sub>F</sub> (eV)</label>
+                  <input type="number" class="param-number efd-slider-num" id={`efd-ef-${j}`} value="0.5" step="0.05">
+                  <input type="range" class="gr-slider" id={`efd-ef-${j}-slider`} aria-label={`Ribbon ${j + 1} Fermi level (eV)`} min="-1.5" max="1.5" step="0.01" value="0.5">
+                </div>
+                {/* Three short numbers, one row. Temperature is a property of
+                    THIS sheet's conductivity, not of the surroundings: it
+                    enters through the Drude weight mu_D(mu(T), T), so two
+                    ribbons held at different electron temperatures respond
+                    differently. It used to sit under Environment, beside the
+                    substrate, where it read as a property of the stack. */}
+                <div class="param efd-param-trio">
+                  <label>
+                    <span>&gamma; (eV)</span>
+                    <input type="number" class="param-number" id={`efd-gamma-${j}`} value="0.02" step="0.002" min="0">
+                  </label>
+                  <label>
+                    <span>&beta; = v<sub>d</sub>/v<sub>F</sub></span>
+                    <input type="number" class="param-number" id={`efd-beta-${j}`} value="0" step="0.02" min="-0.95" max="0.95">
+                  </label>
+                  <label>
+                    <span>T (K)</span>
+                    <input type="number" class="param-number" id={`efd-temp-${j}`} value="0" step="25" min="0">
+                  </label>
+                </div>
+              </div>
+            ))}
+
+            <!-- ===== Source: only the block for the chosen excitation ===== -->
+            <h4 class="efd-group-title efd-src-title">Source</h4>
+            <div class="param efd-plane-only">
+              <p class="efd-src-note">
+                Normal incidence, polarised across the ribbons. That is the
+                <span set:html={im('q=0')} /> case.
+              </p>
+            </div>
+            <div class="param efd-dipole-only efd-param-pair" hidden>
+              <label>
+                <span>Dipole x (nm)</span>
+                <input type="number" class="param-number" id="efd-dip-x" value="0" step="0.5">
+              </label>
+              <label>
+                <span>Dipole z (nm)</span>
+                <input type="number" class="param-number" id="efd-dip-z" value="5" step="0.5">
+              </label>
+            </div>
+            <div class="param efd-dipole-only" hidden>
+              <div class="param-header"><label for="efd-dip-p">Dipole axis</label></div>
+              <select id="efd-dip-p" class="param-select">
+                <option value="x" selected>x &mdash; across the ribbon</option>
+                <option value="y">y &mdash; along the ribbon</option>
+                <option value="z">z &mdash; out of plane</option>
+              </select>
+            </div>
+            {/* Speed in either currency. Beam energies are quoted in keV and
+                the formalism wants v/c, so both are entries and each writes
+                the other; only v/c reaches the solver. And the height is just
+                z: for an aloof parallel trajectory the impact parameter IS
+                the height above the sheet, and z is the axis the geometry
+                drawing and every ribbon's z0 already use. */}
+            <div class="param efd-electron-only efd-param-trio" hidden>
+              <label>
+                <span>v / c</span>
+                <input type="number" class="param-number" id="efd-vc" value="0.2" step="0.01" min="0.001" max="0.999">
+              </label>
+              <label>
+                <span>K (keV)</span>
+                <input type="number" class="param-number efd-mirror" id="efd-kev" value="10.9" step="1" min="0.01">
+              </label>
+              <label>
+                <span>z (nm)</span>
+                <input type="number" class="param-number" id="efd-b" value="5" step="0.5">
+              </label>
+            </div>
+            {/* q belongs to the drive, so it sits under Source for every
+                excitation -- a plane wave at normal incidence IS the q = 0
+                case, but it is the one to fix, not one that cannot be set.
+                The SWEPT q stays in Grid with the energy range, because there
+                it is an axis rather than a property of the source. */}
+            <div class="param efd-q-scalar">
+              <div class="param-header">
+                <label for="efd-q">q (nm&#8315;&sup1;)</label>
+                <input type="number" class="param-number" id="efd-q" value="0" step="0.01">
+              </div>
+            </div>
+
+            <!-- ===== Grid ===== -->
+            <h4 class="efd-group-title">Grid</h4>
+            {/* The layout is the Transition radiation module's .sp-range: the
+                unit toggle in the range's own header, "min to max" below it.
+                The BEHAVIOUR goes further than electron.astro, which keeps its
+                range in nm and moves only the axis. Here the whole block
+                follows the toggle -- heading, both numbers, their step and
+                their bounds -- so you can type 500 to 900 nm directly. The
+                solver only ever sees eV: `energyGrid()` in main.ts is the one
+                place that converts, and it hands back the exact numbers that
+                were typed rather than a rounded reconstruction.
+
+                The near-field map is at ONE energy, set on the slider above
+                the map, so the grid is not a parameter of it at all and
+                .efd-e-grid hides there. */}
+            <div class="param efd-range efd-e-grid">
+              <div class="efd-range__head">
+                <label for="efd-e-min" id="efd-range-label">Energy (eV)</label>
+                <div class="efd-axis-pick" id="efd-axis-overlay" hidden title="The unit for this range and for the plot's horizontal axis">
+                  <div class="plot-tabs plot-tabs--toolbar" id="efd-axis-tabs" role="radiogroup" aria-label="Energy or wavelength">
+                    <button class="plot-tab active" type="button" data-axis="energy" role="radio" aria-checked="true">eV</button>
+                    <button class="plot-tab" type="button" data-axis="lambda" role="radio" aria-checked="false">nm</button>
+                  </div>
+                </div>
+              </div>
+              <div class="efd-range__row">
+                <input type="number" class="param-number efd-rnum" id="efd-e-min" value="0.1" step="0.05" min="0" aria-label="Energy range minimum (eV)">
+                <span class="efd-range__dash">to</span>
+                <input type="number" class="param-number efd-rnum" id="efd-e-max" value="1.2" step="0.05" min="0.002" aria-label="Energy range maximum (eV)">
+              </div>
+            </div>
+            {/* Which unit the two boxes above are in. A hidden input, because
+                the permalink maps query keys to element ids and the toggle is a
+                pair of buttons: without this a link shared while in nm mode
+                would restore nm numbers into an eV page. */}
+            <input type="hidden" id="efd-xunit" value="energy">
+            <div class="param efd-e-grid">
+              <div class="param-header">
+                {/* Not "Energy points": the axis can be read in nm, and the
+                    count is the same count either way. */}
+                <label for="efd-e-n">Number of points</label>
+                <input type="number" class="param-number" id="efd-e-n" value="160" step="10" min="2" max="800">
+              </div>
+            </div>
+            {/* The same shape as the energy range above it: a header naming
+                the quantity and its unit, then "min to max". The two are the
+                page's two swept axes and reading them alike is the point. */}
+            <div class="param efd-range efd-q-grid" hidden>
+              <div class="efd-range__head">
+                <label for="efd-q-min">q (nm&#8315;&sup1;)</label>
+              </div>
+              <div class="efd-range__row">
+                <input type="number" class="param-number efd-rnum" id="efd-q-min" value="0.02" step="0.01" min="0" aria-label="q range minimum (1/nm)">
+                <span class="efd-range__dash">to</span>
+                <input type="number" class="param-number efd-rnum" id="efd-q-max" value="0.5" step="0.05" min="0.001" aria-label="q range maximum (1/nm)">
+              </div>
+            </div>
+            <div class="param efd-q-grid" hidden>
+              <div class="param-header">
+                <label for="efd-q-npos">Number of points (each sign)</label>
+                <input type="number" class="param-number" id="efd-q-npos" value="16" step="2" min="1" max="200">
+              </div>
+            </div>
+
+            <div class="param efd-obs-only" data-obs-for="modes" hidden>
+              <div class="param-header">
+                <label>Modes shown</label>
+                <input type="number" class="param-number" id="efd-nmodes" value="4" step="1" min="1" max="12">
+              </div>
+            </div>
+            <div class="param efd-obs-only" data-obs-for="dispersion" hidden>
+              <div class="param-header">
+                <label>Bands</label>
+                <input type="number" class="param-number" id="efd-nbands" value="3" step="1" min="1" max="8">
+              </div>
+            </div>
+            <div class="param efd-obs-only" data-obs-for="ldos" hidden>
+              <div class="param-header">
+                <label>Peaks tracked</label>
+                <input type="number" class="param-number" id="efd-npeaks" value="3" step="1" min="1" max="6">
+              </div>
+            </div>
+            <div class="param efd-obs-only" data-obs-for="nearfield" hidden>
+              <span class="efd-src-note">
+                The map is at one energy, set on the slider above the map. Put it
+                on a resonance &mdash; the Modes view gives you the band
+                energies, and Material shows where
+                <span set:html={im('\\mathrm{Re}\\,\\eta')} /> meets them.
+              </span>
+            </div>
+            <div class="param efd-obs-only efd-param-pair" data-obs-for="nearfield" hidden>
+              <label>
+                <span>Points along x</span>
+                <input type="number" class="param-number" id="efd-nf-nx" value="140" step="10" min="2" max="300">
+              </label>
+              <label>
+                <span>Points along z</span>
+                <input type="number" class="param-number" id="efd-nf-nz" value="84" step="6" min="2" max="300">
+              </label>
+            </div>
+
+            <!-- ===== Environment =====
+                 eps below and a substrate stack are two descriptions of the SAME
+                 physics and the library does not stop you giving both: eps_b
+                 enters only through eps_eff = (eps_a + eps_b)/2, which scales
+                 every eta, while the stack screens that same interface again
+                 through r(Q) inside Vbar. Giving both screens it twice and
+                 nothing raises. So they are offered as alternatives: a substrate
+                 epsilon above zero takes over, and eps below is hidden and
+                 pinned to eps above. The library's own validation message says
+                 the same thing ("use eps_a = eps_b = layers[0].eps_par"). -->
+            <h4 class="efd-group-title">Environment</h4>
+            <div class="param efd-param-pair">
+              <label>
+                <span>&epsilon; above</span>
+                <input type="number" class="param-number" id="efd-eps-a" value="1" step="0.1" min="1">
+              </label>
+              <label id="efd-eps-b-field">
+                <span>&epsilon; below</span>
+                <input type="number" class="param-number" id="efd-eps-b" value="1" step="0.1" min="1">
+              </label>
+            </div>
+            <div class="param">
+              <div class="param-header">
+                <label for="efd-sub-eps">Substrate &epsilon;</label>
+                <input type="number" class="param-number" id="efd-sub-eps" value="0" step="0.5" min="0" title="0 = no stack; the two permittivities above are then used as they are">
+              </div>
+            </div>
+            <div class="efd-stack" id="efd-stack" hidden>
+              <span class="efd-src-note">
+                The substrate is the half-space at the bottom. Layers added here
+                sit between it and the sheet, each with its own thickness and
+                permittivity.
+              </span>
+              <div class="param">
+                <div class="param-header">
+                  <label for="efd-nlayers">Layers</label>
+                  <input type="number" class="param-number" id="efd-nlayers" value="0" step="1" min="0" max="8">
+                </div>
+              </div>
+              <div class="efd-layer-editor" id="efd-layer-editor"></div>
+            </div>
+
+            <button id="efd-reset" class="chart-tool-btn reset-btn" type="button" title="Reset all parameters to defaults">Reset defaults</button>
+          </div>
+          </ParamsDrawer>
+        </div>
+
+        <!-- ===================== Results ===================== -->
+        <div class="widget-column widget-column--results">
+          <div class="chart-panel card">
+            <!-- Near-field controls, top right of the result it governs. -->
+            <div class="chart-toolbar efd-obs-only efd-nf-toolbar" data-obs-for="nearfield" hidden>
+              <span class="toolbar-label">Component</span>
+              {/* Plain Ex/Ey/Ez, not subscripts. An <option> holds text and
+                  nothing else, and Unicode's Latin subscript block has no y and
+                  no z -- only the x. The previous &#8337; and &#8338; were
+                  SUBSCRIPT SMALL E and SUBSCRIPT SMALL O, so this menu read
+                  "Re E-sub-e" and "Re E-sub-o". The chart title, which can
+                  carry markup, sets them properly. */}
+              <select id="efd-nf-comp" class="param-select param-select--sm">
+                <option value="map" selected>|E|</option>
+                <option value="ex_re">Re Ex</option>
+                <option value="ex_im">Im Ex</option>
+                <option value="ey_re">Re Ey</option>
+                <option value="ey_im">Im Ey</option>
+                <option value="ez_re">Re Ez</option>
+                <option value="ez_im">Im Ez</option>
+              </select>
+              <div class="plot-tabs plot-tabs--toolbar" id="efd-nf-scale" role="radiogroup" aria-label="Colour scale">
+                <button class="plot-tab active" type="button" data-scale="log" role="radio" aria-checked="true">Log</button>
+                <button class="plot-tab" type="button" data-scale="linear" role="radio" aria-checked="false">Linear</button>
+              </div>
+              <button type="button" class="chart-tool-btn efd-nf-all" id="efd-nf-all" title="Show every field component at once">All fields</button>
+              {/* The map is at ONE energy, so the energy belongs beside the map
+                  rather than down in the parameters -- the same move Mie makes
+                  for its near-field lambda. One slider, not two: energy is what
+                  the solver takes, and the wavelength beside it follows. Its
+                  span is the energy grid you already set, widened if the typed
+                  value falls outside, because a slider whose thumb cannot reach
+                  the current value is a broken control. */}
+              <span class="efd-nf-energy-box">
+                <label class="angular-label" for="efd-nf-energy">E =</label>
+                <input type="number" class="param-number param-number--sm" id="efd-nf-energy" value="0.58" step="0.01" min="0.001">
+                <span class="angular-label">eV</span>
+                <input type="range" class="gr-slider efd-nf-energy-slider" id="efd-nf-energy-slider" min="0.1" max="1.2" step="0.001" value="0.58" aria-label="Field map energy (eV)">
+                {/* Typing a wavelength is the same act as typing an energy, so
+                    it is an entry too, not a readout. Either one drives the
+                    other; the slider and the solver stay on eV. */}
+                <label class="angular-label" for="efd-nf-lambda">&lambda; =</label>
+                <input type="number" class="param-number param-number--sm efd-nf-lambda efd-mirror" id="efd-nf-lambda" value="2138" step="10" min="0.1" aria-label="Field map wavelength (nm)">
+                <span class="angular-label">nm</span>
+              </span>
+            </div>
+
+            <div class="efd-boot" id="efd-boot">
+              <div class="efd-boot__bar"><div class="efd-boot__fill" id="efd-boot-fill"></div></div>
+              <span class="efd-boot__text" id="efd-boot-text">Starting the Python solver&hellip;</span>
+            </div>
+
+            <!-- The result comes first. The geometry drawing below is context
+                 for it, not the headline. -->
+            <div class="chart-block">
+              <!-- The unit picker now sits in the Grid block's range header,
+                   beside the numbers it describes, the way the Transition
+                   radiation module does it. It was first floated over the
+                   canvas, where it landed on the first x tick; moving it into
+                   this header fixed that but left it far from the range. Only
+                   the line views have energy on the horizontal axis -- the maps
+                   carry it vertically on a grid the drawing code assumes
+                   uniform, and a uniform eV grid is NOT uniform in lambda, so
+                   the toggle hides itself there rather than misdrawing. -->
+              <div class="chart-header">
+                <span class="chart-title" id="efd-chart-main-title">Cross section vs energy</span>
+                {/* Which polarizabilities to draw, beside the title they
+                    belong to. The buttons are built from the payload, not
+                    hard-coded: a run with orders = shg has no third harmonic
+                    to offer, and offering one would be a lie about what was
+                    computed. */}
+                {/* Both are absolute, and which one you want depends on
+                    what you are comparing: sigma per unit length is the
+                    physical cross section of a ribbon, sigma over its width is
+                    the efficiency, which is what the plasmonic-nanoparticles
+                    lab plots and what compares across widths. */}
+                <div class="efd-chart-pick efd-obs-only" data-obs-for="spectrum" hidden>
+                  <div class="plot-tabs plot-tabs--toolbar" id="efd-xs-unit" role="radiogroup" aria-label="Cross section units">
+                    <button class="plot-tab active" type="button" data-xs="area" role="radio" aria-checked="true">&sigma;/area</button>
+                    <button class="plot-tab" type="button" data-xs="nm" role="radio" aria-checked="false">&sigma; (nm)</button>
+                  </div>
+                </div>
+                {/* The drive, drawn over the field it produced: the
+                    electron's trajectory or the dipole and its axis. Purely a
+                    display switch -- the overlay is built from the payload
+                    that is already in hand, so nothing is recomputed either
+                    way. On by default, because a field map without its source
+                    leaves you guessing where the light came from. */}
+                <label class="efd-chart-check efd-obs-only" data-obs-for="nearfield" hidden>
+                  <input type="checkbox" id="efd-nf-source" checked>
+                  <span>Source</span>
+                </label>
+                {/* TWO ways to see the same modes, each with its own switch,
+                    because they are two different calculations and the point of
+                    the panel is to compare them. Level 3 reads the ridges off
+                    this map; Level 2 root-finds the bands without ever seeing
+                    it. The map's own tracks are on by default -- they come free
+                    with the run that drew the map. The Level 2 bands are off:
+                    the first tick costs a second calculation.
+
+                    "beta = 0" is in the label, not in a footnote, because the
+                    bands are ALWAYS solved with drift off -- with drift, eta is
+                    a tensor and a Level 2 band spectrum does not exist. At
+                    beta = 0 the label is merely redundant; at beta != 0 it is
+                    the whole caveat, and a label that is true at one setting
+                    and silent at the other is the one that misleads. */}
+                <label class="efd-chart-check efd-obs-only" data-obs-for="ldos" hidden>
+                  <input type="checkbox" id="efd-ldos-peaks" checked>
+                  <span>Mode dispersion LDOS</span>
+                </label>
+                <label class="efd-chart-check efd-obs-only" data-obs-for="ldos" hidden>
+                  <input type="checkbox" id="efd-ldos-bands">
+                  <span>Mode dispersion &beta; = 0</span>
+                </label>
+                {/* The loss has two faces and they come out of one run:
+                    Gamma(w) is the integral over q of Gamma(q, w), so neither
+                    needs its own button in the parameters. */}
+                <div class="efd-chart-pick efd-obs-only" data-obs-for="eels" hidden>
+                  <div class="plot-tabs plot-tabs--toolbar" id="efd-eels-pick" role="radiogroup" aria-label="Which face of the loss to show">
+                    <button class="plot-tab active" type="button" data-eels="spectrum" role="radio" aria-checked="true">&Gamma;(&omega;)</button>
+                    <button class="plot-tab" type="button" data-eels="map" role="radio" aria-checked="false">&Gamma;(q, &omega;)</button>
+                  </div>
+                </div>
+                <div
+                  class="efd-chart-pick efd-obs-only"
+                  data-obs-for="nonlinear"
+                  hidden
+                >
+                  <div class="plot-tabs plot-tabs--toolbar" id="efd-nl-pick" role="radiogroup" aria-label="Which polarizability to show"></div>
+                </div>
+                {/* Only for the moduli. A single order draws Re and Im, which
+                    go negative, and a log axis drops every non-positive sample
+                    as unplottable -- so the switch hides there rather than
+                    offering a scale that would silently eat half the curve. */}
+                <div class="efd-chart-pick" id="efd-nl-scale-wrap" hidden>
+                  <div class="plot-tabs plot-tabs--toolbar" id="efd-nl-scale" role="radiogroup" aria-label="Vertical scale">
+                    <button class="plot-tab active" type="button" data-nlscale="log" role="radio" aria-checked="true">Log</button>
+                    <button class="plot-tab" type="button" data-nlscale="linear" role="radio" aria-checked="false">Linear</button>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="efd-chart-main"></canvas>
+                <div class="chart-tip" id="efd-chart-main-tip"></div>
+                {/* An empty chart is ambiguous: nothing computed yet, or a
+                    result that failed to draw? This says which. */}
+                <p class="efd-needs-run" id="efd-needs-run" hidden>
+                  Nothing computed for these settings yet &mdash; press <strong>Run</strong>.
+                </p>
+              </div>
+              <div class="chart-legend" id="efd-chart-main-legend"></div>
+            </div>
+
+            <!-- Hidden until something has been drawn into it. It used to
+                 open captioned "Sheet conductivity" over an empty canvas,
+                 before a single calculation had been run. -->
+            <div class="chart-block" id="efd-chart-aux-block" hidden>
+              <div class="chart-header"><span class="chart-title" id="efd-chart-aux-title">Sheet conductivity</span></div>
+              <div class="chart-wrap"><canvas id="efd-chart-aux"></canvas><div class="chart-tip" id="efd-chart-aux-tip"></div></div>
+              <div class="chart-legend" id="efd-chart-aux-legend"></div>
+            </div>
+
+            <!-- Every payload the solver returns carries a notes array, and all
+                 of it is shown. They are accuracy caveats, auto-tuning reports
+                 and captured library warnings; hiding them would turn a hedged
+                 number into a confident one. -->
+            <div class="efd-notes" id="efd-notes-block" hidden>
+              <ul id="efd-notes"></ul>
+            </div>
+
+            <div class="export-bar">
+              <span class="export-label">Export this result</span>
+              <button id="efd-dl-png" class="export-btn" type="button" title="Download the result chart as PNG">PNG</button>
+              <button id="efd-dl-csv" class="export-btn" type="button" title="Download the current result as CSV">CSV</button>
+              <button id="efd-dl-json" class="export-btn" type="button" title="Download the full solver payload, notes included">JSON</button>
+              {/* initPermalinks wires every [data-copy-link] on the page, so
+                  this needs no id and no handler of its own. It shares the
+                  settings, not the numbers: the URL carries the headline
+                  parameters, and the JSON above carries the result. */}
+              <button class="export-btn" type="button" data-copy-link title="Copy a link that restores these settings">Share</button>
+            </div>
+          </div>
+
+          <!-- The geometry is its own card with its own export bar: sharing a
+               drawing of the structure and sharing the result are different
+               acts, and one export bar serving both made it unclear which was
+               leaving the page. -->
+          <div class="chart-panel card efd-geometry-card">
+            <div class="chart-block">
+              <div class="chart-header">
+                <span class="chart-title">Geometry</span>
+                <button type="button" class="chart-tool-btn efd-enlarge-btn" id="efd-enlarge" title="Open a larger view of the geometry">
+                  Enlarge
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                </button>
+              </div>
+              <div class="chart-wrap efd-wrap--schematic"><canvas id="efd-schematic"></canvas></div>
+            </div>
+
+            <!-- The small number boxes describe the run: node count, what it
+                 will cost, which route the solver took, and the one number the
+                 current view is about. -->
+            {/* One row per ribbon, straight from the geometry payload, so it
+                follows every keystroke rather than the last run. Seven boxes
+                could only ever show the structure's aggregates -- a single
+                node count, a single dx -- which say nothing at all once the
+                ribbons differ from each other, and differing is the point of
+                having five. */}
+            <div class="efd-table-wrap">
+              {/* OUTSIDE the table. renderRibbonTable sets the table's own
+                  innerHTML, which would take a <caption> child with it -- and
+                  then setText had nothing to write to. */}
+              <div class="efd-table-caption" id="efd-table-caption">Ribbons</div>
+              <table class="efd-ribbon-table" id="efd-ribbon-table"></table>
+            </div>
+            {/* The three readouts that were never about the geometry: a cost,
+                a route and the result's headline. They keep their ids, so
+                everything that writes them is untouched. */}
+            <p class="efd-readout">
+              <span>Estimate <b id="efd-out-cost">&mdash;</b></span>
+              <span>Route <b id="efd-out-route">&mdash;</b></span>
+              <span>Headline <b id="efd-out-headline">&mdash;</b> <i id="efd-out-headline-unit"></i></span>
+            </p>
+
+            <div class="export-bar">
+              <span class="export-label">Export the geometry</span>
+              <button id="efd-geo-png" class="export-btn" type="button" title="Download the geometry drawing as PNG">PNG</button>
+              <button id="efd-geo-csv" class="export-btn" type="button" title="Download every node coordinate as CSV">CSV</button>
+            </div>
+          </div>
+
+          <div class="notes-card card">
+            <h4>Notes</h4>
+            <p class="theory-note">
+              <strong>One self-consistent problem.</strong> Every structure here is
+              a two-dimensional sheet whose induced charge responds to the total
+              potential, external plus induced. Discretising the sheet on
+              <span set:html={im('L')} /> nodes turns that into a linear system
+            </p>
+            <div class="note-eq" set:html={eq('\\vec\\phi = \\big[\\mathbb{1}-(\\mathcal{M}+\\bar{\\mathcal{M}})\\big]^{-1}\\vec\\phi^{\\,\\rm ext}, \\qquad \\mathcal{M}_{jj\'} = \\mathcal{V}^{(q)}_{jj\'}\\,\\mathcal{D}^{(q)}_{j\'}')} />
+            <p class="theory-note">
+              in which <span set:html={im('\\mathcal{V}^{(q)}')} /> is the Coulomb
+              kernel between node cells, <span set:html={im('\\mathcal{D}^{(q)}')} />
+              the finite-difference second derivative, and
+              <span set:html={im('\\bar{\\mathcal{M}}')} /> the reflected interaction
+              a layered substrate adds. All the material physics sits in one
+              dimensionless number,
+              <span set:html={im('\\eta(\\omega)=\\mathrm{i}\\sigma(\\omega)/\\omega W\\bar\\varepsilon')} />,
+              so the eigenvalues of the geometric operator are
+              <em>material-independent</em> and the resonances are wherever
+              <span set:html={im('\\eta(\\omega)=\\eta_j')} />. That is why
+              <strong>Modes</strong> and <strong>Dispersion</strong> are offered
+              under every excitation: they are properties of the structure, not of
+              how you drive it.
+            </p>
+
+            <h4>Drift is not a Doppler shift</h4>
+            <p class="theory-note">
+              A drift current is carried by a <em>skewed</em> Fermi&ndash;Dirac
+              distribution, and solving the Boltzmann equation on it gives an
+              anisotropic, nonlocal conductivity tensor &mdash; with
+              <span set:html={im('\\alpha = v_{\\rm F}Q/(\\omega+\\mathrm{i}\\gamma)')} />
+              and <span set:html={im('\\beta = v_{\\rm d}/v_{\\rm F}')} />,
+            </p>
+            <div class="note-eq" set:html={eq('\\sigma_\\parallel(Q)=\\frac{2\\sigma_\\omega}{(\\alpha+\\beta)^2}\\left(\\frac{1+\\alpha\\beta}{\\sqrt{1-\\alpha^2}}-\\sqrt{1-\\beta^2}\\right)')} />
+            <p class="theory-note">
+              Three things a frame shift would get wrong, and this does not: the
+              drift survives <span set:html={im('Q\\to 0')} />, so it renormalises
+              even the plane-wave response; the non-reciprocity lives in
+              <span set:html={im('(\\alpha+\\beta)^2')} /> and the
+              <span set:html={im('\\alpha\\beta')} /> cross term, so
+              <span set:html={im('q\\to-q')} /> is a symmetry only at
+              <span set:html={im('\\beta=0')} />; and
+              <span set:html={im('\\eta')} /> becomes a tensor, which is why
+              <strong>Dispersion</strong> refuses a drifted run and sends you to the
+              LDOS map &mdash; a single eigenvalue spectrum then has no resonance
+              condition to invert.
+            </p>
+
+            <h4>What the numbers mean</h4>
+            <ul>
+              <li>
+                The Dirac cone is electron&ndash;hole symmetric, so every
+                conductivity takes <span set:html={im('|E_{\\rm F}|')} /> and hole
+                doping gives exactly the electron-doped answer. Signed formulas
+                would return <span set:html={im('\\mathrm{Re}\\,\\sigma<0')} /> &mdash;
+                gain from a passive sheet.
+              </li>
+              <li>
+                Eigenvalues are <em>geometric</em>. The same
+                <span set:html={im('\\eta_j')} /> come out under any conductivity
+                convention, so they cannot be used to pin one. The tool hides the
+                operator's charge-neutrality null mode, whose
+                <span set:html={im('\\eta')} /> diverges; it is an artefact, not a
+                resonance.
+              </li>
+              <li>
+                The LDOS is in <strong>arbitrary units</strong>. Read peak positions
+                and relative weights.
+              </li>
+            </ul>
+
+            <PresetStrip presets={presets} />
+          </div>
+
+          <div class="references card">
+            <h4>References</h4>
+            <ul class="reference-list">
+              <li><span class="ref-index">[1]</span><span>T. P. Rasmussen, A. Rodr&iacute;guez Echarri, F. J. Garc&iacute;a de Abajo &amp; J. D. Cox, <em>Nonlocal and cascaded effects in nonlinear graphene nanoplasmonics</em>, Nanoscale <strong>15</strong>, 3150 (2023).</span></li>
+              <li><span class="ref-index">[2]</span><span>T. P. Rasmussen, A. Rodr&iacute;guez Echarri, J. D. Cox &amp; F. J. Garc&iacute;a de Abajo, <em>Generation of entangled waveguided photon pairs by free electrons</em>, Sci. Adv. <strong>10</strong>, eadn6312 (2024).</span></li>
+              <li><span class="ref-index">[3]</span><span>A. Rodr&iacute;guez Echarri, F. J. Garc&iacute;a de Abajo &amp; J. D. Cox, <em>Nonreciprocal plasmons in one-dimensional carbon nanostructures</em>, Nat. Commun. <strong>17</strong>, 1114 (2026), <a href="https://doi.org/10.1038/s41467-025-67872-5" target="_blank" rel="noopener">doi:10.1038/s41467-025-67872-5</a>.</span></li>
+              <li><span class="ref-index">[4]</span><span>Cox, Yu &amp; Garc&iacute;a de Abajo, Phys. Rev. B <strong>96</strong>, 045442 (2017) &mdash; the nonlinear sheet conductivities.</span></li>
+              <li><span class="ref-index">[5]</span><span>Yu, Cox, Garc&iacute;a de Abajo <em>et&nbsp;al.</em>, ACS Photonics <strong>4</strong>, 3106 (2017) &mdash; the coupled-ribbon geometry one example uses. The only evidence tying those parameters to that paper's Fig.&nbsp;5c is a comment in the reference code, so read the example as the parameters the reference attributes to it.</span></li>
+              <li><span class="ref-index">[6]</span><span>G. W. Hanson, <em>Dyadic Green's functions and guided surface waves for a surface conductivity model of graphene</em>, J. Appl. Phys. <strong>103</strong>, 064302 (2008) &mdash; the interband logarithm.</span></li>
+              <li><span class="ref-index">[7]</span><span>M. Jablan, H. Buljan &amp; M. Soljačić, <em>Plasmonics in graphene at infrared frequencies</em>, Phys. Rev. B <strong>80</strong>, 245435 (2009) &mdash; the 2D plasmon dispersion the sheet pole reproduces.</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Every field component at once, after the cylinder page's mode-field
+           dialog. The components share one symmetric scale so their relative
+           sizes are readable; |E| keeps its own, because it is positive. -->
+      <dialog class="efd-dialog efd-field-dialog" id="efd-field-dialog" aria-labelledby="efd-field-dialog-title">
+        <div class="efd-dialog__panel">
+          <div class="efd-dialog__header">
+            <div>
+              <h3 id="efd-field-dialog-title">Induced field, every component</h3>
+              <span class="efd-dialog__meta" id="efd-field-meta"></span>
+            </div>
+            <div class="efd-dialog__actions">
+              <button type="button" class="chart-tool-btn" id="efd-field-log" title="Toggle a log scale on |E|">Log |E|</button>
+              <button type="button" class="structure-dialog__close" id="efd-field-dialog-close" aria-label="Close the field view">&times;</button>
+            </div>
+          </div>
+          <div class="efd-field-grid">
+            <div class="field-tile" style="grid-area:rex"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>x</sub></span></div><canvas id="efd-f-ex-re" aria-label="Re Ex"></canvas></div>
+            <div class="field-tile" style="grid-area:rey"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>y</sub></span></div><canvas id="efd-f-ey-re" aria-label="Re Ey"></canvas></div>
+            <div class="field-tile" style="grid-area:rez"><div class="field-tile__header"><span class="field-tile__label">Re E<sub>z</sub></span></div><canvas id="efd-f-ez-re" aria-label="Re Ez"></canvas></div>
+            <div class="field-tile" style="grid-area:imx"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>x</sub></span></div><canvas id="efd-f-ex-im" aria-label="Im Ex"></canvas></div>
+            <div class="field-tile" style="grid-area:imy"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>y</sub></span></div><canvas id="efd-f-ey-im" aria-label="Im Ey"></canvas></div>
+            <div class="field-tile" style="grid-area:imz"><div class="field-tile__header"><span class="field-tile__label">Im E<sub>z</sub></span></div><canvas id="efd-f-ez-im" aria-label="Im Ez"></canvas></div>
+            <div class="field-tile" style="grid-area:mag"><div class="field-tile__header"><span class="field-tile__label">|E|</span></div><canvas id="efd-f-mag" aria-label="Field magnitude"></canvas></div>
+          </div>
+          <p class="efd-dialog__caption">
+            The induced field only, on an arbitrary common scale. Black marks the
+            ribbons; a dot marks a dipole and a dashed line an electron's path.
+          </p>
+        </div>
+      </dialog>
+
+      <!-- Enlarged geometry, following the dispersion dialog on the cylinder page. -->
+      <dialog class="efd-dialog" id="efd-schematic-dialog" aria-labelledby="efd-schematic-dialog-title">
+        <div class="efd-dialog__panel">
+          <div class="efd-dialog__header">
+            <h3 id="efd-schematic-dialog-title">Geometry</h3>
+            <button type="button" class="structure-dialog__close" id="efd-schematic-dialog-close" aria-label="Close the enlarged geometry">&times;</button>
+          </div>
+          <div class="efd-dialog__canvas-box"><canvas id="efd-schematic-large" aria-label="Geometry, enlarged"></canvas></div>
+          <p class="efd-dialog__caption" id="efd-schematic-caption">
+            Each ribbon is drawn as its line of discretisation nodes. The sheets are
+            two-dimensional and carry no thickness; the vertical axis is to the same
+            scale as the horizontal one.
+          </p>
+        </div>
+      </dialog>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .module-bar { --module-cols: 3; }
+  .excitation-param { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--bg-muted); }
+
+  /* The shared `.controls` rhythm is 1rem between every block, and a group
+     heading added its own 1rem on top of that -- so a Source heading sat 36px
+     from the control above it and the section ran far taller than it had any
+     content for. Scoped to this page; lab.css keeps its own spacing for the
+     labs that want it. */
+  .controls { gap: 0.7rem; }
+  .efd-group-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 0.5rem 0 0.1rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--bg-muted);
+  }
+  .efd-sub-title {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin-bottom: 0.2rem;
+  }
+  /* One block per ribbon, as a card rather than a left rule: each now holds
+     two sub-sections (Geometry, Material) and a bare rule did not contain them
+     visibly enough to read as one ribbon. Shaped after the heterostructure
+     lab's .layer-row so the two pages read alike. */
+  /* A flex column with a gap, not a bare block. As a block the card had NO
+     rhythm of its own: two consecutive .param rows sat flush at 0px, so the
+     gamma/beta/T labels touched the E_F slider above them, while the gaps that
+     did exist came from the sub-titles' margins and ran 3px / 5px / 8px with
+     no pattern. One gap for every row, and a bigger step above a section
+     heading than below it, so a heading reads as belonging to what follows. */
+  .efd-ribbon-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+    padding: 0.45rem var(--space-sm) 0.55rem;
+    margin-bottom: var(--space-sm);
+  }
+  /* Geometry on the left, "Ribbon N" on the right, one line. */
+  .efd-ribbon-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+  .efd-ribbon-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    white-space: nowrap;
+  }
+  .efd-ribbon-group .efd-sub-title {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    /* 0.35rem of gap + this = the step before a heading; the gap alone is the
+       step after it. Shorthand on purpose: it also clears the base rule's
+       margin-bottom, which the gap now provides. */
+    margin: 0.25rem 0 0;
+  }
+  .efd-ribbon-head .efd-sub-title { margin: 0; }
+
+  /* The count is one short value, so it belongs beside its label rather than
+     under it; .param-select is width:100% and would otherwise span the column. */
+  .efd-count-row { margin-bottom: var(--space-xs); }
+  .efd-count-select { width: auto; min-width: 5rem; }
+
+  /* A substrate stack, borrowed from the heterostructure lab. The rows are
+     injected with innerHTML, so they carry no Astro scope attribute and every
+     class used inside one must ALSO exist as :global() or it styles nothing. */
+  /* In the range block's header, beside the numbers it describes. */
+  .efd-axis-pick { display: flex; align-items: center; }
+  .efd-axis-pick[hidden] { display: none; }
+
+  /* electron.astro's .sp-range, in this page's own tokens: a header carrying
+     the quantity and its axis toggle, then "min to max" on one line. */
+  /* Centred over the empty plot area, and never in the way of a drawn one:
+     it only ever shows while the canvas is blank. */
+  .efd-needs-run {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0 var(--space-md);
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .efd-needs-run[hidden] { display: none; }
+
+  .efd-range { display: flex; flex-direction: column; gap: 0.3rem; }
+  /* .param and .efd-range are both display:flex, author rules, so each needs
+     its own [hidden] restated -- the UA rule loses to both. */
+  .efd-e-grid[hidden] { display: none; }
+  .efd-range__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .efd-range__head > label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  .efd-range__row { display: flex; align-items: center; gap: 0.4rem; }
+  .efd-range__row > .efd-rnum { flex: 1 1 0; width: auto; min-width: 0; }
+  .efd-range__dash { font-size: 0.72rem; color: var(--text-muted); }
+
+  /* The map's energy, beside the map. margin-left:auto pushes it to the far end
+     of the toolbar, as .angular-controls does on the Mie page. */
+  /* `flex: 0 1 auto`, not `1 1 14rem`. Growing to fill handed every spare
+     pixel to the slider, which ran most of the toolbar's width while "E =" was
+     squeezed hard enough to break across two lines. The box takes what it
+     needs and `margin-left: auto` still puts it at the far end. */
+  .efd-nf-energy-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  /* The symbols are the part that must never be squeezed: they are two or
+     three characters and they carry the units. */
+  .efd-nf-energy-box > label,
+  .efd-nf-energy-box > span { flex: 0 0 auto; white-space: nowrap; }
+  /* Same automatic-minimum trap as .efd-slider-num above: without min-width 0
+     the number box cannot shrink below its 20-character intrinsic size. */
+  .efd-nf-energy-box > .param-number { flex: 0 0 4rem; width: 4rem; min-width: 0; }
+  .efd-nf-energy-box > .efd-nf-energy-slider {
+    flex: 0 1 9rem;
+    width: 9rem;
+    min-width: 4rem;
+    margin: 0;
+  }
+  .efd-nf-energy-box > .efd-nf-lambda { flex: 0 0 4.6rem; width: 4.6rem; min-width: 0; }
+  #efd-chart-aux-block[hidden] { display: none; }
+
+  .efd-layer-editor { display: flex; flex-direction: column; gap: var(--space-xs); }
+  .efd-stack[hidden], .efd-layer-editor[hidden] { display: none; }
+  :global(.efd-layer-row) {
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-sm);
+    padding: var(--space-xs) var(--space-sm);
+  }
+  :global(.efd-layer-chip) {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+  }
+  /* `minmax(0, 1fr)`, not `1fr`. A bare `1fr` is `minmax(auto, 1fr)`, and its
+     auto floor is the content's minimum -- which for `.param-number`'s fixed
+     5rem is 80px. Three of those plus the gaps came to 248px inside a 216px
+     card, so the tracks were forced wide, the row overflowed by 24px and the
+     last permittivity box ran under the border. The same automatic-minimum
+     trap as .efd-param-pair and .efd-param-trio, which were fixed and this
+     was not. */
+  :global(.efd-layer-fields) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs);
+  }
+  :global(.efd-layer-fields > label) { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  :global(.efd-layer-fields > label > .param-number) { width: 100%; min-width: 0; }
+  :global(.efd-layer-fields > label > span) {
+    font-size: 0.6875rem;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+
+  /* Two short numeric fields on one row: the parameter list is long, and a
+     stacked label-per-row layout pushed the Run button off a laptop screen. */
+  .efd-param-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
+  /* Three short numbers across a 216px card. `align-items: end` is what keeps
+     the three boxes level when one label wraps -- "beta = v_d/v_F" does, and a
+     fixed min-height on the labels would only move the problem to the next
+     label that is a line longer. Same trick as lab.css's .mini-row. */
+  .efd-param-trio {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs);
+    align-items: end;
+  }
+  .efd-param-pair > label,
+  .efd-param-trio > label { display: flex; flex-direction: column; gap: 0.2rem; }
+  .efd-param-pair > label > span,
+  .efd-param-trio > label > span { font-size: 0.6875rem; color: var(--text-soft); font-weight: 600; }
+  /* .param-number is a fixed 5rem, which overflows a third of this card. */
+  .efd-param-pair > label > .param-number,
+  .efd-param-trio > label > .param-number { width: 100%; }
+  .efd-param-pair[hidden], .efd-param-trio[hidden] { display: none; }
+
+  /* Label, number and slider on one line, after the graphene calculator's
+     .gr-ef-field. `.param` is a flex COLUMN, so without the direction here the
+     number's flex basis resolves down the CROSS axis: the box comes out 3.2rem
+     tall and full width with the slider stranded beneath it. materials.astro
+     documents the same trap for `.field.gr-ef-field`. */
+  .param.efd-slider-row { flex-direction: row; align-items: center; gap: 0.4rem; }
+  /* A fixed basis rather than auto, so "W (nm)" and "E_F (eV)" put their
+     numbers in the same column and the two rows read as a pair. */
+  .efd-slider-row > label {
+    flex: 0 0 3.4rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+  /* `min-width: 0` is load-bearing. A flex item's automatic minimum size is its
+     min-content size, and an <input> with no `size` attribute reports 20
+     characters -- 205px here. With flex-shrink 0 that minimum beat the 3.2rem
+     basis outright: the box came out 205px wide and pushed itself and the
+     slider 71px past the edge of the card. */
+  /* 3.9rem, not 3.2: E_F takes a minus sign, and "-1.25" was clipped. The
+     slider is the flexible item, so widening this narrows that. */
+  .efd-slider-row > .efd-slider-num { flex: 0 0 3.9rem; width: 3.9rem; min-width: 0; }
+  /* The native range with accent-color, which is what the graphene calculator
+     uses and what .param-slider is not: accent-color fills the track to the
+     left of the thumb, so the control shows its value. The flat 6px
+     .param-slider bar drew the same grey line at W = 10 as at W = 200, and its
+     16px thumb overhung a 6px track into the row below. */
+  .efd-slider-row > .gr-slider { flex: 1 1 auto; min-width: 2.5rem; margin: 0; }
+
+  /* Derived, not entered: dashed and muted, with .param-number's metrics so
+     the two cells of the Discretization row are the same height. */
+  .efd-derived {
+    display: block;
+    width: 100%;
+    padding: 0.16rem 0.38rem;
+    border: 1px dashed var(--bg-muted);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: var(--font);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-soft);
+    text-align: right;
+    cursor: default;
+  }
+  /* The rule above gives every label in a pair a display of its own, which
+     beats the UA's `[hidden] { display: none }` — so hiding the eps-below field
+     by attribute does nothing without this. Same trap as .param. */
+  .efd-param-pair > label[hidden] { display: none; }
+
+  /* The top band repeats .widget-layout's own grid, so Excitation sits exactly
+     over the parameters column and Observable exactly over the results one.
+     Copying the track sizes rather than inventing them keeps the two aligned if
+     --sidebar-w is ever retuned. */
+  .efd-topbar {
+    display: grid;
+    grid-template-columns: var(--sidebar-w, 300px) minmax(0, 1fr);
+    gap: var(--space-lg);
+    align-items: end;
+    margin-bottom: var(--space-md);
+  }
+  /* Deliberately NOT .excitation-bar: that shared class is capped at 300px,
+     which is right for a single column of tabs over the parameters and wrong
+     here, where the band spans both columns. */
+
+  /* Eight observables is more than one row holds on a laptop, so the tabs wrap
+     rather than scrolling horizontally. */
+  .efd-obs-tabs { flex-wrap: wrap; }
+
+  /* lab.css gives .param (and the toolbars) a display of their own, and an
+     author display rule beats the UA's `[hidden] { display: none }`. Hiding one
+     by attribute therefore does nothing at all unless this is here — which is
+     how the dipole axis stayed on screen under a plane wave. */
+  .param[hidden],
+  .chart-toolbar[hidden],
+  .chart-block[hidden],
+  .export-bar[hidden],
+  .efd-obs-only[hidden],
+  .efd-param-pair[hidden],
+  .efd-param-trio[hidden],
+  .efd-stack[hidden],
+  .efd-ribbon-group[hidden] { display: none; }
+
+  /* In the chart header, beside the title, like the axis pick in the range
+     header. .chart-header is already a space-between flex row. */
+  .efd-chart-pick { display: flex; align-items: center; }
+  .efd-chart-pick[hidden] { display: none; }
+  .efd-chart-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .efd-chart-check[hidden] { display: none; }
+  .efd-chart-check input { accent-color: var(--primary); cursor: pointer; margin: 0; }
+
+  .efd-nf-toolbar { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
+  .efd-nf-toolbar .toolbar-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .efd-nf-toolbar .param-select { width: auto; min-width: 7rem; }
+  /* No `margin-left: auto`. It was there to push the only trailing button to
+     the far end; now the energy box owns that job, and on a toolbar narrow
+     enough to wrap, auto handed every pixel of line one's slack to this button
+     and flung it away from the Log/Linear pill it is meant to sit beside. */
+  .efd-nf-all { flex: 0 0 auto; }
+
+  /* lab.css gives .plot-tabs `display: flex`, an author rule, which beats the
+     UA's `[hidden] { display: none }` -- so `scale.hidden = true` for a signed
+     component never hid anything, and the page offered a Log/Linear choice
+     that drawNearFieldInto ignores. Third time this page has hit this trap;
+     the other two are .param and .efd-param-pair > label. */
+  .plot-tabs[hidden] { display: none; }
+
+  /* Defined in mie-scattering.astro and electron.astro, each inside its own
+     scoped block, so the class did nothing here and both toolbar pills were
+     rendering at the full-size .plot-tabs metrics. Same two lines as theirs. */
+  .plot-tabs--toolbar { padding: 2px; }
+  /* :global on the child. The nonlinear menu's buttons are injected, so they
+     carry no Astro scope attribute, and a scoped descendant selector would
+     style the near-field pills and skip these. */
+  .plot-tabs--toolbar :global(.plot-tab) { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
+
+  .efd-geometry-card { gap: var(--space-sm); }
+
+  .efd-dialog__actions { display: inline-flex; align-items: center; gap: var(--space-xs); }
+  .efd-dialog__meta { font-size: 0.75rem; color: var(--text-soft); }
+  .efd-field-dialog .efd-dialog__panel { width: min(1180px, 95vw); }
+  .efd-field-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "rex rey rez"
+      "imx imy imz"
+      ".   mag .";
+    gap: var(--space-sm);
+    align-items: start;
+  }
+  .efd-field-grid .field-tile canvas { width: 100%; aspect-ratio: 1.6 / 1; height: auto; display: block; }
+  .efd-field-grid .field-tile__header { margin-bottom: 0.15rem; }
+  .efd-field-grid .field-tile__label { font-size: 0.6875rem; font-weight: 700; color: var(--text-soft); }
+  @media (max-width: 820px) {
+    .efd-field-grid {
+      grid-template-columns: 1fr;
+      grid-template-areas: "rex" "imx" "rey" "imy" "rez" "imz" "mag";
+    }
+  }
+  .efd-obs-tabs .plot-tab[hidden] { display: none; }
+  .efd-src-note { font-size: 0.6875rem; line-height: 1.5; color: var(--text-soft); margin: 0; }
+
+  /* `.params-head` is styled only inside mie-scattering's scoped block, so on
+     this page it was a plain div until now. These two rules are what make the
+     Run button sit beside the heading rather than under it. */
+  .params-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .params-head h3 { margin: 0; }
+
+  .efd-run-btn { flex: 0 0 auto; font-weight: 700; }
+  .efd-run-btn[disabled] { opacity: 0.55; cursor: progress; }
+
+  /* "The numbers on screen are not the numbers you have dialled in." The busy
+     half of this is already the card's spectrum rim; only staleness was
+     missing, and the label cannot carry it because refreshLive rewrites the
+     label wholesale on every keystroke. So it lives on a class. */
+  .efd-run-btn.is-stale {
+    border-color: var(--warning);
+    background: var(--warning-soft);
+    color: var(--warning-ink);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.16);
+  }
+  .efd-run-btn.is-stale:hover { border-color: var(--warning); color: var(--warning-ink); }
+  /* The dark block overrides neither --warning-soft nor --warning-ink, so a
+     cream fill would stay cream on a dark card. */
+  :global([data-theme="dark"]) .efd-run-btn.is-stale {
+    background: rgba(217, 119, 6, 0.16);
+    color: var(--amber-pale);
+  }
+
+  .efd-enlarge-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; }
+
+  /* The schematic is a geometry drawing, not a plot, so it wants a wider,
+     shorter frame than the default chart aspect. */
+  .efd-wrap--schematic { --chart-aspect: 3.2; }
+  /* Seven of them now that the geometry caption moved in here, and the shared
+     four-column grid wrapped them onto two rows of full-size boxes -- which
+     took more height under the drawing than the drawing itself. One row, and
+     the boxes trimmed to earn it: the label and unit drop a step, the value
+     comes down from 1.2rem, and the padding halves. */
+  /* The rows are injected, so every selector that has to reach inside is
+     :global() -- the scoped form would match the table and skip its contents,
+     which is the trap this page has hit four times now. */
+  .efd-table-wrap { margin-top: var(--space-sm); overflow-x: auto; }
+  .efd-ribbon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .efd-table-caption {
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding-bottom: 0.3rem;
+  }
+  :global(.efd-ribbon-table th),
+  :global(.efd-ribbon-table td) {
+    padding: 0.3rem 0.5rem;
+    text-align: right;
+    border-bottom: 1px solid var(--bg-muted);
+    white-space: nowrap;
+  }
+  :global(.efd-ribbon-table th) {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom-color: var(--text-muted);
+  }
+  :global(.efd-ribbon-table th:first-child),
+  :global(.efd-ribbon-table td:first-child) { text-align: left; font-weight: 700; color: var(--text); }
+  :global(.efd-ribbon-table td) { color: var(--primary); font-weight: 650; }
+  :global(.efd-ribbon-table tr:last-child td) { border-bottom: none; }
+
+  .efd-readout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin: var(--space-sm) 0 0;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+  .efd-readout b { color: var(--primary); font-weight: 750; font-variant-numeric: tabular-nums; }
+  .efd-readout i { font-style: normal; }
+
+  .efd-boot { display: flex; flex-direction: column; gap: 0.4rem; padding: var(--space-sm) 0 var(--space-md); }
+  .efd-boot[hidden] { display: none; }
+  .efd-boot__bar { height: 4px; border-radius: var(--radius-full); background: var(--bg-muted); overflow: hidden; }
+  .efd-boot__fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s ease; }
+  .efd-boot__text { font-size: 0.75rem; color: var(--text-muted); }
+
+  .efd-notes { margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--bg-muted); }
+  .efd-notes[hidden] { display: none; }
+  .efd-notes ul { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+  /* :global() throughout this block. showNotes builds these <li> elements with
+     createElement, so they carry no data-astro-cid attribute and a scoped
+     selector could never match one -- every note has been rendering at
+     inherited body metrics. Same for the error box, which showError creates. */
+  :global(.efd-notes li) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-soft);
+    padding-left: 0.85rem;
+    position: relative;
+  }
+  :global(.efd-notes li::before) { content: '·'; position: absolute; left: 0.2rem; font-weight: 800; }
+  :global(.efd-notes li.efd-note--warn) { color: var(--warning); }
+
+  :global(.efd-error) {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  :global(.efd-error[hidden]) { display: none; }
+
+  /* Enlarged geometry dialog, after the cylinder page's dispersion dialog. */
+  .efd-dialog { border: none; padding: 0; background: transparent; max-width: 96vw; max-height: 94vh; }
+  .efd-dialog::backdrop { background: rgba(15, 16, 32, 0.62); }
+  .efd-dialog__panel {
+    width: min(1180px, 94vw);
+    background: var(--bg);
+    border: 1px solid var(--bg-muted);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .efd-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+  .efd-dialog__header h3 { margin: 0; font-size: 1rem; }
+  .efd-dialog__canvas-box { width: 100%; aspect-ratio: 2.4; position: relative; }
+  .efd-dialog__canvas-box canvas { width: 100%; height: 100%; display: block; }
+  .efd-dialog__caption { font-size: 0.75rem; color: var(--text-soft); line-height: 1.5; margin: 0; }
+
+  /* KaTeX. Injected markup carries no Astro scope hash, so these have to be
+     global to reach it at all. The display equations are sized down a little:
+     at full size the drift tensor overflowed its column and grew a horizontal
+     scrollbar, and a couple of points is all it needed to fit. */
+  .notes-card :global(.katex) { color: var(--text); font-size: 1em; }
+  /* MEASURE THESE WITH A CLONE, not with getBoundingClientRect on the .katex
+     node. KaTeX's .katex and .katex-html compute to `display: block` here, so
+     they report the CONTAINER's width whatever the formula's own width is --
+     which made the drift tensor look 98% full at 770px when a clone measured
+     in an unconstrained probe puts it at 353px, 46%. Three separate probes
+     said "no overflow" for the same reason before that one said anything true.
+     So the size is left alone at desktop: nothing was measured to be tight.
+     The extra margin and padding are for the vertical crowding against the
+     prose, and the step down below 900px is for the narrow card, where the
+     slack is real but smaller. `overflow-x: auto` stays as the net. */
+  .note-eq { margin: var(--space-md) 0; padding: 0.25rem 0; overflow-x: auto; }
+  .note-eq :global(.katex-display) { margin: 0; padding: 0.15rem 0; }
+  .note-eq :global(.katex-display) > :global(.katex) { text-align: left; font-size: 0.94em; }
+  @media (max-width: 900px) {
+    .note-eq :global(.katex-display) > :global(.katex) { font-size: 0.84em; }
+  }
+  dd :global(.katex) { color: inherit; }
+
+  @media (max-width: 768px) {
+    .widget-layout { grid-template-columns: 1fr; }
+    .efd-topbar { grid-template-columns: 1fr; }
+    .module-bar { --module-cols: 1; }
+    .efd-param-pair, .efd-param-trio { grid-template-columns: 1fr; }
+    .efd-stats { --stats-cols: 2; }
+  }
+</style>
+
+<script>
+  import { initElectrostaticsFd } from '../../scripts/electrostatics-fd/main';
+  import { initPermalinks } from '../../lib/permalink';
+
+  initElectrostaticsFd();
+
+  // THE WHOLE PARAMETER BOX, so that opening a shared link and pressing Run
+  // reproduces the figure. Only what was CHANGED is written -- initPermalinks
+  // drops any field sitting at its own default -- so the common link is still
+  // a handful of parameters, and a fully dialled-in one is long because it
+  // has to be. Mirrors are left out on purpose: the beam energy in keV and the
+  // wavelength beside the near-field energy are second faces of v/c and of
+  // that energy, and carrying both invites the two to disagree.
+  //
+  // ORDER IS THE CONTRACT. The restore loop applies these in sequence, so a
+  // field that decides how many of the later ones exist, or what their
+  // numbers mean, is listed before them.
+  const link: Record<string, string> = {
+    // The counts first: they build the ribbon cards and the layer rows.
+    n: 'efd-nribbons', nl: 'efd-nlayers',
+    // Then the unit, before any energy lands in a box that it governs.
+    u: 'efd-xunit',
+  };
+  // Every ribbon, not just the first two: five cards of eight numbers is what
+  // the box actually holds, and a link that carried three of them was a link
+  // that quietly changed the structure.
+  for (let j = 0; j < 5; j += 1) {
+    link[`w${j}`] = `efd-w-${j}`;
+    link[`x${j}`] = `efd-x0-${j}`;
+    link[`z${j}`] = `efd-z0-${j}`;
+    link[`l${j}`] = `efd-l-${j}`;
+    link[`ef${j}`] = `efd-ef-${j}`;
+    link[`g${j}`] = `efd-gamma-${j}`;
+    link[`b${j}`] = `efd-beta-${j}`;
+    link[`t${j}`] = `efd-temp-${j}`;
+  }
+  for (let i = 0; i < 8; i += 1) {
+    link[`ld${i}`] = `efd-lay-${i}-d`;
+    link[`lp${i}`] = `efd-lay-${i}-par`;
+    link[`lq${i}`] = `efd-lay-${i}-perp`;
+  }
+  Object.assign(link, {
+    // Environment, grids, and how many of each thing to solve for.
+    epsa: 'efd-eps-a', epsb: 'efd-eps-b', eps: 'efd-sub-eps',
+    emin: 'efd-e-min', emax: 'efd-e-max', en: 'efd-e-n',
+    q: 'efd-q', qmin: 'efd-q-min', qmax: 'efd-q-max', qn: 'efd-q-npos',
+    nm: 'efd-nmodes', nb: 'efd-nbands', np: 'efd-npeaks',
+    // The drive's own parameters, and the near field's.
+    dx: 'efd-dip-x', dz: 'efd-dip-z', dp: 'efd-dip-p',
+    zb: 'efd-b', vc: 'efd-vc',
+    nfe: 'efd-nf-energy', nfx: 'efd-nf-nx', nfz: 'efd-nf-nz',
+    nfc: 'efd-nf-comp', nfs: 'efd-nf-source',
+    // The LDOS map's own peak tracks: display only, so restoring it costs a
+    // redraw. Its neighbour `efd-ldos-bands` is deliberately NOT here -- that
+    // box starts a second calculation when it is ticked, and a link that
+    // silently launched a solve on load is a different kind of thing from a
+    // link that remembers what you were looking at.
+    lpk: 'efd-ldos-peaks',
+    // LAST, and `src` before `view`: the drive governs which observables
+    // exist, so it has to be in force before the view lands, and both want
+    // the restored numbers already in the boxes when they trigger a redraw.
+    src: 'efd-src', view: 'efd-view',
+  });
+  initPermalinks(link);
+</script>

@@ -546,6 +546,19 @@
   font-weight: 500;
   color: var(--text-soft);
 }
+/* A legend whose label is a SENTENCE, not a name: the Electrostatics-FD band
+   overlay has to say which bands it drew, and under drift that takes a clause.
+   Flex lays a row of short labels out beautifully and ruins one long one --
+   the text becomes a single flex item that squeezes the swatch to a few pixels
+   and refuses to wrap under itself. So this variant steps out of flex and back
+   into ordinary text flow, where an inline-block swatch leads a wrapping
+   paragraph. Opt-in: every other legend keeps the row. */
+.chart-legend--note span { display: block; max-width: 64ch; line-height: 1.5; }
+.chart-legend--note i {
+  display: inline-block;
+  vertical-align: 0.15em;
+  margin-right: 0.45rem;
+}
 .chart-panel { padding: var(--space-md); display: flex; flex-direction: column; gap: 0; }
 .chart-status { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .chart-title { display: block; font-size: 0.875rem; font-weight: 700; color: var(--text); }

@@ -14,6 +14,7 @@
     "lint:css": "stylelint \"src/**/*.{css,astro}\"",
     "lint:css:fix": "stylelint \"src/**/*.{css,astro}\" --fix",
     "check": "astro check",
+    "check:wheel": "py -3.11 scripts/build_efd_wheel.py --check",
     "visual:snap": "node scripts/visual-snapshot.mjs",
     "visual:diff": "node scripts/visual-diff.mjs"
   },
