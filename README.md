@@ -8,7 +8,7 @@ If these tools support published work, please cite them — see [Citing](#citing
 
 ## What is in it
 
-Seventeen tools, grouped the way the site groups them.
+Eighteen tools, grouped the way the site groups them.
 
 ### Calculators — closed-form, answer-as-you-type
 
@@ -41,6 +41,7 @@ Seventeen tools, grouped the way the site groups them.
 | [RCWA](https://nanophotonicslab.com/lab/rcwa/) | rigorous coupled-wave analysis of 1D gratings, via `inkstone` in Pyodide |
 | [Beam Propagation](https://nanophotonicslab.com/lab/bpm/) | scalar paraxial BPM with a Crank–Nicolson scheme |
 | [Imaging](https://nanophotonicslab.com/lab/imaging/) | simulated fluorescence microscopy with exact ground truth: diffusion, tracking, MSD recovery |
+| [Electrostatics-FD](https://nanophotonicslab.com/lab/electrostatics-fd/) | quasistatic response of coupled 2D nanostructures: modes, bands, spectra, EELS and LDOS, in Python via Pyodide |
 
 Plus a [Methods Assistant](https://nanophotonicslab.com/lab/assistant/), semantic search over
 computational-photonics notes, run locally in the browser.
@@ -56,7 +57,7 @@ that calculation back exactly.
 - **Vanilla TypeScript** in each tool's scoped `<script>` — no frontend framework
 - **Canvas 2D** for all plotting — no charting library
 - **KaTeX** for maths
-- **Pyodide** (Python → WebAssembly) for the BEM and RCWA solvers, lazy-loaded on first use
+- **Pyodide** (Python → WebAssembly) for the BEM, RCWA and Electrostatics-FD solvers, lazy-loaded on first use
 - **three.js** for the BEM mesh viewport only
 - **`@huggingface/transformers`** for in-browser semantic retrieval, lazy-loaded
 
@@ -83,9 +84,9 @@ src/lib/          physics kernels — pure TypeScript, unit-tested
 src/pages/lab/    one page per tool; interactive logic in a scoped script
 src/data/         optical constants and material tables
 src/components/   shared UI (ModelInfo, ToolMeta, ParamsDrawer, …)
-public/wasm/      the BEM wheel served to Pyodide
+public/wasm/      the BEM and Electrostatics-FD wheels served to Pyodide
 public/data/      precomputed embeddings for the methods assistant
-scripts/          offline Python pipeline (not deployed)
+scripts/          offline Python: the embeddings pipeline, and the Electrostatics-FD library
 docs/             provenance notes
 benchmarks/       validation notebooks
 ```
@@ -99,9 +100,11 @@ encode analytical limits (Rayleigh scaling, the bare-dipole limit far from a sph
 agreement with published reference tables, parity against PyRAMIDS and DeepTrack2, and a
 regression test for every numerical defect found in past audits.
 
-The two Pyodide solvers are not covered by this suite, which is TypeScript-only. The BEM
+The three Pyodide solvers are not covered by this suite, which is TypeScript-only. The BEM
 solver is instead validated end-to-end against exact Mie theory; RCWA rests on the upstream
-validation of `inkstone`. Both are marked *Experimental* for that reason.
+validation of `inkstone`; Electrostatics-FD carries its own pytest suite, plus
+`npm run check:wheel`, which fails when the committed wheel no longer matches its sources.
+All three are marked *Experimental* for that reason.
 
 ## Methods assistant — offline pipeline
 

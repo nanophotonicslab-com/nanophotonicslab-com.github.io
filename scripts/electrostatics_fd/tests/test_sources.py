@@ -26,7 +26,7 @@ import pytest
 from scipy.integrate import quad
 from scipy.special import k0, k1
 
-# The package has no __init__.py (another agent owns any such file), so pytest's
+# The package may be imported without its __init__.py, so pytest's
 # rootdir insertion only puts tests/ on sys.path. Add the package directory and
 # its parent so `import sources` and `import units` resolve either way.
 _PKG_DIR = pathlib.Path(__file__).resolve().parents[1]

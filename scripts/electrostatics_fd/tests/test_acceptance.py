@@ -11,8 +11,8 @@ Provenance of the reference values
 ----------------------------------
 * eigenvalues -0.0687, -0.0184, -0.0107 and the dark mode near -0.0289, and the
   coupling ratios 0.2535 / 0.1453: project acceptance table (paper 406 /
-  paper 456 ribbon eigenmode expansion, reference MATLAB
-  ``GNR_phi_LDOS_anisotropic.m``).
+  paper 456 ribbon eigenmode expansion, against the reference
+  implementation).
 * mu(E_F = 0.5 eV, beta = 0.2, T = 300 K) = 0.4848 eV: MATLAB drift
   carrier-conservation reference, recorded in
   ``conductivity.drift_chemical_potential_numeric``.
@@ -87,7 +87,7 @@ def _why(name: str) -> str:
 needs_solver = pytest.mark.xfail(
     solver is None,
     reason=(
-        "solver.py (agent E) not importable: "
+        "solver.py not importable: "
         + _why("solver")
         + ". Expected: `class Ribbon(W_nm, x0_nm=0.0, z0_nm=0.0, EF_ev=0.5, "
         "gamma_ev=0.02, beta=0.0, L=None)` and `class RibbonSystem(ribbons, "
@@ -100,7 +100,7 @@ needs_solver = pytest.mark.xfail(
 needs_observables = pytest.mark.xfail(
     observables is None,
     reason=(
-        "observables.py (agent E) not importable: "
+        "observables.py not importable: "
         + _why("observables")
         + ". Expected: `dissymmetry(qs, Dq) -> float`."
     ),
@@ -451,7 +451,7 @@ def test_sigma_shg_1d_q0_equals_A_plus_B_plus_2C(gamma_ev: float, doping_sign: i
 def test_single_interface_reflection_is_fresnel_quasistatic(eps1: complex, eps2: complex) -> None:
     """Item 7a: a single interface gives r = (eps_1 - eps_2)/(eps_1 + eps_2) (rtol 1e-12).
 
-    Provenance: nanodisk manuscript SI S1B.  With two isotropic layers, no
+    Provenance: the layered-stack recursion.  With two isotropic layers, no
     sheet and ``layers[0].d_nm = 0`` the bottom-up recursion must terminate on
     the bare interface coefficient kappa, independent of Q.
     """
@@ -472,7 +472,7 @@ def test_single_interface_reflection_is_fresnel_quasistatic(eps1: complex, eps2:
 def test_vacuum_reflection_vanishes() -> None:
     """Item 7b: a vacuum "stack" reflects nothing, exactly.
 
-    Provenance: nanodisk manuscript SI S1B.  Two identical layers give
+    Provenance: the layered-stack recursion.  Two identical layers give
     kappa = 0, and a single layer has no interface at all; both must return a
     hard zero, not a small number, because kappa is a difference of identical
     quantities.
@@ -497,9 +497,9 @@ def test_vacuum_reflection_vanishes() -> None:
     reason="substrate.py not importable: " + _why("substrate"),
 )
 def test_perfect_mirror_reflection_tends_to_minus_one() -> None:
-    """Item 7c: eps_2 -> infinity gives r -> -1, with the sign the manuscript states.
+    """Item 7c: eps_2 -> infinity gives r -> -1, with the sign the recursion fixes.
 
-    Provenance: nanodisk manuscript SI S1B ("a perfect mirror gives r = -1").
+    Provenance: the layered-stack recursion -- a perfect mirror gives r = -1.
     Asserted as a rate, not just a limit: r + 1 must fall like 2/eps_2, so each
     factor-100 increase in eps_2 must shrink |r + 1| by ~100.
     """
@@ -638,8 +638,8 @@ def test_build_Vbar_zero_standoff_accuracy_floor_is_where_it_was_measured() -> N
         Qmax =  1e5, NQ = 200000             :  9.338e+00  (dQ = 0.5 >> q, aliased)
 
     i.e. a FLOOR at 7.24e-03 that refinement does not move, and worse than that
-    whenever dQ = Qmax/(NQ-1) exceeds |q| and aliases cos(Q_x dx).  Agent C
-    measured the same floor independently in tests/test_substrate.py and found
+    whenever dQ = Qmax/(NQ-1) exceeds |q| and aliases cos(Q_x dx).  The same
+    floor was measured independently in tests/test_substrate.py, which found
     Qmax = 1e5 with NQ = 2e6 -- 500x the work -- still only reaches ~5e-4;
     rtol 1e-6 there would need NQ ~ 1e8 or a Filon / Bessel-transform
     quadrature in place of trapz.  ``substrate.py`` documents the same ~1e-3

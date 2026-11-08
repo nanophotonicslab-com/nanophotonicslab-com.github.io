@@ -5,7 +5,7 @@ boundary-element/finite-difference scheme for zero-thickness ribbons that are
 infinite along ``y`` and carry a guided wave vector ``q``:
 
 * the **Coulomb operator** ``V`` -- paper 406 SI, reference implementation
-  ``set_V`` inside ``GNR_phi_LDOS_anisotropic.m``;
+  ``set_V``;
 * the **anisotropic differential operator** ``D`` -- paper 456 Eq. (19),
   reference implementation ``set_D``.
 
@@ -202,7 +202,7 @@ _STRUVE_SERIES_MAX = 4.0
 def struve_L(n: int, x: ArrayLike) -> np.ndarray:
     """Modified Struve function ``L_n(x)``, accurate for every ``x``.
 
-    Source: reference MATLAB ``GNR_phi_LDOS_anisotropic.m`` (paper 406 SI),
+    Source: the reference implementation (paper 406 SI),
     which tabulates the coefficient arrays ``p`` and evaluates
     ``StruveL(n, x) = (2/pi) * sum_k p[k] * x**k``.  Equivalent to the
     Abramowitz & Stegun 12.2.1 series for ``L_v``.  That 30-term series is used
@@ -608,8 +608,7 @@ def coulomb_V_entries(
 ) -> np.ndarray:
     """Coulomb-operator entries for one cell row, dispatching the three branches.
 
-    Source: paper 406 SI; reference implementation ``set_V`` inside
-    ``GNR_phi_LDOS_anisotropic.m``.
+    Source: paper 406 SI; reference implementation ``set_V``.
 
     Parameters
     ----------

@@ -82,7 +82,7 @@ pytestmark = pytest.mark.perf
 needs_operators = pytest.mark.xfail(
     operators is None,
     reason=(
-        "operators.py (agent B) not importable: "
+        "operators.py not importable: "
         + _why("operators")
         + ". Expected: build_V(q, W_j, W_jp, x_j, x_jp, z_j, z_jp, theta_j, "
         "theta_jp, h_jp) and build_V_toeplitz(q, W, x_off, z_off, theta, h)."
@@ -91,7 +91,7 @@ needs_operators = pytest.mark.xfail(
 needs_substrate = pytest.mark.xfail(
     substrate is None,
     reason=(
-        "substrate.py (agent C) not importable: "
+        "substrate.py not importable: "
         + _why("substrate")
         + ". Expected: Layer, reflection_coefficient(Q, E_ev, layers) and "
         "build_Vbar(..., r_of_Q, Qmax=None, NQ=4000)."
@@ -100,7 +100,7 @@ needs_substrate = pytest.mark.xfail(
 needs_solver = pytest.mark.xfail(
     solver is None,
     reason=(
-        "solver.py (agent E) not importable: "
+        "solver.py not importable: "
         + _why("solver")
         + ". Expected: Ribbon, RibbonSystem with solve_linear(q, E_ev, phi_ext) "
         "and sweep(qs, Es, phi_ext_fn, fast_path=True)."

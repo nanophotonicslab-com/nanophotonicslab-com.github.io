@@ -20,10 +20,10 @@ Reference values
   eps_b)``, derived here from the pole condition rather than quoted.
 * Level 2 linewidth closed form ``FWHM = gamma (E^2 + gamma^2) / E^2``, derived
   here from ``eta(E) = -A (E - i gamma) / (E (E^2 + gamma^2))``.
-* Reference MATLAB ``DispersionRelation_SurfacePlasmons_vd.m`` and
-  ``graphene_sigma1_Q_vd_intra.m``: reproduced inline (ATOMIC units, as written)
-  so that both of its slips -- the transverse/longitudinal component choice and
-  the eV/nm/atomic-unit mix in its kernel -- are measured, not asserted.
+* An exploratory sheet-dispersion kernel in ATOMIC units, reproduced inline so
+  that both of its differences from this module -- the transverse/longitudinal
+  component choice, and the eV/nm/atomic-unit mix in its kernel -- are measured
+  here rather than asserted.
 
 NOT TESTED ABSOLUTELY, ON PURPOSE: the magnitude of the Level 3 map.
 ``observables.induced_field_q`` carries an unresolved overall constant and its
@@ -88,7 +88,7 @@ def _imr_peak(f, lo, hi):
 
 
 def _matlab_sigma_au(EF_ev, gamma_ev, w_ev, Q_inv_nm, beta):
-    """``graphene_sigma1_Q_vd_intra.m`` transcribed literally: returns ATOMIC units.
+    """The drift intraband conductivity transcribed literally: ATOMIC units.
 
     Same constants as the .m file (they differ in the last digits from
     ``units.py``, which is part of what is being tested -- the .m file is the

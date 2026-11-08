@@ -21,7 +21,7 @@ Three kinds of test live here:
 
 Run with::
 
-    cd C:/Users/alvar/ALVARO/NPLab/nanophotonicslab-com.github.io
+    cd <repo root>
     py -3.11 -m pytest scripts/electrostatics_fd/tests/test_conductivity.py -q
 """
 
@@ -329,9 +329,9 @@ def test_finite_T_xi_has_the_exact_sommerfeld_coefficient():
     Dirac-cone carrier conservation gives
     ``mu = E_F [1 - (pi^2/6)(k_B T/E_F)^2 + O(T^4)]``.  Expanding the library's
     bracket for small xi gives ``mu ~ mu0 (1 - xi/2)``, so the xi coefficient
-    must be ``pi^2/3`` and no other constant will do.  The MATLAB reference's
-    ``graphene_sigma1_Q_T.m:61`` uses ``(log 16)^2 = 7.687``, which is 2.34x
-    the required value -- an operator-precedence slip on ``2 log(4)^2``.
+    must be ``pi^2/3`` and no other constant will do.  The alternative
+    reading ``(log 16)^2 = 7.687`` is 2.34x the required value -- an operator
+    precedence away from ``2 log(4)^2``.
     """
     EF = 0.5
     # extract the coefficient numerically in the degenerate limit

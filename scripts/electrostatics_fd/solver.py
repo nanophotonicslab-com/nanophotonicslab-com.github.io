@@ -12,7 +12,7 @@ Source equations
   Cox, Yu and Garcia de Abajo, Phys. Rev. B 96, 045442 (2017), Table S2
   (NPLab ``nl-graphene.ts`` RIBBON_ETA_J).
 * Drift-induced anisotropic conductivity: paper 456.
-* Coulomb and finite-difference operators: ``operators.py`` (agent B).
+* Coulomb and finite-difference operators: ``operators.py``.
 
 Physical derivation of the assembled system
 -------------------------------------------
@@ -57,8 +57,10 @@ CONTRACT DEVIATIONS AND CONCERNS -- read before trusting a number
 
 2. Signed q in the drift conductivity.  The contract's eta recipe calls
    ``graphene_drift_sigma(E, EF, gamma, abs(q), beta)``.  We pass the SIGNED q.
-   The drift enters as a Doppler shift omega -> omega - q v_drift, which is odd
-   in q; with ``abs(q)`` the whole response would be even in q for any beta, the
+   The drift tensor is ODD in q -- its non-reciprocity lives in (alpha+beta)^2
+   and in the alpha*beta cross term, NOT in any frame shift
+   omega -> omega - q v_drift -- so with ``abs(q)`` the whole response would
+   be even in q for any beta, the
    dissymmetry of paper 456 Eq. (2) would vanish identically, and the drift
    implementation could not be tested at all.  ``SIGNED_Q_IN_DRIFT_SIGMA``
    documents and controls this; set it to False to reproduce the contract

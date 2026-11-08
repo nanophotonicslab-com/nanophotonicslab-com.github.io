@@ -32,8 +32,8 @@ Source equations
 
   -- quasistatic limit of the Fresnel coefficient of a conducting sheet;
   reduces to ``1/(1 - i omega / (2 pi sigma |Q|))`` at ``eps_a = eps_b = 1``,
-  which is the kernel of the reference MATLAB
-  ``DispersionRelation_SurfacePlasmons_vd.m``, and to the quasistatic Fresnel
+  which is the kernel used by exploratory sheet-dispersion scripts, and to the
+  quasistatic Fresnel
   ``(eps_a - eps_b)/(eps_a + eps_b)`` of :func:`substrate.reflection_coefficient`
   at ``sigma = 0``.  Its pole is ``eps_a + eps_b + 4 pi i sigma Q / omega = 0``,
   i.e. ``sigma = i eps_bar omega / (2 pi |Q|)`` with
@@ -68,37 +68,36 @@ Source equations
 WHICH CONDUCTIVITY COMPONENT (settled)
 --------------------------------------
 Level 1 needs the LONGITUDINAL conductivity, i.e. the SECOND component returned
-by ``conductivity.graphene_drift_sigma`` (``sigma_par``, the MATLAB's ``sy``).
+by ``conductivity.graphene_drift_sigma`` (``sigma_par``).
 Expanding paper 456's conductivity at ``beta = 0`` and small ``alpha`` gives
 ``sigma/sigma_0 - 1 -> (1/4) alpha^2`` for the first component and
 ``(3/4) alpha^2`` for the second, which is the textbook semiclassical 2D Dirac
-transverse / longitudinal split.  The reference MATLAB
-``DispersionRelation_SurfacePlasmons_vd.m`` passes ``val(1)`` (transverse); that
-is a slip and is not reproduced here.  At its own parameters (``E_F = 1``,
-``gamma = 0.1``) the choice moves the ``Im r`` peak by 0.36 % at ``Q = 0.1``
-(0.535300 -> 0.537248 eV) and 1.10 % at ``Q = 0.3`` (0.933386 -> 0.943643 eV)
--- small enough to go unnoticed in an exploratory script.  Both numbers are
-remeasured by ``tests/test_dispersion.py``.
+transverse / longitudinal split.  Taking the FIRST component instead --
+transverse -- moves the ``Im r`` peak by 0.36 % at ``Q = 0.1``
+(0.535300 -> 0.537248 eV) and by 1.10 % at ``Q = 0.3``
+(0.933386 -> 0.943643 eV), at ``E_F = 1``, ``gamma = 0.1``: small enough to go
+unnoticed in an exploratory script, which is why it is pinned.  Both numbers
+are remeasured by ``tests/test_dispersion.py``.
 
-A SECOND, INDEPENDENT SLIP IN THAT SCRIPT (measured here, see the test file)
----------------------------------------------------------------------------
-``DispersionRelation_SurfacePlasmons_vd.m`` forms ``1 - 1i*W./(2*pi*sigma.*abs(Q))``
-with ``W`` in eV, ``Q`` in 1/nm and ``sigma`` in ATOMIC units, so the three are
-not in one unit system: the dimensionally correct combination is
+WHY THE ABSOLUTE POLE ENERGIES ARE NOT UNIVERSAL (measured here)
+----------------------------------------------------------------
+A kernel written as ``1 - 1i*W/(2*pi*sigma*|Q|)`` with ``W`` in eV, ``Q`` in
+1/nm and ``sigma`` in ATOMIC units mixes three unit systems: the dimensionally
+correct combination is
 ``omega_au/(sigma_au Q_au)``, and ``W/(sigma_au Q_nm)`` is larger than it by
-exactly ``au_eV * au_nm = e^2 = 1.439964`` eV nm.  The script's plasmon
-therefore sits a factor ``sqrt(e^2) = 1.19998`` too low in energy.  In the
-LOCAL-DRUDE limit that factor is exact: the script's kernel resolves to
+exactly ``au_eV * au_nm = e^2 = 1.439964`` eV nm, so such a kernel's plasmon
+sits a factor ``sqrt(e^2) = 1.19998`` too low in energy.  In the LOCAL-DRUDE
+limit that factor is exact: that kernel resolves to
 ``omega^2 = 2 E_F |Q|`` against the correct ``(hbar omega)^2 = 2 e^2 E_F |Q|``
 of :func:`sheet_plasmon_energy`, so the ratio is ``sqrt(e^2)`` identically
 (pinned to 1e-14 in the test file).  With the nonlocal conductivity the two
 poles sit at different energies and therefore at different ``alpha``, so the
-ratio is only approximately ``sqrt(e^2)``: the script's ``Im r`` peak is at
+ratio is only approximately ``sqrt(e^2)``: that kernel's ``Im r`` peak is at
 0.447882 eV at ``Q = 0.1`` where this module gives 0.537248 (ratio 1.1995), and
 at 0.791449 eV at ``Q = 0.3`` where this module gives 0.943643 (ratio 1.1923).
 This module works throughout in the library's eV-nm-fs units, in which the
-kernel is dimensionally consistent as written; it does NOT reproduce the
-MATLAB's absolute pole energies, by design.
+kernel is dimensionally consistent as written; it does NOT reproduce those
+absolute pole energies, by design.
 
 RANGE LIMIT ON THE LEVEL 1 <-> LEVEL 2 CROSS-CHECK
 --------------------------------------------------

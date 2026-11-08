@@ -4,4 +4,4 @@
 // buster on its URL. `public/sw.js` caches `.whl` cache-first by URL,
 // and the wheel's filename only carries the package version, so
 // without this a rebuilt wheel keeps the old cache entry forever.
-export const WHEEL_VERSION = '4756594eae5d';
+export const WHEEL_VERSION = '15e1e2625a2f';

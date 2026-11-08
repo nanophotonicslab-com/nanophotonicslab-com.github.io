@@ -5,7 +5,8 @@ Two public pieces of physics live here:
 1. ``reflection_coefficient`` -- the quasistatic (electrostatic) reflection
    coefficient r(Q, omega) of an arbitrary stack of uniaxially anisotropic
    layers, each optionally carrying a conducting sheet at its top interface.
-   Built by the bottom-up recursion of the nanodisk manuscript, SI section S1B.
+   Built by the bottom-up recursion for the quasistatic reflection
+   coefficient of a uniaxial layered stack.
 
 2. ``build_Vbar`` -- the reflected ("image") Coulomb block that adds to the
    direct block produced by ``operators.build_V``, obtained by numerically
@@ -53,7 +54,7 @@ __all__ = [
 ]
 
 # --------------------------------------------------------------------------
-# units.py is written by another agent and may not exist yet; fall back to the
+# units.py may not be importable stand-alone; fall back to the
 # documented literal so this module is importable stand-alone. The fallback
 # value is cross-checked against units.py in
 # tests/test_substrate.py::test_hbar_matches_units_module when that module
@@ -97,7 +98,7 @@ class Layer:
 
     Notes
     -----
-    Nanodisk manuscript, SI section S1B (layered quasistatic response).
+    Layered quasistatic response, by bottom-up recursion.
     """
 
     eps_par: complex = 1.0
@@ -162,8 +163,8 @@ def reflection_coefficient(
 ) -> Union[complex, np.ndarray]:
     """Quasistatic reflection coefficient r(Q, omega) of a layered stack.
 
-    Implements the bottom-up recursion of the nanodisk manuscript, SI section
-    S1B. Layers are indexed l = 1..L from the TOP; layer 1 is the half-space
+    Implements the bottom-up recursion for a layered stack. Layers are
+    indexed l = 1..L from the TOP; layer 1 is the half-space
     containing the ribbons (usually vacuum) and layer L is the semi-infinite
     terminating medium. Starting from r[L, L+1] = 0 and working upwards,
 
@@ -177,7 +178,7 @@ def reflection_coefficient(
 
     and r(Q, omega) = r[1, 2].
 
-    UNITS AUDIT of the sheet term. The source manuscript is SI, where
+    UNITS AUDIT of the sheet term. The source formulation is SI, where
 
         sigt_SI = sigma_SI / (1j * omega * eps0 * (eg_l + eg_{l+1})).
 
@@ -221,8 +222,7 @@ def reflection_coefficient(
 
     Notes
     -----
-    Sign convention: a perfect mirror (eps_2 -> infinity) gives r -> -1, as
-    stated explicitly in the manuscript.
+    Sign convention: a perfect mirror (eps_2 -> infinity) gives r -> -1.
 
     Branch cuts: the principal square root is used for both sqrt(eps_par*eps_perp)
     and sqrt(eps_par/eps_perp). For passive media in this package's
@@ -397,7 +397,7 @@ def build_Vbar(
 
     The reflected potential in the 2D Fourier plane carries r(Q, omega) and the
     image height combination exp(-Q*(z_j + z_jp)) in place of the direct
-    block's exp(-Q*|z_j - z_jp|) (nanodisk manuscript, SI section S1B):
+    block's exp(-Q*|z_j - z_jp|):
 
         Vbar(dx) = 2 * integral_0^inf dQx [r(Q)/Q] * exp(-Q*(z_j + z_jp))
                                           * cos(Qx*dx),     Q = sqrt(Qx^2 + q^2)

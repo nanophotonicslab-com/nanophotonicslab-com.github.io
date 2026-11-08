@@ -12,7 +12,7 @@ Q [1/nm]), returning a 2D conductivity in the Gaussian eV-nm-fs units of
 * "paper 456" -- drift-biased anisotropic nonlocal conductivity, Eqs. (12a)-(12b)
   and the thermal Drude weight quoted after Eq. (11).
 * "paper 430" -- thin-film mapping of a local dielectric function onto a sheet
-  conductivity (same as ``eta_metal.m``).
+  conductivity.
 * G. W. Hanson, J. Appl. Phys. 103, 064302 (2008) -- T = 0 interband term.
 
 FLAGGED CONCERNS (items 1 and 4 are RESOLVED, see below; 2, 3 and 5 stand.
@@ -37,8 +37,8 @@ Numbering is kept so that cross-references elsewhere still point correctly.)
    finite-T closed form an approximation that "departs from the numerical
    carrier-number solution by about 0.5 % at 300 K".  That was a
    misdiagnosis: the two routes answer *different questions*.
-   :func:`drift_chemical_potential_numeric` is a faithful port of
-   ``classic/get_chemical_potential_vd.m``, whose root condition is
+   :func:`drift_chemical_potential_numeric` is a faithful port of the
+   reference's own drift chemical potential, whose root condition is
    ``n(mu, beta, T) = n(E_F, 0, T)`` -- both sides at the *same* T, so the
    thermal shift cancels identically and it returns the pure drift shift.
    Measured: it gives exactly 0.50000000 eV at E_F = 0.5 eV, beta = 0 for
@@ -51,11 +51,10 @@ Numbering is kept so that cross-references elsewhere still point correctly.)
    ``mu = E_F [1 - (pi^2/6)(k_B T/E_F)^2 + ...]``.  Against an independent
    carrier-conservation oracle (exact Dirac-cone Fermi integral, root-solved)
    ``pi^2/3`` is accurate to 2.4e-7 at E_F = 0.5 eV, T = 100 K, where the old
-   ``2 log(4)^2`` gave 8.2e-5 and the MATLAB reference's own
-   ``graphene_sigma1_Q_T.m:61`` value ``(log 16)^2`` -- which is 2x the old
-   one -- gave 6.5e-4.  The reference constant is the one with the
-   operator-precedence slip; its small-T coefficient is 3.84 against the
-   exact 1.64.
+   ``2 log(4)^2`` gave 8.2e-5, and the alternative reading ``(log 16)^2``
+   -- which is 2x the old one -- gave 6.5e-4.  That reading differs by an
+   operator precedence; its small-T coefficient is 3.84 against the exact
+   1.64.
 3. RESOLVED 2026-11-03 (MATLAB parity campaign) -- hole doping.  Every
    formula in this module now takes ``|E_F|`` (see :func:`_absEF`), and
    ``thermal_drude_weight`` returns ``|mu|`` at T = 0, which is also the
@@ -68,9 +67,9 @@ Numbering is kept so that cross-references elsewhere still point correctly.)
    parts flipped, which kills the plasmon.  The Dirac cone is exactly
    electron-hole symmetric, so this was a defect, not a convention.
    The reference tree agrees and shows where the sanitisation belongs: its
-   low-level ``graphene_sigma1.m`` takes signed E_F and is simply never
-   handed a negative one, because all 25 call sites in the physics drivers
-   (``classic/``, ``Joel/``, ``Theis/``) pass ``abs(EF(j))``.  This library
+   low-level entry point takes signed E_F and is simply never handed a
+   negative one, because every one of its 25 call sites in the physics
+   drivers passes ``abs(EF(j))``.  This library
    exposes the low-level functions *as* its public API, with no driver in
    between, so the ``abs`` has to live here.  Second order is unaffected: it
    carries an explicit ``doping_sign``, which is the reference's
@@ -92,15 +91,15 @@ Numbering is kept so that cross-references elsewhere still point correctly.)
    :func:`graphene_drift_sigma`.
 6. SCOPE, not a defect (found 2026-11-03 by the MATLAB parity campaign):
    :func:`sigma_thg_local` and :func:`sigma_kerr` are the *intraband*
-   (Drude/BTE) third order of paper 406 only.  The reference tree's
-   ``graphene/graphene_sigma3.m`` computes the full Mikhailov third order,
+   (Drude/BTE) third order of paper 406 only.  The reference tree's own
+   third-order routine computes the full Mikhailov third order,
    including the interband contribution, and the ratio
    ``|intraband / complete|`` over its own parameter range runs from 4.0e-4 to
    7.6e+01.  So wherever the interband third order dominates -- which it does
    once the photon energy approaches or exceeds ``2 E_F / 3`` -- these two
    functions can be orders of magnitude off, in either direction.  They are
    correct transcriptions of the intraband formulas (verified to 1.6e-15
-   against ``graphene_sigma33.m`` and 1.4e-15 against ``graphene_sigma31.m``);
+   against its sigma_33 and 1.4e-15 against its sigma_31);
    the limitation is which physics they contain, not how it is coded.
 """
 
@@ -454,8 +453,8 @@ def graphene_drift_sigma(
 ) -> Tuple[CxOut, CxOut]:
     """Drift-biased anisotropic nonlocal graphene conductivity  [nm/fs].
 
-    Paper 456, Eqs. (12a)-(12b) (verified against
-    ``graphene_sigma1_Q_vd_intra.m``), with
+    Paper 456, Eqs. (12a)-(12b) (verified against the reference's drift
+    intraband conductivity), with
 
     * ``omega_c = E + 1j gamma``                      [eV]
     * ``alpha   = v_F Q hbar / omega_c``              (dimensionless)
@@ -519,7 +518,7 @@ def metal_thin_film(E_ev: ArrayLike, eps: ArrayLike, t_nm: float) -> CxOut:
     """Sheet conductivity of a thin film of local dielectric function eps  [nm/fs].
 
     ``sigma2d = 1j omega t (1 - eps) / (4 pi)``, ``omega = E / hbar``
-    -- paper 430 thin-film mapping (same as ``eta_metal.m``).  A free-electron
+    -- paper 430 thin-film mapping.  A free-electron
     metal (Re eps << 0) gives Im sigma2d > 0, the same inductive sign as
     :func:`graphene_drude`.
     """

@@ -32,3 +32,24 @@ authors' MATLAB toolbox during development. No code from that toolbox is include
 derived from; it is GPL-2.0, whereas this project is MIT. Tabulated optical constants
 shipped with the wheel (`material/*.dat`) are the Johnson & Christy (1972) measurements,
 regenerated from this repository's own `src/data/optical-constants.ts`.
+
+## Electrostatics-FD
+
+`public/wasm/electrostatics_fd-0.1.0-py3-none-any.whl` is built by
+[`scripts/build_efd_wheel.py`](../../scripts/build_efd_wheel.py) from
+[`scripts/electrostatics_fd/`](../../scripts/electrostatics_fd/), which is the source of
+record: the browser runs that library unmodified rather than a TypeScript port, and
+`npm run check:wheel` fails when the committed wheel no longer matches it.
+
+The quasistatic finite-difference eigenmode formulation, the multi-ribbon block structure
+and the nonlinear orders follow T. P. Rasmussen, A. Rodriguez Echarri, F. J. Garcia de
+Abajo & J. D. Cox, *"Nonlocal and cascaded effects in nonlinear graphene nanoplasmonics,"*
+Nanoscale **15**, 3150 (2023); the swift-electron source and the loss probability follow
+Sci. Adv. **10**, eadn6312 (2024); the drift-biased anisotropic conductivity, the
+point-dipole source and the LDOS follow Nat. Commun. **17**, 1114 (2026),
+[doi:10.1038/s41467-025-67872-5](https://doi.org/10.1038/s41467-025-67872-5). A drift
+current enters as an anisotropic, nonlocal conductivity tensor, not as a frame shift.
+
+[`scripts/electrostatics_fd/README.md`](../../scripts/electrostatics_fd/README.md) records
+what is and is not externally validated, and the page states the same limits in its
+Limitations box.

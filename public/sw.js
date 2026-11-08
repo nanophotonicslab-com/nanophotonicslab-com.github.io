@@ -3,7 +3,9 @@
 // values their `mat` permalink parameter accepts and changed how a shared link
 // restores. HTML is network-first, so the exposure is only offline and fallback
 // loads — but a stale page there would silently plot the wrong material.
-const CACHE = 'nanolab-v4';
+// v5: the electrostatics-fd wheel is now content-addressed (its URL carries a
+// hash), so this bump is only to drop the stale copies already in v4 caches.
+const CACHE = 'nanolab-v5';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const IS_LOCAL = LOCAL_HOSTS.has(self.location.hostname);
 

@@ -1,7 +1,7 @@
 """Nonlinear (second- and third-harmonic) quasistatic response of graphene nanoribbons.
 
-Reference: paper 406, "nonlinear orders" block; reference MATLAB implementation
-``GNR_polarizability_block_q0_Lj.m``.
+Reference: paper 406, "nonlinear orders" block, and its q = 0 polarizability
+block as implemented in the reference code.
 
 Perturbation expansion
 ----------------------
@@ -200,7 +200,7 @@ def _cascade_A(
     RESOLVED.  There is no discrepancy here and nothing upstream to fix: the two forms
     below are a SCALAR and a TENSOR COMPONENT, and a 1-D q = 0 source needs the scalar.
 
-    The paper-406 MATLAB reference (``GNR_polarizability_block_q0_Lj.m``) uses, with
+    The paper-406 reference implementation uses, with
     ``D_sum = D_(s1+s2)``::
 
         S_s1_s2 = S2 * D_sum * ( D_s2**2 + 2*D_sum*(D_s1 + D_s2) )

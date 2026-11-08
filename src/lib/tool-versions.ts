@@ -22,7 +22,7 @@ export const TOOL_VERSIONS: Record<string, ToolVersion> = {
   'purcell':                 { version: '0.1.0', updated: '2026-07-18' },
   'pulse':                   { version: '0.1.0', updated: '2026-07-18' },
   'imaging':                 { version: '0.2.0', updated: '2026-07-29' },
-  'electrostatics-fd':       { version: '0.1.0', updated: '2026-11-03' },
+  'electrostatics-fd':       { version: '0.1.0', updated: '2026-11-08' },
 };
 
 export function formatCitation(toolName: string, toolSlug: string): string {

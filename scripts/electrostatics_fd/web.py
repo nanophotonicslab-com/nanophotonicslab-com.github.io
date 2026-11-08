@@ -38,14 +38,15 @@ Entry points, all ``spec -> dict``, dispatched by :func:`run`:
 ``ldos``              Level 3: LDOS map over (q, E), peak tracks, +-q asymmetry
 ``nonlinear_spectrum``  SHG and THG polarizability spectra
 
-See ``notes/electrostatics-fd-notes.html`` for the formalism and its section
-numbers, and its section 15 for what is validated against the reference
-MATLAB and what is not.
+See the package README for the module map, and for what is and is not
+externally validated.
 Two things this module will not let you ask for, because the library would be
 answering a question it has not been checked on: an absolute LDOS is returned in
 arbitrary units and labelled as such (the ``2 pi^2 |p|^2`` normalisation has no
 external confirmation), and a layered calculation is flagged in ``notes`` as
-screening the response while driving with the free-space source (notes 8.4).
+having no reference implementation behind it -- response and source screen
+through the same ``r(Q, omega)``, but only the perfect-mirror limit has been
+checked, and the screened eigenproblem not at all.
 """
 
 from __future__ import annotations
@@ -758,9 +759,9 @@ def material(spec: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     if beta:
-        # With drift eta is a tensor, and which component a given condition wants
-        # is a question the reference MATLAB gets wrong; the longitudinal one is
-        # component 1 (settled 2026-11-02).
+        # With drift eta is a tensor, and which component a given condition
+        # wants was settled numerically rather than read off: the longitudinal
+        # one is component 1 (2026-11-02).
         out["sigma_perp_nm_fs"] = per[0]["sigma_perp_nm_fs"]
         out["sigma_par_nm_fs"] = per[0]["sigma_par_nm_fs"]
         out["notes"].append(
@@ -1418,26 +1419,19 @@ def eels_spectrum(spec: Dict[str, Any]) -> Dict[str, Any]:
         "notes": notes
         + [
             "The external potential carries gamma_L^0; gamma_L enters only through Lam. "
-            "The longitudinal FIELD carries gamma_L^-2, via A_x = (v/c) phi (notes 8.3).",
+            "The longitudinal FIELD carries gamma_L^-2, via A_x = (v/c) phi.",
             "Aloof and parallel only -- there is no penetrating-trajectory formalism here.",
             "Loss is -Im of the overlap of the induced charge with the electron's own "
-            "potential: the work the electron does against the field it induces, which "
-            "is what paper 430 Eq. (G1gena) integrates along the trajectory. Positive "
-            "by construction.",
-            "This is get_EELS of the project's own reference, "
-            "sanity-checks/efd-matlab-parity/matlab-ref/Joel/GNR_phi_EELS.m (its "
-            "Eq. 46), which the parity README lists as having no library counterpart. "
-            "Algebraically its val is exactly -(1/2pi^2) Int rho conj(phi_ext) dx, the "
-            "overlap computed here: the reference's own phi_ext is the same "
-            "-2pi/(v Lam) exp(i w x/v) exp(-Lam|z-b|) form, already matched to this "
-            "library at 1.14e-13. So the SHAPE is the reference's, exactly.",
-            "ABSOLUTE SCALE still open. The constant 1/(2 pi^2) is the reference's, "
-            "but its phi_ext is atomic-unit (e^2 = 1) and non-relativistic while this "
-            "library carries e^2 and gamma_L in Lam, and rho here is rho_phys/eps_eff "
-            "-- so the two differ by a unit factor that has to be measured in the "
-            "parity harness rather than read off. Four constants have been guessed on "
-            "this page already and all four were wrong; this one is left to the "
-            "harness. Ratios and peak positions are unaffected.",
+            "potential: the work the electron does against the field it induces, "
+            "integrated along the trajectory. Positive by construction.",
+            "The SHAPE of the loss is fixed by phi_ext, the aloof "
+            "-2pi/(v Lam) exp(i w x/v) exp(-Lam|z-b|) potential, which this library "
+            "reproduces to 1.1e-13.",
+            "ABSOLUTE SCALE still open. The 1/(2 pi^2) prefactor is quoted in atomic "
+            "units (e^2 = 1) and non-relativistically, while this library carries e^2 "
+            "and gamma_L in Lam, and rho here is rho_phys/eps_eff -- so the two differ "
+            "by a unit factor that has to be measured rather than read off, and has "
+            "not been. Ratios and peak positions are unaffected.",
         ],
     }
     return res
@@ -2030,7 +2024,7 @@ _PRESETS: List[Dict[str, Any]] = [
     {
         "id": "single-ribbon-w10",
         "label": "Single 10 nm ribbon",
-        "citation": "reference default (parity harness case C3_single_W10)",
+        "citation": "a working default, not a published figure",
         "claim": "reference-default",
         "kind": "linear_spectrum",
         "blurb": "The cheapest thing here, and the one to start from: one ribbon, "

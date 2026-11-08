@@ -410,7 +410,7 @@ def test_hbar_matches_units_module():
     try:
         import units  # noqa: PLC0415
     except Exception:  # noqa: BLE001
-        pytest.skip("units.py not available yet (written by another agent)")
+        pytest.skip("units.py not importable here")
     assert HBAR_EV_FS == pytest.approx(units.HBAR_EV_FS, rel=0.0, abs=0.0)
 
 

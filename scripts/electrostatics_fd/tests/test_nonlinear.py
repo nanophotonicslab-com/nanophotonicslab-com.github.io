@@ -775,7 +775,7 @@ def test_cascade_A_discrepancy_is_the_D_s2_squared_term(s1: int, s2: int):
     ``conductivity``'s A is ``-S2 D_sum (3 D_s2^2 + 2 D_sum (D_s1+D_s2))`` at
     ``doping_sign = +1``; the reference is ``+S2 D_sum (D_s2^2 + 2 D_sum (...))``.  The
     ``2 D_sum (...)`` parts cancel in the sum and only ``-2 S2 D_sum D_s2^2`` survives.
-    If agent A changes that coefficient, this test reports it immediately.
+    If that coefficient ever changes, this test reports it immediately.
     """
     cond = pytest.importorskip("conductivity", reason="conductivity.py not written yet")
     E, gamma = _E_EV, 0.02

@@ -6,7 +6,7 @@ circular-dissymmetry ratio of a q-resolved loss spectrum.
 
 Source equations
 ----------------
-* induced field                 set_Eq_Riboons.m (reference MATLAB code), the
+* induced field                 the reference's own ``set_Eq`` form, the
                                 y-Fourier transform of the Coulomb field of a
                                 line-charge distribution:
                                     1/|r-r'|  ->  2 K_0(|q| s)
@@ -19,7 +19,7 @@ Source equations
 =============================================================================
 NORMALISATION -- RESOLVED (2026-11-03); THE ABSOLUTE SCALE IS TRUSTWORTHY
 =============================================================================
-The ``set_Eq_Riboons.m`` form implemented by :func:`induced_field_q`,
+The reference's ``set_Eq`` form, implemented by :func:`induced_field_q`,
 
     s        = sqrt((x0 - x')^2 + z0^2)
     E_q,x    = +2|q| \\int dx' rho_q(x') (x0 - x')/s K_1(|q| s)
@@ -40,8 +40,8 @@ confirmed four independent ways:
    ``q -> 0``;
 4. it reproduces paper 456 Eqs. (14) + (17) + (19) + (21) exactly.
 
-The factor -1/(2 pi) against the inline ``set_Eind`` of
-``GNR_phi_LDOS_anisotropic.m`` is a CONVENTION ARTIFACT, not an error in
+The factor -1/(2 pi) against the reference implementation's inline
+``set_Eind`` is a CONVENTION ARTIFACT, not an error in
 either routine.  ``set_Eind`` folds the Fourier-inversion measure ``dq/(2 pi)``
 of paper 456 Eq. (21) into the per-q field AND flips the sign; every MATLAB
 caller compensates for both (they form ``-imag(p . Eind)`` and then trapz over
@@ -208,7 +208,7 @@ def induced_field_q(
 ) -> tuple[complex, complex, complex]:
     """Induced electric field at (x0, z0) from a 1D charge profile at wave vector q.
 
-    Implements the ``set_Eq_Riboons.m`` form, whose absolute normalisation is
+    Implements the reference's ``set_Eq`` form, whose absolute normalisation is
     resolved and correct (module docstring):
 
         s  = sqrt((x0 - x')^2 + z0^2)

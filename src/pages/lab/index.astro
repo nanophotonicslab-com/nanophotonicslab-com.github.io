@@ -18,6 +18,7 @@ const categories: Category[] = [
       { title: 'Optical Tweezers', description: 'Optical trapping of a sphere: exact Mie radiation pressure and asymmetry parameter, plus Rayleigh-regime trap stiffness and depth for a focused Gaussian beam.', color: '#10B981', icon: 'laser', status: 'Beta', url: `${base}lab/tweezers/` },
       { title: 'Purcell Factor', description: 'Quantum emitter near a nanosphere: Purcell enhancement, quenching, modified quantum yield and lifetime — exact multipole theory with NV, QD and dye presets.', color: '#7C3AED', icon: 'bolt', status: 'Beta', url: `${base}lab/purcell/` },
       { title: 'Heterostructures', description: 'Layered planar-media modules for surface plasmons and thin films. Starts with single-interface Drude dispersion in normalized Economou variables.', color: '#0EA5E9', icon: 'layers', status: 'Beta', url: `${base}lab/heterostructures/` },
+      { title: 'Electrostatics-FD', description: 'Quasistatic finite-difference response of coupled 2D nanostructures — linear, nonlinear, drift-biased and substrate-coupled, solved in the browser. Eigenmodes, bands, spectra, EELS and LDOS, in Python via Pyodide.', color: '#14B8A6', icon: 'ribbons', status: 'Experimental', url: `${base}lab/electrostatics-fd/` },
     ],
   },
   {
@@ -162,6 +163,12 @@ const categories: Category[] = [
                     <polygon points="12 2 2 7 12 12 22 7 12 2"/>
                     <polyline points="2 17 12 22 22 17"/>
                     <polyline points="2 12 12 17 22 12"/>
+                  </svg>
+                )}
+                {widget.icon === 'ribbons' && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="4.5" cy="8" r="1.3"/><circle cx="9.5" cy="8" r="1.3"/><circle cx="14.5" cy="8" r="1.3"/><circle cx="19.5" cy="8" r="1.3"/>
+                    <circle cx="7" cy="16" r="1.3"/><circle cx="12" cy="16" r="1.3"/><circle cx="17" cy="16" r="1.3"/>
                   </svg>
                 )}
               </div>

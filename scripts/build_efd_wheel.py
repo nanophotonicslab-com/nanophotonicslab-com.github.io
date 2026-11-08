@@ -79,9 +79,8 @@ quasistatic eigenmode formalism for self-interacting multiple graphene
 nanoribbons, in the Gaussian eV-nm-fs unit system.
 
 Built for NPLab's Electrostatics-FD Toolkit page, which runs it in Pyodide.
-The formalism is written up at scripts/electrostatics_fd/notes/, whose
-section 15 records what is validated against the reference MATLAB and
-what is not.
+scripts/electrostatics_fd/README.md carries the module map, and what is and
+is not externally validated.
 """
 
 WHEEL = """Wheel-Version: 1.0

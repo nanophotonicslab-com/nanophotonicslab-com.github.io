@@ -1,4 +1,4 @@
-"""Tests for ``solver.py`` and ``observables.py`` (agent E).
+"""Tests for ``solver.py`` and ``observables.py``.
 
 Reference values
 ----------------
@@ -282,7 +282,7 @@ def test_eta_pair_drift_is_odd_in_q():
     rel = abs(ep_p - ep_m) / abs(ep_p)
     print(f"\n|eta_perp(+q) - eta_perp(-q)|/|eta_perp| = {rel:.4e}")
     assert rel > 1e-3, (
-        "eta is even in q at beta = 0.3; the drift Doppler shift was lost "
+        "eta is even in q at beta = 0.3; the drift asymmetry was lost "
         "(solver.SIGNED_Q_IN_DRIFT_SIGMA, or abs() inside graphene_drift_sigma)"
     )
     assert abs(ep_p - ea_p) / abs(ep_p) > 1e-6, "drift did not make eta anisotropic"
@@ -675,8 +675,8 @@ def test_induced_field_absolute_normalisation_is_a_reference_convention():
     """The two reference forms differ by exactly -1/(2 pi) in ALL THREE components.
 
     REPOINTED FROM A STRICT XFAIL (2026-11-03).  This test used to assert that
-    ``set_Eq_Riboons``' Ex equals the inline ``set_Eind`` Ex of
-    GNR_phi_LDOS_anisotropic.m, and xfailed with the reason that the two "cannot
+    ``set_Eq_Riboons``' Ex equals the reference's inline ``set_Eind`` Ex,
+    and xfailed with the reason that the two "cannot
     both be right for one rho normalisation", so absolute LDOS magnitudes were
     uncertain by -1/(2 pi).
 

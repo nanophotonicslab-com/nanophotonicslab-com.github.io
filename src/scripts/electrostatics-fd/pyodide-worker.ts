@@ -112,7 +112,7 @@ async function init(wheelUrl: string) {
     post({ type: 'init-progress', stage: 'Loading numpy and scipy (~28 MB)…', pct: 0.3 });
     await pyodide.loadPackage(['numpy', 'scipy', 'micropip']);
 
-    post({ type: 'init-progress', stage: 'Installing electrostatics-fd (125 kB)…', pct: 0.75 });
+    post({ type: 'init-progress', stage: 'Installing electrostatics-fd (157 kB)…', pct: 0.75 });
     pyodide.globals.set('_efd_wheel_url', wheelUrl);
     await pyodide.runPythonAsync(BOOTSTRAP);
     call = pyodide.globals.get('_efd_call');

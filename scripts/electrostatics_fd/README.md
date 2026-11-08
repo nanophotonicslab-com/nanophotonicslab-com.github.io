@@ -17,7 +17,7 @@ corrected.
 ## Running the suite
 
 ```sh
-cd C:/Users/alvar/ALVARO/NPLab/nanophotonicslab-com.github.io
+cd <repo root>
 py -3.11 -m pytest scripts/electrostatics_fd/ -q
 ```
 
@@ -74,7 +74,7 @@ them. It asserts nothing; `tests/test_performance.py` holds the budgets.
 | Module | Contents |
 | --- | --- |
 | `units.py` | eV-nm-fs Gaussian constants, `omega_of`, a.u. conductivity conversions |
-| `conductivity.py` | graphene Drude / interband / local-RPA sheet conductivity, drift (Doppler) conductivity and its chemical potential, thin metal film, SHG / THG / Kerr / cascade coefficients |
+| `conductivity.py` | graphene Drude / interband / local-RPA sheet conductivity, the anisotropic nonlocal drift conductivity tensor (Boltzmann on a skewed Fermi-Dirac distribution, not a frame shift) and its chemical potential, thin metal film, SHG / THG / Kerr / cascade coefficients |
 | `operators.py` | `struve_L`, the three-branch Coulomb kernel (branch 3 evaluated in four regions — series, two Chebyshev panels, asymptotic — through the complementary function `Fc = 1 − F`, so it is cancellation-free at every coplanar separation), dense and Toeplitz `V` blocks, the finite-difference `D` operator |
 | `substrate.py` | `Layer`, the layered quasistatic reflection coefficient, the reflected ("image") Coulomb block `build_Vbar` |
 | `sources.py` | external potentials: plane wave, dipole, swift electron; `e_ext_electron` for the swift-electron **field** components `(Ex, Ey, Ez)` (`Ex = −γ_L⁻²·dφ/dx`, so the paper-430 `γ_L²` is a field factor, not a potential one); `lorentz_gamma`, `electron_decay_constant`, trajectory validity |
@@ -133,8 +133,8 @@ with `h = 1/(L-1)` and `x = x_j + W_j·theta`.
   charge-neutral ribbon.
 * **Signed `q` reaches the drift conductivity.** The contract said `abs(q)`;
   `solver.SIGNED_Q_IN_DRIFT_SIGMA = True` passes the signed value, because the
-  Doppler asymmetry — and therefore the whole paper-456 dissymmetry — is odd in
-  `q` and vanishes identically with `abs(q)`. Set the flag to `False` to
+  drift tensor's non-reciprocity — and therefore the whole paper-456
+  dissymmetry — is odd in `q` and vanishes identically with `abs(q)`. Set the flag to `False` to
   reproduce the contract literally and watch `g` collapse to zero.
 * **`rho` is the physical charge density divided by `eps_eff`.** Exact for
   `eps_a = eps_b = 1`. Everything downstream of `rho` inherits it.
@@ -181,7 +181,7 @@ path matching a per-frequency solve to 3.8e-11 while running 72× faster.
 **Resolved at integration** (both were reported as suspected upstream errors):
 
 * *The cascade-A "discrepancy" is not one.* `conductivity.sigma_cascade_abcd`'s
-  `A` and the paper-406 MATLAB `S_s1_s2` differ in the coefficient of `D_s2²`
+  `A` and the reference's `S_s1_s2` differ in the coefficient of `D_s2²`
   (3 vs 1). Setting `s1 = s2 = 1` — the degenerate case, which *is* SHG —
   identifies both, exactly: `sigma_cascade_abcd(…,1,1)[0] == sigma_shg_abc[0]`
   (the tensor structure **A**), and `-S_1_1 == sigma_shg_1d_q0` (the q = 0 1-D
@@ -204,7 +204,7 @@ path matching a per-frequency solve to 3.8e-11 while running 72× faster.
 
 Four long-standing disputes were derived independently, adversarially verified,
 and are now **implemented**, not merely decided. One alleged bug turned out to be
-a test asserting a false identity. Full record in `derivations-2026-11-03.md`;
+a test asserting a false identity. The full record is kept outside this repo;
 one-line verdicts:
 
 | Dispute | Resolution |

@@ -117,8 +117,7 @@ const RIBBON_DEFAULTS = [
 
 <Layout
   title="Electrostatics-FD"
-  description="Quasistatic finite-difference response of coupled 2D nanostructures: eigenmodes, bands, cross sections, EELS and LDOS, drift-biased and substrate-coupled, solved in the browser."
-  noindex
+  description="Graphene nanoribbon plasmons by quasistatic finite differences: eigenmodes, bands, linear and nonlinear spectra, EELS and LDOS, drift-biased, in the browser."
 >
   <section class="widget-hero">
     <div class="container">
@@ -130,6 +129,7 @@ const RIBBON_DEFAULTS = [
         geometry; cross sections under a plane wave, the local density of states
         around a dipole, and electron energy loss for a swift electron &mdash;
         drift-biased and substrate-coupled throughout.
+        <br/><strong>First load downloads ~35&nbsp;MB (Pyodide + numpy + scipy) &mdash; cached after.</strong>
       </p>
       <ToolMeta slug="electrostatics-fd" name="Electrostatics-FD" />
     </div>
@@ -148,8 +148,11 @@ const RIBBON_DEFAULTS = [
         <span set:html={im('\\vec\\phi=[\\mathbb{1}-(\\mathcal{M}+\\bar{\\mathcal{M}})]^{-1}\\vec\\phi^{\\,\\rm ext}')} />.
         Perturbative orders (SHG, THG with the cascaded contribution) are each
         screened at their own harmonic. Runs this project's Python reference
-        library in the browser through Pyodide &mdash; the same code the tests and
-        the MATLAB comparison use, not a port.
+        library in the browser through Pyodide &mdash; the same code its test
+        suite exercises, not a port. The charts name three rungs of the one
+        formalism: <strong>Level&nbsp;1</strong> is the unpatterned sheet,
+        <strong>Level&nbsp;2</strong> the ribbon eigenmodes and their bands,
+        <strong>Level&nbsp;3</strong> the LDOS map.
       </dd>
       <dt>Assumptions</dt>
       <dd>
@@ -172,6 +175,11 @@ const RIBBON_DEFAULTS = [
         carries temperature. Nonlinear conductivities keep field gradients to
         linear order, valid for optical wave vectors
         <span set:html={im('\\lesssim 1\\,\\mathrm{nm}^{-1}')} />.
+        <span set:html={im('\\eta')} /> carries the
+        <strong>intraband (Drude)</strong> conductivity alone, with no interband
+        term, so a mode drawn above roughly
+        <span set:html={im('0.83\\times2|E_{\\rm F}|')} /> is an artefact of a
+        conductivity that has stopped being valid there, not a prediction.
       </dd>
       <dt>Limitations</dt>
       <dd>
@@ -181,7 +189,12 @@ const RIBBON_DEFAULTS = [
         response and the source through the same reflection coefficient, but it
         has no third-party implementation to have been checked against; what is
         checked is its perfect-mirror limit, which reproduces the textbook image
-        construction to 2&times;10<sup>&minus;13</sup>. The LDOS is in
+        construction to 2&times;10<sup>&minus;13</sup> &mdash; and that test
+        drives the linear solve, not the screened eigenproblem the Modes and
+        Dispersion views take whenever a stack is set, which nothing has
+        checked. The EELS loss probability, the dissymmetry
+        <span set:html={im('g')} />, and the band and peak-tracking routines are
+        unchecked against any outside code in the same way. The LDOS is in
         <strong>arbitrary units</strong>: its
         <span set:html={im('2\\pi^2|\\mathbf{p}|^2')} /> normalisation has no
         external confirmation. Absolute magnitudes carry a 3&ndash;12&nbsp;%
@@ -844,9 +857,10 @@ const RIBBON_DEFAULTS = [
               <span set:html={im('q\\to-q')} /> is a symmetry only at
               <span set:html={im('\\beta=0')} />; and
               <span set:html={im('\\eta')} /> becomes a tensor, which is why
-              <strong>Dispersion</strong> refuses a drifted run and sends you to the
-              LDOS map &mdash; a single eigenvalue spectrum then has no resonance
-              condition to invert.
+              <strong>Dispersion</strong> refuses a drifted run and falls back to
+              the extended-sheet map &mdash; a single eigenvalue spectrum then has
+              no resonance condition to invert. The drifted ribbon dispersion is
+              read off the <strong>LDOS</strong> map instead.
             </p>
 
             <h4>What the numbers mean</h4>
